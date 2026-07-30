@@ -24,6 +24,7 @@ bluez
 bluez-utils
 blueman
 networkmanager
+tailscale
 awww
 ttf-roboto
 ttf-jetbrains-mono

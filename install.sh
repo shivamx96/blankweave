@@ -113,6 +113,11 @@ echo "Setting up NetworkManager..."
 systemctl enable NetworkManager.service
 systemctl start NetworkManager.service || echo "Warning: Could not start NetworkManager service"
 
+echo "Setting up Tailscale..."
+systemctl enable tailscaled.service
+systemctl start tailscaled.service || echo "Warning: Could not start tailscaled service"
+# Log in separately (interactive/browser auth):  tailscale up
+
 echo "Setting up Docker..."
 systemctl enable docker.service
 systemctl start docker.service || echo "Warning: Could not start docker service"
@@ -345,6 +350,11 @@ if [ -f "$SSH_KEY.pub" ]; then
     echo "Add this to https://github.com/settings/ssh/new"
     echo ""
     cat "$SSH_KEY.pub"
+    echo ""
+fi
+echo "── Tailscale ──"
+if ! tailscale status &>/dev/null; then
+    echo "Not logged in yet. Run:  tailscale up"
     echo ""
 fi
 echo "Reboot to launch into Hyprland."
