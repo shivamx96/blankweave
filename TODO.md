@@ -44,11 +44,18 @@ log confirms we're on the fallback path: `[cfg] Lua config not found, using lega
 
 ## Waybar
 
-- [ ] No `tray` module — Slack, LocalSend and Blueman all expect one. Slack's
-      close-to-tray is effectively broken without it.
+- [x] ~~Add a `tray` module~~ — **declined 2026-07-31, deliberate.** A tray is an
+      attention surface; this rice is meant to be minimal and distraction-free.
+      Consequence, accepted: apps that expect a tray have nowhere to go. Slack's
+      "close to tray" (`runFromTray: true` in its own config) can't work — closing
+      the window quits it. Use `Super+Shift+B` for Blueman instead of an applet.
+      Don't re-suggest this.
 - [ ] No `idle_inhibitor` module. hypridle dims at 150s and locks at 300s, which fires
-      mid-video. Built into Waybar, no script needed.
-- [ ] Autostart `blueman-applet` once the tray exists.
+      mid-video. Built into Waybar, no script needed — and it *serves* the
+      distraction-free goal rather than working against it.
+- [ ] Waybar logs `Requested height: 40 is less than the minimum height: 48 required by
+      the modules` on every start. Pre-existing (confirmed against HEAD), cosmetic —
+      the 16px font plus padding exceeds the configured 40px bar height.
 
 ## Screenshots & capture
 

@@ -30,6 +30,7 @@ ttf-roboto
 ttf-jetbrains-mono
 noto-fonts
 noto-fonts-emoji
+papirus-icon-theme
 base-devel
 git
 openssh
