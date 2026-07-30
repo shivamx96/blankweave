@@ -23,7 +23,7 @@ fi
 if ls /sys/class/backlight/*/brightness &>/dev/null 2>&1; then
     BACKEND="backlight"
 else
-    BACKEND="hyprsunset"
+    BACKEND="none"
 fi
 
 printf '{"text":"%s  %s%%","tooltip":"Brightness: %s%%\\nBackend: %s"}' \

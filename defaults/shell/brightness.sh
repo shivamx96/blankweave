@@ -1,16 +1,14 @@
 #!/usr/bin/env bash
 
-# Unified brightness control: brightnessctl (laptop) or hyprsunset gamma (PC/external monitors)
+# Brightness control via brightnessctl (any panel exposing /sys/class/backlight).
+# External monitors have no backlight device — see TODO.md for the ddcutil backend.
 # Usage: brightness.sh up [step] | down [step] | set <value> | get | save | restore
 
 SAVE_FILE="/tmp/brightness-saved"
-CACHE_FILE="/tmp/brightness-cache"
 
 detect_backend() {
     if ls /sys/class/backlight/*/brightness &>/dev/null 2>&1; then
         echo "backlight"
-    elif hyprctl hyprsunset gamma 2>/dev/null | grep -q .; then
-        echo "gamma"
     else
         echo "none"
     fi
@@ -26,13 +24,6 @@ get_percent() {
             max=$(brightnessctl max)
             echo $((cur * 100 / max))
             ;;
-        gamma)
-            if [ -f "$CACHE_FILE" ]; then
-                cat "$CACHE_FILE"
-            else
-                echo 100
-            fi
-            ;;
         *) echo 0 ;;
     esac
 }
@@ -43,10 +34,6 @@ set_percent() {
     (( val < 5 )) && val=5
     case $BACKEND in
         backlight) brightnessctl set "${val}%" -q ;;
-        gamma)
-            echo "$val" > "$CACHE_FILE"
-            hyprctl hyprsunset gamma "$val" &>/dev/null
-            ;;
     esac
 }
 
