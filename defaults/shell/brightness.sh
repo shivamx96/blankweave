@@ -2,9 +2,10 @@
 
 # Brightness control via brightnessctl (any panel exposing /sys/class/backlight).
 # External monitors have no backlight device — see TODO.md for the ddcutil backend.
-# Usage: brightness.sh up [step] | down [step] | set <value> | get | save | restore
+# Usage: brightness.sh up [step] | down [step] | set <value> | get | dim <max> | restore
 
 SAVE_FILE="/tmp/brightness-saved"
+DIM_FLAG="/tmp/brightness-dimmed"
 
 detect_backend() {
     if ls /sys/class/backlight/*/brightness &>/dev/null 2>&1; then
@@ -74,9 +75,23 @@ case $CMD in
     save)
         get_percent > "$SAVE_FILE"
         ;;
+    dim)
+        # Idle dim: never *raise* brightness. Sitting below the target (e.g. 5% when the
+        # target is 10%) used to make the screen brighter when the session went idle.
+        current=$(get_percent)
+        # Only capture the pre-dim value on the first dim of an idle period — a second
+        # dim without an intervening restore would otherwise save the dimmed value and
+        # strand the screen dark.
+        if [ ! -f "$DIM_FLAG" ]; then
+            echo "$current" > "$SAVE_FILE"
+            touch "$DIM_FLAG"
+        fi
+        (( STEP < current )) && set_percent "$STEP"
+        ;;
     restore)
         if [ -f "$SAVE_FILE" ]; then
             set_percent "$(cat "$SAVE_FILE")"
         fi
+        rm -f "$DIM_FLAG"
         ;;
 esac
