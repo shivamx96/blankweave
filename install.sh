@@ -33,6 +33,16 @@ section() {
     echo ""
 }
 
+copy_file_atomically() {
+    local source_file="$1"
+    local target_file="$2"
+    local staged_file
+
+    staged_file=$(mktemp "$(dirname "$target_file")/.hyprarch.XXXXXX")
+    install -m 0644 "$source_file" "$staged_file"
+    mv -f "$staged_file" "$target_file"
+}
+
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 USER_HOME="/home/$SUDO_USER"
 
@@ -146,7 +156,11 @@ mkdir -p "$CONFIG_DIR"
 
 echo "Copying defaults to $DOTS_DIR..."
 
-cp -rv "$REPO_DIR/defaults/hypr" "$DOTS_DIR/" || { echo "Failed to copy hypr"; exit 1; }
+mkdir -p "$DOTS_DIR/hypr"
+for hypr_config in "$REPO_DIR/defaults/hypr/"*; do
+    echo "Deploying $hypr_config"
+    copy_file_atomically "$hypr_config" "$DOTS_DIR/hypr/$(basename "$hypr_config")"
+done
 cp -rv "$REPO_DIR/defaults/waybar" "$DOTS_DIR/" || { echo "Failed to copy waybar"; exit 1; }
 cp -rv "$REPO_DIR/defaults/dunst" "$DOTS_DIR/" || { echo "Failed to copy dunst"; exit 1; }
 cp -rv "$REPO_DIR/defaults/ghostty" "$DOTS_DIR/" || { echo "Failed to copy ghostty"; exit 1; }
@@ -167,23 +181,37 @@ mkdir -p "$CONFIG_DIR/waybar"
 mkdir -p "$CONFIG_DIR/dunst"
 mkdir -p "$CONFIG_DIR/ghostty"
 
-cat > "$CONFIG_DIR/hypr/hyprland.conf" << 'EOF'
-source = ~/.local/share/hyprarch/hypr/hyprland.conf
-source = ~/.local/share/hyprarch/hypr/env.conf
-source = ~/.config/hypr/env.conf
+HYPRLAND_LUA_STAGED=$(mktemp "$CONFIG_DIR/hypr/.hyprland.lua.XXXXXX")
+cat > "$HYPRLAND_LUA_STAGED" << 'EOF'
+local home = os.getenv("HOME")
+
+require(home .. "/.local/share/hyprarch/hypr/hyprland")
+require(home .. "/.config/hypr/env")
+require(home .. "/.config/hypr/monitors")
 EOF
+chmod 0644 "$HYPRLAND_LUA_STAGED"
+mv -f "$HYPRLAND_LUA_STAGED" "$CONFIG_DIR/hypr/hyprland.lua"
 
 HOST_DIR="$REPO_DIR/hosts/$HOST/hypr"
 if [ -d "$HOST_DIR" ]; then
-    cp "$HOST_DIR/env.conf" "$CONFIG_DIR/hypr/env.conf"
-    cp "$HOST_DIR/monitors.conf" "$CONFIG_DIR/hypr/"
-    cp "$HOST_DIR/hypridle.conf" "$CONFIG_DIR/hypr/hypridle.conf"
+    copy_file_atomically "$HOST_DIR/env.lua" "$CONFIG_DIR/hypr/env.lua"
+    copy_file_atomically "$HOST_DIR/monitors.lua" "$CONFIG_DIR/hypr/monitors.lua"
+    copy_file_atomically "$HOST_DIR/hypridle.conf" "$CONFIG_DIR/hypr/hypridle.conf"
 else
     echo "Error: No host config found at $HOST_DIR"
     exit 1
 fi
 
-cp "$REPO_DIR/defaults/hypr/hyprlock.conf" "$CONFIG_DIR/hypr/hyprlock.conf"
+copy_file_atomically "$REPO_DIR/defaults/hypr/hyprlock.conf" "$CONFIG_DIR/hypr/hyprlock.conf"
+
+echo "Validating Hyprland Lua config..."
+if ! sudo -u "$SUDO_USER" env \
+    HOME="$USER_HOME" \
+    XDG_CONFIG_HOME="$CONFIG_DIR" \
+    hyprland --verify-config --config "$CONFIG_DIR/hypr/hyprland.lua"; then
+    echo "Error: Generated Hyprland Lua config failed validation."
+    exit 1
+fi
 
 section "SYMLINKING CONFIGS"
 
@@ -358,3 +386,5 @@ if ! tailscale status &>/dev/null; then
     echo ""
 fi
 echo "Reboot to launch into Hyprland."
+echo "If Hyprland was running during this install, a full session restart is required."
+echo "A hyprctl reload cannot switch an existing legacy .conf session to Lua."

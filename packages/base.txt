@@ -33,6 +33,7 @@ noto-fonts-emoji
 papirus-icon-theme
 base-devel
 git
+github-cli
 openssh
 less
 uv
