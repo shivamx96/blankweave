@@ -7,7 +7,7 @@
   "margin-right": 10,
   "spacing": 0,
   "reload_style_on_change": true,
-  "modules-left": ["custom/arch", "hyprland/workspaces", "custom/window"],
+  "modules-left": ["custom/arch", "ext/workspaces", "custom/window"],
   "modules-center": ["clock"],
   "modules-right": [
     "custom/brightness",
@@ -27,9 +27,9 @@
     "tooltip": false
   },
 
-  "hyprland/workspaces": {
+  "ext/workspaces": {
     "format": "{name}",
-    "persistent-workspaces": {}
+    "on-click": "activate"
   },
 
   "custom/window": {
