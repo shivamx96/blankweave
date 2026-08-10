@@ -17,17 +17,12 @@
 
 ## Hyprland: Lua config migration
 
-Hyprland 0.55+ deprecated hyprlang (`.conf`) in favour of Lua. We're on 0.56.1 and the
-log confirms we're on the fallback path: `[cfg] Lua config not found, using legacy config`.
+Hyprland 0.55+ deprecated Hyprlang (`.conf`) in favour of Lua.
 
-- [ ] Decide whether to migrate `defaults/hypr/*.conf` → `hyprland.lua`.
-      Legacy `.conf` still parses and `hyprctl configerrors` is clean, so this is not
-      urgent — but new features (user-defined layouts) are Lua-only.
-      Reference: `/usr/share/hypr/hyprland.lua`, stubs at `/usr/share/hypr/stubs/hl.meta.lua`
-- [ ] If migrating, the `.conf`-per-concern split maps to Lua `require()` modules, so the
-      defaults/hosts layout survives intact.
-- [ ] `windowrulev2` is now hard-deprecated. We already use the new `match:` form —
-      keep it that way. Note effects need explicit values now (`float true`, not `float`).
+- [x] Migrated the Hyprland compositor config to `hyprland.lua` and Lua modules.
+      Hyprlock and Hypridle stay in Hyprlang, as required by those tools.
+- [x] Preserved the per-concern defaults and per-host overrides with Lua `require()`.
+- [x] Replaced the legacy window-rule form with `hl.window_rule()` definitions.
 
 ## Keybinds
 
@@ -89,6 +84,6 @@ log confirms we're on the fallback path: `[cfg] Lua config not found, using lega
 
 ## Misc
 
-- [ ] `windowrules.conf` still has its "convert these to floating windows" TODO unresolved.
+- [ ] `windowrules.lua` still has its "convert these to floating windows" TODO unresolved.
 - [ ] No firewall (`ufw`).
 - [ ] No snapshots/backups (`snapper` + `snap-pac`, or `timeshift`).

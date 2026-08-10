@@ -114,7 +114,7 @@ update_fuzzel_icons() {
 # --- Apply to all themed configs ---
 swap_colors "$DOTS_DIR/waybar/style.css"
 swap_colors "$DOTS_DIR/dunst/dunstrc"
-swap_colors "$DOTS_DIR/hypr/hyprland.conf"
+swap_colors "$DOTS_DIR/hypr/hyprland.lua"
 swap_colors "$DOTS_DIR/fuzzel/fuzzel.ini"
 
 update_waybar_comment
