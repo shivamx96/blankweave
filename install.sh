@@ -45,6 +45,8 @@ copy_file_atomically() {
 
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 USER_HOME="/home/$SUDO_USER"
+USER_UID="$(id -u "$SUDO_USER")"
+USER_RUNTIME_DIR="/run/user/$USER_UID"
 
 # Grant temporary NOPASSWD to avoid repeated password prompts during install
 SUDOERS_TMP="/etc/sudoers.d/hyprarch-install"
@@ -205,9 +207,16 @@ fi
 copy_file_atomically "$REPO_DIR/defaults/hypr/hyprlock.conf" "$CONFIG_DIR/hypr/hyprlock.conf"
 
 echo "Validating Hyprland Lua config..."
+if [ ! -d "$USER_RUNTIME_DIR" ]; then
+    echo "Error: User runtime directory does not exist: $USER_RUNTIME_DIR"
+    echo "Log in as $SUDO_USER to create a systemd user session, then run the installer again."
+    exit 1
+fi
+
 if ! sudo -u "$SUDO_USER" env \
     HOME="$USER_HOME" \
     XDG_CONFIG_HOME="$CONFIG_DIR" \
+    XDG_RUNTIME_DIR="$USER_RUNTIME_DIR" \
     hyprland --verify-config --config "$CONFIG_DIR/hypr/hyprland.lua"; then
     echo "Error: Generated Hyprland Lua config failed validation."
     exit 1
