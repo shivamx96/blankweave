@@ -12,6 +12,7 @@ PopupWindow {
     property bool open: false
     property bool preserveNextClose: false
     property int panelWidth: 340
+    property string anchorAlignment: "right"
 
     visible: open
     grabFocus: true
@@ -49,11 +50,10 @@ PopupWindow {
             if (!target)
                 return
 
-            const point = root.bar.contentItem.mapFromItem(
-                target,
-                target.width - root.implicitWidth,
-                target.height + 8
-            )
+            const targetX = root.anchorAlignment === "center"
+                ? target.width / 2 - root.implicitWidth / 2
+                : target.width - root.implicitWidth
+            const point = root.bar.contentItem.mapFromItem(target, targetX, target.height + 8)
             popupAnchor.rect.x = Math.round(Math.max(6, Math.min(point.x, root.bar.width - root.implicitWidth - 6)))
             popupAnchor.rect.y = Math.round(point.y)
         }
