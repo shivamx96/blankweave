@@ -82,6 +82,12 @@ Each feature is an internal QML module under `defaults/quickshell/Modules/`.
 Reusable presentation lives under `Components/`, and process-backed data goes
 through `Services/ScriptPoller.qml`.
 
+`Components/ControlPopup.qml` provides the anchored, keyboard-dismissible panel
+surface used by interactive status widgets. `ControlSlider.qml` provides the
+shared angular slider treatment. The audio widget uses PipeWire's logical
+default sink and discovers available output nodes at runtime; never encode host
+card IDs or device names in the shell.
+
 The right section is grouped into process-aware application indicators,
 icon-only system controls, and hardware metrics plus power. Add watched apps
 through `ApplicationIndicatorsWidget.qml` using `ProcessIndicator.qml`.
@@ -101,6 +107,8 @@ and UPower.
 
 - **Shell dark**: near-black surfaces with electric blue interaction states
 - **Shell light**: white surfaces with cobalt blue interaction states
+- **Shell typography**: Atkinson Hyperlegible Next for UI text; JetBrains Mono
+  Nerd Font only for icon glyphs
 - Other application configs still use their Catppuccin Mocha/Latte mappings
 - **Toggle**: `Super+D` runs `theme-toggle.sh` which:
   - Swaps hex colors via sed (with placeholder technique to avoid double-replacement) in Dunst, Hyprland, and Fuzzel

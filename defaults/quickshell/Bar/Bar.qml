@@ -219,7 +219,7 @@ PanelWindow {
                 text: root.tooltipText
                 color: root.theme.text
                 font.family: root.theme.fontFamily
-                font.pixelSize: 11
+                font.pixelSize: root.theme.smallTextSize
                 lineHeight: 1.2
                 wrapMode: Text.Wrap
                 horizontalAlignment: Text.AlignHCenter

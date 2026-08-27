@@ -35,7 +35,7 @@ Item {
             text: root.icon
             color: root.foreground
             font.family: theme.iconFontFamily
-            font.pixelSize: 14
+            font.pixelSize: theme.iconSize
             renderType: Text.NativeRendering
         }
 
@@ -44,7 +44,7 @@ Item {
             text: root.label
             color: root.foreground
             font.family: theme.fontFamily
-            font.pixelSize: 12
+            font.pixelSize: theme.textSize
             font.weight: root.labelWeight
             font.letterSpacing: 0.1
             renderType: Text.NativeRendering

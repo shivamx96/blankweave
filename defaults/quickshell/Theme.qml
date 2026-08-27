@@ -9,6 +9,7 @@ QtObject {
 
     readonly property color canvas: dark ? "#05080f" : "#edf4ff"
     readonly property color barSurface: dark ? "#b3070b12" : "#b3f8fbff"
+    readonly property color panelSurface: dark ? "#e60b111c" : "#e8f8fbff"
     readonly property color surface: dark ? "#e60a101b" : "#f5ffffff"
     readonly property color surfaceRaised: dark ? "#f0111a2a" : "#fff7fbff"
     readonly property color surfaceHover: dark ? "#182944" : "#e3efff"
@@ -25,12 +26,19 @@ QtObject {
     readonly property color warning: dark ? "#f4bf50" : "#b46608"
     readonly property color critical: dark ? "#ff6b8a" : "#d52149"
 
-    readonly property string fontFamily: "Inter"
+    readonly property string fontFamily: "Atkinson Hyperlegible Next"
     readonly property string monoFontFamily: "JetBrainsMono Nerd Font"
     readonly property string iconFontFamily: "JetBrainsMono Nerd Font"
 
-    readonly property int barHeight: 42
-    readonly property int widgetHeight: 30
+    readonly property int textSize: 13
+    readonly property int smallTextSize: 12
+    readonly property int microTextSize: 11
+    readonly property int iconSize: 15
+    readonly property int controlIconSize: 17
+    readonly property int heroIconSize: 21
+
+    readonly property int barHeight: 44
+    readonly property int widgetHeight: 32
     readonly property int widgetRadius: 4
     readonly property int sectionPadding: 10
     readonly property int widgetPadding: 9

@@ -70,7 +70,7 @@ Item {
                         : (workspaceButton.occupied ? theme.text : theme.textMuted)
                     opacity: workspaceButton.occupied || workspaceButton.activeWorkspace ? 1 : 0.55
                     font.family: theme.fontFamily
-                    font.pixelSize: 11
+                    font.pixelSize: theme.smallTextSize
                     font.weight: Font.DemiBold
                     font.letterSpacing: 0.15
                 }
