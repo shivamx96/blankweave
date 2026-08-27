@@ -143,13 +143,10 @@ PanelWindow {
         BatteryWidget { bar: root; theme: root.theme; iconOnly: true }
         BarDivider { theme: root.theme }
 
-        MetricWidget {
+        MemoryWidget {
             bar: root
             theme: root.theme
-            icon: ""
             iconOnly: root.compact
-            command: Quickshell.env("HOME") + "/.local/share/hyprarch/shell/memory-usage.sh"
-            clickCommand: "ghostty -e btop"
         }
 
         CpuWidget {

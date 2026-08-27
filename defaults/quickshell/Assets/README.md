@@ -1,4 +1,8 @@
-# Application marks
+# Interface marks
+
+The processor and memory symbols are original HyprArch assets. Their dark and
+light variants use the shell's neutral foreground and blue accent palettes so
+hardware indicators remain independent of icon-font glyph coverage.
 
 The Tailscale connected and disconnected dot patterns follow the canonical
 definitions in Tailscale's
