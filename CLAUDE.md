@@ -153,6 +153,8 @@ and UPower.
   - State stored in `~/.local/share/hyprarch/theme` ("dark" or "light")
 - **Ghostty**: Uses native `theme = light:Catppuccin Latte,dark:Catppuccin Mocha` — reacts to portal automatically, not sed-swapped
 - **Quickshell**: Watches the shared theme state file and updates the full bar live
+- **Hyprlock**: Sources an atomically selected `hyprlock-theme.conf`, generated
+  from the dark/light variants by the installer and `theme-toggle.sh`
 
 ### Hardware detection
 
@@ -196,6 +198,10 @@ GPU monitoring script (`gpu-usage.sh`) auto-detects at runtime: tries `nvidia-sm
 Colors are defined as `"mocha_hex:latte_hex"` pairs in `theme-toggle.sh`. The full Catppuccin Mocha ↔ Latte mapping is in that script's `COLORS` array. To add a new config file to the toggle:
 1. Add a `swap_colors "$DOTS_DIR/<path>"` call
 2. Add its symlink to the `touch -h` loop if applicable
+
+Hyprlock is the exception: keep layout in `hyprlock.conf`, colors in the two
+`hyprlock-theme-{dark,light}.conf` variants, and atomically select the active
+include. Do not run placeholder substitutions over the Hyprlock layout.
 
 ## Gotchas
 

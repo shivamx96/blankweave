@@ -111,12 +111,27 @@ update_fuzzel_icons() {
     fi
 }
 
+update_hyprlock_theme() {
+    local source_file="$DOTS_DIR/hypr/hyprlock-theme-${TARGET}.conf"
+    local target_file="$DOTS_DIR/hypr/hyprlock-theme.conf"
+    local staged_file
+
+    [ -f "$source_file" ] || return
+    staged_file=$(mktemp --tmpdir="$(dirname "$target_file")" ".$(basename "$target_file").XXXXXX") || return 1
+    cp --preserve=mode "$source_file" "$staged_file" || {
+        rm -f "$staged_file"
+        return 1
+    }
+    mv -f "$staged_file" "$target_file"
+}
+
 # --- Apply to all themed configs ---
 swap_colors "$DOTS_DIR/dunst/dunstrc"
 swap_colors "$DOTS_DIR/hypr/hyprland.lua"
 swap_colors "$DOTS_DIR/fuzzel/fuzzel.ini"
 
 update_fuzzel_icons
+update_hyprlock_theme
 
 # Touch symlinks so inotify-based apps (Ghostty, etc.) detect the change
 CONFIG_DIR="$HOME/.config"

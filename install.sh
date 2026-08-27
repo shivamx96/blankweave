@@ -163,6 +163,16 @@ for hypr_config in "$REPO_DIR/defaults/hypr/"*; do
     echo "Deploying $hypr_config"
     copy_file_atomically "$hypr_config" "$DOTS_DIR/hypr/$(basename "$hypr_config")"
 done
+
+# Hyprlock sources a generated theme include. Preserve an existing light-mode
+# preference on reinstall; otherwise match the shell's dark default.
+HYPRLOCK_THEME=dark
+if [ -r "$DOTS_DIR/theme" ] && [ "$(cat "$DOTS_DIR/theme")" = light ]; then
+    HYPRLOCK_THEME=light
+fi
+copy_file_atomically \
+    "$DOTS_DIR/hypr/hyprlock-theme-${HYPRLOCK_THEME}.conf" \
+    "$DOTS_DIR/hypr/hyprlock-theme.conf"
 # Quickshell is a code tree, so mirror it exactly and do not retain removed modules.
 rm -rf "$DOTS_DIR/quickshell"
 cp -rv "$REPO_DIR/defaults/quickshell" "$DOTS_DIR/" || { echo "Failed to copy quickshell"; exit 1; }

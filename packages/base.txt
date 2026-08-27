@@ -29,6 +29,7 @@ networkmanager
 tailscale
 awww
 ttf-roboto
+ttf-atkinson-hyperlegible
 ttf-jetbrains-mono
 noto-fonts
 noto-fonts-emoji
