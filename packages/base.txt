@@ -27,6 +27,7 @@ bluez-utils
 blueman
 networkmanager
 tailscale
+curl
 jq
 awww
 ttf-roboto

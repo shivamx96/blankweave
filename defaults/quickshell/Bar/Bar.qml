@@ -123,6 +123,15 @@ PanelWindow {
     }
 
     BarSection {
+        theme: root.theme
+        anchors.right: centerIsland.left
+        anchors.verticalCenter: parent.verticalCenter
+        z: 2
+
+        WeatherWidget { bar: root; theme: root.theme }
+    }
+
+    BarSection {
         id: rightIsland
         theme: root.theme
         anchors.right: parent.right
