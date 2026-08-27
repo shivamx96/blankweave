@@ -25,14 +25,10 @@ Item {
             theme: root.theme
         }
 
-        ProcessIndicator {
+        DockerWidget {
             id: docker
             bar: root.bar
             theme: root.theme
-            processName: "dockerd"
-            displayName: "Docker"
-            icon: "󰡨"
-            clickCommand: "ghostty -e bash -lc 'docker ps; printf \\\"\\nPress Enter to close...\\\"; read -r'"
         }
     }
 }

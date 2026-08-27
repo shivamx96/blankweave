@@ -111,7 +111,9 @@ Item {
                         ? true
                         : Boolean(modelData.enabled)
 
-                    Layout.preferredWidth: String(modelData.label || "") !== "" ? 48 : 28
+                    Layout.preferredWidth: String(modelData.label || "") !== ""
+                        ? Math.max(48, 24 + String(modelData.label || "").length * 7)
+                        : 28
                     Layout.preferredHeight: 28
                     opacity: root.busy || !actionEnabled ? 0.35 : 1
 
