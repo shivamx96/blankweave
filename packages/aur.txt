@@ -9,7 +9,7 @@ docker
 docker-compose
 claude-code
 openai-codex
-t3code-bin
+t3code-nightly-bin
 lmstudio-bin
 intellij-idea-ultimate-edition
 bruno
