@@ -58,7 +58,17 @@ declare -a COLORS=(
 
 swap_colors() {
     local file="$1"
+    local staged_file
     [ -f "$file" ] || return
+
+    # Hyprland watches its Lua config and may reload after every write. Do all
+    # placeholder substitutions off to the side, then expose only the finished
+    # file with one atomic rename so it can never parse an intermediate value.
+    staged_file=$(mktemp --tmpdir="$(dirname "$file")" ".$(basename "$file").XXXXXX") || return 1
+    cp --preserve=mode "$file" "$staged_file" || {
+        rm -f "$staged_file"
+        return 1
+    }
 
     for pair in "${COLORS[@]}"; do
         local mocha="${pair%%:*}"
@@ -67,10 +77,10 @@ swap_colors() {
         if [ "$TARGET" = "light" ]; then
             # dark -> light: replace mocha with latte
             # Use a temporary placeholder to avoid double-replacement
-            sed -i "s/${mocha}/PLACEHOLDER_${mocha}/gi" "$file"
+            sed -i "s/${mocha}/PLACEHOLDER_${mocha}/gi" "$staged_file"
         else
             # light -> dark: replace latte with mocha
-            sed -i "s/${latte}/PLACEHOLDER_${latte}/gi" "$file"
+            sed -i "s/${latte}/PLACEHOLDER_${latte}/gi" "$staged_file"
         fi
     done
 
@@ -80,23 +90,13 @@ swap_colors() {
         local latte="${pair##*:}"
 
         if [ "$TARGET" = "light" ]; then
-            sed -i "s/PLACEHOLDER_${mocha}/${latte}/gi" "$file"
+            sed -i "s/PLACEHOLDER_${mocha}/${latte}/gi" "$staged_file"
         else
-            sed -i "s/PLACEHOLDER_${latte}/${mocha}/gi" "$file"
+            sed -i "s/PLACEHOLDER_${latte}/${mocha}/gi" "$staged_file"
         fi
     done
-}
 
-# Also update the theme comment in waybar CSS
-update_waybar_comment() {
-    local file="$DOTS_DIR/waybar/style.css"
-    [ -f "$file" ] || return
-
-    if [ "$TARGET" = "light" ]; then
-        sed -i 's|/\* Catppuccin Mocha \*/|/* Catppuccin Latte */|' "$file"
-    else
-        sed -i 's|/\* Catppuccin Latte \*/|/* Catppuccin Mocha */|' "$file"
-    fi
+    mv -f "$staged_file" "$file"
 }
 
 # Update fuzzel icon theme
@@ -112,17 +112,15 @@ update_fuzzel_icons() {
 }
 
 # --- Apply to all themed configs ---
-swap_colors "$DOTS_DIR/waybar/style.css"
 swap_colors "$DOTS_DIR/dunst/dunstrc"
 swap_colors "$DOTS_DIR/hypr/hyprland.lua"
 swap_colors "$DOTS_DIR/fuzzel/fuzzel.ini"
 
-update_waybar_comment
 update_fuzzel_icons
 
 # Touch symlinks so inotify-based apps (Ghostty, etc.) detect the change
 CONFIG_DIR="$HOME/.config"
-for link in "$CONFIG_DIR/ghostty/config" "$CONFIG_DIR/waybar/style.css" "$CONFIG_DIR/dunst/dunstrc" "$CONFIG_DIR/fuzzel/fuzzel.ini"; do
+for link in "$CONFIG_DIR/ghostty/config" "$CONFIG_DIR/dunst/dunstrc" "$CONFIG_DIR/fuzzel/fuzzel.ini"; do
     [ -L "$link" ] && touch -h "$link" 2>/dev/null
 done
 
@@ -157,7 +155,7 @@ gtk-theme-name=Adwaita
 EOF
 
 # --- Reload services ---
-# Waybar auto-reloads via reload_style_on_change
+# Quickshell watches the shared theme state file and updates live.
 # Dunst: kill it; it auto-restarts on next notification
 killall dunst 2>/dev/null
 # Hyprland: reload config

@@ -10,7 +10,7 @@ hl.bind(main_mod .. " + L", hl.dsp.exec_cmd("hyprlock"))
 hl.bind(main_mod .. " + D", hl.dsp.exec_cmd("~/.local/share/hyprarch/shell/theme-toggle.sh"))
 hl.bind(main_mod .. " + SHIFT + W", hl.dsp.exec_cmd("~/.local/share/hyprarch/shell/wallpaper.sh cycle"))
 hl.bind(main_mod .. " + SHIFT + V", hl.dsp.exec_cmd("cliphist list | fuzzel --dmenu | cliphist decode | wl-copy"))
-hl.bind(main_mod .. " + Y", hl.dsp.exec_cmd("pkill -SIGUSR1 waybar"))
+hl.bind(main_mod .. " + Y", hl.dsp.exec_cmd([[qs ipc -n -p "$HOME/.local/share/hyprarch/quickshell" call hyprarch reload]]))
 
 -- Screenshots
 hl.bind("Print", hl.dsp.exec_cmd("grim - | wl-copy"))

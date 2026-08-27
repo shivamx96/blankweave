@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-choice=$(printf "Lock\nSuspend\nShutdown\nReboot\nLogout" | fuzzel --dmenu --prompt "⏻  Power Menu  ")
+choice=$(printf 'Lock\nSuspend\nShutdown\nReboot\nLogout' | fuzzel --dmenu --prompt 'Power  ')
 
 case "$choice" in
     Lock)
@@ -16,6 +16,6 @@ case "$choice" in
         systemctl reboot
         ;;
     Logout)
-        hyprctl dispatch exit
+        uwsm stop
         ;;
 esac

@@ -1,7 +1,7 @@
 local startup_commands = {
     "awww-daemon",
     "~/.local/share/hyprarch/shell/wallpaper.sh random && sleep 1 && hyprlock",
-    "waybar",
+    "quickshell -n -p ~/.local/share/hyprarch/quickshell",
     "dunst",
     "hypridle",
     "wl-paste --type text --watch cliphist store",

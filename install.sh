@@ -10,7 +10,7 @@ if [ "$EUID" -ne 0 ]; then
     echo "###"
     echo "###   This will install and configure:"
     echo "###     - Hyprland (window manager)"
-    echo "###     - Waybar, Dunst, Ghostty, Fuzzel"
+    echo "###     - Quickshell, Dunst, Ghostty, Fuzzel"
     echo "###     - PipeWire audio, Bluetooth, NetworkManager"
     echo "###     - ZSH with Powerlevel10k"
     echo "###     - Host-specific GPU drivers (auto-detected)"
@@ -163,7 +163,9 @@ for hypr_config in "$REPO_DIR/defaults/hypr/"*; do
     echo "Deploying $hypr_config"
     copy_file_atomically "$hypr_config" "$DOTS_DIR/hypr/$(basename "$hypr_config")"
 done
-cp -rv "$REPO_DIR/defaults/waybar" "$DOTS_DIR/" || { echo "Failed to copy waybar"; exit 1; }
+# Quickshell is a code tree, so mirror it exactly and do not retain removed modules.
+rm -rf "$DOTS_DIR/quickshell"
+cp -rv "$REPO_DIR/defaults/quickshell" "$DOTS_DIR/" || { echo "Failed to copy quickshell"; exit 1; }
 cp -rv "$REPO_DIR/defaults/dunst" "$DOTS_DIR/" || { echo "Failed to copy dunst"; exit 1; }
 cp -rv "$REPO_DIR/defaults/ghostty" "$DOTS_DIR/" || { echo "Failed to copy ghostty"; exit 1; }
 cp -rv "$REPO_DIR/defaults/fuzzel" "$DOTS_DIR/" || { echo "Failed to copy fuzzel"; exit 1; }
@@ -179,7 +181,6 @@ chmod +x "$DOTS_DIR/shell"/*.sh
 
 section "GENERATING USER CONFIGS"
 mkdir -p "$CONFIG_DIR/hypr"
-mkdir -p "$CONFIG_DIR/waybar"
 mkdir -p "$CONFIG_DIR/dunst"
 mkdir -p "$CONFIG_DIR/ghostty"
 
@@ -223,13 +224,6 @@ if ! sudo -u "$SUDO_USER" env \
 fi
 
 section "SYMLINKING CONFIGS"
-
-# Waybar
-rm -f "$CONFIG_DIR/waybar/config" "$CONFIG_DIR/waybar/style.css" "$CONFIG_DIR/waybar/power-menu.sh"
-ln -s "$DOTS_DIR/waybar/config" "$CONFIG_DIR/waybar/config"
-ln -s "$DOTS_DIR/waybar/style.css" "$CONFIG_DIR/waybar/style.css"
-chmod +x "$DOTS_DIR/waybar/power-menu.sh"
-ln -s "$DOTS_DIR/waybar/power-menu.sh" "$CONFIG_DIR/waybar/power-menu.sh"
 
 # Dunst
 rm -f "$CONFIG_DIR/dunst/dunstrc"

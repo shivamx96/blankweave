@@ -17,7 +17,7 @@ chmod +x install.sh
 
 The script will:
 - Detect hardware
-- Install packages (Hyprland, waybar, dunst, ghostty, etc.)
+- Install packages (Hyprland, Quickshell, Dunst, Ghostty, etc.)
 - Set up defaults in `~/.local/share/hyprarch/`
 - Generate user configs in `~/.config/`
 
@@ -26,6 +26,7 @@ The script will:
 ### System
 - `Super + L` – lock screen
 - `Super + D` – toggle light/dark theme
+- `Super + Y` – reload the desktop shell
 - `Super + M` – exit Hyprland
 
 ### Applications
@@ -66,7 +67,10 @@ The script will:
 - **Bluetooth** with Blueman GUI manager
 - **Power management** via Hypridle (auto-lock, brightness control, suspend)
 - **Clean notifications** via Dunst
-- **Status bar** with Waybar showing volume, brightness, network, battery, etc.
+- **Native Quickshell bar** with multi-monitor workspaces, audio, brightness,
+  network throughput, Bluetooth, hardware metrics, battery, and power controls
+- **Hyprarch visual system** with floating UI islands and black/blue dark and
+  white/blue light palettes
 
 ## Wallpapers
 
@@ -80,4 +84,6 @@ See [WALLPAPERS.md](WALLPAPERS.md) for recommended wallpaper sources and setup.
 
 ## Customize
 
-Edit `~/.config/` to customize. Waybar, dunst, and ghostty symlinks can be broken to customize independently.
+Edit `~/.config/` to customize application settings. The Quickshell source is
+deployed to `~/.local/share/hyprarch/quickshell/`; Dunst, Ghostty, and Fuzzel
+remain symlinked from `~/.config/`.

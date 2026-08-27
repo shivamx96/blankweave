@@ -1,6 +1,6 @@
 # hyprarch
 
-Arch Linux + Hyprland bootstrap with automatic hardware detection. Deploys a complete desktop environment (Waybar, Dunst, Ghostty, Fuzzel, PipeWire, etc.) with Catppuccin theming across two host profiles: laptop (Intel Arc) and PC (NVIDIA).
+Arch Linux + Hyprland bootstrap with automatic hardware detection. Deploys a complete desktop environment (Quickshell, Dunst, Ghostty, Fuzzel, PipeWire, etc.) across two host profiles: laptop (Intel Arc) and PC (NVIDIA).
 
 ## Architecture
 
@@ -8,7 +8,7 @@ Arch Linux + Hyprland bootstrap with automatic hardware detection. Deploys a com
 hyprarch/
   defaults/          # Universal configs, deployed to ~/.local/share/hyprarch/
     hypr/            # Hyprland configs (keybindings, animations, window rules, etc.)
-    waybar/          # Status bar config + style + power menu script
+    quickshell/      # Native status bar, shared UI primitives, services, modules
     dunst/           # Notification daemon
     ghostty/         # Terminal emulator
     fuzzel/          # App launcher
@@ -30,7 +30,8 @@ hyprarch/
 1. `install.sh` detects hardware via `lspci` (Intel Arc → "laptop", NVIDIA → "pc")
 2. Copies `defaults/` → `~/.local/share/hyprarch/`
 3. Copies `hosts/$HOST/hypr/` → `~/.config/hypr/` (Lua env/monitors, Hypridle)
-4. Symlinks app configs: `~/.config/{waybar,dunst,ghostty,fuzzel}/` → `~/.local/share/hyprarch/`
+4. Launches Quickshell directly from `~/.local/share/hyprarch/quickshell/`
+5. Symlinks app configs: `~/.config/{dunst,ghostty,fuzzel}/` → `~/.local/share/hyprarch/`
 
 ### Hyprland config hierarchy
 
@@ -59,7 +60,7 @@ companion tools; only the Hyprland compositor config uses Lua.
 
 ### Symlink strategy
 
-Waybar, Dunst, Ghostty, Fuzzel, and Fontconfig are symlinked from `~/.config/` back to `~/.local/share/hyprarch/`. This means:
+Dunst, Ghostty, Fuzzel, and Fontconfig are symlinked from `~/.config/` back to `~/.local/share/hyprarch/`. Quickshell runs directly from the deployed defaults. This means:
 - Running `update-hyprarch` (git pull + re-run install) updates configs automatically
 - Users can break a symlink and replace it with a custom file to override
 
@@ -74,29 +75,36 @@ Waybar, Dunst, Ghostty, Fuzzel, and Fontconfig are symlinked from `~/.config/` b
 
 All scripts live in `defaults/shell/`, deployed to `~/.local/share/hyprarch/shell/`. Referenced in configs via that path. `install.sh` runs `chmod +x` on all `*.sh` files.
 
-### Waybar custom modules
+### Quickshell modules
 
-Custom modules (CPU, GPU) use scripts that output JSON:
+The bar is split into three floating islands in `defaults/quickshell/Bar/Bar.qml`.
+Each feature is an internal QML module under `defaults/quickshell/Modules/`.
+Reusable presentation lives under `Components/`, and process-backed data goes
+through `Services/ScriptPoller.qml`.
+
+Process-backed modules (CPU, GPU, memory, network) use scripts that output JSON:
 
 ```json
 {"text":"7","tooltip":"GPU: 7%\nTemp: 44°C\nVRAM: 1.4/32 GB"}
 ```
 
-The waybar config uses `"return-type": "json"` with `"format": "icon  {text}%"` and `"tooltip": "{tooltip}"`. See `gpu-usage.sh` and `cpu-usage.sh` as reference.
-
-Note: Waybar config contains multi-byte Nerd Font icons. Use python or direct file reads rather than sed for modifications to avoid encoding issues.
+`MetricWidget.qml` reads the `text` and `tooltip` fields. See `gpu-usage.sh`,
+`cpu-usage.sh`, and `memory-usage.sh` as references. Prefer native Quickshell
+services for reactive state such as Hyprland workspaces, PipeWire, Bluetooth,
+and UPower.
 
 ### Theme system
 
-- **Dark**: Catppuccin Mocha — base `#1e1e2e`, text `#cdd6f4`
-- **Light**: Catppuccin Latte — base `#eff1f5`, text `#4c4f69`
+- **Shell dark**: near-black surfaces with electric blue interaction states
+- **Shell light**: white surfaces with cobalt blue interaction states
+- Other application configs still use their Catppuccin Mocha/Latte mappings
 - **Toggle**: `Super+D` runs `theme-toggle.sh` which:
-  - Swaps hex colors via sed (with placeholder technique to avoid double-replacement) in: waybar CSS, dunst config, hyprland borders, fuzzel config
+  - Swaps hex colors via sed (with placeholder technique to avoid double-replacement) in Dunst, Hyprland, and Fuzzel
   - Sets `gsettings org.gnome.desktop.interface color-scheme` for portal-aware apps (libadwaita)
   - Writes `~/.config/gtk-3.0/settings.ini` and `gtk-4.0/settings.ini` for GTK apps
   - State stored in `~/.local/share/hyprarch/theme` ("dark" or "light")
 - **Ghostty**: Uses native `theme = light:Catppuccin Latte,dark:Catppuccin Mocha` — reacts to portal automatically, not sed-swapped
-- **Waybar CSS**: Uses `@define-color` variables at the top; `reload_style_on_change: true` auto-reloads on file change
+- **Quickshell**: Watches the shared theme state file and updates the full bar live
 
 ### Hardware detection
 
@@ -121,13 +129,13 @@ GPU monitoring script (`gpu-usage.sh`) auto-detects at runtime: tries `nvidia-sm
 2. Create `hosts/<hostname>/packages.txt` for host-specific packages
 3. Update `detect_host()` in `install.sh` with a new `lspci` pattern
 
-### Adding a new Waybar module
+### Adding a new Quickshell module
 
-1. If custom: create a script in `defaults/shell/` that outputs `{"text":"...","tooltip":"..."}` JSON
-2. Add module config to `defaults/waybar/config` with `"return-type": "json"`
-3. Add module to `modules-left`, `modules-center`, or `modules-right` array
-4. Add CSS styling in `defaults/waybar/style.css` (selector: `#custom-<name>` for custom modules)
-5. If the module has colors: add color entries to the `COLORS` array in `theme-toggle.sh`
+1. Create `defaults/quickshell/Modules/<Name>Widget.qml`
+2. Build on `Components/WidgetFrame.qml` for standard bar behavior
+3. Use a native Quickshell service where available; otherwise use `ScriptPoller`
+4. Add the module to the appropriate island in `Bar/Bar.qml`
+5. Keep colors and geometry in `Theme.qml` instead of defining them per module
 
 ### Adding a new shell script
 
@@ -144,7 +152,7 @@ Colors are defined as `"mocha_hex:latte_hex"` pairs in `theme-toggle.sh`. The fu
 ## Gotchas
 
 - Fuzzel colors are 8-digit RGBA hex **without** `#` prefix (e.g. `1e1e2ee6`)
-- Waybar CSS uses `@define-color` with `#` prefix (e.g. `#1e1e2e`)
+- Quickshell colors and geometry are centralized in `Theme.qml`
 - Hyprland borders use `rgba()` notation (e.g. `rgba(b4befeff)`)
 - Dunst and Ghostty use `#` prefix (e.g. `"#1e1e2e"` and `#1e1e2e`)
 - GTK3 apps (Thunar) don't react to live gsettings changes on Hyprland — only libadwaita apps do
