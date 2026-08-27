@@ -10,6 +10,7 @@ PanelWindow {
 
     required property var modelData
     required property var theme
+    required property var shell
 
     property Item tooltipTarget: null
     property Item pendingTooltipTarget: null
@@ -105,6 +106,7 @@ PanelWindow {
         anchors.leftMargin: root.theme.sectionPadding
         anchors.verticalCenter: parent.verticalCenter
 
+        ApplicationLauncherWidget { bar: root; theme: root.theme }
         SystemOverviewWidget { bar: root; theme: root.theme }
         BarDivider { theme: root.theme }
         WorkspacesWidget { bar: root; theme: root.theme }

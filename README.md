@@ -45,7 +45,8 @@ The live shell never needs elevated privileges; it only reads this cached file.
 - `Super + B` – web browser (Zen)
 - `Super + Shift + B` – Bluetooth manager
 - `Super + F` – file manager (Thunar)
-- `Super + Space` – app launcher (Fuzzel)
+- `Super + Space` – native application launcher
+- `Super + Shift + Space` – Fuzzel fallback launcher
 
 ### Window Management
 - `Super + Arrow Keys` – focus windows
