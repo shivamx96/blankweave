@@ -2,4 +2,5 @@ intel-media-driver
 libva-intel-driver
 vulkan-intel
 intel-gpu-tools
+power-profiles-daemon
 sof-firmware
