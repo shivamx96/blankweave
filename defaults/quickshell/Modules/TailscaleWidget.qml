@@ -13,6 +13,8 @@ WidgetFrame {
         "available": false,
         "daemonRunning": false,
         "connected": false,
+        "loggedIn": false,
+        "needsLogin": false,
         "backend": "Loading",
         "hostname": "",
         "dnsName": "",
@@ -30,8 +32,11 @@ WidgetFrame {
     property string actionKind: ""
     property string actionOutput: ""
     property string actionError: ""
+    property bool loginUrlOpened: false
+    property bool logoutArmed: false
     readonly property bool running: Boolean(status.daemonRunning)
     readonly property bool connected: Boolean(status.connected)
+    readonly property bool loggedIn: Boolean(status.loggedIn)
     readonly property bool busy: actionProcess.running
     readonly property url tailscaleIconSource: Qt.resolvedUrl(
         "../Assets/tailscale-"
@@ -46,12 +51,15 @@ WidgetFrame {
             return
         try {
             root.status = JSON.parse(payload)
+            if (!root.status.loggedIn)
+                root.logoutArmed = false
             root.syncPeerModel()
         } catch (error) {
             root.status = {
                 "available": true,
                 "daemonRunning": true,
                 "connected": false,
+                "loggedIn": false,
                 "backend": "Error",
                 "peers": [],
                 "error": "Could not read Tailscale status"
@@ -126,14 +134,57 @@ WidgetFrame {
         return "Seen " + seen.toLocaleDateString(Qt.locale(), "dd MMM")
     }
 
-    function beginConnectionAction(connect) {
+    function handleActionEvent(payload) {
+        const line = String(payload || "").trim()
+        if (!line)
+            return
+        const separator = line.indexOf("\t")
+        const event = separator >= 0 ? line.slice(0, separator) : line
+        const value = separator >= 0 ? line.slice(separator + 1).trim() : ""
+
+        if (event === "auth-url" && value.startsWith("https://") && !root.loginUrlOpened) {
+            root.loginUrlOpened = true
+            root.actionOutput = "Complete sign-in in your browser"
+            root.bar.run(["xdg-open", value])
+        } else if (event === "error") {
+            root.actionError = value || "Tailscale authentication failed"
+        } else if (event === "state") {
+            root.actionOutput = value
+            statusPoller.refresh()
+        }
+    }
+
+    function beginAction(kind) {
         if (actionProcess.running)
             return
-        root.actionKind = connect ? "connect" : "disconnect"
+        root.actionKind = kind
         root.actionOutput = ""
         root.actionError = ""
-        actionProcess.command = ["tailscale", connect ? "up" : "down"]
+        root.loginUrlOpened = false
+        actionProcess.command = [
+            root.shellDir + "/tailscale-auth.sh",
+            kind,
+            Quickshell.env("USER")
+        ]
         actionProcess.running = true
+    }
+
+    function beginConnectionAction(connect) {
+        if (connect && !root.loggedIn)
+            root.beginAction("login")
+        else
+            root.beginAction(connect ? "connect" : "disconnect")
+    }
+
+    function requestLogout() {
+        if (root.logoutArmed) {
+            logoutGuard.stop()
+            root.logoutArmed = false
+            root.beginAction("logout")
+        } else {
+            root.logoutArmed = true
+            logoutGuard.restart()
+        }
     }
 
     visible: running
@@ -142,14 +193,16 @@ WidgetFrame {
     iconOnly: true
     active: connected || tailscalePanel.open
     attention: running && !connected
-    tooltip: connected
+    tooltip: !loggedIn
+        ? "Tailscale sign-in required\nClick to authenticate"
+        : (connected
         ? "Tailscale connected · " + Number(status.onlinePeerCount || 0) + " peers online\nClick for mesh controls"
-        : "Tailscale " + String(status.backend || "stopped") + "\nClick for controls"
+        : "Tailscale " + String(status.backend || "stopped") + "\nClick for controls")
 
     ScriptPoller {
         id: statusPoller
         command: root.shellDir + "/tailscale-status.sh"
-        interval: tailscalePanel.open ? 4000 : 10000
+        interval: root.actionKind === "login" ? 1000 : (tailscalePanel.open ? 4000 : 10000)
         onUpdated: payload => root.updateStatus(payload)
     }
 
@@ -160,9 +213,9 @@ WidgetFrame {
     Process {
         id: actionProcess
 
-        stdout: StdioCollector {
-            waitForEnd: true
-            onStreamFinished: root.actionOutput = String(text || "").trim()
+        stdout: SplitParser {
+            splitMarker: "\n"
+            onRead: data => root.handleActionEvent(data)
         }
 
         stderr: StdioCollector {
@@ -175,8 +228,13 @@ WidgetFrame {
         }
 
         onExited: (exitCode, exitStatus) => {
-            if (exitCode !== 0)
-                root.actionError = root.actionOutput || "Tailscale action failed"
+            if (exitCode !== 0 && !root.actionError) {
+                root.actionError = root.actionKind === "login" && root.loginUrlOpened
+                    ? "Sign-in was not completed"
+                    : (root.actionOutput || (root.actionKind === "login"
+                        ? "Could not start Tailscale sign-in"
+                        : "Tailscale action failed"))
+            }
             actionSettleTimer.restart()
         }
     }
@@ -188,6 +246,12 @@ WidgetFrame {
             root.actionKind = ""
             statusPoller.refresh()
         }
+    }
+
+    Timer {
+        id: logoutGuard
+        interval: 3500
+        onTriggered: root.logoutArmed = false
     }
 
     onPressed: button => {
@@ -209,35 +273,52 @@ WidgetFrame {
                 root.actionError = ""
                 statusPoller.refresh()
             }
+            if (!open && root.logoutArmed) {
+                logoutGuard.stop()
+                root.logoutArmed = false
+            }
         }
 
         ControlPanelHeader {
             theme: root.theme
             iconSource: root.tailscaleIconSource
             title: "TAILSCALE"
-            subtitle: root.connected
+            subtitle: root.logoutArmed
+                ? "Select sign out again to confirm"
+                : (!root.loggedIn
+                ? (root.actionKind === "login" ? "Waiting for browser sign-in…" : "Sign in required")
+                : (root.connected
                 ? (String(root.status.tailnet || "Connected") + " · " + String(root.status.hostname || "This device"))
                 : (root.busy
                     ? (root.actionKind === "connect" ? "Connecting…" : "Disconnecting…")
-                    : String(root.status.backend || "Stopped"))
-            actions: [
-                { "id": "refresh", "icon": "󰑐", "active": statusPoller.ready },
-                { "id": "admin", "icon": "󰖟" },
-                {
-                    "id": "power",
-                    "icon": root.connected ? "󰅖" : "󰐥",
-                    "active": root.connected,
-                    "attention": !root.connected
-                }
-            ]
+                    : String(root.status.backend || "Stopped"))))
+            actions: root.loggedIn
+                ? [
+                    { "id": "admin", "icon": "󰖟" },
+                    {
+                        "id": "power",
+                        "icon": root.connected ? "󰅖" : "󰐥",
+                        "active": root.connected
+                    },
+                    {
+                        "id": "logout",
+                        "icon": "󰍃",
+                        "attention": root.logoutArmed
+                    }
+                ]
+                : [
+                    { "id": "login", "icon": "󰍂", "attention": true }
+                ]
             onActionPressed: actionId => {
-                if (actionId === "refresh") {
-                    statusPoller.refresh()
-                } else if (actionId === "admin") {
+                if (actionId === "admin") {
                     tailscalePanel.open = false
                     root.bar.run(["xdg-open", "https://login.tailscale.com/admin/machines"])
                 } else if (actionId === "power") {
                     root.beginConnectionAction(!root.connected)
+                } else if (actionId === "login") {
+                    root.beginAction("login")
+                } else if (actionId === "logout") {
+                    root.requestLogout()
                 }
             }
         }
@@ -249,27 +330,33 @@ WidgetFrame {
             metrics: [
                 {
                     "label": "STATUS",
-                    "value": root.connected ? "Online" : "Offline",
+                    "value": !root.loggedIn ? "Sign in" : (root.connected ? "Online" : "Offline"),
                     "active": root.connected,
-                    "attention": !root.connected
+                    "attention": !root.loggedIn
                 },
                 {
                     "label": "PEERS",
-                    "value": Number(root.status.onlinePeerCount || 0) + " / " + Number(root.status.peerCount || 0)
+                    "value": root.connected
+                        ? Number(root.status.onlinePeerCount || 0) + " / " + Number(root.status.peerCount || 0)
+                        : "—"
                 },
                 {
                     "label": "RELAY",
-                    "value": String(root.status.relay || "Direct").toUpperCase()
+                    "value": root.connected
+                        ? String(root.status.relay || "Direct").toUpperCase()
+                        : "—"
                 }
             ]
         }
 
         ControlSectionLabel {
+            visible: root.loggedIn
             theme: root.theme
             text: "THIS DEVICE"
         }
 
         ColumnLayout {
+            visible: root.loggedIn
             Layout.fillWidth: true
             spacing: 1
 
@@ -303,16 +390,17 @@ WidgetFrame {
             }
         }
 
-        ControlDivider { theme: root.theme }
+        ControlDivider { visible: root.loggedIn; theme: root.theme }
 
         ControlSectionLabel {
+            visible: root.loggedIn
             theme: root.theme
             text: "DEVICES"
         }
 
         ListView {
             id: peerList
-            visible: peerModel.count > 0
+            visible: root.loggedIn && peerModel.count > 0
             Layout.fillWidth: true
             Layout.preferredHeight: visible ? Math.min(contentHeight, 8 * 44) : 0
             model: peerModel
@@ -383,17 +471,33 @@ WidgetFrame {
         }
 
         ApplicationEmptyState {
-            visible: peerModel.count === 0
+            visible: !root.loggedIn || peerModel.count === 0
             theme: root.theme
-            icon: "󰌘"
-            title: root.connected ? "No other devices" : "Mesh is offline"
-            message: root.connected
-                ? "Devices in this tailnet will appear here."
-                : "Reconnect Tailscale to see your devices."
+            icon: root.loggedIn ? "󰌘" : "󰍂"
+            title: !root.loggedIn
+                ? "Sign in to Tailscale"
+                : (root.connected ? "No other devices" : "Mesh is offline")
+            message: !root.loggedIn
+                ? "Authenticate this device to join your tailnet."
+                : (root.connected
+                    ? "Devices in this tailnet will appear here."
+                    : "Reconnect Tailscale to see your devices.")
+        }
+
+        ControlAction {
+            visible: !root.loggedIn
+            theme: root.theme
+            icon: root.actionKind === "login" ? "󰔟" : "󰍂"
+            label: root.actionKind === "login"
+                ? (root.loginUrlOpened ? "Complete sign-in in browser" : "Starting sign-in…")
+                : "Sign in"
+            active: root.actionKind === "login"
+            enabled: !root.busy
+            onPressed: root.beginAction("login")
         }
 
         Text {
-            visible: Number(root.status.hiddenPeerCount || 0) > 0
+            visible: root.loggedIn && Number(root.status.hiddenPeerCount || 0) > 0
             Layout.fillWidth: true
             text: "+ " + Number(root.status.hiddenPeerCount || 0) + " more devices in the admin console"
             color: root.theme.textMuted
@@ -414,6 +518,7 @@ WidgetFrame {
             font.pixelSize: root.theme.microTextSize
             renderType: Text.NativeRendering
         }
+
     }
 
     Component.onCompleted: root.syncPeerModel()
