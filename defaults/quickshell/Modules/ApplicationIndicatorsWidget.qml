@@ -17,7 +17,7 @@ Item {
     RowLayout {
         id: indicators
         anchors.fill: parent
-        spacing: 2
+        spacing: theme.barItemGap
 
         ProcessIndicator {
             id: tailscale

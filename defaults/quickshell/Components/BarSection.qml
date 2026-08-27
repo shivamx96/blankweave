@@ -13,6 +13,6 @@ Item {
     RowLayout {
         id: contentRow
         anchors.fill: parent
-        spacing: 2
+        spacing: theme.barItemGap
     }
 }

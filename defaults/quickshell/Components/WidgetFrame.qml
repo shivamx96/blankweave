@@ -14,6 +14,7 @@ Item {
     property bool attention: false
     property bool iconOnly: false
     property int labelWeight: Font.Medium
+    property int labelWidth: 0
     property int horizontalPadding: theme.widgetPadding
     property color foreground: attention ? theme.critical : (active ? theme.accentBright : theme.text)
 
@@ -28,7 +29,7 @@ Item {
     RowLayout {
         id: content
         anchors.centerIn: parent
-        spacing: root.label ? 6 : 0
+        spacing: root.label ? theme.widgetContentGap : 0
 
         Text {
             visible: root.icon !== ""
@@ -41,8 +42,10 @@ Item {
 
         Text {
             visible: !root.iconOnly && root.label !== ""
+            Layout.preferredWidth: root.labelWidth > 0 ? root.labelWidth : implicitWidth
             text: root.label
             color: root.foreground
+            horizontalAlignment: root.labelWidth > 0 ? Text.AlignRight : Text.AlignLeft
             font.family: theme.fontFamily
             font.pixelSize: theme.textSize
             font.weight: root.labelWeight

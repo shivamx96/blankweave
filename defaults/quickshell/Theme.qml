@@ -21,7 +21,7 @@ QtObject {
     readonly property color accentSurface: dark ? "#253b82f6" : "#1f2563eb"
     readonly property color outline: dark ? "#33476a" : "#bdd3f3"
     readonly property color outlineStrong: dark ? "#4f75ad" : "#8ab4ed"
-    readonly property color divider: dark ? "#253b587a" : "#b4cbe9"
+    readonly property color divider: dark ? "#607da6" : "#91add4"
     readonly property color success: dark ? "#3ddc97" : "#07894f"
     readonly property color warning: dark ? "#f4bf50" : "#b46608"
     readonly property color critical: dark ? "#ff6b8a" : "#d52149"
@@ -37,12 +37,15 @@ QtObject {
     readonly property int controlIconSize: 17
     readonly property int heroIconSize: 21
 
-    readonly property int barHeight: 44
-    readonly property int widgetHeight: 32
+    readonly property int barHeight: 40
+    readonly property int widgetHeight: 30
     readonly property int widgetRadius: 4
-    readonly property int sectionPadding: 10
-    readonly property int widgetPadding: 9
-    readonly property int gap: 6
+    readonly property int sectionPadding: 7
+    readonly property int widgetPadding: 6
+    readonly property int metricLabelWidth: 32
+    readonly property int widgetContentGap: 4
+    readonly property int barItemGap: 0
+    readonly property int dividerMargin: 5
 
     function applyTheme(value) {
         root.dark = String(value || "").trim() !== "light"

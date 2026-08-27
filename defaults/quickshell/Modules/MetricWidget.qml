@@ -12,6 +12,8 @@ WidgetFrame {
     property string detail: ""
     property string suffix: "%"
 
+    horizontalPadding: 7
+    labelWidth: theme.metricLabelWidth
     label: value + suffix
     tooltip: detail
 
