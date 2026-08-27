@@ -151,6 +151,7 @@ PanelWindow {
         AudioWidget { bar: root; theme: root.theme; iconOnly: true }
         BluetoothWidget { bar: root; theme: root.theme; iconOnly: true }
         NetworkWidget { bar: root; theme: root.theme; iconOnly: true }
+        NotificationWidget { bar: root; theme: root.theme }
         BatteryWidget { bar: root; theme: root.theme; iconOnly: true }
         BarDivider { theme: root.theme }
 

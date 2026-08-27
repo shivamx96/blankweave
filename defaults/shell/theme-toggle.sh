@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 #
-# Toggle between Catppuccin Mocha (dark) and Latte (light) across all themed apps.
-# State is stored in ~/.local/share/hyprarch/theme
+# Toggle between the Hyprarch dark/light shell palettes and the corresponding
+# legacy application themes. State is stored in ~/.local/share/hyprarch/theme.
 
 DOTS_DIR="$HOME/.local/share/hyprarch"
 STATE_FILE="$DOTS_DIR/theme"
@@ -17,9 +17,23 @@ else
 fi
 
 # --- Color maps ---
-# Mocha (dark) -> Latte (light) pairs
+# Dark -> light pairs. The later entries retain Catppuccin mappings for apps
+# that have not yet moved to the native Hyprarch palette.
 # Order matters: replace longer/more-specific values first to avoid partial matches
 declare -a COLORS=(
+    # Hyprarch shell surfaces
+    "05080f:edf4ff"
+    "0b111c:f8fbff"
+    "111a2a:f7fbff"
+    "f4f8ff:081426"
+    "8798ae:607087"
+    "67a6ff:1d4ed8"
+    "4f75ad:8ab4ed"
+    "33476a:bdd3f3"
+    "607da6:91add4"
+    "3ddc97:07894f"
+    "f4bf50:b46608"
+    "ff6b8a:d52149"
     # base
     "1e1e2e:eff1f5"
     # mantle
@@ -171,7 +185,7 @@ EOF
 
 # --- Reload services ---
 # Quickshell watches the shared theme state file and updates live.
-# Dunst: kill it; it auto-restarts on next notification
-killall dunst 2>/dev/null
+# Reload Dunst in place so the new palette applies without discarding history.
+dunstctl reload "$DOTS_DIR/dunst/dunstrc" 2>/dev/null || killall dunst 2>/dev/null
 # Hyprland: reload config
 hyprctl reload 2>/dev/null
