@@ -73,12 +73,9 @@ Hyprland 0.55+ deprecated Hyprlang (`.conf`) in favour of Lua.
 
 ## Brightness
 
-- [ ] hyprsunset removed (2026-07-31) — it was gamma-faking brightness and was never
-      installed on laptop anyway. External monitors now have **no** brightness backend;
-      `brightness.sh` reports `none` and the Quickshell module hides itself.
-- [ ] Add a `ddcutil` backend for external monitors (real DDC/CI backlight control, not
-      gamma). Needs the `i2c-dev` module and `i2c` group. This was the original intent —
-      `brightness-module.sh`'s header comment already claims ddcutil support.
+- [x] Replaced gamma-faked external brightness with real DDC/CI control. The brightness
+      helper maps each DRM connector to its dynamically assigned I²C bus, while internal
+      panels continue to use the kernel backlight API.
 
 ## Misc
 

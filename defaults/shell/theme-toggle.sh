@@ -160,10 +160,3 @@ EOF
 killall dunst 2>/dev/null
 # Hyprland: reload config
 hyprctl reload 2>/dev/null
-
-# --- Notify ---
-if [ "$TARGET" = "light" ]; then
-    notify-send -t 2000 "Theme" "Switched to Catppuccin Latte (light)"
-else
-    notify-send -t 2000 "Theme" "Switched to Catppuccin Mocha (dark)"
-fi

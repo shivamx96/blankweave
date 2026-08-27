@@ -11,9 +11,11 @@ RowLayout {
     property real value: 0
     property real stepSize: 1
     property string valueText: Math.round(value) + "%"
+    property bool interactionActive: false
     readonly property alias pressed: control.pressed
 
     signal valueMoved(real value)
+    signal valueCommitted(real value)
 
     Layout.fillWidth: true
     spacing: 10
@@ -36,6 +38,15 @@ RowLayout {
         value: root.value
         stepSize: root.stepSize
         onMoved: root.valueMoved(value)
+        onPressedChanged: {
+            if (pressed) {
+                root.interactionActive = true
+            }
+            else if (root.interactionActive) {
+                root.interactionActive = false
+                root.valueCommitted(value)
+            }
+        }
     }
 
     Text {

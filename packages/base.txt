@@ -13,6 +13,7 @@ fuzzel
 zed
 thunar
 brightnessctl
+ddcutil
 upower
 btop
 fastfetch

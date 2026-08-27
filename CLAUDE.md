@@ -94,6 +94,12 @@ uses PipeWire's logical default sink and
 discovers available output nodes at runtime; never encode host card IDs or
 device names in the shell.
 
+Brightness is also runtime-selected: internal eDP/LVDS/DSI panels use
+`brightnessctl`, while external displays use DDC/CI VCP `0x10`. Pass the
+Quickshell screen's DRM connector to `brightness.sh`; it resolves and caches the
+corresponding I²C bus because `/dev/i2c-*` numbering is not stable. The display
+panel also owns the global dark/light toggle as an inline header action.
+
 The right section is grouped into process-aware application indicators,
 icon-only system controls, and hardware metrics plus power. Add watched apps
 through `ApplicationIndicatorsWidget.qml` using `ProcessIndicator.qml`.

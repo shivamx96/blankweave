@@ -10,6 +10,7 @@ PopupWindow {
     required property Item anchorItem
     default property alias content: panelContent.children
     property bool open: false
+    property bool preserveNextClose: false
     property int panelWidth: 340
 
     visible: open
@@ -18,7 +19,21 @@ PopupWindow {
     implicitWidth: panelWidth
     implicitHeight: panelContent.implicitHeight + 28
 
-    onClosed: open = false
+    onClosed: {
+        if (preserveNextClose) {
+            preserveNextClose = false
+            reopenTimer.restart()
+        }
+        else {
+            open = false
+        }
+    }
+
+    Timer {
+        id: reopenTimer
+        interval: 1
+        onTriggered: root.open = true
+    }
 
     anchor {
         id: popupAnchor
