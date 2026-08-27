@@ -183,11 +183,21 @@ cp -rv "$REPO_DIR/defaults/xdg-desktop-portal" "$DOTS_DIR/" || { echo "Failed to
 cp -rv "$REPO_DIR/defaults/fontconfig" "$DOTS_DIR/" || { echo "Failed to copy fontconfig"; exit 1; }
 cp -rv "$REPO_DIR/defaults/shell" "$DOTS_DIR/" || { echo "Failed to copy shell"; exit 1; }
 
+HARDWARE_OVERRIDES="$REPO_DIR/hosts/$HOST/hardware-overrides.json"
+if [ -f "$HARDWARE_OVERRIDES" ]; then
+    copy_file_atomically "$HARDWARE_OVERRIDES" "$DOTS_DIR/hardware-overrides.json"
+fi
+
 # Mirror wallpapers exactly so removals in the repo propagate (cp alone never deletes stale files)
 rm -rf "$DOTS_DIR/wallpapers"
 cp -rv "$REPO_DIR/defaults/wallpapers" "$DOTS_DIR/" || { echo "Failed to copy wallpapers"; exit 1; }
 
 chmod +x "$DOTS_DIR/shell"/*.sh
+
+echo "Capturing sanitized hardware inventory..."
+if ! "$DOTS_DIR/shell/hardware-inventory.sh" "$SUDO_USER"; then
+    echo "Warning: Could not capture hardware inventory; the live system overview will use generic fallbacks"
+fi
 
 section "GENERATING USER CONFIGS"
 mkdir -p "$CONFIG_DIR/hypr"

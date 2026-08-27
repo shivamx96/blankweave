@@ -20,6 +20,17 @@ The script will:
 - Install packages (Hyprland, Quickshell, Dunst, Ghostty, etc.)
 - Set up defaults in `~/.local/share/hyprarch/`
 - Generate user configs in `~/.config/`
+- Capture a sanitized hardware inventory for the native system panel
+
+The hardware inventory stores motherboard, display, and DIMM model/specification
+fields, but excludes hardware serial numbers and machine UUIDs. Refresh it after
+changing RAM or displays without reinstalling:
+
+```bash
+sudo ~/.local/share/hyprarch/shell/hardware-inventory.sh "$USER"
+```
+
+The live shell never needs elevated privileges; it only reads this cached file.
 
 ## Keybindings
 

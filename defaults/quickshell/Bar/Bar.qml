@@ -105,7 +105,7 @@ PanelWindow {
         anchors.leftMargin: root.theme.sectionPadding
         anchors.verticalCenter: parent.verticalCenter
 
-        LauncherWidget { bar: root; theme: root.theme }
+        SystemOverviewWidget { bar: root; theme: root.theme }
         BarDivider { theme: root.theme }
         WorkspacesWidget { bar: root; theme: root.theme }
         BarDivider { theme: root.theme; visible: !root.veryCompact }
