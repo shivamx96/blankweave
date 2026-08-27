@@ -152,13 +152,10 @@ PanelWindow {
             clickCommand: "ghostty -e btop"
         }
 
-        MetricWidget {
+        CpuWidget {
             bar: root
             theme: root.theme
-            icon: ""
             iconOnly: root.compact
-            command: Quickshell.env("HOME") + "/.local/share/hyprarch/shell/cpu-usage.sh"
-            clickCommand: "ghostty -e btop"
         }
 
         MetricWidget {
