@@ -27,6 +27,19 @@ WidgetFrame {
         return String(node.description || node.nickname || node.name || "Audio output")
     }
 
+    function nodeIcon(node) {
+        const description = root.nodeLabel(node).toLowerCase()
+        if (description.includes("headset"))
+            return "󰋎"
+        if (description.includes("headphone"))
+            return "󰋋"
+        if (description.includes("bluetooth"))
+            return "󰂯"
+        if (description.includes("hdmi") || description.includes("displayport") || description.includes("display port"))
+            return "󰍹"
+        return "󰓃"
+    }
+
     function setPreferredSink(node) {
         if (node)
             Pipewire.preferredDefaultAudioSink = node
@@ -64,127 +77,50 @@ WidgetFrame {
         bar: root.bar
         theme: root.theme
         anchorItem: root
-        panelWidth: 370
+        panelWidth: 350
 
-        RowLayout {
-            Layout.fillWidth: true
-            spacing: 10
-
-            Text {
-                text: "󰕾"
-                color: root.theme.accentBright
-                font.family: root.theme.iconFontFamily
-                font.pixelSize: root.theme.heroIconSize
-            }
-
-            ColumnLayout {
-                Layout.fillWidth: true
-                spacing: 2
-
-                Text {
-                    text: "AUDIO OUTPUT"
-                    color: root.theme.text
-                    font.family: root.theme.fontFamily
-                    font.pixelSize: root.theme.textSize
-                    font.weight: Font.Bold
-                    font.letterSpacing: 1.2
+        ControlPanelHeader {
+            theme: root.theme
+            icon: "󰎆"
+            title: "SOUND"
+            subtitle: root.nodeLabel(root.sink)
+            actions: [
+                { "id": "mixer", "icon": "󰒓" },
+                { "id": "mute", "icon": root.muted ? "󰝟" : "󰕾", "attention": root.muted }
+            ]
+            onActionPressed: actionId => {
+                if (actionId === "mixer") {
+                    audioPanel.open = false
+                    root.bar.run(["pavucontrol"])
                 }
-
-                Text {
-                    Layout.fillWidth: true
-                    text: root.nodeLabel(root.sink)
-                    color: root.theme.textMuted
-                    elide: Text.ElideRight
-                    font.family: root.theme.fontFamily
-                    font.pixelSize: root.theme.smallTextSize
-                }
-            }
-
-            Item {
-                Layout.preferredWidth: 30
-                Layout.preferredHeight: 28
-
-                Text {
-                    anchors.centerIn: parent
-                    text: root.muted ? "󰝟" : "󰕾"
-                    color: root.muted ? root.theme.critical : root.theme.text
-                    font.family: root.theme.iconFontFamily
-                    font.pixelSize: root.theme.controlIconSize
-                }
-
-                Rectangle {
-                    anchors.horizontalCenter: parent.horizontalCenter
-                    anchors.bottom: parent.bottom
-                    width: muteMouse.containsMouse ? 18 : 0
-                    height: 1
-                    color: root.muted ? root.theme.critical : root.theme.accentBright
-
-                    Behavior on width {
-                        NumberAnimation { duration: 140; easing.type: Easing.OutCubic }
-                    }
-                }
-
-                MouseArea {
-                    id: muteMouse
-                    anchors.fill: parent
-                    hoverEnabled: true
-                    cursorShape: Qt.PointingHandCursor
-                    onClicked: {
-                        if (root.sink && root.sink.audio)
-                            root.sink.audio.muted = !root.sink.audio.muted
-                    }
-                }
+                else if (actionId === "mute" && root.sink && root.sink.audio)
+                    root.sink.audio.muted = !root.sink.audio.muted
             }
         }
 
-        RowLayout {
-            Layout.fillWidth: true
-            spacing: 10
+        ControlSectionLabel {
+            theme: root.theme
+            text: "OUTPUT LEVEL"
+        }
 
-            Text {
-                text: root.muted ? "󰝟" : (root.percentage < 35 ? "󰕿" : (root.percentage < 70 ? "󰖀" : "󰕾"))
-                color: root.muted ? root.theme.critical : root.theme.accentBright
-                font.family: root.theme.iconFontFamily
-                font.pixelSize: root.theme.controlIconSize
-            }
-
-            ControlSlider {
-                theme: root.theme
-                Layout.fillWidth: true
-                from: 0
-                to: 1.5
-                value: root.volume
-                stepSize: 0.01
-                onMoved: {
-                    if (root.sink && root.sink.audio)
-                        root.sink.audio.volume = value
-                }
-            }
-
-            Text {
-                Layout.preferredWidth: 42
-                horizontalAlignment: Text.AlignRight
-                text: root.percentage + "%"
-                color: root.theme.text
-                font.family: root.theme.fontFamily
-                font.pixelSize: root.theme.textSize
-                font.weight: Font.DemiBold
+        ControlValueRow {
+            theme: root.theme
+            from: 0
+            to: 1.5
+            value: root.volume
+            stepSize: 0.01
+            valueText: root.percentage + "%"
+            onValueMoved: value => {
+                if (root.sink && root.sink.audio)
+                    root.sink.audio.volume = value
             }
         }
 
-        Rectangle {
-            Layout.fillWidth: true
-            Layout.preferredHeight: 1
-            color: root.theme.divider
-        }
+        ControlDivider { theme: root.theme }
 
-        Text {
+        ControlSectionLabel {
+            theme: root.theme
             text: "OUTPUT DEVICES"
-            color: root.theme.textMuted
-            font.family: root.theme.fontFamily
-            font.pixelSize: root.theme.microTextSize
-            font.weight: Font.DemiBold
-            font.letterSpacing: 1.1
         }
 
         ListView {
@@ -203,7 +139,7 @@ WidgetFrame {
                 readonly property bool selected: root.sink === modelData
 
                 width: sinkList.width
-                height: 38
+                height: 36
 
                 Rectangle {
                     anchors.left: parent.left
@@ -218,8 +154,20 @@ WidgetFrame {
                 }
 
                 Text {
+                    id: deviceIcon
                     anchors.left: parent.left
                     anchors.leftMargin: 12
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: root.nodeIcon(sinkRow.modelData)
+                    color: sinkRow.selected ? root.theme.accentBright : root.theme.textMuted
+                    font.family: root.theme.iconFontFamily
+                    font.pixelSize: root.theme.iconSize
+                    renderType: Text.NativeRendering
+                }
+
+                Text {
+                    anchors.left: deviceIcon.right
+                    anchors.leftMargin: 10
                     anchors.right: selectedMark.left
                     anchors.rightMargin: 8
                     anchors.verticalCenter: parent.verticalCenter
@@ -252,50 +200,6 @@ WidgetFrame {
             }
         }
 
-        Item {
-            Layout.fillWidth: true
-            Layout.preferredHeight: 30
-
-            RowLayout {
-                anchors.centerIn: parent
-                spacing: 7
-
-                Text {
-                    text: "󰒓"
-                    color: root.theme.accentBright
-                    font.family: root.theme.iconFontFamily
-                    font.pixelSize: root.theme.iconSize
-                }
-
-                Text {
-                    text: "Open advanced mixer"
-                    color: root.theme.text
-                    font.family: root.theme.fontFamily
-                    font.pixelSize: root.theme.smallTextSize
-                    font.weight: Font.Medium
-                }
-            }
-
-            Rectangle {
-                anchors.horizontalCenter: parent.horizontalCenter
-                anchors.bottom: parent.bottom
-                width: mixerMouse.containsMouse ? 122 : 0
-                height: 1
-                color: root.theme.accentBright
-
-                Behavior on width {
-                    NumberAnimation { duration: 150; easing.type: Easing.OutCubic }
-                }
-            }
-
-            MouseArea {
-                id: mixerMouse
-                anchors.fill: parent
-                hoverEnabled: true
-                cursorShape: Qt.PointingHandCursor
-                onClicked: root.bar.run(["pavucontrol"])
-            }
-        }
     }
 
 }

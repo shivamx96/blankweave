@@ -10,13 +10,13 @@ PopupWindow {
     required property Item anchorItem
     default property alias content: panelContent.children
     property bool open: false
-    property int panelWidth: 360
+    property int panelWidth: 340
 
     visible: open
     grabFocus: true
     color: "transparent"
     implicitWidth: panelWidth
-    implicitHeight: panelContent.implicitHeight + 32
+    implicitHeight: panelContent.implicitHeight + 28
 
     onClosed: open = false
 
@@ -85,8 +85,8 @@ PopupWindow {
         ColumnLayout {
             id: panelContent
             anchors.fill: parent
-            anchors.margins: 16
-            spacing: 12
+            anchors.margins: 14
+            spacing: 10
         }
     }
 }

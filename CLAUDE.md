@@ -84,9 +84,15 @@ through `Services/ScriptPoller.qml`.
 
 `Components/ControlPopup.qml` provides the anchored, keyboard-dismissible panel
 surface used by interactive status widgets. `ControlSlider.qml` provides the
-shared angular slider treatment. The audio widget uses PipeWire's logical
-default sink and discovers available output nodes at runtime; never encode host
-card IDs or device names in the shell.
+shared angular slider treatment. Interactive panels compose
+`ControlPanelHeader`, `ControlValueRow`, `ControlDivider`,
+`ControlSectionLabel`, and `ControlAction`; extend those primitives instead of
+recreating panel headers, value rows, section labels, or footer actions inside
+individual widgets. Widget-wide controls belong in `ControlPanelHeader.actions`;
+reserve `ControlAction` footer rows for secondary navigation. The audio widget
+uses PipeWire's logical default sink and
+discovers available output nodes at runtime; never encode host card IDs or
+device names in the shell.
 
 The right section is grouped into process-aware application indicators,
 icon-only system controls, and hardware metrics plus power. Add watched apps
