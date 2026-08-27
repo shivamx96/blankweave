@@ -5,7 +5,7 @@ set -u
 interface=$(ip route show default 2>/dev/null | awk 'NR == 1 { print $5 }')
 
 if [[ -z $interface || ! -d /sys/class/net/$interface ]]; then
-    jq -cn '{icon:"󰤭", text:"Offline", tooltip:"No network connection"}'
+    jq -cn '{icon:"󰤭", text:"Offline", tooltip:"No network connection", kind:"disconnected", interface:"", connection:"", ip:"", gateway:"", download:"0 B/s", upload:"0 B/s"}'
     exit 0
 fi
 
@@ -60,19 +60,29 @@ connection=$(nmcli -g GENERAL.CONNECTION device show "$interface" 2>/dev/null | 
 
 if [[ -d /sys/class/net/$interface/wireless ]]; then
     icon="󰤨"
+    kind="wifi"
     signal=$(nmcli -t -f active,signal device wifi 2>/dev/null | awk -F: '$1 == "yes" { print $2; exit }')
     detail="Wi-Fi: ${connection:-Unknown}"$'\n'"Interface: $interface"
     [[ -n ${signal:-} ]] && detail+=$'\n'"Signal: ${signal}%"
 else
     icon=""
+    kind="ethernet"
     detail="Ethernet: ${connection:-Connected}"$'\n'"Interface: $interface"
 fi
 
 [[ -n ${ip_address:-} ]] && detail+=$'\n'"IP: $ip_address"
 detail+=$'\n'"Download: ${down}/s · Upload: ${up}/s"
+gateway=$(ip route show default dev "$interface" 2>/dev/null | awk 'NR == 1 { print $3 }')
 
 jq -cn \
     --arg icon "$icon" \
     --arg text "↓${down} ↑${up}" \
     --arg tooltip "$detail" \
-    '{icon:$icon, text:$text, tooltip:$tooltip}'
+    --arg kind "$kind" \
+    --arg interface "$interface" \
+    --arg connection "${connection:-}" \
+    --arg ip "${ip_address:-}" \
+    --arg gateway "${gateway:-}" \
+    --arg download "${down}/s" \
+    --arg upload "${up}/s" \
+    '{icon:$icon, text:$text, tooltip:$tooltip, kind:$kind, interface:$interface, connection:$connection, ip:$ip, gateway:$gateway, download:$download, upload:$upload}'
