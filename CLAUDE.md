@@ -100,6 +100,14 @@ Quickshell screen's DRM connector to `brightness.sh`; it resolves and caches the
 corresponding I²C bus because `/dev/i2c-*` numbering is not stable. The display
 panel also owns the global dark/light toggle as an inline header action.
 
+Bluetooth uses Quickshell's native BlueZ model for live state, but device rows
+must contain primitive snapshots rather than `BluetoothDevice` objects because
+discovery can invalidate those objects while delegates are incubating. Resolve
+actions back to a live device by address. A panel-owned discovery session must
+also be stopped after close so scanning cannot degrade Bluetooth audio. Power
+changes go through `bluetooth-power.sh` for rfkill persistence, and successful
+audio-device connections become the preferred PipeWire output.
+
 The right section is grouped into process-aware application indicators,
 icon-only system controls, and hardware metrics plus power. Add watched apps
 through `ApplicationIndicatorsWidget.qml` using `ProcessIndicator.qml`.

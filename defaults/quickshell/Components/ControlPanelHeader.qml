@@ -71,7 +71,9 @@ RowLayout {
                 Text {
                     anchors.centerIn: parent
                     text: String(actionItem.modelData.icon || "")
-                    color: actionItem.modelData.attention ? root.theme.critical : root.theme.text
+                    color: actionItem.modelData.attention
+                        ? root.theme.critical
+                        : (actionItem.modelData.active ? root.theme.accentBright : root.theme.text)
                     font.family: root.theme.iconFontFamily
                     font.pixelSize: root.theme.controlIconSize
                     renderType: Text.NativeRendering
@@ -80,7 +82,7 @@ RowLayout {
                 Rectangle {
                     anchors.horizontalCenter: parent.horizontalCenter
                     anchors.bottom: parent.bottom
-                    width: actionMouse.containsMouse ? 18 : 0
+                    width: actionItem.modelData.active || actionMouse.containsMouse ? 18 : 0
                     height: 1
                     color: actionItem.modelData.attention ? root.theme.critical : root.theme.accentBright
 
