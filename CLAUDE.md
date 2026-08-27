@@ -82,6 +82,10 @@ Each feature is an internal QML module under `defaults/quickshell/Modules/`.
 Reusable presentation lives under `Components/`, and process-backed data goes
 through `Services/ScriptPoller.qml`.
 
+The right section is grouped into process-aware application indicators,
+icon-only system controls, and hardware metrics plus power. Add watched apps
+through `ApplicationIndicatorsWidget.qml` using `ProcessIndicator.qml`.
+
 Process-backed modules (CPU, GPU, memory, network) use scripts that output JSON:
 
 ```json

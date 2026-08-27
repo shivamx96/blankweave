@@ -129,11 +129,28 @@ PanelWindow {
         anchors.rightMargin: root.theme.sectionPadding
         anchors.verticalCenter: parent.verticalCenter
 
-        BrightnessWidget { bar: root; theme: root.theme; iconOnly: root.compact }
-        AudioWidget { bar: root; theme: root.theme; iconOnly: root.compact }
-        BluetoothWidget { bar: root; theme: root.theme }
-        NetworkWidget { bar: root; theme: root.theme; iconOnly: root.compact }
+        ApplicationIndicatorsWidget {
+            id: applicationIndicators
+            bar: root
+            theme: root.theme
+        }
+        BarDivider { theme: root.theme; visible: applicationIndicators.hasIndicators }
+
+        BrightnessWidget { bar: root; theme: root.theme; iconOnly: true }
+        AudioWidget { bar: root; theme: root.theme; iconOnly: true }
+        BluetoothWidget { bar: root; theme: root.theme; iconOnly: true }
+        NetworkWidget { bar: root; theme: root.theme; iconOnly: true }
+        BatteryWidget { bar: root; theme: root.theme; iconOnly: true }
         BarDivider { theme: root.theme }
+
+        MetricWidget {
+            bar: root
+            theme: root.theme
+            icon: ""
+            iconOnly: root.compact
+            command: Quickshell.env("HOME") + "/.local/share/hyprarch/shell/memory-usage.sh"
+            clickCommand: "ghostty -e btop"
+        }
 
         MetricWidget {
             bar: root
@@ -153,17 +170,6 @@ PanelWindow {
             clickCommand: "ghostty -e nvtop"
         }
 
-        MetricWidget {
-            bar: root
-            theme: root.theme
-            icon: ""
-            iconOnly: root.compact
-            command: Quickshell.env("HOME") + "/.local/share/hyprarch/shell/memory-usage.sh"
-            clickCommand: "ghostty -e btop"
-        }
-
-        BatteryWidget { bar: root; theme: root.theme }
-        BarDivider { theme: root.theme }
         PowerWidget { bar: root; theme: root.theme }
     }
 

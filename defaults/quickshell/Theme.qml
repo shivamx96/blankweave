@@ -8,7 +8,7 @@ QtObject {
     property bool dark: true
 
     readonly property color canvas: dark ? "#05080f" : "#edf4ff"
-    readonly property color barSurface: dark ? "#c7070b12" : "#d9f8fbff"
+    readonly property color barSurface: dark ? "#b3070b12" : "#b3f8fbff"
     readonly property color surface: dark ? "#e60a101b" : "#f5ffffff"
     readonly property color surfaceRaised: dark ? "#f0111a2a" : "#fff7fbff"
     readonly property color surfaceHover: dark ? "#182944" : "#e3efff"
