@@ -94,6 +94,10 @@ uses PipeWire's logical default sink and
 discovers available output nodes at runtime; never encode host card IDs or
 device names in the shell.
 
+The rightmost power control is a native panel. Lock and suspend are immediate;
+logout, reboot, and shutdown require a second confirmation click and must clear
+their armed state whenever the panel closes.
+
 Brightness is also runtime-selected: internal eDP/LVDS/DSI panels use
 `brightnessctl`, while external displays use DDC/CI VCP `0x10`. Pass the
 Quickshell screen's DRM connector to `brightness.sh`; it resolves and caches the

@@ -7,11 +7,14 @@ Item {
     required property var theme
     property string icon: ""
     property string label: ""
+    property bool active: false
+    property bool attention: false
 
     signal pressed
 
     Layout.fillWidth: true
     Layout.preferredHeight: 30
+    opacity: enabled ? 1 : 0.45
 
     RowLayout {
         anchors.centerIn: parent
@@ -20,7 +23,9 @@ Item {
         Text {
             visible: root.icon !== ""
             text: root.icon
-            color: root.theme.accentBright
+            color: root.attention
+                ? root.theme.critical
+                : (root.active ? root.theme.accentBright : root.theme.text)
             font.family: root.theme.iconFontFamily
             font.pixelSize: root.theme.iconSize
             renderType: Text.NativeRendering
@@ -28,7 +33,7 @@ Item {
 
         Text {
             text: root.label
-            color: root.theme.text
+            color: root.attention ? root.theme.critical : root.theme.text
             font.family: root.theme.fontFamily
             font.pixelSize: root.theme.smallTextSize
             font.weight: Font.Medium
@@ -39,9 +44,9 @@ Item {
     Rectangle {
         anchors.horizontalCenter: parent.horizontalCenter
         anchors.bottom: parent.bottom
-        width: actionMouse.containsMouse ? Math.min(root.width - 12, 140) : 0
+        width: root.active || actionMouse.containsMouse ? Math.min(root.width - 12, 140) : 0
         height: 1
-        color: root.theme.accentBright
+        color: root.attention ? root.theme.critical : root.theme.accentBright
 
         Behavior on width {
             NumberAnimation { duration: 150; easing.type: Easing.OutCubic }
@@ -51,8 +56,9 @@ Item {
     MouseArea {
         id: actionMouse
         anchors.fill: parent
-        hoverEnabled: true
-        cursorShape: Qt.PointingHandCursor
+        enabled: root.enabled
+        hoverEnabled: enabled
+        cursorShape: enabled ? Qt.PointingHandCursor : Qt.ArrowCursor
         onClicked: root.pressed()
     }
 }
