@@ -8,6 +8,8 @@ Item {
     required property var theme
 
     property string icon: ""
+    property url iconSource: ""
+    property int iconVisualSize: theme.iconSize + 1
     property string label: ""
     property string tooltip: ""
     property bool active: false
@@ -31,8 +33,20 @@ Item {
         anchors.centerIn: parent
         spacing: root.label ? theme.widgetContentGap : 0
 
+        Image {
+            visible: root.iconSource.toString() !== ""
+            Layout.preferredWidth: root.iconVisualSize
+            Layout.preferredHeight: root.iconVisualSize
+            source: root.iconSource
+            sourceSize.width: root.iconVisualSize * 2
+            sourceSize.height: root.iconVisualSize * 2
+            fillMode: Image.PreserveAspectFit
+            smooth: true
+            mipmap: true
+        }
+
         Text {
-            visible: root.icon !== ""
+            visible: root.iconSource.toString() === "" && root.icon !== ""
             text: root.icon
             color: root.foreground
             font.family: theme.iconFontFamily

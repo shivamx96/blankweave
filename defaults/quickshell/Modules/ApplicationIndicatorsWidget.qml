@@ -19,14 +19,10 @@ Item {
         anchors.fill: parent
         spacing: theme.barItemGap
 
-        ProcessIndicator {
+        TailscaleWidget {
             id: tailscale
             bar: root.bar
             theme: root.theme
-            processName: "tailscaled"
-            displayName: "Tailscale"
-            icon: "󰒍"
-            clickCommand: "ghostty -e bash -lc 'tailscale status; printf \\\"\\nPress Enter to close...\\\"; read -r'"
         }
 
         ProcessIndicator {

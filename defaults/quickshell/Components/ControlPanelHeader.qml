@@ -6,6 +6,7 @@ RowLayout {
 
     required property var theme
     property string icon: ""
+    property url iconSource: ""
     property string title: ""
     property string subtitle: ""
     property var actions: []
@@ -15,8 +16,20 @@ RowLayout {
     Layout.fillWidth: true
     spacing: 10
 
+    Image {
+        visible: root.iconSource.toString() !== ""
+        Layout.preferredWidth: root.theme.heroIconSize
+        Layout.preferredHeight: root.theme.heroIconSize
+        source: root.iconSource
+        sourceSize.width: root.theme.heroIconSize * 2
+        sourceSize.height: root.theme.heroIconSize * 2
+        fillMode: Image.PreserveAspectFit
+        smooth: true
+        mipmap: true
+    }
+
     Text {
-        visible: root.icon !== ""
+        visible: root.iconSource.toString() === "" && root.icon !== ""
         text: root.icon
         color: root.theme.accentBright
         font.family: root.theme.iconFontFamily

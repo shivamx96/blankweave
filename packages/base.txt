@@ -27,6 +27,7 @@ bluez-utils
 blueman
 networkmanager
 tailscale
+jq
 awww
 ttf-roboto
 ttf-atkinson-hyperlegible
