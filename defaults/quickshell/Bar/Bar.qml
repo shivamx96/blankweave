@@ -155,13 +155,10 @@ PanelWindow {
             iconOnly: root.compact
         }
 
-        MetricWidget {
+        GpuWidget {
             bar: root
             theme: root.theme
-            icon: "󰾲"
             iconOnly: root.compact
-            command: Quickshell.env("HOME") + "/.local/share/hyprarch/shell/gpu-usage.sh"
-            clickCommand: "ghostty -e nvtop"
         }
 
         PowerWidget { bar: root; theme: root.theme }

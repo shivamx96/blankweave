@@ -8,6 +8,8 @@ Item {
     property int interval: 5000
     property string output: ""
     property bool ready: false
+    property bool refreshPending: false
+    readonly property bool running: process.running
 
     signal updated(string payload)
 
@@ -16,9 +18,14 @@ Item {
     implicitHeight: 0
 
     function refresh() {
-        if (!root.command || process.running)
+        if (!root.command)
             return
+        if (process.running) {
+            root.refreshPending = true
+            return
+        }
 
+        root.refreshPending = false
         process.command = ["bash", "-lc", root.command]
         process.running = true
     }
@@ -33,6 +40,11 @@ Item {
                 root.ready = true
                 root.updated(root.output)
             }
+        }
+
+        onExited: {
+            if (root.refreshPending)
+                Qt.callLater(root.refresh)
         }
     }
 
