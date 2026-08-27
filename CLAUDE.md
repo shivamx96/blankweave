@@ -77,7 +77,7 @@ All scripts live in `defaults/shell/`, deployed to `~/.local/share/hyprarch/shel
 
 ### Quickshell modules
 
-The bar is split into three floating islands in `defaults/quickshell/Bar/Bar.qml`.
+The full-width bar is split into three aligned sections in `defaults/quickshell/Bar/Bar.qml`.
 Each feature is an internal QML module under `defaults/quickshell/Modules/`.
 Reusable presentation lives under `Components/`, and process-backed data goes
 through `Services/ScriptPoller.qml`.

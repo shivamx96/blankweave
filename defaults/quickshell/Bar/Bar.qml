@@ -16,11 +16,12 @@ PanelWindow {
     property string tooltipText: ""
     property string pendingTooltipText: ""
     readonly property bool compact: width < 1700
+    readonly property bool veryCompact: width < 1250
 
     screen: modelData
     color: "transparent"
     implicitHeight: theme.barHeight
-    exclusiveZone: theme.barHeight + theme.outerMargin * 2
+    exclusiveZone: theme.barHeight
     surfaceFormat.opaque: false
 
     anchors {
@@ -29,10 +30,38 @@ PanelWindow {
         right: true
     }
 
-    margins {
-        top: theme.outerMargin
-        left: theme.outerMargin + 4
-        right: theme.outerMargin + 4
+    Rectangle {
+        anchors.fill: parent
+        color: root.theme.barSurface
+
+        Rectangle {
+            anchors.top: parent.top
+            anchors.left: parent.left
+            anchors.right: parent.right
+            height: 1
+            color: root.theme.dark ? "#18ffffff" : "#70ffffff"
+        }
+
+        Rectangle {
+            anchors.bottom: parent.bottom
+            anchors.left: parent.left
+            anchors.right: parent.right
+            height: 1
+            color: root.theme.outline
+        }
+
+        Rectangle {
+            anchors.bottom: parent.bottom
+            anchors.horizontalCenter: parent.horizontalCenter
+            width: Math.min(parent.width * 0.28, 560)
+            height: 1
+            gradient: Gradient {
+                orientation: Gradient.Horizontal
+                GradientStop { position: 0; color: "transparent" }
+                GradientStop { position: 0.5; color: root.theme.accentBright }
+                GradientStop { position: 1; color: "transparent" }
+            }
+        }
     }
 
     WlrLayershell.namespace: "hyprarch-bar"
@@ -73,11 +102,14 @@ PanelWindow {
         id: leftIsland
         theme: root.theme
         anchors.left: parent.left
+        anchors.leftMargin: root.theme.sectionPadding
         anchors.verticalCenter: parent.verticalCenter
 
         LauncherWidget { bar: root; theme: root.theme }
+        BarDivider { theme: root.theme }
         WorkspacesWidget { bar: root; theme: root.theme }
-        ActiveWindowWidget { bar: root; theme: root.theme }
+        BarDivider { theme: root.theme; visible: !root.veryCompact }
+        ActiveWindowWidget { bar: root; theme: root.theme; visible: !root.veryCompact }
     }
 
     BarSection {
@@ -94,12 +126,14 @@ PanelWindow {
         id: rightIsland
         theme: root.theme
         anchors.right: parent.right
+        anchors.rightMargin: root.theme.sectionPadding
         anchors.verticalCenter: parent.verticalCenter
 
         BrightnessWidget { bar: root; theme: root.theme; iconOnly: root.compact }
         AudioWidget { bar: root; theme: root.theme; iconOnly: root.compact }
         BluetoothWidget { bar: root; theme: root.theme }
         NetworkWidget { bar: root; theme: root.theme; iconOnly: root.compact }
+        BarDivider { theme: root.theme }
 
         MetricWidget {
             bar: root
@@ -129,6 +163,7 @@ PanelWindow {
         }
 
         BatteryWidget { bar: root; theme: root.theme }
+        BarDivider { theme: root.theme }
         PowerWidget { bar: root; theme: root.theme }
     }
 

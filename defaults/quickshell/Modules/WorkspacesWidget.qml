@@ -48,7 +48,7 @@ Item {
         Repeater {
             model: root.workspaceIds
 
-            Rectangle {
+            Item {
                 id: workspaceButton
 
                 required property int modelData
@@ -59,30 +59,57 @@ Item {
                     && workspace.monitor
                     && workspace.monitor.name === root.bar.screen.name
 
-                Layout.preferredWidth: activeWorkspace ? 28 : 22
+                Layout.preferredWidth: 24
                 Layout.preferredHeight: theme.widgetHeight
-                radius: theme.widgetRadius
-                color: activeWorkspace
-                    ? theme.accent
-                    : (workspaceMouse.containsMouse ? theme.surfaceHover : "transparent")
-
-                Behavior on Layout.preferredWidth {
-                    NumberAnimation { duration: 160; easing.type: Easing.OutCubic }
-                }
-                Behavior on color {
-                    ColorAnimation { duration: 120 }
-                }
 
                 Text {
                     anchors.centerIn: parent
                     text: modelData === 10 ? "0" : String(modelData)
                     color: workspaceButton.activeWorkspace
-                        ? "white"
+                        ? theme.accentBright
                         : (workspaceButton.occupied ? theme.text : theme.textMuted)
                     opacity: workspaceButton.occupied || workspaceButton.activeWorkspace ? 1 : 0.55
-                    font.family: theme.monoFontFamily
+                    font.family: theme.fontFamily
                     font.pixelSize: 11
-                    font.weight: Font.Bold
+                    font.weight: Font.DemiBold
+                    font.letterSpacing: 0.15
+                }
+
+                Rectangle {
+                    visible: workspaceButton.occupied
+                        && !workspaceButton.activeWorkspace
+                        && !workspaceMouse.containsMouse
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    anchors.bottom: parent.bottom
+                    anchors.bottomMargin: 3
+                    width: 3
+                    height: 3
+                    radius: 2
+                    color: theme.accentBright
+                }
+
+                Item {
+                    id: workspaceTrace
+
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    anchors.bottom: parent.bottom
+                    anchors.bottomMargin: 1
+                    width: workspaceButton.activeWorkspace ? 17 : (workspaceMouse.containsMouse ? 11 : 0)
+                    height: 2
+
+                    Behavior on width {
+                        NumberAnimation { duration: 150; easing.type: Easing.OutCubic }
+                    }
+
+                    Rectangle {
+                        anchors.left: parent.left
+                        anchors.right: parent.right
+                        anchors.bottom: parent.bottom
+                        height: workspaceButton.activeWorkspace ? 2 : 1
+                        color: workspaceButton.activeWorkspace ? theme.accentBright : theme.outlineStrong
+                        opacity: workspaceButton.activeWorkspace ? 0.82 : 0.65
+                    }
+
                 }
 
                 MouseArea {

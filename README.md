@@ -69,7 +69,7 @@ The script will:
 - **Clean notifications** via Dunst
 - **Native Quickshell bar** with multi-monitor workspaces, audio, brightness,
   network throughput, Bluetooth, hardware metrics, battery, and power controls
-- **Hyprarch visual system** with floating UI islands and black/blue dark and
+- **Hyprarch visual system** with a modern full-width shell and black/blue dark and
   white/blue light palettes
 
 ## Wallpapers

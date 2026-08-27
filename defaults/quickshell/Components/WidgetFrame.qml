@@ -13,6 +13,7 @@ Item {
     property bool active: false
     property bool attention: false
     property bool iconOnly: false
+    property int labelWeight: Font.Medium
     property int horizontalPadding: theme.widgetPadding
     property color foreground: attention ? theme.critical : (active ? theme.accentBright : theme.text)
 
@@ -24,20 +25,6 @@ Item {
     Layout.preferredWidth: implicitWidth
     Layout.preferredHeight: implicitHeight
 
-    Rectangle {
-        anchors.fill: parent
-        radius: theme.widgetRadius
-        color: mouse.pressed
-            ? theme.surfacePressed
-            : (mouse.containsMouse ? theme.surfaceHover : (root.active ? theme.accentSurface : "transparent"))
-        border.width: root.active ? 1 : 0
-        border.color: root.attention ? theme.critical : theme.outlineStrong
-
-        Behavior on color {
-            ColorAnimation { duration: 120 }
-        }
-    }
-
     RowLayout {
         id: content
         anchors.centerIn: parent
@@ -48,7 +35,7 @@ Item {
             text: root.icon
             color: root.foreground
             font.family: theme.iconFontFamily
-            font.pixelSize: 15
+            font.pixelSize: 14
             renderType: Text.NativeRendering
         }
 
@@ -58,8 +45,22 @@ Item {
             color: root.foreground
             font.family: theme.fontFamily
             font.pixelSize: 12
-            font.weight: Font.DemiBold
+            font.weight: root.labelWeight
+            font.letterSpacing: 0.1
             renderType: Text.NativeRendering
+        }
+    }
+
+    Rectangle {
+        anchors.horizontalCenter: parent.horizontalCenter
+        anchors.bottom: parent.bottom
+        width: mouse.containsMouse ? Math.max(8, root.width - root.horizontalPadding * 2) : 0
+        height: 1
+        color: root.attention ? root.theme.critical : root.theme.accentBright
+        opacity: mouse.pressed ? 1 : 0.72
+
+        Behavior on width {
+            NumberAnimation { duration: 150; easing.type: Easing.OutCubic }
         }
     }
 

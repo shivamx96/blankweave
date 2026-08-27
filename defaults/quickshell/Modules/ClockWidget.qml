@@ -13,6 +13,7 @@ WidgetFrame {
         : Qt.formatDateTime(clock.date, "hh:mm AP")
     tooltip: Qt.formatDateTime(clock.date, "dddd, d MMMM yyyy\nHH:mm:ss")
     active: alternate
+    labelWeight: Font.DemiBold
     horizontalPadding: 13
 
     SystemClock {
