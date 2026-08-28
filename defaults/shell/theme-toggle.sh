@@ -139,6 +139,21 @@ update_hyprlock_theme() {
     mv -f "$staged_file" "$target_file"
 }
 
+update_wallpaper() {
+    local wallpaper_manager="$DOTS_DIR/shell/wallpaper.sh"
+    local wallpaper
+
+    if [ "$TARGET" = "light" ]; then
+        wallpaper="$DOTS_DIR/wallpapers/hyprarch-porcelain-blue-light.png"
+    else
+        wallpaper="$DOTS_DIR/wallpapers/hyprarch-obsidian-blue-dark.png"
+    fi
+
+    # Wallpaper availability should never prevent the palette from changing.
+    [ -f "$wallpaper_manager" ] && [ -f "$wallpaper" ] || return 0
+    bash "$wallpaper_manager" set "$wallpaper" >/dev/null 2>&1 || true
+}
+
 # --- Apply to all themed configs ---
 swap_colors "$DOTS_DIR/dunst/dunstrc"
 swap_colors "$DOTS_DIR/hypr/hyprland.lua"
@@ -155,6 +170,7 @@ done
 
 # --- Save new state ---
 echo "$TARGET" > "$STATE_FILE"
+update_wallpaper
 
 # --- Set system color-scheme (portal / GTK / browsers) ---
 if [ "$TARGET" = "light" ]; then

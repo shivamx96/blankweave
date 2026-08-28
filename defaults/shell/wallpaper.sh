@@ -4,6 +4,7 @@
 
 WALLPAPER_DIR="$HOME/.local/share/hyprarch/wallpapers"
 CURRENT_WALLPAPER="$HOME/.cache/hyprarch-wallpaper"
+THEME_FILE="$HOME/.local/share/hyprarch/theme"
 
 # Create wallpaper directory if it doesn't exist
 mkdir -p "$WALLPAPER_DIR"
@@ -17,6 +18,11 @@ set_wallpaper() {
         return 1
     fi
 
+    # Publish the lock-screen source before waiting for the wallpaper daemon.
+    # This keeps Hyprlock deterministic during session startup.
+    printf '%s\n' "$wallpaper" > "$CURRENT_WALLPAPER"
+    ln -sfn "$wallpaper" "$HOME/.cache/hyprarch-current-wallpaper"
+
     # Wait for awww daemon to be ready
     for i in $(seq 1 10); do
         awww query 2>/dev/null && break
@@ -25,10 +31,26 @@ set_wallpaper() {
 
     # Set wallpaper with transition
     awww img "$wallpaper" --transition-type wipe --transition-duration 1
+}
 
-    # Save current wallpaper path and symlink for hyprlock
-    echo "$wallpaper" > "$CURRENT_WALLPAPER"
-    ln -sf "$wallpaper" "$HOME/.cache/hyprarch-current-wallpaper"
+# Return the wallpaper paired with the persisted shell theme.
+theme_wallpaper() {
+    local theme="dark"
+    local wallpaper
+
+    [ -f "$THEME_FILE" ] && read -r theme < "$THEME_FILE"
+
+    if [ "$theme" = "light" ]; then
+        wallpaper="$WALLPAPER_DIR/hyprarch-porcelain-blue-light.png"
+    else
+        wallpaper="$WALLPAPER_DIR/hyprarch-obsidian-blue-dark.png"
+    fi
+
+    if [ -f "$wallpaper" ]; then
+        printf '%s\n' "$wallpaper"
+    else
+        random_wallpaper
+    fi
 }
 
 # Function to get random wallpaper
@@ -79,11 +101,15 @@ case "${1:-random}" in
         wp=$(random_wallpaper) || exit 1
         set_wallpaper "$wp"
         ;;
+    theme)
+        wp=$(theme_wallpaper) || exit 1
+        set_wallpaper "$wp"
+        ;;
     cycle)
         cycle_wallpaper
         ;;
     *)
-        echo "Usage: $0 {set <path>|random|cycle}"
+        echo "Usage: $0 {set <path>|random|theme|cycle}"
         exit 1
         ;;
 esac
