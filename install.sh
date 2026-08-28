@@ -43,16 +43,59 @@ copy_file_atomically() {
     mv -f "$staged_file" "$target_file"
 }
 
+load_package_manifest() {
+    local manifest="$1"
+    local destination="$2"
+    local line package
+    declare -n packages_ref="$destination"
+
+    packages_ref=()
+    [ -f "$manifest" ] || return 0
+
+    while IFS= read -r line || [ -n "$line" ]; do
+        line="${line%%#*}"
+        read -r package <<< "$line"
+        [ -n "$package" ] && packages_ref+=("$package")
+    done < "$manifest"
+}
+
+verify_packages_installed() {
+    local label="$1"
+    shift
+    local package
+    local -a missing=()
+
+    for package in "$@"; do
+        if ! pacman -Q -- "$package" &> /dev/null; then
+            missing+=("$package")
+        fi
+    done
+
+    if [ "${#missing[@]}" -gt 0 ]; then
+        echo "Error: $label installation did not provide every requested package:" >&2
+        printf '  - %s\n' "${missing[@]}" >&2
+        return 1
+    fi
+}
+
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 USER_HOME="/home/$SUDO_USER"
 USER_UID="$(id -u "$SUDO_USER")"
 USER_RUNTIME_DIR="/run/user/$USER_UID"
+PARU_BUILD_DIR=""
 
 # Grant temporary NOPASSWD to avoid repeated password prompts during install
 SUDOERS_TMP="/etc/sudoers.d/hyprarch-install"
 echo "$SUDO_USER ALL=(ALL) NOPASSWD: ALL" > "$SUDOERS_TMP"
 chmod 440 "$SUDOERS_TMP"
-trap 'rm -f "$SUDOERS_TMP"' EXIT
+
+cleanup_install() {
+    rm -f "$SUDOERS_TMP"
+    if [[ -n "$PARU_BUILD_DIR" && "$PARU_BUILD_DIR" == /tmp/hyprarch-paru.* ]]; then
+        rm -rf -- "$PARU_BUILD_DIR"
+    fi
+}
+trap cleanup_install EXIT
 
 DOTS_DIR="$USER_HOME/.local/share/hyprarch"
 CONFIG_DIR="$USER_HOME/.config"
@@ -74,11 +117,15 @@ echo "Detected host: $HOST"
 
 section "INSTALLING AUR HELPER"
 
-if ! command -v yay &> /dev/null && ! command -v paru &> /dev/null; then
+if ! command -v paru &> /dev/null; then
     echo "Installing paru (AUR helper)..."
     pacman -S --noconfirm --needed base-devel
-    rm -rf /tmp/paru
-    sudo -u "$SUDO_USER" bash -c 'cd /tmp && git clone https://aur.archlinux.org/paru.git && cd paru && makepkg -si'
+    PARU_BUILD_DIR=$(mktemp -d /tmp/hyprarch-paru.XXXXXX)
+    chown "$SUDO_USER:$SUDO_USER" "$PARU_BUILD_DIR"
+    sudo -H -u "$SUDO_USER" git clone https://aur.archlinux.org/paru.git "$PARU_BUILD_DIR"
+    sudo -H -u "$SUDO_USER" bash -c 'cd "$1" && makepkg -si --noconfirm' _ "$PARU_BUILD_DIR"
+    rm -rf -- "$PARU_BUILD_DIR"
+    PARU_BUILD_DIR=""
 fi
 
 section "INSTALLING PACKAGES"
@@ -95,22 +142,25 @@ pacman -Syu --noconfirm
 pacman -Fy --noconfirm || echo "Warning: file database sync failed"
 
 echo "Installing base packages..."
-pacman -S --noconfirm --needed $(cat "$REPO_DIR/packages/base.txt") || echo "Warning: pacman failed"
+load_package_manifest "$REPO_DIR/packages/base.txt" REPO_PACKAGES
+load_package_manifest "$REPO_DIR/hosts/$HOST/packages.txt" HOST_REPO_PACKAGES
+ALL_REPO_PACKAGES=("${REPO_PACKAGES[@]}" "${HOST_REPO_PACKAGES[@]}")
+pacman -S --noconfirm --needed "${ALL_REPO_PACKAGES[@]}"
+verify_packages_installed "repository package" "${ALL_REPO_PACKAGES[@]}"
 
-AUR_HELPER=$(command -v paru || command -v yay)
-if [ -n "$AUR_HELPER" ]; then
-    echo "Installing AUR packages..."
-    AUR_PKGS=$(cat "$REPO_DIR/packages/aur.txt" | tr '\n' ' ')
-    sudo -u "$SUDO_USER" $AUR_HELPER -S --noconfirm --needed $AUR_PKGS || echo "Warning: AUR install failed"
+load_package_manifest "$REPO_DIR/packages/aur.txt" AUR_PACKAGES
+load_package_manifest "$REPO_DIR/hosts/$HOST/aur.txt" HOST_AUR_PACKAGES
+ALL_AUR_PACKAGES=("${AUR_PACKAGES[@]}" "${HOST_AUR_PACKAGES[@]}")
 
-    HOST_PKGS="$REPO_DIR/hosts/$HOST/packages.txt"
-    if [ -f "$HOST_PKGS" ]; then
-        echo "Installing $HOST packages..."
-        sudo -u "$SUDO_USER" $AUR_HELPER -S --noconfirm --needed $(cat "$HOST_PKGS") || echo "Warning: host package install failed"
-    fi
-else
-    echo "Error: No AUR helper available."
-    exit 1
+if [ "${#ALL_AUR_PACKAGES[@]}" -gt 0 ]; then
+    echo "Installing exact AUR packages..."
+    AUR_TARGETS=()
+    for package in "${ALL_AUR_PACKAGES[@]}"; do
+        AUR_TARGETS+=("aur/$package")
+    done
+
+    sudo -H -u "$SUDO_USER" paru -S --noconfirm --needed --noprovides "${AUR_TARGETS[@]}"
+    verify_packages_installed "AUR package" "${ALL_AUR_PACKAGES[@]}"
 fi
 
 echo "Package installation complete."

@@ -1,4 +1,3 @@
-linux-headers
 nvidia-open-dkms
 nvidia-utils
 nvtop
@@ -16,5 +15,3 @@ gamemode
 lib32-gamemode
 gamescope
 mangohud
-proton-ge-custom-bin
-protonup-qt

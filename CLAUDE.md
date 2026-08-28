@@ -66,10 +66,12 @@ Dunst, Ghostty, Fuzzel, and Fontconfig are symlinked from `~/.config/` back to `
 
 ### Package placement
 
-- `packages/base.txt` — pacman packages, shared across all hosts
-- `packages/aur.txt` — AUR packages (installed via paru), shared
-- `hosts/$HOST/packages.txt` — host-specific packages (GPU drivers, Intel GPU tools, etc.)
-- When unsure if something is pacman or AUR, default to `aur.txt`
+- `packages/base.txt` — official repository packages, shared across all hosts
+- `packages/aur.txt` — exact AUR packages (installed via paru), shared
+- `hosts/$HOST/packages.txt` — host-specific official repository packages
+- `hosts/$HOST/aur.txt` — optional host-specific exact AUR packages
+- Check with `pacman -Si <package>` before choosing a manifest; use `aur.txt`
+  only when the exact package is absent from the configured repositories
 
 ### Shell scripts
 
@@ -176,7 +178,8 @@ GPU monitoring script (`gpu-usage.sh`) auto-detects at runtime: tries `nvidia-sm
 ### Adding a new host
 
 1. Create `hosts/<hostname>/hypr/` with `env.lua`, `monitors.lua`, `hypridle.conf`
-2. Create `hosts/<hostname>/packages.txt` for host-specific packages
+2. Create `hosts/<hostname>/packages.txt` for repository packages and
+   `hosts/<hostname>/aur.txt` when host-specific AUR packages are required
 3. Update `detect_host()` in `install.sh` with a new `lspci` pattern
 
 ### Adding a new Quickshell module
