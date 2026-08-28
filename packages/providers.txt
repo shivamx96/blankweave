@@ -1,0 +1,6 @@
+# Concrete implementations for virtual dependencies used by Hyprarch packages.
+# Install these before the main manifests so pacman never chooses a provider
+# implicitly. Keep this list limited to deliberate, repository-backed policy.
+jdk21-openjdk
+pipewire-jack
+iptables

@@ -142,6 +142,13 @@ pacman -Syu --noconfirm
 pacman -Fy --noconfirm || echo "Warning: file database sync failed"
 
 echo "Installing base packages..."
+load_package_manifest "$REPO_DIR/packages/providers.txt" PROVIDER_PACKAGES
+if [ "${#PROVIDER_PACKAGES[@]}" -gt 0 ]; then
+    echo "Installing pinned virtual dependency providers..."
+    pacman -S --noconfirm --needed "${PROVIDER_PACKAGES[@]}"
+    verify_packages_installed "virtual dependency provider" "${PROVIDER_PACKAGES[@]}"
+fi
+
 load_package_manifest "$REPO_DIR/packages/base.txt" REPO_PACKAGES
 load_package_manifest "$REPO_DIR/hosts/$HOST/packages.txt" HOST_REPO_PACKAGES
 ALL_REPO_PACKAGES=("${REPO_PACKAGES[@]}" "${HOST_REPO_PACKAGES[@]}")

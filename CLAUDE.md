@@ -67,11 +67,14 @@ Dunst, Ghostty, Fuzzel, and Fontconfig are symlinked from `~/.config/` back to `
 ### Package placement
 
 - `packages/base.txt` — official repository packages, shared across all hosts
+- `packages/providers.txt` — concrete repository packages selected for virtual dependencies
 - `packages/aur.txt` — exact AUR packages (installed via paru), shared
 - `hosts/$HOST/packages.txt` — host-specific official repository packages
 - `hosts/$HOST/aur.txt` — optional host-specific exact AUR packages
 - Check with `pacman -Si <package>` before choosing a manifest; use `aur.txt`
   only when the exact package is absent from the configured repositories
+- When pacman offers multiple implementations for a virtual dependency, record
+  the deliberate concrete choice in `packages/providers.txt`
 
 ### Shell scripts
 
