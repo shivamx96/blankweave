@@ -6,6 +6,6 @@ claude-code
 t3code-nightly-bin
 lmstudio-bin
 intellij-idea-ultimate-edition
-bruno
+bruno-bin
 rose-pine-hyprcursor
 localsend-bin
