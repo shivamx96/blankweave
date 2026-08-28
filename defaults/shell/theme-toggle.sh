@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 #
-# Toggle between Catppuccin Mocha (dark) and Latte (light) across all themed apps.
-# State is stored in ~/.local/share/hyprarch/theme
+# Toggle between the Hyprarch dark/light shell palettes and the corresponding
+# legacy application themes. State is stored in ~/.local/share/hyprarch/theme.
 
 DOTS_DIR="$HOME/.local/share/hyprarch"
 STATE_FILE="$DOTS_DIR/theme"
@@ -17,9 +17,23 @@ else
 fi
 
 # --- Color maps ---
-# Mocha (dark) -> Latte (light) pairs
+# Dark -> light pairs. The later entries retain Catppuccin mappings for apps
+# that have not yet moved to the native Hyprarch palette.
 # Order matters: replace longer/more-specific values first to avoid partial matches
 declare -a COLORS=(
+    # Hyprarch shell surfaces
+    "05080f:edf4ff"
+    "0b111c:f8fbff"
+    "111a2a:f7fbff"
+    "f4f8ff:081426"
+    "8798ae:607087"
+    "67a6ff:1d4ed8"
+    "4f75ad:8ab4ed"
+    "33476a:bdd3f3"
+    "607da6:91add4"
+    "3ddc97:07894f"
+    "f4bf50:b46608"
+    "ff6b8a:d52149"
     # base
     "1e1e2e:eff1f5"
     # mantle
@@ -58,7 +72,17 @@ declare -a COLORS=(
 
 swap_colors() {
     local file="$1"
+    local staged_file
     [ -f "$file" ] || return
+
+    # Hyprland watches its Lua config and may reload after every write. Do all
+    # placeholder substitutions off to the side, then expose only the finished
+    # file with one atomic rename so it can never parse an intermediate value.
+    staged_file=$(mktemp --tmpdir="$(dirname "$file")" ".$(basename "$file").XXXXXX") || return 1
+    cp --preserve=mode "$file" "$staged_file" || {
+        rm -f "$staged_file"
+        return 1
+    }
 
     for pair in "${COLORS[@]}"; do
         local mocha="${pair%%:*}"
@@ -67,10 +91,10 @@ swap_colors() {
         if [ "$TARGET" = "light" ]; then
             # dark -> light: replace mocha with latte
             # Use a temporary placeholder to avoid double-replacement
-            sed -i "s/${mocha}/PLACEHOLDER_${mocha}/gi" "$file"
+            sed -i "s/${mocha}/PLACEHOLDER_${mocha}/gi" "$staged_file"
         else
             # light -> dark: replace latte with mocha
-            sed -i "s/${latte}/PLACEHOLDER_${latte}/gi" "$file"
+            sed -i "s/${latte}/PLACEHOLDER_${latte}/gi" "$staged_file"
         fi
     done
 
@@ -80,23 +104,13 @@ swap_colors() {
         local latte="${pair##*:}"
 
         if [ "$TARGET" = "light" ]; then
-            sed -i "s/PLACEHOLDER_${mocha}/${latte}/gi" "$file"
+            sed -i "s/PLACEHOLDER_${mocha}/${latte}/gi" "$staged_file"
         else
-            sed -i "s/PLACEHOLDER_${latte}/${mocha}/gi" "$file"
+            sed -i "s/PLACEHOLDER_${latte}/${mocha}/gi" "$staged_file"
         fi
     done
-}
 
-# Also update the theme comment in waybar CSS
-update_waybar_comment() {
-    local file="$DOTS_DIR/waybar/style.css"
-    [ -f "$file" ] || return
-
-    if [ "$TARGET" = "light" ]; then
-        sed -i 's|/\* Catppuccin Mocha \*/|/* Catppuccin Latte */|' "$file"
-    else
-        sed -i 's|/\* Catppuccin Latte \*/|/* Catppuccin Mocha */|' "$file"
-    fi
+    mv -f "$staged_file" "$file"
 }
 
 # Update fuzzel icon theme
@@ -111,23 +125,52 @@ update_fuzzel_icons() {
     fi
 }
 
+update_hyprlock_theme() {
+    local source_file="$DOTS_DIR/hypr/hyprlock-theme-${TARGET}.conf"
+    local target_file="$DOTS_DIR/hypr/hyprlock-theme.conf"
+    local staged_file
+
+    [ -f "$source_file" ] || return
+    staged_file=$(mktemp --tmpdir="$(dirname "$target_file")" ".$(basename "$target_file").XXXXXX") || return 1
+    cp --preserve=mode "$source_file" "$staged_file" || {
+        rm -f "$staged_file"
+        return 1
+    }
+    mv -f "$staged_file" "$target_file"
+}
+
+update_wallpaper() {
+    local wallpaper_manager="$DOTS_DIR/shell/wallpaper.sh"
+    local wallpaper
+
+    if [ "$TARGET" = "light" ]; then
+        wallpaper="$DOTS_DIR/wallpapers/hyprarch-porcelain-blue-light.png"
+    else
+        wallpaper="$DOTS_DIR/wallpapers/hyprarch-obsidian-blue-dark.png"
+    fi
+
+    # Wallpaper availability should never prevent the palette from changing.
+    [ -f "$wallpaper_manager" ] && [ -f "$wallpaper" ] || return 0
+    bash "$wallpaper_manager" set "$wallpaper" >/dev/null 2>&1 || true
+}
+
 # --- Apply to all themed configs ---
-swap_colors "$DOTS_DIR/waybar/style.css"
 swap_colors "$DOTS_DIR/dunst/dunstrc"
 swap_colors "$DOTS_DIR/hypr/hyprland.lua"
 swap_colors "$DOTS_DIR/fuzzel/fuzzel.ini"
 
-update_waybar_comment
 update_fuzzel_icons
+update_hyprlock_theme
 
 # Touch symlinks so inotify-based apps (Ghostty, etc.) detect the change
 CONFIG_DIR="$HOME/.config"
-for link in "$CONFIG_DIR/ghostty/config" "$CONFIG_DIR/waybar/style.css" "$CONFIG_DIR/dunst/dunstrc" "$CONFIG_DIR/fuzzel/fuzzel.ini"; do
+for link in "$CONFIG_DIR/ghostty/config" "$CONFIG_DIR/dunst/dunstrc" "$CONFIG_DIR/fuzzel/fuzzel.ini"; do
     [ -L "$link" ] && touch -h "$link" 2>/dev/null
 done
 
 # --- Save new state ---
 echo "$TARGET" > "$STATE_FILE"
+update_wallpaper
 
 # --- Set system color-scheme (portal / GTK / browsers) ---
 if [ "$TARGET" = "light" ]; then
@@ -157,15 +200,8 @@ gtk-theme-name=Adwaita
 EOF
 
 # --- Reload services ---
-# Waybar auto-reloads via reload_style_on_change
-# Dunst: kill it; it auto-restarts on next notification
-killall dunst 2>/dev/null
+# Quickshell watches the shared theme state file and updates live.
+# Reload Dunst in place so the new palette applies without discarding history.
+dunstctl reload "$DOTS_DIR/dunst/dunstrc" 2>/dev/null || killall dunst 2>/dev/null
 # Hyprland: reload config
 hyprctl reload 2>/dev/null
-
-# --- Notify ---
-if [ "$TARGET" = "light" ]; then
-    notify-send -t 2000 "Theme" "Switched to Catppuccin Latte (light)"
-else
-    notify-send -t 2000 "Theme" "Switched to Catppuccin Mocha (dark)"
-fi

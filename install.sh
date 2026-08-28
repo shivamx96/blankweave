@@ -10,7 +10,7 @@ if [ "$EUID" -ne 0 ]; then
     echo "###"
     echo "###   This will install and configure:"
     echo "###     - Hyprland (window manager)"
-    echo "###     - Waybar, Dunst, Ghostty, Fuzzel"
+    echo "###     - Quickshell, Dunst, Ghostty, Fuzzel"
     echo "###     - PipeWire audio, Bluetooth, NetworkManager"
     echo "###     - ZSH with Powerlevel10k"
     echo "###     - Host-specific GPU drivers (auto-detected)"
@@ -45,6 +45,8 @@ copy_file_atomically() {
 
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 USER_HOME="/home/$SUDO_USER"
+USER_UID="$(id -u "$SUDO_USER")"
+USER_RUNTIME_DIR="/run/user/$USER_UID"
 
 # Grant temporary NOPASSWD to avoid repeated password prompts during install
 SUDOERS_TMP="/etc/sudoers.d/hyprarch-install"
@@ -161,7 +163,19 @@ for hypr_config in "$REPO_DIR/defaults/hypr/"*; do
     echo "Deploying $hypr_config"
     copy_file_atomically "$hypr_config" "$DOTS_DIR/hypr/$(basename "$hypr_config")"
 done
-cp -rv "$REPO_DIR/defaults/waybar" "$DOTS_DIR/" || { echo "Failed to copy waybar"; exit 1; }
+
+# Hyprlock sources a generated theme include. Preserve an existing light-mode
+# preference on reinstall; otherwise match the shell's dark default.
+HYPRLOCK_THEME=dark
+if [ -r "$DOTS_DIR/theme" ] && [ "$(cat "$DOTS_DIR/theme")" = light ]; then
+    HYPRLOCK_THEME=light
+fi
+copy_file_atomically \
+    "$DOTS_DIR/hypr/hyprlock-theme-${HYPRLOCK_THEME}.conf" \
+    "$DOTS_DIR/hypr/hyprlock-theme.conf"
+# Quickshell is a code tree, so mirror it exactly and do not retain removed modules.
+rm -rf "$DOTS_DIR/quickshell"
+cp -rv "$REPO_DIR/defaults/quickshell" "$DOTS_DIR/" || { echo "Failed to copy quickshell"; exit 1; }
 cp -rv "$REPO_DIR/defaults/dunst" "$DOTS_DIR/" || { echo "Failed to copy dunst"; exit 1; }
 cp -rv "$REPO_DIR/defaults/ghostty" "$DOTS_DIR/" || { echo "Failed to copy ghostty"; exit 1; }
 cp -rv "$REPO_DIR/defaults/fuzzel" "$DOTS_DIR/" || { echo "Failed to copy fuzzel"; exit 1; }
@@ -169,15 +183,24 @@ cp -rv "$REPO_DIR/defaults/xdg-desktop-portal" "$DOTS_DIR/" || { echo "Failed to
 cp -rv "$REPO_DIR/defaults/fontconfig" "$DOTS_DIR/" || { echo "Failed to copy fontconfig"; exit 1; }
 cp -rv "$REPO_DIR/defaults/shell" "$DOTS_DIR/" || { echo "Failed to copy shell"; exit 1; }
 
+HARDWARE_OVERRIDES="$REPO_DIR/hosts/$HOST/hardware-overrides.json"
+if [ -f "$HARDWARE_OVERRIDES" ]; then
+    copy_file_atomically "$HARDWARE_OVERRIDES" "$DOTS_DIR/hardware-overrides.json"
+fi
+
 # Mirror wallpapers exactly so removals in the repo propagate (cp alone never deletes stale files)
 rm -rf "$DOTS_DIR/wallpapers"
 cp -rv "$REPO_DIR/defaults/wallpapers" "$DOTS_DIR/" || { echo "Failed to copy wallpapers"; exit 1; }
 
 chmod +x "$DOTS_DIR/shell"/*.sh
 
+echo "Capturing sanitized hardware inventory..."
+if ! "$DOTS_DIR/shell/hardware-inventory.sh" "$SUDO_USER"; then
+    echo "Warning: Could not capture hardware inventory; the live system overview will use generic fallbacks"
+fi
+
 section "GENERATING USER CONFIGS"
 mkdir -p "$CONFIG_DIR/hypr"
-mkdir -p "$CONFIG_DIR/waybar"
 mkdir -p "$CONFIG_DIR/dunst"
 mkdir -p "$CONFIG_DIR/ghostty"
 
@@ -205,22 +228,22 @@ fi
 copy_file_atomically "$REPO_DIR/defaults/hypr/hyprlock.conf" "$CONFIG_DIR/hypr/hyprlock.conf"
 
 echo "Validating Hyprland Lua config..."
+if [ ! -d "$USER_RUNTIME_DIR" ]; then
+    echo "Error: User runtime directory does not exist: $USER_RUNTIME_DIR"
+    echo "Log in as $SUDO_USER to create a systemd user session, then run the installer again."
+    exit 1
+fi
+
 if ! sudo -u "$SUDO_USER" env \
     HOME="$USER_HOME" \
     XDG_CONFIG_HOME="$CONFIG_DIR" \
+    XDG_RUNTIME_DIR="$USER_RUNTIME_DIR" \
     hyprland --verify-config --config "$CONFIG_DIR/hypr/hyprland.lua"; then
     echo "Error: Generated Hyprland Lua config failed validation."
     exit 1
 fi
 
 section "SYMLINKING CONFIGS"
-
-# Waybar
-rm -f "$CONFIG_DIR/waybar/config" "$CONFIG_DIR/waybar/style.css" "$CONFIG_DIR/waybar/power-menu.sh"
-ln -s "$DOTS_DIR/waybar/config" "$CONFIG_DIR/waybar/config"
-ln -s "$DOTS_DIR/waybar/style.css" "$CONFIG_DIR/waybar/style.css"
-chmod +x "$DOTS_DIR/waybar/power-menu.sh"
-ln -s "$DOTS_DIR/waybar/power-menu.sh" "$CONFIG_DIR/waybar/power-menu.sh"
 
 # Dunst
 rm -f "$CONFIG_DIR/dunst/dunstrc"

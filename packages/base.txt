@@ -5,7 +5,7 @@ hyprlock
 hypridle
 xdg-desktop-portal-hyprland
 xdg-desktop-portal-gtk
-waybar
+quickshell
 dunst
 ghostty
 firefox
@@ -13,6 +13,8 @@ fuzzel
 zed
 thunar
 brightnessctl
+ddcutil
+upower
 btop
 fastfetch
 pipewire
@@ -25,8 +27,11 @@ bluez-utils
 blueman
 networkmanager
 tailscale
+curl
+jq
 awww
 ttf-roboto
+ttf-atkinson-hyperlegible
 ttf-jetbrains-mono
 noto-fonts
 noto-fonts-emoji

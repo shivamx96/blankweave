@@ -8,7 +8,7 @@
 
 ## Bugs
 
-- [ ] `nvtop` is referenced by `defaults/waybar/config` (GPU module `on-click`) but only
+- [ ] `nvtop` is referenced by the Quickshell GPU module (`on-click`) but only
       listed in `hosts/pc/packages.txt` — clicking the module does nothing on laptop.
       Either move to `base.txt` or make the click host-aware (`intel_gpu_top` on laptop).
 - [ ] `install.sh` has no trailing newline on its last line.
@@ -37,7 +37,7 @@ Hyprland 0.55+ deprecated Hyprlang (`.conf`) in favour of Lua.
 - [ ] Special workspace / scratchpad (`Super+grave`) for a floating terminal.
 - [ ] Notification history: `dunstctl history-pop` and `dunstctl close-all`.
 
-## Waybar
+## Quickshell bar
 
 - [x] ~~Add a `tray` module~~ — **declined 2026-07-31, deliberate.** A tray is an
       attention surface; this rice is meant to be minimal and distraction-free.
@@ -45,12 +45,10 @@ Hyprland 0.55+ deprecated Hyprlang (`.conf`) in favour of Lua.
       "close to tray" (`runFromTray: true` in its own config) can't work — closing
       the window quits it. Use `Super+Shift+B` for Blueman instead of an applet.
       Don't re-suggest this.
-- [ ] No `idle_inhibitor` module. hypridle dims at 150s and locks at 300s, which fires
-      mid-video. Built into Waybar, no script needed — and it *serves* the
+- [ ] No idle-inhibitor module. hypridle dims at 150s and locks at 300s, which fires
+      mid-video. Quickshell can expose this directly — and it *serves* the
       distraction-free goal rather than working against it.
-- [ ] Waybar logs `Requested height: 40 is less than the minimum height: 48 required by
-      the modules` on every start. Pre-existing (confirmed against HEAD), cosmetic —
-      the 16px font plus padding exceeds the configured 40px bar height.
+- [x] Replaced Waybar with a native Quickshell bar, removing the minimum-height warning.
 
 ## Screenshots & capture
 
@@ -75,12 +73,9 @@ Hyprland 0.55+ deprecated Hyprlang (`.conf`) in favour of Lua.
 
 ## Brightness
 
-- [ ] hyprsunset removed (2026-07-31) — it was gamma-faking brightness and was never
-      installed on laptop anyway. External monitors now have **no** brightness backend;
-      `brightness.sh` reports `none` and the Waybar module hides itself.
-- [ ] Add a `ddcutil` backend for external monitors (real DDC/CI backlight control, not
-      gamma). Needs the `i2c-dev` module and `i2c` group. This was the original intent —
-      `brightness-module.sh`'s header comment already claims ddcutil support.
+- [x] Replaced gamma-faked external brightness with real DDC/CI control. The brightness
+      helper maps each DRM connector to its dynamically assigned I²C bus, while internal
+      panels continue to use the kernel backlight API.
 
 ## Misc
 

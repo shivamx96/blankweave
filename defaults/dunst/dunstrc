@@ -1,30 +1,88 @@
 [global]
+# Compact notification cards aligned with the native Hyprarch shell.
 monitor = 0
-width = 400
-height = 100
+width = 420
+height = (0, 180)
 origin = top-right
-offset = 15x15
-separator_height = 1
-padding = 8
-horizontal_padding = 8
-text_icon_padding = 10
+offset = (8, 8)
+notification_limit = 4
+layer = overlay
+
+sort = update
+indicate_hidden = true
+separator_height = 0
+gap_size = 6
+padding = 12
+horizontal_padding = 14
+text_icon_padding = 12
 frame_width = 1
-frame_color = "#45475a"
-separator_color = "#45475a"
-background = "#1e1e2e"
-foreground = "#cdd6f4"
-font = Atkinson Hyperlegible Next 10
+frame_color = "#4f75ad"
+separator_color = frame
+
+background = "#0b111c"
+foreground = "#f4f8ff"
+font = Atkinson Hyperlegible Next 11
 line_height = 3
-corner_radius = 10
+format = "<span size='small' foreground='#8798ae'>%a</span>\n<b>%s</b>\n%b"
+alignment = left
+vertical_alignment = center
+show_age_threshold = 60
+ellipsize = end
+ignore_newline = no
+stack_duplicates = true
+hide_duplicate_count = false
+show_indicators = true
+
+corner_radius = 0
+icon_corner_radius = 0
+corners = none
+icon_corners = none
+
+progress_bar = true
+progress_bar_height = 3
+progress_bar_frame_width = 0
+progress_bar_min_width = 180
+progress_bar_max_width = 390
+progress_bar_corner_radius = 0
+progress_bar_corners = none
+
+enable_recursive_icon_lookup = true
+icon_theme = "Papirus, Adwaita"
+icon_position = left
+min_icon_size = 28
+max_icon_size = 40
+
+sticky_history = false
+history_length = 100
+browser = /usr/bin/xdg-open
+
+mouse_left_click = close_current
+mouse_middle_click = do_action, close_current
+mouse_right_click = context
+
+[experimental]
+pause_on_mouse_over = true
 
 [urgency_low]
-background = "#1e1e2e"
-foreground = "#6c7086"
+background = "#0b111c"
+foreground = "#8798ae"
+frame_color = "#33476a"
+highlight = "#607da6"
+timeout = 4s
+default_icon = dialog-information
 
 [urgency_normal]
-background = "#1e1e2e"
-foreground = "#cdd6f4"
+background = "#0b111c"
+foreground = "#f4f8ff"
+frame_color = "#4f75ad"
+highlight = "#67a6ff"
+timeout = 6s
+default_icon = dialog-information
 
 [urgency_critical]
-background = "#1e1e2e"
-foreground = "#f38ba8"
+background = "#0b111c"
+foreground = "#f4f8ff"
+frame_color = "#ff6b8a"
+highlight = "#ff6b8a"
+timeout = 0
+default_icon = dialog-warning
