@@ -8,6 +8,11 @@ Supported hosts:
 
 ## Install
 
+For a new machine starting from the Arch live USB, use the reusable
+[Archinstall baseline](archinstall/README.md) first. It keeps disk selection and
+LUKS/user credentials interactive, then hands the installed system to this
+bootstrap.
+
 ```bash
 git clone https://github.com/shivamx96/hyprarch.git
 cd hyprarch
