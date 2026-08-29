@@ -1,3 +1,4 @@
 firefox
 obsidian
 yubikey-manager
+spotify-launcher
