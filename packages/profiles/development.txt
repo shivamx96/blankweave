@@ -8,3 +8,4 @@ lazygit
 lazydocker
 nvm
 opencode
+shellcheck
