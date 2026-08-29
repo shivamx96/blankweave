@@ -1,0 +1,5 @@
+claude-code
+t3code-nightly-bin
+lmstudio-bin
+intellij-idea-ultimate-edition
+bruno-bin

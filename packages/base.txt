@@ -8,9 +8,7 @@ xdg-desktop-portal-gtk
 quickshell
 dunst
 ghostty
-firefox
 fuzzel
-zed
 thunar
 brightnessctl
 ddcutil
@@ -38,18 +36,11 @@ noto-fonts-emoji
 papirus-icon-theme
 base-devel
 git
-github-cli
 openssh
 less
-uv
 linux-headers
-go
 inter-font
 ttf-jetbrains-mono-nerd
-obsidian
-docker
-docker-compose
-openai-codex
 zsh
 fzf
 zoxide
@@ -58,8 +49,6 @@ cliphist
 grim
 slurp
 polkit-gnome
-lazygit
-lazydocker
 xdg-user-dirs
 file-roller
 thunar-archive-plugin
@@ -67,7 +56,5 @@ unzip
 alsa-utils
 alsa-ucm-conf
 alsa-plugins
-nvm
 plymouth
 sddm
-yubikey-manager

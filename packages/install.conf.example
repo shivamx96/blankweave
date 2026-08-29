@@ -1,0 +1,4 @@
+# Hyprarch installer choices. Core environment and detected hardware packages
+# are always installed. Profiles are whitespace-separated and order-independent.
+version=1
+profiles=desktop development communication

@@ -1,11 +1,2 @@
 ttf-atkinson-hyperlegible-next
-zen-browser-bin
-helium-browser-bin
-slack-desktop
-claude-code
-t3code-nightly-bin
-lmstudio-bin
-intellij-idea-ultimate-edition
-bruno-bin
 rose-pine-hyprcursor
-localsend-bin

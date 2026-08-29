@@ -1,0 +1,10 @@
+zed
+github-cli
+uv
+go
+docker
+docker-compose
+openai-codex
+lazygit
+lazydocker
+nvm

@@ -5,13 +5,3 @@ libva-nvidia-driver
 vulkan-icd-loader
 egl-wayland
 socat
-cuda
-cmake
-python-huggingface-hub
-steam
-lib32-nvidia-utils
-lib32-vulkan-icd-loader
-gamemode
-lib32-gamemode
-gamescope
-mangohud
