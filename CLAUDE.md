@@ -121,6 +121,15 @@ Each feature is an internal QML module under `defaults/quickshell/Modules/`.
 Reusable presentation lives under `Components/`, and process-backed data goes
 through `Services/ScriptPoller.qml`.
 
+Vector artwork lives in `Assets/marks.js` as tokenised SVG templates and is
+drawn through `Components/VectorMark.qml`, which resolves `{fg}` to the caller's
+foreground and `{accent}` to the accent detail. A mark therefore follows the
+theme and a widget's active state exactly like an icon-font glyph; never add a
+per-theme image file or build an image source by hand. Because marks now honour
+`foreground`, a widget's `active` must mean the panel is open or the state is
+genuinely transient — a steady-state condition such as "the daemon is running"
+would leave the mark permanently accented.
+
 `Components/ControlPopup.qml` provides the anchored, keyboard-dismissible panel
 surface used by interactive status widgets. `ControlSlider.qml` provides the
 shared angular slider treatment. Interactive panels compose
@@ -239,7 +248,8 @@ GPU monitoring script (`gpu-usage.sh`) auto-detects at runtime: tries `nvidia-sm
 ### Adding a new Quickshell module
 
 1. Create `defaults/quickshell/Modules/<Name>Widget.qml`
-2. Build on `Components/WidgetFrame.qml` for standard bar behavior
+2. Build on `Components/WidgetFrame.qml` for standard bar behavior; set `icon`
+   for a Nerd Font glyph or `iconMark` for a vector mark from `Assets/marks.js`
 3. Use a native Quickshell service where available; otherwise use `ScriptPoller`
 4. Add the module to the appropriate island in `Bar/Bar.qml`
 5. Keep colors and geometry in `Theme.qml` instead of defining them per module

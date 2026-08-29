@@ -8,9 +8,7 @@ WidgetFrame {
     id: root
 
     readonly property string shellDir: Quickshell.env("HOME") + "/.local/share/hyprarch/shell"
-    readonly property url cpuIconSource: Qt.resolvedUrl(
-        "../Assets/cpu-" + (theme.dark ? "dark" : "light") + ".svg"
-    )
+    readonly property string cpuMark: "cpu"
     property var status: ({
         "text": "—",
         "tooltip": "CPU information unavailable",
@@ -51,7 +49,7 @@ WidgetFrame {
             + Number(process.memory || 0).toFixed(1) + "% RAM"
     }
 
-    iconSource: root.cpuIconSource
+    iconMark: root.cpuMark
     iconVisualSize: root.theme.iconSize + 2
     horizontalPadding: 7
     labelWidth: theme.metricLabelWidth
@@ -88,7 +86,7 @@ WidgetFrame {
 
         ControlPanelHeader {
             theme: root.theme
-            iconSource: root.cpuIconSource
+            iconMark: root.cpuMark
             title: "PROCESSOR"
             subtitle: String(root.status.model || "Processor")
             actions: [

@@ -38,13 +38,7 @@ WidgetFrame {
     readonly property bool connected: Boolean(status.connected)
     readonly property bool loggedIn: Boolean(status.loggedIn)
     readonly property bool busy: actionProcess.running
-    readonly property url tailscaleIconSource: Qt.resolvedUrl(
-        "../Assets/tailscale-"
-            + (connected ? "connected" : "disconnected")
-            + "-"
-            + (theme.dark ? "dark" : "light")
-            + ".svg"
-    )
+    readonly property string tailscaleMark: "tailscale-" + (connected ? "connected" : "disconnected")
 
     function updateStatus(payload) {
         if (!payload)
@@ -188,10 +182,10 @@ WidgetFrame {
     }
 
     visible: running
-    iconSource: root.tailscaleIconSource
+    iconMark: root.tailscaleMark
     iconVisualSize: root.theme.iconSize
     iconOnly: true
-    active: connected || tailscalePanel.open
+    active: tailscalePanel.open
     attention: running && !connected
     tooltip: !loggedIn
         ? "Tailscale sign-in required\nClick to authenticate"
@@ -281,7 +275,7 @@ WidgetFrame {
 
         ControlPanelHeader {
             theme: root.theme
-            iconSource: root.tailscaleIconSource
+            iconMark: root.tailscaleMark
             title: "TAILSCALE"
             subtitle: root.logoutArmed
                 ? "Select sign out again to confirm"

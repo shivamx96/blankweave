@@ -8,9 +8,7 @@ WidgetFrame {
     id: root
 
     readonly property string shellDir: Quickshell.env("HOME") + "/.local/share/hyprarch/shell"
-    readonly property url dockerIconSource: Qt.resolvedUrl(
-        "../Assets/docker-" + (theme.dark ? "dark" : "light") + ".svg"
-    )
+    readonly property string dockerMark: "docker"
     property var status: ({
         "available": false,
         "daemonRunning": false,
@@ -131,10 +129,10 @@ WidgetFrame {
     }
 
     visible: running
-    iconSource: root.dockerIconSource
+    iconMark: root.dockerMark
     iconVisualSize: root.theme.iconSize + 4
     iconOnly: true
-    active: running || dockerPanel.open
+    active: dockerPanel.open
     tooltip: Number(status.runningContainers || 0) > 0
         ? "Docker · " + Number(status.runningContainers || 0) + " containers running\nClick for workloads"
         : "Docker Engine running · No active containers\nClick for workloads"
@@ -171,7 +169,7 @@ WidgetFrame {
 
         ControlPanelHeader {
             theme: root.theme
-            iconSource: root.dockerIconSource
+            iconMark: root.dockerMark
             title: "DOCKER"
             subtitle: String(root.status.name || "Docker Engine")
                 + (root.status.version ? " · " + String(root.status.version) : "")

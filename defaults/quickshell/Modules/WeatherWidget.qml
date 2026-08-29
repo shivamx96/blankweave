@@ -34,7 +34,7 @@ WidgetFrame {
         && hourly.precipitation_probability.length > 0
         ? Math.round(Number(hourly.precipitation_probability[0] || 0))
         : 0
-    readonly property url weatherIconSource: root.iconFor(root.weatherCode, root.isDay)
+    readonly property string weatherMark: root.markFor(root.weatherCode, root.isDay)
 
     function updateStatus(payload) {
         if (!payload)
@@ -70,8 +70,8 @@ WidgetFrame {
         return "cloudy"
     }
 
-    function iconFor(code, day) {
-        return Qt.resolvedUrl("../Assets/weather-" + root.conditionCategory(code, day) + ".svg")
+    function markFor(code, day) {
+        return "weather-" + root.conditionCategory(code, day)
     }
 
     function conditionLabel(code) {
@@ -203,7 +203,7 @@ WidgetFrame {
         actionProcess.running = true
     }
 
-    iconSource: root.weatherIconSource
+    iconMark: root.weatherMark
     iconVisualSize: root.theme.iconSize + 2
     label: root.available ? root.temperature + "°" : ""
     tooltip: !root.configured
@@ -285,7 +285,7 @@ WidgetFrame {
 
         ControlPanelHeader {
             theme: root.theme
-            iconSource: root.weatherIconSource
+            iconMark: root.weatherMark
             title: root.configured ? String(root.status.location || "WEATHER").toUpperCase() : "WEATHER"
             subtitle: root.available
                 ? root.conditionLabel(root.weatherCode) + " · Feels like " + root.feelsLike + "°C"
@@ -462,16 +462,12 @@ WidgetFrame {
                         renderType: Text.NativeRendering
                     }
 
-                    Image {
+                    VectorMark {
                         Layout.alignment: Qt.AlignHCenter
-                        Layout.preferredWidth: 22
-                        Layout.preferredHeight: 22
-                        source: root.iconFor(parent.modelData.code, parent.modelData.isDay)
-                        sourceSize.width: 44
-                        sourceSize.height: 44
-                        fillMode: Image.PreserveAspectFit
-                        smooth: true
-                        mipmap: true
+                        mark: root.markFor(parent.modelData.code, parent.modelData.isDay)
+                        markColor: root.theme.text
+                        accentColor: root.theme.accentBright
+                        visualSize: 22
                     }
 
                     Text {
@@ -533,15 +529,11 @@ WidgetFrame {
                         renderType: Text.NativeRendering
                     }
 
-                    Image {
-                        Layout.preferredWidth: 22
-                        Layout.preferredHeight: 22
-                        source: root.iconFor(parent.parent.modelData.code, true)
-                        sourceSize.width: 44
-                        sourceSize.height: 44
-                        fillMode: Image.PreserveAspectFit
-                        smooth: true
-                        mipmap: true
+                    VectorMark {
+                        mark: root.markFor(parent.parent.modelData.code, true)
+                        markColor: root.theme.text
+                        accentColor: root.theme.accentBright
+                        visualSize: 22
                     }
 
                     Text {

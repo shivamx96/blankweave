@@ -8,9 +8,7 @@ WidgetFrame {
     id: root
 
     readonly property string shellDir: Quickshell.env("HOME") + "/.local/share/hyprarch/shell"
-    readonly property url gpuIconSource: Qt.resolvedUrl(
-        "../Assets/gpu-" + (theme.dark ? "dark" : "light") + ".svg"
-    )
+    readonly property string gpuMark: "gpu"
     property bool detailLoading: false
     property var status: ({
         "available": false,
@@ -93,7 +91,7 @@ WidgetFrame {
     }
 
     visible: Boolean(status.available)
-    iconSource: root.gpuIconSource
+    iconMark: root.gpuMark
     iconVisualSize: root.theme.iconSize + 2
     horizontalPadding: 7
     labelWidth: theme.metricLabelWidth
@@ -134,7 +132,7 @@ WidgetFrame {
 
         ControlPanelHeader {
             theme: root.theme
-            iconSource: root.gpuIconSource
+            iconMark: root.gpuMark
             title: "GRAPHICS"
             subtitle: String(root.status.name || "Graphics processor")
             actions: [
