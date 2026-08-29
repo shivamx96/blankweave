@@ -19,7 +19,9 @@ if [ "$EUID" -ne 0 ]; then
     echo "###"
     echo "#############################################################################"
     echo ""
-    exec sudo "$0" "$@"
+    exec sudo env \
+        HYPRARCH_USER_STATE_HOME="${XDG_STATE_HOME:-$HOME/.local/state}" \
+        "$0" "$@"
 elif [ -z "$SUDO_USER" ]; then
     echo "Do not run as root directly. Just run: ./install.sh"
     exit 1
@@ -31,6 +33,13 @@ section() {
     echo "### $1"
     echo "#############################################################################"
     echo ""
+}
+
+WARNINGS=()
+
+warn() {
+    WARNINGS+=("$*")
+    printf 'Warning: %s\n' "$*" >&2
 }
 
 copy_file_atomically() {
@@ -79,9 +88,11 @@ verify_packages_installed() {
 }
 
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-USER_HOME="/home/$SUDO_USER"
+USER_HOME="$(getent passwd "$SUDO_USER" | cut -d: -f6)"
+[ -n "$USER_HOME" ] || { echo "Could not resolve the home directory for $SUDO_USER" >&2; exit 1; }
 USER_UID="$(id -u "$SUDO_USER")"
 USER_RUNTIME_DIR="/run/user/$USER_UID"
+USER_STATE_HOME="${HYPRARCH_USER_STATE_HOME:-$USER_HOME/.local/state}"
 PARU_BUILD_DIR=""
 
 # Grant temporary NOPASSWD to avoid repeated password prompts during install
@@ -139,7 +150,9 @@ fi
 
 echo "Running full system upgrade..."
 pacman -Syu --noconfirm
-pacman -Fy --noconfirm || echo "Warning: file database sync failed"
+if ! pacman -Fy --noconfirm; then
+    warn "File database sync failed; package installation will continue."
+fi
 
 echo "Installing base packages..."
 load_package_manifest "$REPO_DIR/packages/providers.txt" PROVIDER_PACKAGES
@@ -176,20 +189,20 @@ section "ENABLING SERVICES"
 
 echo "Setting up Bluetooth..."
 systemctl enable bluetooth.service
-systemctl start bluetooth.service || echo "Warning: Could not start bluetooth service (may need manual setup)"
+systemctl start bluetooth.service || warn "Could not start Bluetooth; it may need manual setup."
 
 echo "Setting up NetworkManager..."
 systemctl enable NetworkManager.service
-systemctl start NetworkManager.service || echo "Warning: Could not start NetworkManager service"
+systemctl start NetworkManager.service || warn "Could not start NetworkManager."
 
 echo "Setting up Tailscale..."
 systemctl enable tailscaled.service
-systemctl start tailscaled.service || echo "Warning: Could not start tailscaled service"
+systemctl start tailscaled.service || warn "Could not start Tailscale."
 # Log in separately (interactive/browser auth):  tailscale up
 
 echo "Setting up Docker..."
 systemctl enable docker.service
-systemctl start docker.service || echo "Warning: Could not start docker service"
+systemctl start docker.service || warn "Could not start Docker."
 usermod -aG docker "$SUDO_USER"
 usermod -aG render,video "$SUDO_USER"
 
@@ -214,6 +227,10 @@ mkdir -p "$DOTS_DIR"
 mkdir -p "$CONFIG_DIR"
 
 echo "Copying defaults to $DOTS_DIR..."
+
+mkdir -p "$USER_HOME/.local/bin"
+install -m 0755 "$REPO_DIR/bin/hyprarch" "$USER_HOME/.local/bin/hyprarch"
+copy_file_atomically "$REPO_DIR/VERSION" "$DOTS_DIR/VERSION"
 
 mkdir -p "$DOTS_DIR/hypr"
 for hypr_config in "$REPO_DIR/defaults/hypr/"*; do
@@ -253,7 +270,7 @@ chmod +x "$DOTS_DIR/shell"/*.sh
 
 echo "Capturing sanitized hardware inventory..."
 if ! "$DOTS_DIR/shell/hardware-inventory.sh" "$SUDO_USER"; then
-    echo "Warning: Could not capture hardware inventory; the live system overview will use generic fallbacks"
+    warn "Could not capture hardware inventory; the system overview will use generic fallbacks."
 fi
 
 section "GENERATING USER CONFIGS"
@@ -378,8 +395,7 @@ if [ "$HOST" = "pc" ]; then
         if [ -d "/usr/lib/modules/$RUNNING_KERNEL/build" ]; then
             dkms autoinstall
         else
-            echo "Warning: Headers for running kernel $RUNNING_KERNEL not found (kernel was likely upgraded)."
-            echo "DKMS modules will build automatically on next boot."
+            warn "Headers for running kernel $RUNNING_KERNEL were not found; DKMS modules should build on next boot."
         fi
     fi
 
@@ -442,6 +458,13 @@ if [ ! -f "$SSH_KEY" ]; then
     sudo -u "$SUDO_USER" ssh-keygen -t ed25519 -C "$GIT_EMAIL" -f "$SSH_KEY" -N ""
 fi
 
+section "APPLYING MIGRATIONS"
+
+sudo -H -u "$SUDO_USER" env \
+    HOME="$USER_HOME" \
+    XDG_STATE_HOME="$USER_STATE_HOME" \
+    "$REPO_DIR/scripts/run-migrations.sh" "$REPO_DIR"
+
 section "DONE"
 
 echo "Installation complete!"
@@ -468,3 +491,9 @@ fi
 echo "Reboot to launch into Hyprland."
 echo "If Hyprland was running during this install, a full session restart is required."
 echo "A hyprctl reload cannot switch an existing legacy .conf session to Lua."
+
+if [ "${#WARNINGS[@]}" -gt 0 ]; then
+    echo ""
+    echo "Completed with ${#WARNINGS[@]} warning(s):"
+    printf '  - %s\n' "${WARNINGS[@]}"
+fi

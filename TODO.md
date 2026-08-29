@@ -11,9 +11,23 @@
 - [ ] `nvtop` is referenced by the Quickshell GPU module (`on-click`) but only
       listed in `hosts/pc/packages.txt` — clicking the module does nothing on laptop.
       Either move to `base.txt` or make the click host-aware (`intel_gpu_top` on laptop).
-- [ ] `install.sh` has no trailing newline on its last line.
 - [ ] Audit for other `defaults/` configs referencing host-only packages — this is the
       same root cause that made `hyprsunset` fail silently on laptop.
+
+## Installer UX
+
+- [ ] Add `hyprarch setup`, a guided terminal flow for first-install preferences.
+      Keep `bootstrap.sh` focused on acquiring the managed checkout and handing
+      off to the CLI.
+- [ ] Define package profiles (`core`, `desktop`, `development`, `communication`,
+      `gaming`, and host-specific hardware) so users select capabilities rather
+      than individual dependency packages.
+- [ ] Offer optional Git identity (`user.name` and `user.email`), GitHub SSH-key
+      generation, and a clear skip path. Never collect credentials or upload keys.
+- [ ] Save non-secret choices in an inspectable user config so `hyprarch update`
+      can converge without asking the setup questions again.
+- [ ] Add a final review before package or system changes, plus a non-interactive
+      mode that consumes an existing config for repeatable installs.
 
 ## Hyprland: Lua config migration
 
@@ -45,9 +59,8 @@ Hyprland 0.55+ deprecated Hyprlang (`.conf`) in favour of Lua.
       "close to tray" (`runFromTray: true` in its own config) can't work — closing
       the window quits it. Use `Super+Shift+B` for Blueman instead of an applet.
       Don't re-suggest this.
-- [ ] No idle-inhibitor module. hypridle dims at 150s and locks at 300s, which fires
-      mid-video. Quickshell can expose this directly — and it *serves* the
-      distraction-free goal rather than working against it.
+- [x] ~~Add an idle-inhibitor module~~ — **declined 2026-08-28.** Keep the shell
+      free of an explicit inhibitor control.
 - [x] Replaced Waybar with a native Quickshell bar, removing the minimum-height warning.
 
 ## Screenshots & capture
@@ -68,7 +81,7 @@ Hyprland 0.55+ deprecated Hyprlang (`.conf`) in favour of Lua.
 - [ ] `hyprpicker` — colour picker.
 - [ ] `qt6ct` — Qt apps are unstyled while GTK gets themed on toggle, despite
       `QT_QPA_PLATFORM` being set. Would need wiring into `theme-toggle.sh`.
-- [ ] `power-profiles-daemon` for laptop battery.
+- [x] `power-profiles-daemon` for laptop battery.
 - [ ] `hyprpolkitagent` — native replacement for the `polkit-gnome` we autostart.
 
 ## Brightness

@@ -69,7 +69,7 @@ alias ls='ls --color'
 alias lsa='ls -lha'
 alias lzg='lazygit'
 alias lzd='lazydocker'
-alias update-hyprarch='cd ~/hyprarch && git pull && ./install.sh'
+alias update-hyprarch='hyprarch update'
 
 # Updating PATH with Zed
 export PATH=$HOME/.local/bin:$PATH
