@@ -161,6 +161,20 @@ uses PipeWire's logical default sink and
 discovers available output nodes at runtime; never encode host card IDs or
 device names in the shell.
 
+A choice the user makes inside a widget's own bar entry, such as the clock's
+right-click representation, is a preference and must survive a restart.
+`Services/ShellPreferences.qml` owns those: it reads and writes
+`~/.config/hyprarch/shell.json` through a `FileView` and a `JsonAdapter`, is
+instantiated once in `shell.qml`, and is reached from a widget as
+`bar.shell.preferences`. Declare a new preference in that adapter's schema —
+anything absent from it is dropped the next time the file is written — and never
+open a second `FileView` over the same path, because the two would race.
+Widget configuration with a real schema and network work behind it keeps its own
+file and its own script instead, the way the weather location lives in
+`~/.config/hyprarch/weather.json` and is written only by `weather-status.sh`, so
+every file has exactly one writer. A persisted preference is still a
+steady state, so it changes a widget's form, never its `active` accent.
+
 The rightmost power control is a native panel. Lock and suspend are immediate;
 logout, reboot, and shutdown require a second confirmation click and must clear
 their armed state whenever the panel closes.
@@ -270,6 +284,8 @@ GPU monitoring script (`gpu-usage.sh`) auto-detects at runtime: tries `nvidia-sm
 3. Use a native Quickshell service where available; otherwise use `ScriptPoller`
 4. Add the module to the appropriate island in `Bar/Bar.qml`
 5. Keep colors and geometry in `Theme.qml` instead of defining them per module
+6. Persist any user-facing choice the widget offers through
+   `Services/ShellPreferences.qml` rather than a plain widget property
 
 ### Adding a new shell script
 

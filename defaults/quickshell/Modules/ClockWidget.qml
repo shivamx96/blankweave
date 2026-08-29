@@ -6,7 +6,8 @@ import "../Components"
 WidgetFrame {
     id: root
 
-    property int displayMode: 0
+    readonly property var preferences: root.bar.shell.preferences
+    readonly property int displayMode: preferences.clock.displayMode
     property int viewYear: clock.date.getFullYear()
     property int viewMonth: clock.date.getMonth()
     property date selectedDate: clock.date
@@ -98,7 +99,7 @@ WidgetFrame {
     }
     tooltip: Qt.formatDateTime(clock.date, "dddd, d MMMM yyyy\nHH:mm:ss")
         + "\nRight-click: change display"
-    active: displayMode !== 0 || calendarPanel.open
+    active: calendarPanel.open
     labelWeight: Font.DemiBold
     horizontalPadding: 13
 
@@ -113,7 +114,7 @@ WidgetFrame {
             calendarPanel.open = !calendarPanel.open
         }
         else if (button === Qt.RightButton)
-            root.displayMode = (root.displayMode + 1) % 3
+            root.preferences.clock.displayMode = (root.displayMode + 1) % 3
     }
 
     ControlPopup {
