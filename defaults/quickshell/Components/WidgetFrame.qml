@@ -8,7 +8,7 @@ Item {
     required property var theme
 
     property string icon: ""
-    property url iconSource: ""
+    property string iconMark: ""
     property int iconVisualSize: theme.iconSize + 1
     property int iconPixelSize: theme.iconSize
     property string label: ""
@@ -20,6 +20,9 @@ Item {
     property int labelWidth: 0
     property int horizontalPadding: theme.widgetPadding
     property color foreground: attention ? theme.critical : (active ? theme.accentBright : theme.text)
+    // Vector marks carry an accent detail. Once the widget itself is accented
+    // the detail would disappear into it, so the mark goes monochrome instead.
+    readonly property color markAccent: active || attention ? foreground : theme.accentBright
 
     signal pressed(int button)
     signal scrolled(real delta)
@@ -34,20 +37,15 @@ Item {
         anchors.centerIn: parent
         spacing: root.label ? theme.widgetContentGap : 0
 
-        Image {
-            visible: root.iconSource.toString() !== ""
-            Layout.preferredWidth: root.iconVisualSize
-            Layout.preferredHeight: root.iconVisualSize
-            source: root.iconSource
-            sourceSize.width: root.iconVisualSize * 2
-            sourceSize.height: root.iconVisualSize * 2
-            fillMode: Image.PreserveAspectFit
-            smooth: true
-            mipmap: true
+        VectorMark {
+            mark: root.iconMark
+            markColor: root.foreground
+            accentColor: root.markAccent
+            visualSize: root.iconVisualSize
         }
 
         Text {
-            visible: root.iconSource.toString() === "" && root.icon !== ""
+            visible: root.iconMark === "" && root.icon !== ""
             text: root.icon
             color: root.foreground
             font.family: theme.iconFontFamily

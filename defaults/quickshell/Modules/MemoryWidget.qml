@@ -8,9 +8,7 @@ WidgetFrame {
     id: root
 
     readonly property string shellDir: Quickshell.env("HOME") + "/.local/share/hyprarch/shell"
-    readonly property url memoryIconSource: Qt.resolvedUrl(
-        "../Assets/memory-" + (theme.dark ? "dark" : "light") + ".svg"
-    )
+    readonly property string memoryMark: "memory"
     property var status: ({
         "text": "—",
         "tooltip": "Memory information unavailable",
@@ -56,7 +54,7 @@ WidgetFrame {
             + Number(process.usage || 0).toFixed(1) + "%"
     }
 
-    iconSource: root.memoryIconSource
+    iconMark: root.memoryMark
     iconVisualSize: root.theme.iconSize + 2
     horizontalPadding: 7
     labelWidth: theme.metricLabelWidth
@@ -93,7 +91,7 @@ WidgetFrame {
 
         ControlPanelHeader {
             theme: root.theme
-            iconSource: root.memoryIconSource
+            iconMark: root.memoryMark
             title: "MEMORY"
             subtitle: root.formatBytes(root.status.totalBytes) + " usable"
             actions: [
