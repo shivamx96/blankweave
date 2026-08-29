@@ -28,7 +28,7 @@ hyprarch/
   bin/hyprarch       # User-facing version/update command
   bootstrap.sh       # First-install managed-checkout bootstrap
   migrations/        # Ordered, user-scoped, run-once migrations
-  scripts/           # Installer/update support scripts
+  scripts/           # Installer/update support scripts, wallpaper tinting tool
   install.sh         # Internal apply engine (also usable by developers)
 ```
 
@@ -314,7 +314,8 @@ A theme is a directory holding `theme.json` with two modes, `dark` and
 theme itself. Bundled themes live in `defaults/themes/<id>/` (mirrored to
 `~/.local/share/hyprarch/themes/`), and a user theme in
 `~/.config/hyprarch/themes/<id>/` shadows a bundled one with the same id. The
-default is `obsidian`: Obsidian in dark mode, Porcelain in light.
+default is `obsidian`: Obsidian in dark mode, Porcelain in light; `moss` is
+the bundled green counterpart (Moss and Sage).
 
 Each mode carries:
 
@@ -358,8 +359,12 @@ last good palette. The state file is rewritten in place with a single write
 rather than renamed, because Quickshell watches that path. `wallpaper.sh
 theme` reads the same file at startup. Ghostty is not re-rendered per mode:
 its template emits `theme = light:…,dark:…` from both modes and Ghostty
-follows the portal colour scheme. GTK3 apps (Thunar) still only pick a change
-up on restart.
+follows the portal colour scheme. A theme switch changes that pair, and a
+surface that is already open keeps the pair it resolved at creation even
+after Ghostty's own file-watch reload, so the script activates Ghostty's
+`reload-config` D-Bus action — guarded by `NameHasOwner`, because the name is
+activatable and a bare call would launch a terminal. GTK3 apps (Thunar) still
+only pick a change up on restart.
 
 `hyprarch theme list|status|set <id>|mode dark|light|toggle` is the public
 entry point and delegates to the deployed script. Fonts, geometry,
@@ -423,9 +428,14 @@ GPU monitoring script (`gpu-usage.sh`) auto-detects at runtime: tries `nvidia-sm
    `~/.config/hyprarch/themes/<id>/` for a personal theme, and edit
    `theme.json`. Both modes and every palette token are required; wallpaper
    paths are relative to the theme directory.
-2. Retune `lock` for the new wallpapers instead of copying the palette into
+2. Derive the wallpapers with `scripts/tint-wallpaper.py <source> <output>
+   <from-accent> <to-accent>` (runs under `uv`, needs no install): the bundled
+   renders share one scene whose only saturated element is the accent river,
+   so a hue rotation from the source theme's accent to the new one moves the
+   river and the neutral tint together and keeps the family recognisable.
+3. Retune `lock` for the new wallpapers instead of copying the palette into
    it; the lock screen needs more contrast than the bar.
-3. Check both modes with `theme-apply.sh set <id>` and `theme-apply.sh mode
+4. Check both modes with `theme-apply.sh set <id>` and `theme-apply.sh mode
    light`; the renderer rejects a missing token before touching any output.
 
 ### Adding a themed config

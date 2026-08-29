@@ -26,6 +26,7 @@ mkdir -p "$fake_bin"
 for command in gsettings dunstctl hyprctl awww; do
     ln -s "$repository/tests/fixtures/fake-log.sh" "$fake_bin/$command"
 done
+ln -s "$repository/tests/fixtures/fake-gdbus.sh" "$fake_bin/gdbus"
 
 home=$test_root/home
 data=$home/.local/share/hyprarch
@@ -90,6 +91,7 @@ grep -Fxq 'gsettings set org.gnome.desktop.interface color-scheme prefer-dark' "
 grep -Fq "awww img $data/themes/obsidian/obsidian-dark.png" "$FAKE_LOG"
 grep -Fxq 'hyprctl reload' "$FAKE_LOG"
 grep -Fxq "dunstctl reload $dunstrc" "$FAKE_LOG"
+grep -Fq 'gdbus call --session --dest com.mitchellh.ghostty --object-path /com/mitchellh/ghostty --method org.gtk.Actions.Activate reload-config [] {}' "$FAKE_LOG"
 [[ $(< "$home/.cache/hyprarch-wallpaper") == "$data/themes/obsidian/obsidian-dark.png" ]]
 
 # The rendered configs are complete files, not just colour lines.
@@ -112,6 +114,14 @@ grep -Fxq 'gtk-application-prefer-dark-theme=0' "$XDG_CONFIG_HOME/gtk-3.0/settin
 grep -Fxq 'gsettings set org.gnome.desktop.interface color-scheme prefer-light' "$FAKE_LOG"
 grep -Fq "awww img $data/themes/obsidian/porcelain-light.png" "$FAKE_LOG"
 
+# Ghostty is D-Bus activatable, so when it is not running the reload must not
+# be sent or it would launch a terminal.
+: > "$FAKE_LOG"
+FAKE_GDBUS_OWNED=false "$script" toggle
+grep -Fq 'NameHasOwner com.mitchellh.ghostty' "$FAKE_LOG"
+expect_failure grep -Fq 'Activate reload-config' "$FAKE_LOG"
+"$script" toggle
+
 # The wallpaper script hands the boot-time restore the theme's wallpaper.
 bash "$data/shell/wallpaper.sh" theme > /dev/null
 [[ $(< "$home/.cache/hyprarch-wallpaper") == "$data/themes/obsidian/porcelain-light.png" ]]
@@ -123,6 +133,23 @@ printf 'light\n' > "$data/theme"
 "$script"
 [[ $(jq -r '.mode' "$state") == light ]]
 rm -f "$data/theme"
+
+# Every bundled theme must resolve and render in both modes, so a palette
+# missing a token or a wallpaper can never ship.
+for theme_file in "$data"/themes/*/theme.json; do
+    theme_id=$(basename "$(dirname "$theme_file")")
+    for theme_mode in dark light; do
+        "$script" set "$theme_id"
+        "$script" mode "$theme_mode"
+        assert_rendered
+        [[ $(jq -r '.theme' "$state") == "$theme_id" ]]
+        [[ $(jq -r '.mode' "$state") == "$theme_mode" ]]
+        [[ -f $(jq -r '.wallpaper' "$state") ]]
+        [[ $(jq -r '.colors | length' "$state") -ge 20 ]]
+    done
+done
+"$script" set obsidian
+"$script" mode light
 
 # A user theme under ~/.config shadows the bundled set and is listed as such.
 user_theme=$XDG_CONFIG_HOME/hyprarch/themes/ember
@@ -148,7 +175,8 @@ grep -Fq 'active_border = { "rgba(ff5500ff)", "rgba(ff7733ff)" },' "$hypr_theme"
 expect_failure grep -Fq 'awww img /nonexistent' "$FAKE_LOG"
 
 listing=$("$script" list)
-[[ $(jq -r 'length' <<< "$listing") == 2 ]]
+bundled_themes=("$data"/themes/*/theme.json)
+[[ $(jq -r 'length' <<< "$listing") == $(( ${#bundled_themes[@]} + 1 )) ]]
 [[ $(jq -r '.[] | select(.id == "ember") | .source' <<< "$listing") == user ]]
 [[ $(jq -r '.[] | select(.id == "obsidian") | .source' <<< "$listing") == bundled ]]
 [[ $(jq -r '.[] | select(.id == "obsidian") | .modes | length' <<< "$listing") == 2 ]]
