@@ -86,7 +86,8 @@ for connector_dir in /sys/class/drm/card*-*; do
     first_letter=$((((manufacturer_code >> 10) & 31) + 64))
     second_letter=$((((manufacturer_code >> 5) & 31) + 64))
     third_letter=$(((manufacturer_code & 31) + 64))
-    manufacturer=$(printf "\\$(printf '%03o' "$first_letter")\\$(printf '%03o' "$second_letter")\\$(printf '%03o' "$third_letter")")
+    manufacturer=$(awk -v first="$first_letter" -v second="$second_letter" -v third="$third_letter" \
+        'BEGIN { printf "%c%c%c", first, second, third }')
     product_id=$((product_low + product_high * 256))
     monitor_key="$manufacturer:$product_id"
     connector=$(basename "$connector_dir")

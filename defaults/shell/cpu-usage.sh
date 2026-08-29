@@ -9,7 +9,8 @@ current_file=$(mktemp "${runtime_dir}/hyprarch-cpu-current.XXXXXX" 2>/dev/null |
 
 if [[ -z "$current_file" ]]; then
     runtime_dir="/tmp/hyprarch-cpu-${UID}"
-    mkdir -p -m 700 "$runtime_dir"
+    mkdir -p "$runtime_dir"
+    chmod 700 "$runtime_dir"
     state_file="$runtime_dir/hyprarch-cpu-usage.state"
     process_state_file="$runtime_dir/hyprarch-cpu-processes.state"
     current_file=$(mktemp "${runtime_dir}/hyprarch-cpu-current.XXXXXX")

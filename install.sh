@@ -436,7 +436,7 @@ section "GENERATING SSH KEY"
 
 SSH_KEY="$USER_HOME/.ssh/id_ed25519"
 if [ ! -f "$SSH_KEY" ]; then
-    read -p "Enter your email for GitHub SSH key: " GIT_EMAIL
+    read -r -p "Enter your email for GitHub SSH key: " GIT_EMAIL
     echo "Generating SSH key for GitHub..."
     sudo -u "$SUDO_USER" mkdir -p "$USER_HOME/.ssh"
     sudo -u "$SUDO_USER" ssh-keygen -t ed25519 -C "$GIT_EMAIL" -f "$SSH_KEY" -N ""

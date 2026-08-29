@@ -79,7 +79,8 @@ cycle_wallpaper() {
         return 1
     fi
 
-    local current="$(cat "$CURRENT_WALLPAPER" 2>/dev/null)"
+    local current
+    current=$(cat "$CURRENT_WALLPAPER" 2>/dev/null)
     local next_idx=0
 
     for i in "${!wallpapers[@]}"; do
