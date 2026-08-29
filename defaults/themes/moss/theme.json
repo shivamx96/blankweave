@@ -5,7 +5,7 @@
     "dark": {
       "label": "Moss",
       "wallpaper": "moss-dark.png",
-      "ghostty": "Everforest Dark Hard",
+      "ghostty": "Neobones Dark",
       "iconTheme": "Papirus-Dark",
       "colors": {
         "canvas": "#050d0a",
@@ -49,7 +49,7 @@
     "light": {
       "label": "Sage",
       "wallpaper": "sage-light.png",
-      "ghostty": "Everforest Light Med",
+      "ghostty": "Neobones Light",
       "iconTheme": "Papirus-Light",
       "colors": {
         "canvas": "#eef7f2",
