@@ -63,7 +63,7 @@ assert_contains intel-media-driver "${packages[@]}"
 assert_contains docker "${packages[@]}"
 assert_excludes steam "${packages[@]}"
 resolve_package_manifests "$repository" laptop aur aur_packages
-[[ "${#aur_packages[@]}" -eq 12 ]]
+[[ "${#aur_packages[@]}" -eq 13 ]]
 resolve_package_manifests "$repository" laptop providers provider_packages
 [[ "${#provider_packages[@]}" -eq 3 ]]
 
