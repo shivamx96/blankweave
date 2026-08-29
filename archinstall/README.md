@@ -60,13 +60,14 @@ credentials-file option and keep the decryption key separately.
 After Archinstall finishes, reboot into the new system and run:
 
 ```bash
-git clone https://github.com/shivamx96/hyprarch.git
-cd hyprarch
-./install.sh
+curl --proto '=https' --tlsv1.2 -fsSL \
+  https://raw.githubusercontent.com/shivamx96/hyprarch/refs/heads/main/bootstrap.sh | sh
 ```
 
-The second stage detects the Intel laptop or NVIDIA desktop and installs the
-matching drivers, AUR packages, services, and user configuration.
+The bootstrap creates a managed checkout under
+`~/.local/share/hyprarch/repository`. The second stage detects the Intel laptop
+or NVIDIA desktop and installs the matching drivers, AUR packages, services,
+and user configuration. Future updates are applied with `hyprarch update`.
 
 ## Encryption policy
 

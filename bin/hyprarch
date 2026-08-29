@@ -1,0 +1,168 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+PROGRAM_NAME=hyprarch
+EXPECTED_HTTPS_REMOTE=https://github.com/shivamx96/hyprarch.git
+EXPECTED_SSH_REMOTE=git@github.com:shivamx96/hyprarch.git
+STATE_HOME=${XDG_STATE_HOME:-$HOME/.local/state}
+HYPRARCH_DATA_DIR=$HOME/.local/share/hyprarch
+HYPRARCH_STATE_DIR=$STATE_HOME/hyprarch
+REPOSITORY_STATE=$HYPRARCH_STATE_DIR/repository
+INSTALLED_REVISION_STATE=$HYPRARCH_STATE_DIR/installed-revision
+
+die() {
+    printf '%s: %s\n' "$PROGRAM_NAME" "$*" >&2
+    exit 1
+}
+
+script_repository() {
+    local script_dir candidate
+
+    script_dir=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
+    candidate=$(cd -- "$script_dir/.." && pwd)
+    if [[ -f "$candidate/install.sh" && -f "$candidate/VERSION" ]]; then
+        printf '%s\n' "$candidate"
+    fi
+}
+
+configured_repository() {
+    local repository
+
+    if repository=$(script_repository) && [[ -n "$repository" ]]; then
+        printf '%s\n' "$repository"
+    elif [[ -r "$REPOSITORY_STATE" ]]; then
+        IFS= read -r repository < "$REPOSITORY_STATE"
+        printf '%s\n' "$repository"
+    else
+        printf '%s\n' "$HYPRARCH_DATA_DIR/repository"
+    fi
+}
+
+require_normal_user() {
+    if (( EUID == 0 )); then
+        die "run this command as your normal user; it will request sudo when required"
+    fi
+}
+
+validate_repository() {
+    local repository="$1"
+    local remote
+
+    [[ -d "$repository/.git" ]] || die "managed repository not found at $repository"
+    [[ -f "$repository/install.sh" ]] || die "repository is missing install.sh"
+    [[ -x "$repository/bin/hyprarch" ]] || die "repository is missing the hyprarch command"
+
+    remote=$(git -C "$repository" remote get-url origin 2>/dev/null) \
+        || die "repository has no origin remote"
+    case "$remote" in
+        "$EXPECTED_HTTPS_REMOTE"|"$EXPECTED_SSH_REMOTE") ;;
+        *) die "refusing unexpected origin remote: $remote" ;;
+    esac
+}
+
+current_revision() {
+    git -C "$1" rev-parse --short=12 HEAD 2>/dev/null || printf 'unknown\n'
+}
+
+read_version() {
+    local source_repository version_file
+
+    if source_repository=$(script_repository) && [[ -r "$source_repository/VERSION" ]]; then
+        version_file=$source_repository/VERSION
+    elif [[ -r "$HYPRARCH_DATA_DIR/VERSION" ]]; then
+        version_file=$HYPRARCH_DATA_DIR/VERSION
+    else
+        printf 'unknown\n'
+        return
+    fi
+
+    head -n 1 "$version_file"
+}
+
+apply_repository() {
+    local repository="$1"
+
+    require_normal_user
+    validate_repository "$repository"
+    "$repository/install.sh"
+}
+
+command_version() {
+    local repository installed_revision repository_revision
+
+    repository=$(configured_repository)
+    installed_revision=not-recorded
+    if [[ -r "$INSTALLED_REVISION_STATE" ]]; then
+        IFS= read -r installed_revision < "$INSTALLED_REVISION_STATE"
+        installed_revision=${installed_revision:0:12}
+    fi
+    repository_revision=$(current_revision "$repository")
+
+    printf 'hyprarch %s\n' "$(read_version)"
+    printf 'installed:  %s\n' "$installed_revision"
+    printf 'repository: %s\n' "$repository_revision"
+}
+
+command_update() {
+    local repository branch
+
+    require_normal_user
+    repository=$(configured_repository)
+    validate_repository "$repository"
+
+    branch=$(git -C "$repository" branch --show-current)
+    [[ "$branch" == main ]] || die "managed repository must be on main, found: ${branch:-detached HEAD}"
+    [[ -z "$(git -C "$repository" status --porcelain)" ]] \
+        || die "managed repository has local changes; refusing to update"
+
+    printf 'Fetching Hyprarch updates...\n'
+    git -C "$repository" fetch --prune origin main
+    git -C "$repository" merge-base --is-ancestor HEAD origin/main \
+        || die "origin/main is not a fast-forward of the local checkout"
+    git -C "$repository" merge --ff-only origin/main
+
+    exec "$repository/bin/hyprarch" _apply "$repository"
+}
+
+print_help() {
+    cat <<'EOF'
+Usage: hyprarch <command>
+
+Commands:
+  version   Show the CLI version and installed/repository revisions
+  update    Fast-forward the managed repository and apply the update
+  help      Show this help
+EOF
+}
+
+main() {
+    local command=${1:-help}
+    shift || true
+
+    case "$command" in
+        version|--version|-V)
+            [[ $# -eq 0 ]] || die "version does not accept arguments"
+            command_version
+            ;;
+        update)
+            [[ $# -eq 0 ]] || die "update does not accept arguments"
+            command_update
+            ;;
+        help|--help|-h)
+            [[ $# -eq 0 ]] || die "help does not accept arguments"
+            print_help
+            ;;
+        _apply)
+            [[ $# -eq 1 ]] || die "internal apply requires a repository path"
+            apply_repository "$1"
+            ;;
+        *)
+            printf '%s: unknown command: %s\n\n' "$PROGRAM_NAME" "$command" >&2
+            print_help >&2
+            exit 2
+            ;;
+    esac
+}
+
+main "$@"

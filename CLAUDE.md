@@ -22,8 +22,27 @@ hyprarch/
   packages/
     base.txt         # Pacman packages (shared)
     aur.txt          # AUR packages (shared)
-  install.sh         # Main installer (auto-detects hardware, deploys everything)
+  bin/hyprarch       # User-facing version/update command
+  bootstrap.sh       # First-install managed-checkout bootstrap
+  migrations/        # Ordered, user-scoped, run-once migrations
+  scripts/           # Installer/update support scripts
+  install.sh         # Internal apply engine (also usable by developers)
 ```
+
+### Install and update lifecycle
+
+1. `bootstrap.sh` clones the trusted `main` branch to
+   `~/.local/share/hyprarch/repository`.
+2. The repository CLI invokes `install.sh`, which deploys the public command to
+   `~/.local/bin/hyprarch` along with the desktop configuration.
+3. `install.sh` runs `scripts/run-migrations.sh` as the normal user only after a
+   successful apply. Applied migration filenames are recorded under
+   `${XDG_STATE_HOME:-~/.local/state}/hyprarch/`.
+4. `hyprarch update` validates the origin, branch, and clean worktree, performs
+   a fast-forward-only update, then re-executes the newly fetched CLI.
+
+Do not add a public `hyprarch install` command. First installation is the
+bootstrap's responsibility; subsequent convergence is `hyprarch update`.
 
 ### Config deployment flow
 
@@ -61,7 +80,7 @@ companion tools; only the Hyprland compositor config uses Lua.
 ### Symlink strategy
 
 Dunst, Ghostty, Fuzzel, and Fontconfig are symlinked from `~/.config/` back to `~/.local/share/hyprarch/`. Quickshell runs directly from the deployed defaults. This means:
-- Running `update-hyprarch` (git pull + re-run install) updates configs automatically
+- Running `hyprarch update` updates the managed checkout and reapplies configs
 - Users can break a symlink and replace it with a custom file to override
 
 ### Package placement
@@ -198,6 +217,13 @@ GPU monitoring script (`gpu-usage.sh`) auto-detects at runtime: tries `nvidia-sm
 1. Create in `defaults/shell/<name>.sh` with `#!/usr/bin/env bash`
 2. It will be auto-deployed and made executable by `install.sh`
 3. Reference in configs as `~/.local/share/hyprarch/shell/<name>.sh`
+
+### Adding a migration
+
+1. Add an executable `migrations/YYYYMMDD-description.sh`.
+2. Keep it user-scoped, non-privileged, host-independent, and idempotent.
+3. Leave packages and declarative configuration in `install.sh`; migrations are
+   only for one-time state transitions that cannot be expressed by redeployment.
 
 ### Modifying the theme toggle
 

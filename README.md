@@ -13,12 +13,29 @@ For a new machine starting from the Arch live USB, use the reusable
 LUKS/user credentials interactive, then hands the installed system to this
 bootstrap.
 
+Run the bootstrap as your normal user after the Archinstall stage:
+
 ```bash
-git clone https://github.com/shivamx96/hyprarch.git
-cd hyprarch
-chmod +x install.sh
-./install.sh
+curl --proto '=https' --tlsv1.2 -fsSL \
+  https://raw.githubusercontent.com/shivamx96/hyprarch/refs/heads/main/bootstrap.sh | sh
 ```
+
+It clones the managed repository to
+`~/.local/share/hyprarch/repository`, installs the `hyprarch` command in
+`~/.local/bin`, and applies the system configuration. The bootstrap requires an
+interactive terminal because package installation and a few first-run choices
+need user input.
+
+After the first install, use:
+
+```bash
+hyprarch version
+hyprarch update
+```
+
+`hyprarch update` refuses dirty, divergent, or non-`main` managed checkouts. It
+only fast-forwards from the expected GitHub repository, applies the new version,
+and then records successful one-time migrations.
 
 The script will:
 - Detect hardware
@@ -26,6 +43,10 @@ The script will:
 - Set up defaults in `~/.local/share/hyprarch/`
 - Generate user configs in `~/.config/`
 - Capture a sanitized hardware inventory for the native system panel
+
+For development, a local checkout can still be applied with `./install.sh`.
+That path installs the same command and records the checkout as the active
+Hyprarch source.
 
 The hardware inventory stores motherboard, display, and DIMM model/specification
 fields, but excludes hardware serial numbers and machine UUIDs. Refresh it after
