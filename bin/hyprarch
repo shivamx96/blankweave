@@ -104,6 +104,14 @@ command_version() {
     printf 'repository: %s\n' "$repository_revision"
 }
 
+command_theme() {
+    local script=$HYPRARCH_DATA_DIR/shell/theme-apply.sh
+
+    require_normal_user
+    [[ -x "$script" ]] || die "theme support is not deployed yet; run: hyprarch update"
+    exec "$script" "$@"
+}
+
 command_update() {
     local repository branch
 
@@ -132,6 +140,7 @@ Usage: hyprarch <command>
 Commands:
   version   Show the CLI version and installed/repository revisions
   update    Fast-forward the managed repository and apply the update
+  theme     Manage the desktop theme: list, status, set <id>, mode <dark|light>, toggle
   help      Show this help
 EOF
 }
@@ -148,6 +157,9 @@ main() {
         update)
             [[ $# -eq 0 ]] || die "update does not accept arguments"
             command_update
+            ;;
+        theme)
+            command_theme "$@"
             ;;
         help|--help|-h)
             [[ $# -eq 0 ]] || die "help does not accept arguments"

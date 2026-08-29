@@ -161,7 +161,7 @@ WidgetFrame {
                 if (actionId === "theme") {
                     brightnessPanel.preserveNextClose = true
                     themeCloseGuard.restart()
-                    root.bar.run([root.shellDir + "/theme-toggle.sh"])
+                    root.bar.run([root.shellDir + "/theme-apply.sh", "toggle"])
                 }
             }
         }

@@ -133,7 +133,7 @@ PanelWindow {
 
     Rectangle {
         anchors.fill: parent
-        color: root.theme.dark ? "#b805080f" : "#a8edf4ff"
+        color: root.theme.scrim
 
         MouseArea {
             anchors.fill: parent

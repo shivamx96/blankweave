@@ -7,6 +7,17 @@ require(config_dir .. "input")
 require(config_dir .. "animations")
 require(config_dir .. "autostart")
 
+-- Window border colours come from the active theme: theme-apply.sh renders
+-- ~/.config/hyprarch/theme.lua, which is absent until the first apply, so fall
+-- back to the bundled default palette rather than refusing to start.
+local theme_ok, theme = pcall(dofile, os.getenv("HOME") .. "/.config/hyprarch/theme.lua")
+if not theme_ok or type(theme) ~= "table" then
+    theme = {
+        active_border = { "rgba(3b82f6ff)", "rgba(67a6ffff)" },
+        inactive_border = "rgba(33476aff)",
+    }
+end
+
 hl.config({
     general = {
         gaps_in = 2,
@@ -14,10 +25,10 @@ hl.config({
         border_size = 2,
         col = {
             active_border = {
-                colors = { "rgba(b4befeff)", "rgba(cba6f7ff)" },
+                colors = theme.active_border,
                 angle = 45,
             },
-            inactive_border = "rgba(45475aaa)",
+            inactive_border = theme.inactive_border,
         },
         resize_on_border = false,
         allow_tearing = false,

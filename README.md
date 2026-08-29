@@ -89,7 +89,7 @@ software already present.
 
 ### System
 - `Super + L` – lock screen
-- `Super + D` – toggle light/dark theme
+- `Super + D` – toggle dark/light mode of the active theme
 - `Super + Y` – reload the desktop shell
 - `Super + M` – exit Hyprland
 
@@ -134,15 +134,36 @@ software already present.
 - **Clean notifications** via Dunst
 - **Native Quickshell bar** with multi-monitor workspaces, audio, brightness,
   network throughput, Bluetooth, hardware metrics, battery, and power controls
-- **Hyprarch visual system** with a modern full-width shell and black/blue dark and
-  white/blue light palettes
+- **Themes** — each theme provides the shell palette, lock-screen treatment, and
+  wallpapers for both dark and light modes; `hyprarch theme` switches them and
+  personal themes live under `~/.config/hyprarch/themes/`
+
+## Themes
+
+A theme bundles the shell palette, the lock-screen treatment, and a wallpaper
+for each of its two modes, dark and light. `Super + D` switches the mode; the
+theme itself is chosen on the command line:
+
+```
+hyprarch theme list          # available themes and their modes
+hyprarch theme set <id>      # switch theme, keeping the current mode
+hyprarch theme mode light    # or dark
+hyprarch theme status        # the resolved theme as JSON
+```
+
+Bundled themes live in `defaults/themes/`. To make your own, copy
+`defaults/themes/obsidian/` to `~/.config/hyprarch/themes/<id>/`, edit
+`theme.json`, and run `hyprarch theme set <id>`; a personal theme with the same
+id as a bundled one takes precedence.
 
 ## Wallpapers
 
 Wallpapers are managed with **awww** (dynamic background for Wayland).
 
 - Add wallpapers to: `~/.local/share/hyprarch/wallpapers/`
-- Change wallpaper: `Super + Shift + W` (cycles through all wallpapers)
+- Change wallpaper: `Super + Shift + W` (cycles through that folder)
+- Each theme mode has its own wallpaper, restored at login and on every mode
+  switch
 - Set random: `~/.local/share/hyprarch/shell/wallpaper.sh random`
 
 See [WALLPAPERS.md](WALLPAPERS.md) for recommended wallpaper sources and setup.
