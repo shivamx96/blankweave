@@ -66,15 +66,20 @@ PopupWindow {
 
         Rectangle {
             anchors.fill: parent
+            radius: root.theme.panelRadius
             color: root.theme.panelSurface
             border.width: 1
             border.color: root.theme.outline
         }
 
+        // The accent hairlines run along the straight edges only, between the
+        // corner curves, so their bright ends stop where the border turns.
         Rectangle {
             anchors.top: parent.top
             anchors.left: parent.left
             anchors.right: parent.right
+            anchors.leftMargin: root.theme.panelRadius
+            anchors.rightMargin: root.theme.panelRadius
             height: 1
             gradient: Gradient {
                 orientation: Gradient.Horizontal
@@ -88,6 +93,8 @@ PopupWindow {
             anchors.bottom: parent.bottom
             anchors.left: parent.left
             anchors.right: parent.right
+            anchors.leftMargin: root.theme.panelRadius
+            anchors.rightMargin: root.theme.panelRadius
             height: 1
             gradient: Gradient {
                 orientation: Gradient.Horizontal
