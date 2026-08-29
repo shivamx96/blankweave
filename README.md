@@ -17,7 +17,7 @@ Run the bootstrap as your normal user after the Archinstall stage:
 
 ```bash
 curl --proto '=https' --tlsv1.2 -fsSL \
-  https://raw.githubusercontent.com/shivamx96/hyprarch/refs/heads/main/bootstrap.sh | sh
+  https://raw.githubusercontent.com/shivamx96/blankweave/refs/heads/main/bootstrap.sh | sh
 ```
 
 It clones the managed repository to
