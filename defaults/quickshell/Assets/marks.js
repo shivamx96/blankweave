@@ -5,12 +5,24 @@
 // `{accent}` the accent detail colour; anything that should read as secondary
 // carries its own stroke/fill opacity rather than a second baked colour.
 //
-// The processor, memory, and graphics-card symbols are original HyprArch
-// assets. The Tailscale dot patterns follow the canonical definitions in
+// The blankweave mark and the processor, memory, and graphics-card symbols
+// are original assets. The Tailscale dot patterns follow the canonical definitions in
 // Tailscale's `client/systray/logo.go` (BSD-3-Clause), and the Docker whale is
 // Docker's `assets/icons/Whale.svg` (Apache-2.0); see README.md.
 
 const MARKS = {
+    "blankweave": `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
+  <!-- The blankweave mark: cascaded translucent panes with the ribbon through them. -->
+  <g fill="{fg}">
+    <rect x="2" y="3" width="11" height="10" rx="2.2" fill-opacity="0.5"/>
+    <rect x="6.5" y="7" width="11" height="10" rx="2.2" fill-opacity="0.72"/>
+    <rect x="11" y="11" width="11" height="10" rx="2.2" fill-opacity="0.95"/>
+  </g>
+  <g stroke="{accent}" fill="none" stroke-linecap="round">
+    <path d="M3 15.5C7.5 15.5 9 8.8 13.5 9.6S19.5 14 21 11.8" stroke-width="1.6"/>
+    <path d="M4 12.6C7.5 12.6 9 6.4 13.5 7.2" stroke-width="0.7" stroke-opacity="0.7"/>
+  </g>
+</svg>`,
     "cpu": `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
   <g transform="translate(0.834 0.834) scale(0.932)">
     <g stroke="{fg}" stroke-width="1.5" stroke-linecap="square" stroke-linejoin="miter">
