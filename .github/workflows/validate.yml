@@ -23,7 +23,9 @@ jobs:
         shell: bash
         run: |
           find . -path ./.git -prune -o -type f -name '*.sh' -print0 | xargs -0 -r bash -n
-          sh -n bootstrap.sh
+          if [[ -f bootstrap.sh ]]; then
+            sh -n bootstrap.sh
+          fi
 
       - name: Run ShellCheck
         run: find . -path ./.git -prune -o -type f -name '*.sh' -print0 | xargs -0 -r shellcheck -x
