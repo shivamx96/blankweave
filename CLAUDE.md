@@ -96,6 +96,20 @@ first real authentication on this setup: `install.sh` writes
 and `hyprlock.conf` selects it via `auth:pam:module`. Keep that PAM service
 hyprarch-owned rather than editing the package-owned `/etc/pam.d/hyprlock`.
 
+Electron applications only reach that keyring when Chromium's `os_crypt`
+recognises the desktop. `XDG_CURRENT_DESKTOP=Hyprland` is unknown to it, so it
+would select the `basic_text` backend, `safeStorage.isEncryptionAvailable()`
+would be false, and Clerk-style logins (T3 Code) drop their tokens and 401.
+`env.lua` therefore sets the legacy `GNOME_DESKTOP_SESSION_ID`, Chromium's last
+fallback, which flips the backend to `gnome_libsecret` without touching
+`XDG_CURRENT_DESKTOP`. Verify any change here with
+`safeStorage.getSelectedStorageBackend()` under a scratch `electron` script
+rather than by reasoning about it. One first-boot caveat: the login keyring is
+created by the first hyprlock unlock after install, and the daemon instance that
+created it does not expose the new collection on D-Bus until it restarts, so a
+fresh install needs one re-login (or
+`systemctl --user restart gnome-keyring-daemon`) before libsecret clients work.
+
 ### Package placement
 
 - `packages/base.txt` — required official repository packages, shared across all hosts
