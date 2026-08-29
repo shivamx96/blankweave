@@ -61,7 +61,7 @@ hyprland_position() {
 # A description is embedded in a Lua string literal and in a Hyprland
 # selector, so keep it to plain printable ASCII without quote or backslash.
 valid_description() {
-    [[ $1 =~ ^[[:print:]]+$ ]] && [[ $1 != *'"'* ]] && [[ $1 != *'\'* ]]
+    [[ $1 =~ ^[[:print:]]+$ ]] && [[ $1 != *'"'* ]] && [[ $1 != *\\* ]]
 }
 
 write_rules() {

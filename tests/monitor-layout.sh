@@ -69,16 +69,23 @@ grep -Fq "dofile(\"$rules\")" "$FAKE_HYPRCTL_LOG"
 "$script" set DP-3 auto
 [[ $(jq -r '.monitors | length' "$config") == 1 ]]
 [[ $(jq -r '.monitors[0].description' "$config") == 'Samsung Display Corp. 0x4170' ]]
-! grep -q 'LG HDR' "$rules"
+if grep -q 'LG HDR' "$rules"; then
+    printf 'Auto must drop the generated rule.\n' >&2
+    exit 1
+fi
 grep -Fq 'position = "auto"' "$FAKE_HYPRCTL_LOG"
 [[ $(jq -r '.monitors[1].position' <<< "$("$script" status)") == auto ]]
 
 # Invalid input is rejected before anything is written or applied.
 : > "$FAKE_HYPRCTL_LOG"
 before=$(cat "$config")
-! "$script" set DP-3 sideways 2>/dev/null
-! "$script" set DP-9 left 2>/dev/null
-! "$script" set DP-3 2>/dev/null
+for arguments in 'DP-3 sideways' 'DP-9 left' 'DP-3'; do
+    # shellcheck disable=SC2086
+    if "$script" set $arguments 2>/dev/null; then
+        printf 'Invalid input "%s" must be rejected.\n' "$arguments" >&2
+        exit 1
+    fi
+done
 [[ $(cat "$config") == "$before" ]]
 [[ ! -s $FAKE_HYPRCTL_LOG ]]
 
