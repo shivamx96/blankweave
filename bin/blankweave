@@ -147,6 +147,14 @@ command_theme() {
     esac
 }
 
+command_webapp() {
+    local script=$BLANKWEAVE_DATA_DIR/shell/webapp.sh
+
+    require_normal_user
+    [[ -x "$script" ]] || die "web app support is not deployed yet; run: blankweave update"
+    exec "$script" "$@"
+}
+
 command_update() {
     local repository branch
 
@@ -176,6 +184,7 @@ Commands:
   version   Show the CLI version and installed/repository revisions
   update    Fast-forward the managed repository and apply the update
   theme     Manage the desktop theme: list, status, set <id>, mode <dark|light>, toggle, sync
+  webapp    Manage Helium web apps: list, install <name> <url> <icon>, remove <name>, sync
   help      Show this help
 EOF
 }
@@ -195,6 +204,9 @@ main() {
             ;;
         theme)
             command_theme "$@"
+            ;;
+        webapp)
+            command_webapp "$@"
             ;;
         help|--help|-h)
             [[ $# -eq 0 ]] || die "help does not accept arguments"

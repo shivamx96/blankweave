@@ -15,6 +15,7 @@ blankweave/
     shell/           # Helper scripts (wallpaper, theme toggle, OSD popups, monitoring)
     wallpapers/      # Bundled wallpapers
     themes/          # Bundled themes: palette, lock treatment, wallpapers, splash art
+    webapps/         # Manifest of bundled web apps (name, URL, icon URL)
     plymouth/        # Boot splash: script template, master artwork to tint
     fontconfig/      # Font fallback config
     xdg-desktop-portal/  # Portal routing (hyprland → gtk fallback)
@@ -420,6 +421,26 @@ reports `system.pending`. Fonts, geometry, translucency, animations, and the
 cursor size are deliberately not part of a theme; they are the rice's
 identity and stay in `Theme.qml`, `hyprland.lua`, and `env.lua`.
 
+### Web apps
+
+A web app is a site run in Helium's `--app=<url>` mode, the way Omarchy does
+it with Chromium: a window with no browser chrome that joins the running
+Helium instance (so it shares the browser's logins) and carries the class
+`chrome-<host>__<path>-Default`, the path's slashes turned into underscores.
+`defaults/shell/webapp.sh` is the single owner of the entries: `install`,
+`remove`, and `list` manage `~/.local/share/applications/blankweave-webapp-<slug>.desktop`
+with the icon installed into the user's hicolor theme under the same name and
+`StartupWMClass` set to that class, and `sync` converges the entries tagged
+`X-Blankweave-Webapp=bundled` on `defaults/webapps/webapps.tsv` (tab-separated
+name, URL, icon URL) while leaving user-installed entries alone. `install.sh`
+runs `sync` as the user after the theme apply; it is a no-op without
+`helium-browser`, because Helium ships in the optional `desktop` profile, and a
+failed icon download degrades to the theme's `web-browser` icon rather than
+failing the apply. The URL goes into a desktop `Exec` line, so the script
+refuses anything that would need Exec quoting instead of escaping it. Gecko
+browsers (Firefox, Zen) have no equivalent of `--app`, which is why this is
+tied to Helium. `blankweave webapp` is the public entry point.
+
 ### Hardware detection
 
 `install.sh` uses `lspci | grep` to detect GPU:
@@ -498,6 +519,16 @@ GPU monitoring script (`gpu-usage.sh`) auto-detects at runtime: tries `nvidia-sm
    light`; the renderer rejects a missing token before touching any output.
    `tests/theme-apply.sh` renders every bundled theme in both modes and
    `tests/theme-system.sh` exercises the root-side sync against a sandbox.
+
+### Adding a bundled web app
+
+1. Append a tab-separated `name`, `URL`, `icon URL` line to
+   `defaults/webapps/webapps.tsv`; the icon must be a PNG or SVG (the
+   `homarr-labs/dashboard-icons` CDN carries most services).
+2. Verify the class Helium gives the window (`hyprctl clients -j`) matches
+   the entry's `StartupWMClass` if the URL carries a path.
+3. `tests/webapp.sh` lints the manifest and exercises the script against
+   stand-ins for the browser and the download.
 
 ### Adding a themed config
 
