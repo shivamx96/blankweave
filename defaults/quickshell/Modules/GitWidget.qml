@@ -12,6 +12,7 @@ WidgetFrame {
     property var repos: ({
         "available": false,
         "root": "",
+        "ideAvailable": false,
         "error": "",
         "skipped": 0,
         "total": 0,
@@ -39,6 +40,7 @@ WidgetFrame {
     readonly property int reviewCount: Number(prs.reviewCount || 0)
     readonly property int authoredCount: Number(prs.authoredCount || 0)
     readonly property bool signedIn: Boolean(prs.authenticated)
+    readonly property bool ideAvailable: Boolean(repos.ideAvailable)
     // Pull requests are useful on their own, so the widget also earns its place
     // on a machine that has no local checkouts yet.
     readonly property bool available: repoCount > 0 || signedIn
@@ -53,6 +55,7 @@ WidgetFrame {
         } catch (error) {
             root.repos = {
                 "available": false,
+                "ideAvailable": false,
                 "error": "Could not read project directory",
                 "total": 0,
                 "dirty": 0,
@@ -103,11 +106,17 @@ WidgetFrame {
         return parts.join("  ·  ")
     }
 
-    function openInIde(path) {
+    function projectAction() {
+        return root.ideAvailable
+            ? { "id": "project", "icon": "󰲋", "label": "IDE" }
+            : { "id": "project", "icon": "󰉋", "label": "FILES" }
+    }
+
+    function openProject(path) {
         if (!path)
             return
         gitPanel.open = false
-        root.bar.run(["idea", path])
+        root.bar.run(root.ideAvailable ? ["idea", path] : ["xdg-open", path])
     }
 
     function openInBrowser(url) {
@@ -257,14 +266,14 @@ WidgetFrame {
                     statusKind: changed > 0 ? "warning" : "success"
                     active: changed > 0 || Number(modelData.ahead || 0) > 0
                     actions: {
-                        const result = [{ "id": "ide", "icon": "󰲋", "label": "IDE" }]
+                        const result = [root.projectAction()]
                         if (String(modelData.webUrl || ""))
                             result.push({ "id": "github", "icon": "󰊤" })
                         return result
                     }
                     onActionPressed: actionId => {
-                        if (actionId === "ide")
-                            root.openInIde(String(repoRow.modelData.path || ""))
+                        if (actionId === "project")
+                            root.openProject(String(repoRow.modelData.path || ""))
                         else if (actionId === "github")
                             root.openInBrowser(String(repoRow.modelData.webUrl || ""))
                     }
@@ -340,13 +349,13 @@ WidgetFrame {
                     actions: {
                         const result = []
                         if (reviewRow.localPath)
-                            result.push({ "id": "ide", "icon": "󰲋" })
+                            result.push(root.projectAction())
                         result.push({ "id": "open", "icon": "󰏌", "label": "OPEN" })
                         return result
                     }
                     onActionPressed: actionId => {
-                        if (actionId === "ide")
-                            root.openInIde(reviewRow.localPath)
+                        if (actionId === "project")
+                            root.openProject(reviewRow.localPath)
                         else if (actionId === "open")
                             root.openInBrowser(String(reviewRow.modelData.url || ""))
                     }
@@ -391,13 +400,13 @@ WidgetFrame {
                     actions: {
                         const result = []
                         if (authoredRow.localPath)
-                            result.push({ "id": "ide", "icon": "󰲋" })
+                            result.push(root.projectAction())
                         result.push({ "id": "open", "icon": "󰏌", "label": "OPEN" })
                         return result
                     }
                     onActionPressed: actionId => {
-                        if (actionId === "ide")
-                            root.openInIde(authoredRow.localPath)
+                        if (actionId === "project")
+                            root.openProject(authoredRow.localPath)
                         else if (actionId === "open")
                             root.openInBrowser(String(authoredRow.modelData.url || ""))
                     }

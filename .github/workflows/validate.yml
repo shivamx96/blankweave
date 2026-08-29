@@ -16,7 +16,7 @@ jobs:
 
     steps:
       - name: Install validation tools
-        run: pacman -Syu --noconfirm git shellcheck qt6-declarative quickshell
+        run: pacman -Syu --noconfirm git jq shellcheck qt6-declarative quickshell
 
       - name: Check out repository
         uses: actions/checkout@v5

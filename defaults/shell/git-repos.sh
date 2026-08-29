@@ -5,11 +5,14 @@
 set -uo pipefail
 
 root=${1:-$HOME/IdeaProjects}
+ide_available=false
+command -v idea >/dev/null 2>&1 && ide_available=true
 
 if [ ! -d "$root" ]; then
-    jq -cn --arg root "$root" '{
+    jq -cn --arg root "$root" --argjson ideAvailable "$ide_available" '{
         available: false,
         root: $root,
+        ideAvailable: $ideAvailable,
         error: "Project directory not found",
         total: 0, dirty: 0, ahead: 0, skipped: 0, repos: []
     }'
@@ -107,12 +110,14 @@ done
 
 printf '%s\n' "${entries[@]:-}" | jq -cs \
     --arg root "$root" \
+    --argjson ideAvailable "$ide_available" \
     --argjson skipped "$skipped" '
     map(select(type == "object")) as $repos
     | ($repos | sort_by(.name | ascii_downcase)) as $repos
     | {
         available: true,
         root: $root,
+        ideAvailable: $ideAvailable,
         error: "",
         skipped: $skipped,
         total: ($repos | length),
