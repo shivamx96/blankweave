@@ -31,7 +31,7 @@ ln -s "$repository/tests/fixtures/fake-gdbus.sh" "$fake_bin/gdbus"
 home=$test_root/home
 data=$home/.local/share/hyprarch
 mkdir -p "$data" "$home/.config"
-for directory in dunst fuzzel ghostty hypr shell themes; do
+for directory in dunst fuzzel ghostty hypr plymouth shell themes; do
     cp -R "$repository/defaults/$directory" "$data/"
 done
 
@@ -41,6 +41,10 @@ export FAKE_LOG=$test_root/side-effects.log
 export PATH=$fake_bin:$PATH
 export WAYLAND_DISPLAY=wayland-test
 export HYPRLAND_INSTANCE_SIGNATURE=test
+# The root-owned parts are looked up, never written, here; point the lookups
+# at an empty sandbox so the developer's machine never leaks into a result.
+export HYPRARCH_ICONS_DIR=$test_root/icons
+export HYPRARCH_PLYMOUTH_DIR=$test_root/plymouth
 : > "$FAKE_LOG"
 
 script=$data/shell/theme-apply.sh
@@ -50,10 +54,11 @@ fuzzel=$data/fuzzel/fuzzel.ini
 ghostty=$data/ghostty/config
 hyprlock=$data/hypr/hyprlock-theme.conf
 hypr_theme=$XDG_CONFIG_HOME/hyprarch/theme.lua
+plymouth=$data/plymouth/hyprarch/hyprarch.script
 
 assert_rendered() {
     local file
-    for file in "$dunstrc" "$fuzzel" "$ghostty" "$hyprlock" "$hypr_theme"; do
+    for file in "$dunstrc" "$fuzzel" "$ghostty" "$hyprlock" "$hypr_theme" "$plymouth"; do
         [[ -f $file ]]
         if grep -q '{{' "$file"; then
             printf 'Unrendered placeholder in %s\n' "$file" >&2
@@ -85,7 +90,16 @@ grep -Fxq "\$placeholder = <span foreground=\"##8798ae\">Password</span>" "$hypr
 grep -Eq "^\\\$background_contrast = 0\\.98$" "$hyprlock"
 grep -Fq 'active_border = { "rgba(3b82f6ff)", "rgba(67a6ffff)" },' "$hypr_theme"
 grep -Fq 'inactive_border = "rgba(33476aff)",' "$hypr_theme"
+grep -Fq 'cursor_theme = "Bibata-Modern-Ice",' "$hypr_theme"
+grep -Fxq 'Window.SetBackgroundTopColor(0.02, 0.031, 0.059);' "$plymouth"
+grep -Fxq 'Window.SetBackgroundBottomColor(0.02, 0.031, 0.059);' "$plymouth"
+cmp -s "$data/plymouth/hyprarch/logo.png" "$data/themes/obsidian/plymouth/logo.png"
 grep -Fxq 'gtk-application-prefer-dark-theme=1' "$XDG_CONFIG_HOME/gtk-3.0/settings.ini"
+grep -Fxq 'gtk-icon-theme-name=Papirus-Dark' "$XDG_CONFIG_HOME/gtk-3.0/settings.ini"
+grep -Fxq 'gtk-cursor-theme-name=Bibata-Modern-Ice' "$XDG_CONFIG_HOME/gtk-4.0/settings.ini"
+grep -Fxq 'gsettings set org.gnome.desktop.interface icon-theme Papirus-Dark' "$FAKE_LOG"
+grep -Fxq 'gsettings set org.gnome.desktop.interface cursor-theme Bibata-Modern-Ice' "$FAKE_LOG"
+grep -Fxq 'hyprctl setcursor Bibata-Modern-Ice 24' "$FAKE_LOG"
 grep -Fxq 'gtk-application-prefer-dark-theme=1' "$XDG_CONFIG_HOME/gtk-4.0/settings.ini"
 grep -Fxq 'gsettings set org.gnome.desktop.interface color-scheme prefer-dark' "$FAKE_LOG"
 grep -Fq "awww img $data/themes/obsidian/obsidian-dark.png" "$FAKE_LOG"
@@ -110,7 +124,10 @@ grep -Fxq 'background = "#f8fbff"' "$dunstrc"
 grep -Fxq 'icon-theme=Papirus-Light' "$fuzzel"
 grep -Fxq "\$accent = rgba(1d4ed8ff)" "$hyprlock"
 grep -Fq 'active_border = { "rgba(2563ebff)", "rgba(1d4ed8ff)" },' "$hypr_theme"
+grep -Fq 'cursor_theme = "Bibata-Modern-Classic",' "$hypr_theme"
 grep -Fxq 'gtk-application-prefer-dark-theme=0' "$XDG_CONFIG_HOME/gtk-3.0/settings.ini"
+grep -Fxq 'gtk-cursor-theme-name=Bibata-Modern-Classic' "$XDG_CONFIG_HOME/gtk-3.0/settings.ini"
+grep -Fxq 'hyprctl setcursor Bibata-Modern-Classic 24' "$FAKE_LOG"
 grep -Fxq 'gsettings set org.gnome.desktop.interface color-scheme prefer-light' "$FAKE_LOG"
 grep -Fq "awww img $data/themes/obsidian/porcelain-light.png" "$FAKE_LOG"
 
@@ -146,6 +163,10 @@ for theme_file in "$data"/themes/*/theme.json; do
         [[ $(jq -r '.mode' "$state") == "$theme_mode" ]]
         [[ -f $(jq -r '.wallpaper' "$state") ]]
         [[ $(jq -r '.colors | length' "$state") -ge 20 ]]
+        [[ -f $(jq -r '.plymouth.logo' "$state") ]]
+        [[ -f $(jq -r '.plymouth.progressBar' "$state") ]]
+        [[ $(jq -r '.folderColor' "$state") =~ ^[a-z]+$ ]]
+        [[ $(jq -r '.modes.dark.colors.canvas' "$state") =~ ^#[0-9a-f]{6}$ ]]
     done
 done
 "$script" set obsidian
@@ -180,7 +201,10 @@ bundled_themes=("$data"/themes/*/theme.json)
 [[ $(jq -r '.[] | select(.id == "ember") | .source' <<< "$listing") == user ]]
 [[ $(jq -r '.[] | select(.id == "obsidian") | .source' <<< "$listing") == bundled ]]
 [[ $(jq -r '.[] | select(.id == "obsidian") | .modes | length' <<< "$listing") == 2 ]]
+[[ $(jq -r '.[] | select(.id == "ember") | .modes[] | select(.mode == "dark") | .accent' <<< "$listing") == '#ff5500' ]]
 [[ $(jq -r '.theme' <<< "$("$script" status)") == ember ]]
+# Nothing root-owned is present in the sandbox, so nothing can be pending.
+[[ $(jq -r '.system.pending' <<< "$("$script" status)") == false ]]
 
 # Invalid requests fail before anything is touched.
 before=$(cat "$state" "$dunstrc")
@@ -189,6 +213,16 @@ expect_failure "$script" set '../escape'
 expect_failure "$script" mode purple
 expect_failure "$script" bogus
 [[ $(cat "$state" "$dunstrc") == "$before" ]]
+
+# A theme missing a companion token is rejected with a message naming it.
+broken=$XDG_CONFIG_HOME/hyprarch/themes/nocursor
+mkdir -p "$broken"
+jq 'del(.modes.dark.cursorTheme)' "$data/themes/obsidian/theme.json" > "$broken/theme.json"
+if "$script" set nocursor 2> "$test_root/nocursor.err"; then
+    printf 'A theme missing cursorTheme must be rejected.\n' >&2
+    exit 1
+fi
+grep -Fq 'missing: cursorTheme' "$test_root/nocursor.err"
 
 # A theme missing a palette token is rejected rather than rendered with holes.
 broken=$XDG_CONFIG_HOME/hyprarch/themes/broken

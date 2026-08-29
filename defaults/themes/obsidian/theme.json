@@ -1,12 +1,18 @@
 {
   "name": "Obsidian",
   "description": "Near-black and porcelain surfaces with an electric blue accent.",
+  "folderColor": "blue",
+  "plymouth": {
+    "logo": "plymouth/logo.png",
+    "progressBar": "plymouth/progress_bar.png"
+  },
   "modes": {
     "dark": {
       "label": "Obsidian",
       "wallpaper": "obsidian-dark.png",
       "ghostty": "Catppuccin Mocha",
       "iconTheme": "Papirus-Dark",
+      "cursorTheme": "Bibata-Modern-Ice",
       "colors": {
         "canvas": "#05080f",
         "barSurface": "#070b12b3",
@@ -51,6 +57,7 @@
       "wallpaper": "porcelain-light.png",
       "ghostty": "Catppuccin Latte",
       "iconTheme": "Papirus-Light",
+      "cursorTheme": "Bibata-Modern-Classic",
       "colors": {
         "canvas": "#edf4ff",
         "barSurface": "#f8fbffb3",

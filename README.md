@@ -140,16 +140,23 @@ software already present.
 
 ## Themes
 
-A theme bundles the shell palette, the lock-screen treatment, and a wallpaper
-for each of its two modes, dark and light. `Super + D` switches the mode; the
-theme itself is chosen on the command line:
+A theme bundles the shell palette, the lock-screen treatment, a wallpaper,
+the cursor and icon themes for each of its two modes, dark and light, plus
+the Papirus folder colour and the boot splash. `Super + D` switches the mode;
+the theme itself is chosen from the display panel in the bar or on the
+command line:
 
 ```
 hyprarch theme list          # available themes and their modes
 hyprarch theme set <id>      # switch theme, keeping the current mode
 hyprarch theme mode light    # or dark
 hyprarch theme status        # the resolved theme as JSON
+hyprarch theme sync          # folder colours and boot splash (needs sudo)
 ```
+
+Folder colours and the boot splash live outside your home, so `set` on the
+command line finishes with a sudo prompt and a switch from the bar leaves a
+hint until you run `hyprarch theme sync`.
 
 Two themes are bundled: `obsidian` (Obsidian dark / Porcelain light, blue) and
 `moss` (Moss dark / Sage light, green). To make your own, copy

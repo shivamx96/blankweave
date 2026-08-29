@@ -27,6 +27,7 @@ networkmanager
 tailscale
 curl
 jq
+diffutils
 awww
 ttf-roboto
 ttf-atkinson-hyperlegible

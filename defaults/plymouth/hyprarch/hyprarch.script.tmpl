@@ -1,9 +1,10 @@
 // HyprArch Plymouth Theme
-// Catppuccin Mocha background, centered logo, smooth progress bar
+// Rendered by theme-apply.sh from the active theme: the dark-mode canvas
+// behind a centred logo and a smooth progress bar in the accent.
 
 // --- Background ---
-Window.SetBackgroundTopColor(0.118, 0.118, 0.180);
-Window.SetBackgroundBottomColor(0.118, 0.118, 0.180);
+Window.SetBackgroundTopColor({{modes.dark.colors.canvas:plymouth}});
+Window.SetBackgroundBottomColor({{modes.dark.colors.canvas:plymouth}});
 
 // --- Logo ---
 logo = Image("logo.png");

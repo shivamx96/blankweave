@@ -51,6 +51,34 @@ WidgetFrame {
         return "other displays"
     }
 
+    // Themes come from theme-apply.sh, the one writer of the selection; the
+    // rows are primitive snapshots of its `list` output. `status` says whether
+    // the root-only parts (folder colours, boot splash) still need a sync.
+    property var themes: []
+    property string pendingThemeId: ""
+    property bool systemPending: false
+
+    function themeSwatch(row) {
+        const modes = Array.isArray(row.modes) ? row.modes : []
+        const wanted = root.theme.mode
+        for (let index = 0; index < modes.length; index++) {
+            if (String(modes[index].mode) === wanted && modes[index].accent)
+                return root.theme.cssColor(String(modes[index].accent))
+        }
+        return null
+    }
+
+    function setTheme(themeId) {
+        if (themeProcess.running || themeId === root.theme.themeId)
+            return
+
+        root.pendingThemeId = themeId
+        brightnessPanel.preserveNextClose = true
+        themeCloseGuard.restart()
+        themeProcess.command = [root.shellDir + "/theme-apply.sh", "set", themeId]
+        themeProcess.running = true
+    }
+
     function placementFor(connector) {
         return root.placements[connector] || null
     }
@@ -124,6 +152,54 @@ WidgetFrame {
         }
     }
 
+    ScriptPoller {
+        id: themePoller
+        command: root.shellDir + "/theme-apply.sh list"
+        interval: 0
+        onUpdated: payload => {
+            const rows = []
+            try {
+                const listing = JSON.parse(payload)
+                const entries = Array.isArray(listing) ? listing : []
+                for (let index = 0; index < entries.length; index++) {
+                    if (entries[index].invalid)
+                        continue
+                    rows.push({
+                        "id": String(entries[index].id || ""),
+                        "name": String(entries[index].name || entries[index].id || ""),
+                        "modes": Array.isArray(entries[index].modes) ? entries[index].modes : []
+                    })
+                }
+            } catch (error) {
+            }
+            root.themes = rows
+        }
+    }
+
+    ScriptPoller {
+        id: themeStatusPoller
+        command: root.shellDir + "/theme-apply.sh status"
+        interval: 0
+        onUpdated: payload => {
+            let pending = false
+            try {
+                const status = JSON.parse(payload)
+                pending = Boolean(status.system && status.system.pending)
+            } catch (error) {
+            }
+            root.systemPending = pending
+        }
+    }
+
+    Process {
+        id: themeProcess
+
+        onExited: {
+            root.pendingThemeId = ""
+            themeStatusPoller.refresh()
+        }
+    }
+
     onPressed: button => {
         if (button === Qt.LeftButton) {
             root.bar.hideTooltip(root)
@@ -143,8 +219,11 @@ WidgetFrame {
         anchorItem: root
 
         onOpenChanged: {
-            if (open)
+            if (open) {
                 placementPoller.refresh()
+                themePoller.refresh()
+                themeStatusPoller.refresh()
+            }
         }
 
         ControlPanelHeader {
@@ -244,6 +323,45 @@ WidgetFrame {
                     }
                 }
             }
+        }
+
+        ControlSectionLabel {
+            visible: root.themes.length > 0
+            theme: root.theme
+            text: "THEME · " + root.theme.mode.toUpperCase()
+        }
+
+        Flow {
+            visible: root.themes.length > 0
+            Layout.fillWidth: true
+            spacing: 5
+
+            Repeater {
+                model: root.themes
+
+                delegate: ControlChoice {
+                    required property var modelData
+
+                    theme: root.theme
+                    text: String(modelData.name)
+                    swatch: root.themeSwatch(modelData)
+                    selected: root.theme.themeId === String(modelData.id)
+                    busy: root.pendingThemeId === String(modelData.id)
+                    enabled: !themeProcess.running
+                    onPressed: root.setTheme(String(modelData.id))
+                }
+            }
+        }
+
+        Text {
+            visible: root.systemPending
+            Layout.fillWidth: true
+            text: "Folder colours and boot splash follow on hyprarch theme sync"
+            color: root.theme.textMuted
+            wrapMode: Text.WordWrap
+            font.family: root.theme.fontFamily
+            font.pixelSize: root.theme.microTextSize
+            renderType: Text.NativeRendering
         }
     }
 

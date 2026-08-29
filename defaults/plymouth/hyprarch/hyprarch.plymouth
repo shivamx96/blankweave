@@ -1,6 +1,6 @@
 [Plymouth Theme]
 Name=HyprArch
-Description=HyprArch boot splash with Catppuccin Mocha background
+Description=HyprArch boot splash in the active theme
 ModuleName=script
 
 [script]

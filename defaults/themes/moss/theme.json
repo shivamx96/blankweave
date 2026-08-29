@@ -1,12 +1,18 @@
 {
   "name": "Moss",
   "description": "Deep forest and sage surfaces with an emerald accent.",
+  "folderColor": "green",
+  "plymouth": {
+    "logo": "plymouth/logo.png",
+    "progressBar": "plymouth/progress_bar.png"
+  },
   "modes": {
     "dark": {
       "label": "Moss",
       "wallpaper": "moss-dark.png",
       "ghostty": "Neobones Dark",
       "iconTheme": "Papirus-Dark",
+      "cursorTheme": "Bibata-Modern-Ice",
       "colors": {
         "canvas": "#050d0a",
         "barSurface": "#070f0cb3",
@@ -51,6 +57,7 @@
       "wallpaper": "sage-light.png",
       "ghostty": "Neobones Light",
       "iconTheme": "Papirus-Light",
+      "cursorTheme": "Bibata-Modern-Classic",
       "colors": {
         "canvas": "#eef7f2",
         "barSurface": "#f6fcf8b3",

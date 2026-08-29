@@ -15,8 +15,14 @@ if not theme_ok or type(theme) ~= "table" then
     theme = {
         active_border = { "rgba(3b82f6ff)", "rgba(67a6ffff)" },
         inactive_border = "rgba(33476aff)",
+        cursor_theme = "Bibata-Modern-Ice",
     }
 end
+
+-- The cursor theme is a theme token too. These variables only seed the session;
+-- theme-apply.sh switches a running compositor with `hyprctl setcursor`.
+hl.env("HYPRCURSOR_THEME", theme.cursor_theme)
+hl.env("XCURSOR_THEME", theme.cursor_theme)
 
 hl.config({
     general = {

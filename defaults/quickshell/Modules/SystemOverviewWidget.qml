@@ -62,8 +62,7 @@ WidgetFrame {
         ])
     }
 
-    icon: "󰣇"
-    iconPixelSize: theme.barIconSize + 1
+    iconMark: "blankweave"
     iconOnly: true
     active: systemPanel.open
     tooltip: "System overview\nRight-click: full terminal report"
@@ -97,7 +96,7 @@ WidgetFrame {
 
         ControlPanelHeader {
             theme: root.theme
-            icon: "󰣇"
+            iconMark: "blankweave"
             title: "SYSTEM OVERVIEW"
             subtitle: root.systemInfo.available
                 ? String(root.systemInfo.hostname || "System") + " · " + String(root.systemInfo.os || "Linux")
