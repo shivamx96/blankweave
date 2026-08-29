@@ -19,9 +19,10 @@
 - [ ] Add `hyprarch setup`, a guided terminal flow for first-install preferences.
       Keep `bootstrap.sh` focused on acquiring the managed checkout and handing
       off to the CLI.
-- [ ] Define package profiles (`core`, `desktop`, `development`, `communication`,
-      `gaming`, and host-specific hardware) so users select capabilities rather
-      than individual dependency packages.
+- [x] Define required core/hardware manifests plus optional `desktop`,
+      `development`, `communication`, and `gaming` profiles.
+- [x] Add a versioned, non-executable installer config parser with strict key and
+      profile validation and compatibility defaults for existing machines.
 - [ ] Offer optional Git identity (`user.name` and `user.email`), GitHub SSH-key
       generation, and a clear skip path. Never collect credentials or upload keys.
 - [ ] Save non-secret choices in an inspectable user config so `hyprarch update`

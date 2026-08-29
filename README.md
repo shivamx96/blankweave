@@ -58,6 +58,33 @@ sudo ~/.local/share/hyprarch/shell/hardware-inventory.sh "$USER"
 
 The live shell never needs elevated privileges; it only reads this cached file.
 
+## Installer profiles
+
+The required Hyprarch environment and detected hardware support are always
+installed. Optional applications are grouped into four additive profiles:
+
+- `desktop` — browsers, notes, and personal desktop utilities;
+- `development` — editors, containers, language tooling, and coding tools;
+- `communication` — messaging and local sharing applications;
+- `gaming` — Steam, Proton, overlays, and host-appropriate 32-bit GPU support.
+
+Selections can be stored in `~/.config/hyprarch/install.conf`:
+
+```ini
+version=1
+profiles=desktop development communication
+```
+
+The config is parsed as data and is never sourced as shell code. Profile order
+does not matter, duplicate names are ignored, and unknown keys, versions, or
+profiles stop the installer before package changes begin.
+
+Until the guided `hyprarch setup` command is added, a missing config preserves
+the historical installation exactly: laptop enables desktop, development, and
+communication; PC additionally enables gaming. Removing a profile only stops
+Hyprarch from requesting those packages in future runs—it does not uninstall
+software already present.
+
 ## Keybindings
 
 ### System

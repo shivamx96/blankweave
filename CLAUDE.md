@@ -20,8 +20,10 @@ hyprarch/
     laptop/          # Intel Arc: GPU drivers, monitor layout, power management
     pc/              # NVIDIA RTX: GPU drivers, monitor layout, power management
   packages/
-    base.txt         # Pacman packages (shared)
-    aur.txt          # AUR packages (shared)
+    base.txt         # Required pacman packages (shared)
+    aur.txt          # Required exact AUR packages (shared)
+    profiles/        # Optional capability manifests by package source
+    install.conf.example  # Versioned, non-executable selection example
   bin/hyprarch       # User-facing version/update command
   bootstrap.sh       # First-install managed-checkout bootstrap
   migrations/        # Ordered, user-scoped, run-once migrations
@@ -85,15 +87,25 @@ Dunst, Ghostty, Fuzzel, and Fontconfig are symlinked from `~/.config/` back to `
 
 ### Package placement
 
-- `packages/base.txt` — official repository packages, shared across all hosts
-- `packages/providers.txt` — concrete repository packages selected for virtual dependencies
-- `packages/aur.txt` — exact AUR packages (installed via paru), shared
+- `packages/base.txt` — required official repository packages, shared across all hosts
+- `packages/providers.txt` — required concrete providers for virtual dependencies
+- `packages/aur.txt` — required exact AUR packages (installed via paru), shared
+- `packages/profiles/<profile>.txt` — optional official packages
+- `packages/profiles/<profile>.providers.txt` — optional concrete providers
+- `packages/profiles/<profile>.aur.txt` — optional exact AUR packages
 - `hosts/$HOST/packages.txt` — host-specific official repository packages
 - `hosts/$HOST/aur.txt` — optional host-specific exact AUR packages
+- `hosts/$HOST/profiles/` — host-specific additions to an optional profile
 - Check with `pacman -Si <package>` before choosing a manifest; use `aur.txt`
   only when the exact package is absent from the configured repositories
 - When pacman offers multiple implementations for a virtual dependency, record
-  the deliberate concrete choice in `packages/providers.txt`
+  the concrete choice in the required or corresponding profile provider manifest
+
+Installer choices live in `~/.config/hyprarch/install.conf` as a deliberately
+small `key=value` format. Never source this user-owned file. Extend
+`scripts/installer-config.sh` with explicit parsing and validation when the
+schema changes. Core and detected hardware packages are mandatory; optional
+profiles are additive and deselection never implies package removal.
 
 ### Shell scripts
 
@@ -201,7 +213,8 @@ GPU monitoring script (`gpu-usage.sh`) auto-detects at runtime: tries `nvidia-sm
 
 1. Create `hosts/<hostname>/hypr/` with `env.lua`, `monitors.lua`, `hypridle.conf`
 2. Create `hosts/<hostname>/packages.txt` for repository packages and
-   `hosts/<hostname>/aur.txt` when host-specific AUR packages are required
+   `hosts/<hostname>/aur.txt` when required host-specific AUR packages exist;
+   add optional capability packages under `hosts/<hostname>/profiles/`
 3. Update `detect_host()` in `install.sh` with a new `lspci` pattern
 
 ### Adding a new Quickshell module

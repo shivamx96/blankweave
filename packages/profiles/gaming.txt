@@ -1,0 +1,6 @@
+steam
+lib32-vulkan-icd-loader
+gamemode
+lib32-gamemode
+gamescope
+mangohud

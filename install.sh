@@ -52,22 +52,6 @@ copy_file_atomically() {
     mv -f "$staged_file" "$target_file"
 }
 
-load_package_manifest() {
-    local manifest="$1"
-    local destination="$2"
-    local line package
-    declare -n packages_ref="$destination"
-
-    packages_ref=()
-    [ -f "$manifest" ] || return 0
-
-    while IFS= read -r line || [ -n "$line" ]; do
-        line="${line%%#*}"
-        read -r package <<< "$line"
-        [ -n "$package" ] && packages_ref+=("$package")
-    done < "$manifest"
-}
-
 verify_packages_installed() {
     local label="$1"
     shift
@@ -110,6 +94,12 @@ trap cleanup_install EXIT
 
 DOTS_DIR="$USER_HOME/.local/share/hyprarch"
 CONFIG_DIR="$USER_HOME/.config"
+INSTALLER_CONFIG_FILE="$CONFIG_DIR/hyprarch/install.conf"
+
+# shellcheck source=scripts/installer-config.sh
+source "$REPO_DIR/scripts/installer-config.sh"
+# shellcheck source=scripts/package-manifests.sh
+source "$REPO_DIR/scripts/package-manifests.sh"
 
 section "DETECTING HOST"
 
@@ -125,6 +115,13 @@ detect_host() {
 
 HOST=$(detect_host)
 echo "Detected host: $HOST"
+installer_config_load "$INSTALLER_CONFIG_FILE" "$HOST"
+echo "Required profile: core"
+if [ "${#INSTALLER_PROFILES[@]}" -gt 0 ]; then
+    printf 'Optional profiles: %s\n' "${INSTALLER_PROFILES[*]}"
+else
+    echo "Optional profiles: none"
+fi
 
 section "INSTALLING AUR HELPER"
 
@@ -155,32 +152,31 @@ if ! pacman -Fy --noconfirm; then
 fi
 
 echo "Installing base packages..."
-load_package_manifest "$REPO_DIR/packages/providers.txt" PROVIDER_PACKAGES
+PROVIDER_PACKAGES=()
+REPO_PACKAGES=()
+AUR_PACKAGES=()
+resolve_package_manifests "$REPO_DIR" "$HOST" providers PROVIDER_PACKAGES
 if [ "${#PROVIDER_PACKAGES[@]}" -gt 0 ]; then
     echo "Installing pinned virtual dependency providers..."
     pacman -S --noconfirm --needed "${PROVIDER_PACKAGES[@]}"
     verify_packages_installed "virtual dependency provider" "${PROVIDER_PACKAGES[@]}"
 fi
 
-load_package_manifest "$REPO_DIR/packages/base.txt" REPO_PACKAGES
-load_package_manifest "$REPO_DIR/hosts/$HOST/packages.txt" HOST_REPO_PACKAGES
-ALL_REPO_PACKAGES=("${REPO_PACKAGES[@]}" "${HOST_REPO_PACKAGES[@]}")
-pacman -S --noconfirm --needed "${ALL_REPO_PACKAGES[@]}"
-verify_packages_installed "repository package" "${ALL_REPO_PACKAGES[@]}"
+resolve_package_manifests "$REPO_DIR" "$HOST" repository REPO_PACKAGES
+pacman -S --noconfirm --needed "${REPO_PACKAGES[@]}"
+verify_packages_installed "repository package" "${REPO_PACKAGES[@]}"
 
-load_package_manifest "$REPO_DIR/packages/aur.txt" AUR_PACKAGES
-load_package_manifest "$REPO_DIR/hosts/$HOST/aur.txt" HOST_AUR_PACKAGES
-ALL_AUR_PACKAGES=("${AUR_PACKAGES[@]}" "${HOST_AUR_PACKAGES[@]}")
+resolve_package_manifests "$REPO_DIR" "$HOST" aur AUR_PACKAGES
 
-if [ "${#ALL_AUR_PACKAGES[@]}" -gt 0 ]; then
+if [ "${#AUR_PACKAGES[@]}" -gt 0 ]; then
     echo "Installing exact AUR packages..."
     AUR_TARGETS=()
-    for package in "${ALL_AUR_PACKAGES[@]}"; do
+    for package in "${AUR_PACKAGES[@]}"; do
         AUR_TARGETS+=("aur/$package")
     done
 
     sudo -H -u "$SUDO_USER" paru -S --noconfirm --needed --noprovides "${AUR_TARGETS[@]}"
-    verify_packages_installed "AUR package" "${ALL_AUR_PACKAGES[@]}"
+    verify_packages_installed "AUR package" "${AUR_PACKAGES[@]}"
 fi
 
 echo "Package installation complete."
@@ -200,10 +196,12 @@ systemctl enable tailscaled.service
 systemctl start tailscaled.service || warn "Could not start Tailscale."
 # Log in separately (interactive/browser auth):  tailscale up
 
-echo "Setting up Docker..."
-systemctl enable docker.service
-systemctl start docker.service || warn "Could not start Docker."
-usermod -aG docker "$SUDO_USER"
+if installer_profile_enabled development; then
+    echo "Setting up Docker..."
+    systemctl enable docker.service
+    systemctl start docker.service || warn "Could not start Docker."
+    usermod -aG docker "$SUDO_USER"
+fi
 usermod -aG render,video "$SUDO_USER"
 
 echo "Creating user directories..."
