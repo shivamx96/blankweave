@@ -151,7 +151,8 @@ hyprarch theme mode light    # or dark
 hyprarch theme status        # the resolved theme as JSON
 ```
 
-Bundled themes live in `defaults/themes/`. To make your own, copy
+Two themes are bundled: `obsidian` (Obsidian dark / Porcelain light, blue) and
+`moss` (Moss dark / Sage light, green). To make your own, copy
 `defaults/themes/obsidian/` to `~/.config/hyprarch/themes/<id>/`, edit
 `theme.json`, and run `hyprarch theme set <id>`; a personal theme with the same
 id as a bundled one takes precedence.

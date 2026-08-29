@@ -124,6 +124,23 @@ printf 'light\n' > "$data/theme"
 [[ $(jq -r '.mode' "$state") == light ]]
 rm -f "$data/theme"
 
+# Every bundled theme must resolve and render in both modes, so a palette
+# missing a token or a wallpaper can never ship.
+for theme_file in "$data"/themes/*/theme.json; do
+    theme_id=$(basename "$(dirname "$theme_file")")
+    for theme_mode in dark light; do
+        "$script" set "$theme_id"
+        "$script" mode "$theme_mode"
+        assert_rendered
+        [[ $(jq -r '.theme' "$state") == "$theme_id" ]]
+        [[ $(jq -r '.mode' "$state") == "$theme_mode" ]]
+        [[ -f $(jq -r '.wallpaper' "$state") ]]
+        [[ $(jq -r '.colors | length' "$state") -ge 20 ]]
+    done
+done
+"$script" set obsidian
+"$script" mode light
+
 # A user theme under ~/.config shadows the bundled set and is listed as such.
 user_theme=$XDG_CONFIG_HOME/hyprarch/themes/ember
 mkdir -p "$user_theme"
@@ -148,7 +165,8 @@ grep -Fq 'active_border = { "rgba(ff5500ff)", "rgba(ff7733ff)" },' "$hypr_theme"
 expect_failure grep -Fq 'awww img /nonexistent' "$FAKE_LOG"
 
 listing=$("$script" list)
-[[ $(jq -r 'length' <<< "$listing") == 2 ]]
+bundled_themes=("$data"/themes/*/theme.json)
+[[ $(jq -r 'length' <<< "$listing") == $(( ${#bundled_themes[@]} + 1 )) ]]
 [[ $(jq -r '.[] | select(.id == "ember") | .source' <<< "$listing") == user ]]
 [[ $(jq -r '.[] | select(.id == "obsidian") | .source' <<< "$listing") == bundled ]]
 [[ $(jq -r '.[] | select(.id == "obsidian") | .modes | length' <<< "$listing") == 2 ]]
