@@ -10,6 +10,7 @@ Item {
     property string icon: ""
     property url iconSource: ""
     property int iconVisualSize: theme.iconSize + 1
+    property int iconPixelSize: theme.iconSize
     property string label: ""
     property string tooltip: ""
     property bool active: false
@@ -50,7 +51,7 @@ Item {
             text: root.icon
             color: root.foreground
             font.family: theme.iconFontFamily
-            font.pixelSize: theme.iconSize
+            font.pixelSize: root.iconPixelSize
             renderType: Text.NativeRendering
         }
 

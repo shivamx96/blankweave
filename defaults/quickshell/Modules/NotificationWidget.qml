@@ -44,7 +44,7 @@ WidgetFrame {
 
     icon: Boolean(status.paused) ? "󰂛" : "󰂚"
     iconOnly: true
-    active: notificationPanel.open || Number(status.historyCount || 0) > 0
+    active: notificationPanel.open
     attention: Number(status.waitingCount || 0) > 0
     tooltip: Boolean(status.paused)
         ? "Do not disturb · " + Number(status.waitingCount || 0) + " waiting\nRight-click to resume notifications"

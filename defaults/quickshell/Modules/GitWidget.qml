@@ -119,6 +119,9 @@ WidgetFrame {
 
     visible: available
     icon: "󰊢"
+    // The Material git glyph draws smaller than the other bar icons at the
+    // shared size, so nudge it up to match their optical weight.
+    iconPixelSize: theme.iconSize + 3
     iconOnly: root.reviewCount === 0
     label: root.reviewCount > 0 ? String(root.reviewCount) : ""
     active: root.reviewCount > 0 || gitPanel.open
