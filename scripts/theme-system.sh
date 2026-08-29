@@ -3,9 +3,9 @@
 # Install the parts of the active theme that need root: the Papirus folder
 # colour and the Plymouth boot splash. Everything else a theme carries is
 # applied by the user's theme-apply.sh, which also stages the rendered splash
-# under ~/.local/share/hyprarch/plymouth/hyprarch/ for this script to copy.
+# under ~/.local/share/blankweave/plymouth/blankweave/ for this script to copy.
 #
-# Runs from install.sh on every apply and from `hyprarch theme sync`; each
+# Runs from install.sh on every apply and from `blankweave theme sync`; each
 # step compares before it acts, so a run with nothing to do touches nothing
 # and never rebuilds the initramfs.
 #
@@ -14,10 +14,10 @@
 
 set -euo pipefail
 
-ICONS_DIR=${HYPRARCH_ICONS_DIR:-/usr/share/icons}
-PLYMOUTH_DIR=${HYPRARCH_PLYMOUTH_DIR:-/usr/share/plymouth/themes/hyprarch}
-BOOT_ENTRIES=${HYPRARCH_BOOT_ENTRIES:-/boot/loader/entries}
-PLYMOUTH_FILES=(hyprarch.plymouth hyprarch.script logo.png progress_bar.png progress_box.png)
+ICONS_DIR=${BLANKWEAVE_ICONS_DIR:-/usr/share/icons}
+PLYMOUTH_DIR=${BLANKWEAVE_PLYMOUTH_DIR:-/usr/share/plymouth/themes/blankweave}
+BOOT_ENTRIES=${BLANKWEAVE_BOOT_ENTRIES:-/boot/loader/entries}
+PLYMOUTH_FILES=(blankweave.plymouth blankweave.script logo.png progress_bar.png progress_box.png)
 PAPIRUS_THEMES=(Papirus Papirus-Dark Papirus-Light)
 
 die() {
@@ -28,11 +28,11 @@ die() {
 [[ $# -eq 1 || $# -eq 2 ]] || die "usage: theme-system.sh <user-home> [<config-dir>]"
 user_home=$1
 config_dir=${2:-$user_home/.config}
-state=$config_dir/hyprarch/theme.json
-stage=$user_home/.local/share/hyprarch/plymouth/hyprarch
+state=$config_dir/blankweave/theme.json
+stage=$user_home/.local/share/blankweave/plymouth/blankweave
 
 [[ -r $state ]] || die "no theme state at $state; apply the theme first"
-[[ -w $(dirname "$PLYMOUTH_DIR") ]] || die "needs root: run through sudo or hyprarch theme sync"
+[[ -w $(dirname "$PLYMOUTH_DIR") ]] || die "needs root: run through sudo or blankweave theme sync"
 
 current_folder_color() {
     local link
@@ -81,6 +81,12 @@ sync_boot_splash() {
     for file in "${PLYMOUTH_FILES[@]}"; do
         cmp -s "$stage/$file" "$PLYMOUTH_DIR/$file" || changed=true
     done
+    # The splash was installed under its old name before the rename; the
+    # initramfs still carries it until the theme is set again.
+    if [[ -d $(dirname "$PLYMOUTH_DIR")/hyprarch ]]; then
+        rm -rf -- "$(dirname "$PLYMOUTH_DIR")/hyprarch"
+        changed=true
+    fi
     if [[ $changed == false ]]; then
         printf 'Boot splash already current.\n'
         return 0
@@ -91,7 +97,7 @@ sync_boot_splash() {
     for file in "${PLYMOUTH_FILES[@]}"; do
         install -m 0644 "$stage/$file" "$PLYMOUTH_DIR/$file"
     done
-    plymouth-set-default-theme -R hyprarch
+    plymouth-set-default-theme -R blankweave
 }
 
 # The console behind the splash is painted with the kernel's vt.default_*

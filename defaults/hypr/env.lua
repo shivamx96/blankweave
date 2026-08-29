@@ -12,6 +12,6 @@ hl.env("XDG_SESSION_DESKTOP", "Hyprland")
 -- This legacy GNOME variable is Chromium's final fallback; Qt and GTK ignore it
 -- while XDG_CURRENT_DESKTOP is set, and xdg-utils merely routes xdg-open through
 -- gio open, which honours the same mimeapps.list.
-hl.env("GNOME_DESKTOP_SESSION_ID", "hyprarch")
+hl.env("GNOME_DESKTOP_SESSION_ID", "blankweave")
 hl.env("HYPRCURSOR_SIZE", "24")
 hl.env("XCURSOR_SIZE", "24")

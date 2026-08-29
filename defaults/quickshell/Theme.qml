@@ -5,13 +5,13 @@ import Quickshell.Io
 QtObject {
     id: root
 
-    // The palette is resolved by theme-apply.sh into ~/.config/hyprarch/theme.json,
+    // The palette is resolved by theme-apply.sh into ~/.config/blankweave/theme.json,
     // the only file it is read from. Until the first apply has run, the bundled
     // default theme's dark mode stands in so the shell never draws unthemed.
     readonly property string configDirectory: (Quickshell.env("XDG_CONFIG_HOME")
-        || (Quickshell.env("HOME") + "/.config")) + "/hyprarch"
+        || (Quickshell.env("HOME") + "/.config")) + "/blankweave"
     readonly property string bundledDefault: Quickshell.env("HOME")
-        + "/.local/share/hyprarch/themes/obsidian/theme.json"
+        + "/.local/share/blankweave/themes/obsidian/theme.json"
 
     property var resolved: null
     property var fallback: null

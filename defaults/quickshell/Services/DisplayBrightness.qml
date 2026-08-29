@@ -16,7 +16,7 @@ Item {
     // so a poll that lands mid-drag cannot snap the handle back.
     property bool held: false
 
-    readonly property string shellDir: Quickshell.env("HOME") + "/.local/share/hyprarch/shell"
+    readonly property string shellDir: Quickshell.env("HOME") + "/.local/share/blankweave/shell"
     readonly property string connector: String((screen && screen.name) || "")
     readonly property string reportedModel: String((screen && screen.model) || "")
     // The laptop panel is the anchor external displays are placed against,

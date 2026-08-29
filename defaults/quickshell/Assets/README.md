@@ -14,7 +14,7 @@ Font glyphs use. A mark's rendered size is therefore its optical size, and a new
 mark needs no per-widget size correction — normalise the artwork with a wrapping
 `<g transform>` instead of resizing the widget.
 
-The processor, memory, and graphics-card symbols are original HyprArch assets.
+The processor, memory, and graphics-card symbols are original Blankweave assets.
 
 The Tailscale connected and disconnected dot patterns follow the canonical
 definitions in Tailscale's

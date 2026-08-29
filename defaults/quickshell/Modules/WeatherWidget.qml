@@ -8,7 +8,7 @@ import "../Services"
 WidgetFrame {
     id: root
 
-    readonly property string shellDir: Quickshell.env("HOME") + "/.local/share/hyprarch/shell"
+    readonly property string shellDir: Quickshell.env("HOME") + "/.local/share/blankweave/shell"
     readonly property string weatherScript: shellDir + "/weather-status.sh"
     property var status: ({
         "configured": false,

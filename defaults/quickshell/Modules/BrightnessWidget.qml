@@ -8,7 +8,7 @@ import "../Services"
 WidgetFrame {
     id: root
 
-    readonly property string shellDir: Quickshell.env("HOME") + "/.local/share/hyprarch/shell"
+    readonly property string shellDir: Quickshell.env("HOME") + "/.local/share/blankweave/shell"
 
     // The bar entry is about the screen it is drawn on; the panel covers
     // every screen, this one first.
@@ -356,7 +356,7 @@ WidgetFrame {
         Text {
             visible: root.systemPending
             Layout.fillWidth: true
-            text: "Folder colours and boot splash follow on hyprarch theme sync"
+            text: "Folder colours and boot splash follow on blankweave theme sync"
             color: root.theme.textMuted
             wrapMode: Text.WordWrap
             font.family: root.theme.fontFamily

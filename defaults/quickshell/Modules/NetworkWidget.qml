@@ -10,7 +10,7 @@ import "../Services"
 WidgetFrame {
     id: root
 
-    readonly property string shellDir: Quickshell.env("HOME") + "/.local/share/hyprarch/shell"
+    readonly property string shellDir: Quickshell.env("HOME") + "/.local/share/blankweave/shell"
     readonly property string statusScript: shellDir + "/network-status.sh"
     readonly property var networkDevices: Networking.devices ? Networking.devices.values : []
     readonly property var wifiDevice: findDevice(DeviceType.Wifi)

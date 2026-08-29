@@ -1,7 +1,7 @@
 # Archinstall baseline
 
 This directory contains the reusable, non-secret first-stage configuration for
-installing Arch Linux before running the Hyprarch bootstrap.
+installing Arch Linux before running the Blankweave bootstrap.
 
 The committed configuration intentionally excludes:
 
@@ -20,9 +20,9 @@ Boot the Arch ISO in UEFI mode, connect to the network, and download the baselin
 ```bash
 curl -fL \
   https://raw.githubusercontent.com/shivamx96/hyprarch/main/archinstall/user_configuration.json \
-  -o /tmp/hyprarch-archinstall.json
+  -o /tmp/blankweave-archinstall.json
 
-archinstall --config /tmp/hyprarch-archinstall.json
+archinstall --config /tmp/blankweave-archinstall.json
 ```
 
 Always use the interactive menu. Do not add `--silent`: the deliberately omitted
@@ -37,7 +37,7 @@ small package set required to clone and run this repository after first boot.
 
 Before selecting **Install**, review the full summary and explicitly configure:
 
-1. **Hostname** — use a unique name such as `hyprarch-laptop` or `hyprarch-pc`.
+1. **Hostname** — use a unique name such as `blankweave-laptop` or `blankweave-pc`.
 2. **Disk configuration** — select the intended target disk. Prefer the
    best-effort Btrfs layout for a dedicated Arch disk. Never select the Windows
    disk on the desktop.
@@ -55,7 +55,7 @@ local disk-layout exports in Git. Matching patterns are ignored by the repositor
 If Archinstall credentials must be saved temporarily, use its encrypted
 credentials-file option and keep the decryption key separately.
 
-## Finish the Hyprarch installation
+## Finish the Blankweave installation
 
 After Archinstall finishes, reboot into the new system and run:
 
@@ -65,9 +65,9 @@ curl --proto '=https' --tlsv1.2 -fsSL \
 ```
 
 The bootstrap creates a managed checkout under
-`~/.local/share/hyprarch/repository`. The second stage detects the Intel laptop
+`~/.local/share/blankweave/repository`. The second stage detects the Intel laptop
 or NVIDIA desktop and installs the matching drivers, AUR packages, services,
-and user configuration. Future updates are applied with `hyprarch update`.
+and user configuration. Future updates are applied with `blankweave update`.
 
 ## Encryption policy
 

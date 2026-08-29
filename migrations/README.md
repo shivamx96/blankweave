@@ -1,7 +1,7 @@
-# Hyprarch migrations
+# Blankweave migrations
 
 This directory contains small, user-scoped state transitions that run once after
-a successful Hyprarch apply.
+a successful Blankweave apply.
 
 Migration files must:
 
@@ -13,4 +13,4 @@ Migration files must:
   declarative installer.
 
 Applied filenames are recorded in
-`${XDG_STATE_HOME:-$HOME/.local/state}/hyprarch/migrations-applied`.
+`${XDG_STATE_HOME:-$HOME/.local/state}/blankweave/migrations-applied`.

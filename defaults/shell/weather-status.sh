@@ -5,8 +5,8 @@ umask 077
 
 config_home=${XDG_CONFIG_HOME:-"$HOME/.config"}
 cache_home=${XDG_CACHE_HOME:-"$HOME/.cache"}
-config_dir="$config_home/hyprarch"
-cache_dir="$cache_home/hyprarch"
+config_dir="$config_home/blankweave"
+cache_dir="$cache_home/blankweave"
 config_file="$config_dir/weather.json"
 cache_file="$cache_dir/weather.json"
 forecast_url='https://api.open-meteo.com/v1/forecast'

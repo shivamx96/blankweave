@@ -1,7 +1,7 @@
 local startup_commands = {
     "awww-daemon",
-    "~/.local/share/hyprarch/shell/wallpaper.sh theme && sleep 1 && hyprlock",
-    "quickshell -n -p ~/.local/share/hyprarch/quickshell",
+    "~/.local/share/blankweave/shell/wallpaper.sh theme && sleep 1 && hyprlock",
+    "quickshell -n -p ~/.local/share/blankweave/quickshell",
     "dunst",
     "hypridle",
     "wl-paste --type text --watch cliphist store",
@@ -24,5 +24,5 @@ hl.on("monitor.added", function(monitor)
     if type(name) ~= "string" or not name:match("^[%w%-]+$") then
         return
     end
-    hl.exec_cmd("~/.local/share/hyprarch/shell/wallpaper.sh restore " .. name)
+    hl.exec_cmd("~/.local/share/blankweave/shell/wallpaper.sh restore " .. name)
 end)

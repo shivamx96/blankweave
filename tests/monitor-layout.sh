@@ -30,8 +30,8 @@ export FAKE_HYPRCTL_LOG=$test_root/eval.log
 export PATH=$fake_bin:$PATH
 
 script=$repository/defaults/shell/monitor-layout.sh
-config=$XDG_CONFIG_HOME/hyprarch/monitors.json
-rules=$XDG_CONFIG_HOME/hyprarch/monitors.lua
+config=$XDG_CONFIG_HOME/blankweave/monitors.json
+rules=$XDG_CONFIG_HOME/blankweave/monitors.lua
 
 # Status without any persisted choice reports every monitor as automatic and
 # recognises the internal panel.

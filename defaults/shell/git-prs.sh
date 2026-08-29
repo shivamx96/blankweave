@@ -11,7 +11,7 @@ case "${1:-}" in
     --max-age) max_age=${2:-300} ;;
 esac
 
-cache_dir=${XDG_CACHE_HOME:-$HOME/.cache}/hyprarch
+cache_dir=${XDG_CACHE_HOME:-$HOME/.cache}/blankweave
 cache_file=
 fields=number,title,url,repository,author,isDraft,updatedAt,commentsCount
 

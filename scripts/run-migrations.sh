@@ -4,7 +4,7 @@ set -euo pipefail
 
 repository=${1:?repository path is required}
 state_home=${XDG_STATE_HOME:-$HOME/.local/state}
-state_dir=$state_home/hyprarch
+state_dir=$state_home/blankweave
 ledger=$state_dir/migrations-applied
 lock_file=$state_dir/migrations.lock
 

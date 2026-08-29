@@ -1,14 +1,14 @@
 #!/usr/bin/env bash
 #
-# Apply the active Hyprarch theme.
+# Apply the active Blankweave theme.
 #
 # A theme is a directory holding theme.json with a dark and a light mode, each
 # carrying the shell palette, the lock-screen treatment, a wallpaper, and the
 # names of the matching application themes. Bundled themes are deployed to
-# ~/.local/share/hyprarch/themes/<id>/ and a user theme in
-# ~/.config/hyprarch/themes/<id>/ shadows a bundled one of the same id.
+# ~/.local/share/blankweave/themes/<id>/ and a user theme in
+# ~/.config/blankweave/themes/<id>/ shadows a bundled one of the same id.
 #
-# This script is the only writer of ~/.config/hyprarch/theme.json, which holds
+# This script is the only writer of ~/.config/blankweave/theme.json, which holds
 # both the persisted selection and the resolved values of the active mode, and
 # of every config rendered from a *.tmpl next to it. Templates use
 # {{path}} placeholders resolved against the resolved theme, with an optional
@@ -16,8 +16,8 @@
 #
 # Two parts of a theme need root and are not applied here: the Papirus folder
 # colour and the Plymouth boot splash. This script stages the rendered splash
-# under ~/.local/share/hyprarch/plymouth/ and reports both as `system.pending`
-# in `status`; `hyprarch theme sync` (scripts/theme-system.sh) installs them.
+# under ~/.local/share/blankweave/plymouth/ and reports both as `system.pending`
+# in `status`; `blankweave theme sync` (scripts/theme-system.sh) installs them.
 #
 # Usage:
 #   theme-apply.sh [apply]          re-render the persisted selection
@@ -30,12 +30,12 @@
 
 set -euo pipefail
 
-DOTS_DIR=$HOME/.local/share/hyprarch
+DOTS_DIR=$HOME/.local/share/blankweave
 CONFIG_DIR=${XDG_CONFIG_HOME:-$HOME/.config}
-HYPRARCH_CONFIG_DIR=$CONFIG_DIR/hyprarch
-STATE_FILE=$HYPRARCH_CONFIG_DIR/theme.json
+BLANKWEAVE_CONFIG_DIR=$CONFIG_DIR/blankweave
+STATE_FILE=$BLANKWEAVE_CONFIG_DIR/theme.json
 LEGACY_STATE_FILE=$DOTS_DIR/theme
-PLYMOUTH_STAGE=$DOTS_DIR/plymouth/hyprarch
+PLYMOUTH_STAGE=$DOTS_DIR/plymouth/blankweave
 DEFAULT_THEME=obsidian
 DEFAULT_MODE=dark
 # Cursor size is rice geometry, matching HYPRCURSOR_SIZE in env.lua.
@@ -43,9 +43,9 @@ CURSOR_SIZE=24
 
 # Where the privileged parts land; overridable so the tests never look at the
 # real system. theme-system.sh honours the same variables.
-ICONS_DIR=${HYPRARCH_ICONS_DIR:-/usr/share/icons}
-PLYMOUTH_DIR=${HYPRARCH_PLYMOUTH_DIR:-/usr/share/plymouth/themes/hyprarch}
-PLYMOUTH_FILES=(hyprarch.plymouth hyprarch.script logo.png progress_bar.png progress_box.png)
+ICONS_DIR=${BLANKWEAVE_ICONS_DIR:-/usr/share/icons}
+PLYMOUTH_DIR=${BLANKWEAVE_PLYMOUTH_DIR:-/usr/share/plymouth/themes/blankweave}
+PLYMOUTH_FILES=(blankweave.plymouth blankweave.script logo.png progress_bar.png progress_box.png)
 
 # Every token Theme.qml and the templates may reference. A theme missing one
 # is rejected rather than rendered with a hole in it.
@@ -106,7 +106,7 @@ theme_dir() {
     local id=$1 dir
 
     valid_theme_id "$id" || die "invalid theme id: $id"
-    for dir in "$HYPRARCH_CONFIG_DIR/themes/$id" "$DOTS_DIR/themes/$id"; do
+    for dir in "$BLANKWEAVE_CONFIG_DIR/themes/$id" "$DOTS_DIR/themes/$id"; do
         if [[ -r $dir/theme.json ]]; then
             printf '%s\n' "$dir"
             return 0
@@ -189,8 +189,8 @@ render_all() {
     render_template fuzzel "$DOTS_DIR/fuzzel/fuzzel.ini.tmpl" "$DOTS_DIR/fuzzel/fuzzel.ini"
     render_template css "$DOTS_DIR/ghostty/config.tmpl" "$DOTS_DIR/ghostty/config"
     render_template hypr "$DOTS_DIR/hypr/hyprlock-theme.conf.tmpl" "$DOTS_DIR/hypr/hyprlock-theme.conf"
-    render_template hypr "$DOTS_DIR/hypr/theme.lua.tmpl" "$HYPRARCH_CONFIG_DIR/theme.lua"
-    render_template plymouth "$PLYMOUTH_STAGE/hyprarch.script.tmpl" "$PLYMOUTH_STAGE/hyprarch.script"
+    render_template hypr "$DOTS_DIR/hypr/theme.lua.tmpl" "$BLANKWEAVE_CONFIG_DIR/theme.lua"
+    render_template plymouth "$PLYMOUTH_STAGE/blankweave.script.tmpl" "$PLYMOUTH_STAGE/blankweave.script"
     stage_plymouth_artwork
 }
 
@@ -219,7 +219,7 @@ stage_plymouth_artwork() {
 # Quickshell watches this file, so replace its contents with one write rather
 # than renaming a staged copy out from under the watch.
 write_state() {
-    mkdir -p "$HYPRARCH_CONFIG_DIR"
+    mkdir -p "$BLANKWEAVE_CONFIG_DIR"
     printf '%s\n' "$RESOLVED" > "$STATE_FILE"
 }
 
@@ -331,7 +331,7 @@ list_themes() {
 
     for source in user bundled; do
         case $source in
-            user) root=$HYPRARCH_CONFIG_DIR/themes ;;
+            user) root=$BLANKWEAVE_CONFIG_DIR/themes ;;
             bundled) root=$DOTS_DIR/themes ;;
         esac
         for file in "$root"/*/theme.json; do

@@ -1,8 +1,0 @@
-[Plymouth Theme]
-Name=HyprArch
-Description=HyprArch boot splash in the active theme
-ModuleName=script
-
-[script]
-ImageDir=/usr/share/plymouth/themes/hyprarch
-ScriptFile=/usr/share/plymouth/themes/hyprarch/hyprarch.script

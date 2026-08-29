@@ -1,4 +1,4 @@
-local config_dir = os.getenv("HOME") .. "/.local/share/hyprarch/hypr/"
+local config_dir = os.getenv("HOME") .. "/.local/share/blankweave/hypr/"
 
 require(config_dir .. "env")
 require(config_dir .. "keybindings")
@@ -8,9 +8,9 @@ require(config_dir .. "animations")
 require(config_dir .. "autostart")
 
 -- Window border colours come from the active theme: theme-apply.sh renders
--- ~/.config/hyprarch/theme.lua, which is absent until the first apply, so fall
+-- ~/.config/blankweave/theme.lua, which is absent until the first apply, so fall
 -- back to the bundled default palette rather than refusing to start.
-local theme_ok, theme = pcall(dofile, os.getenv("HOME") .. "/.config/hyprarch/theme.lua")
+local theme_ok, theme = pcall(dofile, os.getenv("HOME") .. "/.config/blankweave/theme.lua")
 if not theme_ok or type(theme) ~= "table" then
     theme = {
         active_border = { "rgba(3b82f6ff)", "rgba(67a6ffff)" },

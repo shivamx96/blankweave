@@ -43,7 +43,7 @@ ShellRoot {
     }
 
     IpcHandler {
-        target: "hyprarch"
+        target: "blankweave"
 
         function reload() {
             Quickshell.reload(true)

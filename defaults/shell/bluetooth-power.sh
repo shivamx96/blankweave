@@ -3,7 +3,7 @@
 # Persist Bluetooth power through rfkill so systemd-rfkill restores the choice
 # after reboot. BlueZ's adapter Powered property alone is not persistent.
 
-POWER_WAIT_SECONDS=${HYPRARCH_BLUETOOTH_POWER_WAIT_SECONDS:-2}
+POWER_WAIT_SECONDS=${BLANKWEAVE_BLUETOOTH_POWER_WAIT_SECONDS:-2}
 
 controllers() {
     timeout 2 bluetoothctl list 2>/dev/null | awk '{print $2}'

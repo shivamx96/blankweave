@@ -7,8 +7,8 @@
 # instead, persists the choice by EDID description (connector names such as
 # DP-3 change with the port or dock) and applies it live.
 #
-# It is the only writer of ~/.config/hyprarch/monitors.json, the source of
-# truth, and of ~/.config/hyprarch/monitors.lua, the Hyprland rules generated
+# It is the only writer of ~/.config/blankweave/monitors.json, the source of
+# truth, and of ~/.config/blankweave/monitors.lua, the Hyprland rules generated
 # from it. The generated hyprland.lua loads the Lua file after the host's
 # monitors.lua, so these rules win on every start.
 #
@@ -20,7 +20,7 @@
 set -euo pipefail
 
 config_home=${XDG_CONFIG_HOME:-"$HOME/.config"}
-config_dir="$config_home/hyprarch"
+config_dir="$config_home/blankweave"
 config_file="$config_dir/monitors.json"
 rules_file="$config_dir/monitors.lua"
 

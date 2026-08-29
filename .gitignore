@@ -6,3 +6,4 @@ archinstall/user_credentials.json
 archinstall/user_configuration.local.json
 archinstall/*-credentials.json
 archinstall/*-disk-layout.json
+__pycache__/
