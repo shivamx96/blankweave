@@ -74,8 +74,8 @@ Hyprland 0.55+ deprecated Hyprlang (`.conf`) in favour of Lua.
 ## Packages
 
 - [ ] `playerctl` is installed here but in no package list — a fresh install won't have it.
-- [ ] `gnome-keyring` — no secret store daemon; Slack and Bruno will nag. (`libsecret`
-      is present but has nothing behind it.)
+- [x] `gnome-keyring` — Secret Service daemon behind `libsecret`; unlocked by the
+      `hyprarch-lock` PAM service hyprlock authenticates against.
 - [ ] `man-db` — no man pages currently.
 - [ ] `ripgrep`, `fd` — fills the gap next to existing fzf/zoxide/lazygit.
 - [ ] `pacman-contrib` — `checkupdates`, `paccache` for cache cleanup.

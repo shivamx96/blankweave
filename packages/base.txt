@@ -50,6 +50,7 @@ cliphist
 grim
 slurp
 polkit-gnome
+gnome-keyring
 xdg-user-dirs
 xdg-utils
 file-roller
