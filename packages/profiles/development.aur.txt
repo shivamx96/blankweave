@@ -3,3 +3,4 @@ t3code-nightly-bin
 lmstudio-bin
 intellij-idea-ultimate-edition
 bruno-bin
+grok-build-bin

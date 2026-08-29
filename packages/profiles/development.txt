@@ -7,3 +7,4 @@ openai-codex
 lazygit
 lazydocker
 nvm
+opencode
