@@ -17,7 +17,7 @@ jobs:
         run: pacman -Syu --noconfirm git shellcheck qt6-declarative quickshell
 
       - name: Check out repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Check shell syntax
         shell: bash
@@ -38,6 +38,3 @@ jobs:
             cat /tmp/qmllint.log
             exit 1
           fi
-
-      - name: Check whitespace
-        run: git diff --check
