@@ -26,13 +26,17 @@ QtObject {
     // Theme files use CSS #rrggbb[aa]; Qt reads a nine-digit literal as
     // #aarrggbb. Magenta is deliberately loud: theme-apply.sh validates every
     // token, so a hole here means both theme files failed to load.
-    function token(name) {
-        const value = String(palette[name] || "")
+    function cssColor(value) {
+        value = String(value || "")
         if (/^#[0-9a-fA-F]{6}$/.test(value))
             return value
         if (/^#[0-9a-fA-F]{8}$/.test(value))
             return "#" + value.slice(7, 9) + value.slice(1, 7)
         return "#ff00ff"
+    }
+
+    function token(name) {
+        return cssColor(palette[name])
     }
 
     readonly property color canvas: token("canvas")

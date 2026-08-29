@@ -8,10 +8,13 @@ Item {
     property string text: ""
     property bool selected: false
     property bool busy: false
+    // An optional colour sample drawn before the label, for choices that are
+    // about a colour (a theme) rather than a word (a position).
+    property var swatch: null
 
     signal pressed
 
-    implicitWidth: label.implicitWidth + 14
+    implicitWidth: content.implicitWidth + 14
     implicitHeight: 28
     Layout.preferredHeight: implicitHeight
     opacity: enabled ? 1 : 0.45
@@ -23,15 +26,30 @@ Item {
         border.color: root.selected ? root.theme.accentBright : root.theme.outlineStrong
     }
 
-    Text {
-        id: label
+    RowLayout {
+        id: content
         anchors.centerIn: parent
-        text: root.busy ? "Applying…" : root.text
-        color: root.selected ? root.theme.accentBright : root.theme.text
-        font.family: root.theme.fontFamily
-        font.pixelSize: root.theme.microTextSize
-        font.weight: root.selected ? Font.DemiBold : Font.Normal
-        renderType: Text.NativeRendering
+        spacing: 6
+
+        Rectangle {
+            visible: root.swatch !== null && !root.busy
+            Layout.preferredWidth: 8
+            Layout.preferredHeight: 8
+            radius: 4
+            color: root.swatch !== null ? root.swatch : "transparent"
+            border.width: 1
+            border.color: root.theme.outlineStrong
+        }
+
+        Text {
+            id: label
+            text: root.busy ? "Applying…" : root.text
+            color: root.selected ? root.theme.accentBright : root.theme.text
+            font.family: root.theme.fontFamily
+            font.pixelSize: root.theme.microTextSize
+            font.weight: root.selected ? Font.DemiBold : Font.Normal
+            renderType: Text.NativeRendering
+        }
     }
 
     Rectangle {

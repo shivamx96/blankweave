@@ -12,7 +12,12 @@
 # both the persisted selection and the resolved values of the active mode, and
 # of every config rendered from a *.tmpl next to it. Templates use
 # {{path}} placeholders resolved against the resolved theme, with an optional
-# {{path:format}} override for colours (css, rgb, fuzzel, hypr).
+# {{path:format}} override for colours (css, rgb, fuzzel, hypr, plymouth).
+#
+# Two parts of a theme need root and are not applied here: the Papirus folder
+# colour and the Plymouth boot splash. This script stages the rendered splash
+# under ~/.local/share/hyprarch/plymouth/ and reports both as `system.pending`
+# in `status`; `hyprarch theme sync` (scripts/theme-system.sh) installs them.
 #
 # Usage:
 #   theme-apply.sh [apply]          re-render the persisted selection
@@ -20,7 +25,8 @@
 #   theme-apply.sh mode <dark|light>
 #   theme-apply.sh toggle           flip between dark and light
 #   theme-apply.sh list             JSON array of the available themes
-#   theme-apply.sh status           JSON of the active theme
+#   theme-apply.sh status           JSON of the active theme, plus whether the
+#                                   privileged parts still need a sync
 
 set -euo pipefail
 
@@ -29,8 +35,17 @@ CONFIG_DIR=${XDG_CONFIG_HOME:-$HOME/.config}
 HYPRARCH_CONFIG_DIR=$CONFIG_DIR/hyprarch
 STATE_FILE=$HYPRARCH_CONFIG_DIR/theme.json
 LEGACY_STATE_FILE=$DOTS_DIR/theme
+PLYMOUTH_STAGE=$DOTS_DIR/plymouth/hyprarch
 DEFAULT_THEME=obsidian
 DEFAULT_MODE=dark
+# Cursor size is rice geometry, matching HYPRCURSOR_SIZE in env.lua.
+CURSOR_SIZE=24
+
+# Where the privileged parts land; overridable so the tests never look at the
+# real system. theme-system.sh honours the same variables.
+ICONS_DIR=${HYPRARCH_ICONS_DIR:-/usr/share/icons}
+PLYMOUTH_DIR=${HYPRARCH_PLYMOUTH_DIR:-/usr/share/plymouth/themes/hyprarch}
+PLYMOUTH_FILES=(hyprarch.plymouth hyprarch.script logo.png progress_bar.png progress_box.png)
 
 # Every token Theme.qml and the templates may reference. A theme missing one
 # is rejected rather than rendered with a hole in it.
@@ -46,12 +61,16 @@ REQUIRED_COLORS=(
 RENDER_PROGRAM='
 def body: ltrimstr("#") | ascii_downcase | if length == 6 then . + "ff" else . end;
 def is_color: type == "string" and test("^#[0-9A-Fa-f]{6}([0-9A-Fa-f]{2})?$");
+def hex_digit: if . >= 97 then . - 87 else . - 48 end;
+def channel($at): body | .[$at:$at + 2] | explode | map(hex_digit) | .[0] * 16 + .[1];
+def unit($at): channel($at) / 255 * 1000 | round / 1000 | tostring;
 def render($format):
     if is_color then
         if $format == "css" then ascii_downcase
         elif $format == "rgb" then "#" + (body | .[0:6])
         elif $format == "fuzzel" then body
         elif $format == "hypr" then "rgba(" + body + ")"
+        elif $format == "plymouth" then [unit(0), unit(2), unit(4)] | join(", ")
         else error("unknown colour format: " + $format)
         end
     elif type == "string" then .
@@ -126,15 +145,23 @@ resolve_theme() {
         | if ($missing | length) > 0
           then error("theme \($id) \($mode) mode is missing colours: \($missing | join(", "))")
           else . end
-        | ($variant.wallpaper // "") as $wallpaper
-        | $variant + {
+        | (["ghostty", "iconTheme", "cursorTheme"] - ($variant | keys)) as $missing
+        | if ($missing | length) > 0
+          then error("theme \($id) \($mode) mode is missing: \($missing | join(", "))")
+          else . end
+        | def path_in_theme: if . == null or . == "" then null
+                             elif startswith("/") then .
+                             else "\($dir)/\(.)" end;
+        $variant + {
             theme: $id,
             mode: $mode,
             name: .name,
-            wallpaper: (if $wallpaper == "" then null
-                        elif ($wallpaper | startswith("/")) then $wallpaper
-                        else "\($dir)/\($wallpaper)" end),
-            modes: (.modes | map_values({label, ghostty, iconTheme}))
+            wallpaper: ($variant.wallpaper | path_in_theme),
+            folderColor: (.folderColor // null),
+            plymouth: (if .plymouth == null then null
+                       else { logo: (.plymouth.logo | path_in_theme),
+                              progressBar: (.plymouth.progressBar | path_in_theme) } end),
+            modes: (.modes | map_values({label, ghostty, iconTheme, cursorTheme, colors}))
           }
     ' "$dir/theme.json"
 }
@@ -163,6 +190,30 @@ render_all() {
     render_template css "$DOTS_DIR/ghostty/config.tmpl" "$DOTS_DIR/ghostty/config"
     render_template hypr "$DOTS_DIR/hypr/hyprlock-theme.conf.tmpl" "$DOTS_DIR/hypr/hyprlock-theme.conf"
     render_template hypr "$DOTS_DIR/hypr/theme.lua.tmpl" "$HYPRARCH_CONFIG_DIR/theme.lua"
+    render_template plymouth "$PLYMOUTH_STAGE/hyprarch.script.tmpl" "$PLYMOUTH_STAGE/hyprarch.script"
+    stage_plymouth_artwork
+}
+
+# The boot splash is installed by root from this user-owned staging copy, so
+# the theme's tinted artwork is placed next to the rendered script. A theme
+# without artwork leaves an incomplete stage that theme-system.sh refuses to
+# install rather than a splash with the previous theme's logo.
+stage_plymouth_artwork() {
+    local logo bar staged
+
+    [[ -d $PLYMOUTH_STAGE ]] || return 0
+    logo=$(jq -r '.plymouth.logo // empty' <<< "$RESOLVED")
+    bar=$(jq -r '.plymouth.progressBar // empty' <<< "$RESOLVED")
+    if [[ -f $logo && -f $bar ]]; then
+        for file in "$logo:logo.png" "$bar:progress_bar.png"; do
+            staged=$(mktemp "$PLYMOUTH_STAGE/.${file##*:}.XXXXXX")
+            cp -f "${file%%:*}" "$staged"
+            chmod 0644 "$staged"
+            mv -f "$staged" "$PLYMOUTH_STAGE/${file##*:}"
+        done
+    else
+        rm -f "$PLYMOUTH_STAGE/logo.png" "$PLYMOUTH_STAGE/progress_bar.png"
+    fi
 }
 
 # Quickshell watches this file, so replace its contents with one write rather
@@ -173,8 +224,10 @@ write_state() {
 }
 
 apply_desktop_preferences() {
-    local scheme gtk_theme prefer_dark dir
+    local scheme gtk_theme prefer_dark dir icon_theme cursor_theme
 
+    icon_theme=$(jq -r '.iconTheme' <<< "$RESOLVED")
+    cursor_theme=$(jq -r '.cursorTheme' <<< "$RESOLVED")
     if [[ $MODE == light ]]; then
         scheme=prefer-light
         gtk_theme=Adwaita
@@ -189,13 +242,16 @@ apply_desktop_preferences() {
     if command -v gsettings > /dev/null; then
         gsettings set org.gnome.desktop.interface color-scheme "$scheme" 2> /dev/null || true
         gsettings set org.gnome.desktop.interface gtk-theme "$gtk_theme" 2> /dev/null || true
+        gsettings set org.gnome.desktop.interface icon-theme "$icon_theme" 2> /dev/null || true
+        gsettings set org.gnome.desktop.interface cursor-theme "$cursor_theme" 2> /dev/null || true
+        gsettings set org.gnome.desktop.interface cursor-size "$CURSOR_SIZE" 2> /dev/null || true
     fi
 
     # GTK3 apps on Hyprland have no settings daemon and read these files.
     for dir in gtk-3.0 gtk-4.0; do
         mkdir -p "$CONFIG_DIR/$dir"
-        printf '[Settings]\ngtk-application-prefer-dark-theme=%s\ngtk-theme-name=Adwaita\n' \
-            "$prefer_dark" > "$CONFIG_DIR/$dir/settings.ini"
+        printf '[Settings]\ngtk-application-prefer-dark-theme=%s\ngtk-theme-name=Adwaita\ngtk-icon-theme-name=%s\ngtk-cursor-theme-name=%s\ngtk-cursor-theme-size=%s\n' \
+            "$prefer_dark" "$icon_theme" "$cursor_theme" "$CURSOR_SIZE" > "$CONFIG_DIR/$dir/settings.ini"
     done
 }
 
@@ -237,7 +293,36 @@ reload_services() {
     fi
     if [[ -n ${HYPRLAND_INSTANCE_SIGNATURE:-} ]] && command -v hyprctl > /dev/null; then
         hyprctl reload > /dev/null 2>&1 || true
+        # env() in the config only seeds a new session; a running compositor
+        # switches its cursor, and tells clients through XCURSOR, here.
+        hyprctl setcursor "$(jq -r '.cursorTheme' <<< "$RESOLVED")" "$CURSOR_SIZE" > /dev/null 2>&1 || true
     fi
+}
+
+# Whether the privileged parts of the given resolved theme are installed. A
+# part that is not present on this machine at all (no Papirus, no Plymouth
+# theme staged) is never pending; there is nothing a sync could do.
+system_status() {
+    local resolved=$1 wanted current link file
+    local folders=false splash=false
+
+    wanted=$(jq -r '.folderColor // empty' <<< "$resolved")
+    link=$ICONS_DIR/Papirus/48x48/places/folder.svg
+    if [[ -n $wanted && -L $link ]]; then
+        current=$(readlink "$link")
+        current=${current#folder-}
+        [[ ${current%.svg} == "$wanted" ]] || folders=true
+    fi
+
+    if [[ -f $PLYMOUTH_STAGE/logo.png ]]; then
+        for file in "${PLYMOUTH_FILES[@]}"; do
+            [[ -f $PLYMOUTH_STAGE/$file ]] || continue
+            cmp -s "$PLYMOUTH_STAGE/$file" "$PLYMOUTH_DIR/$file" || splash=true
+        done
+    fi
+
+    jq -n --argjson folders "$folders" --argjson splash "$splash" \
+        '{folders: $folders, bootSplash: $splash, pending: ($folders or $splash)}'
 }
 
 list_themes() {
@@ -260,7 +345,8 @@ list_themes() {
                 name: (.name // $id),
                 description: (.description // ""),
                 source: $source,
-                modes: (.modes // {} | to_entries | map({mode: .key, label: (.value.label // .key)}))
+                modes: (.modes // {} | to_entries
+                        | map({mode: .key, label: (.value.label // .key), accent: (.value.colors.accent // null)}))
             }' "$file" 2> /dev/null || printf '{"id":"%s","name":"%s","source":"%s","invalid":true}' "$id" "$id" "$source")")
         done
     done
@@ -301,10 +387,11 @@ main() {
         status)
             [[ $# -eq 0 ]] || die "status does not accept arguments"
             if [[ -r $STATE_FILE ]]; then
-                cat "$STATE_FILE"
+                RESOLVED=$(< "$STATE_FILE")
             else
-                resolve_theme "$THEME" "$MODE"
+                RESOLVED=$(resolve_theme "$THEME" "$MODE")
             fi
+            jq --argjson system "$(system_status "$RESOLVED")" '. + {system: $system}' <<< "$RESOLVED"
             return 0
             ;;
         help|-h|--help)

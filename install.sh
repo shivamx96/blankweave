@@ -256,6 +256,8 @@ cp -rv "$REPO_DIR/defaults/fuzzel" "$DOTS_DIR/" || { echo "Failed to copy fuzzel
 cp -rv "$REPO_DIR/defaults/xdg-desktop-portal" "$DOTS_DIR/" || { echo "Failed to copy xdg-desktop-portal"; exit 1; }
 cp -rv "$REPO_DIR/defaults/fontconfig" "$DOTS_DIR/" || { echo "Failed to copy fontconfig"; exit 1; }
 cp -rv "$REPO_DIR/defaults/shell" "$DOTS_DIR/" || { echo "Failed to copy shell"; exit 1; }
+# The boot splash is rendered here by theme-apply.sh and installed by root below.
+cp -rv "$REPO_DIR/defaults/plymouth" "$DOTS_DIR/" || { echo "Failed to copy plymouth"; exit 1; }
 
 HARDWARE_OVERRIDES="$REPO_DIR/hosts/$HOST/hardware-overrides.json"
 if [ -f "$HARDWARE_OVERRIDES" ]; then
@@ -444,10 +446,6 @@ section "CONFIGURING PLYMOUTH"
 
 echo "Setting up Plymouth boot splash..."
 if command -v plymouth-set-default-theme &> /dev/null; then
-    # Install custom HyprArch theme
-    cp -rv "$REPO_DIR/defaults/plymouth/hyprarch" /usr/share/plymouth/themes/
-    plymouth-set-default-theme -R hyprarch
-
     # Add plymouth hook to mkinitcpio if not present
     if [ -f /etc/mkinitcpio.conf ]; then
         if ! grep "^HOOKS=" /etc/mkinitcpio.conf | grep -q "plymouth"; then
@@ -462,13 +460,17 @@ if command -v plymouth-set-default-theme &> /dev/null; then
     if [ -d "$BOOT_ENTRIES" ]; then
         for entry in "$BOOT_ENTRIES"/*.conf; do
             if ! grep -q "splash" "$entry"; then
-                sed -i '/^options/ s/$/ quiet loglevel=3 splash vt.default_red=30 vt.default_grn=30 vt.default_blu=46/' "$entry"
+                sed -i '/^options/ s/$/ quiet loglevel=3 splash vt.default_red=0 vt.default_grn=0 vt.default_blu=0/' "$entry"
                 echo "Updated boot entry: $entry"
             fi
         done
     fi
-
 fi
+
+# The splash artwork, its background, the console colours behind it, and the
+# Papirus folder colour all follow the theme applied above; this installs the
+# staged copies and only rebuilds the initramfs when the splash changed.
+"$REPO_DIR/scripts/theme-system.sh" "$USER_HOME" "$CONFIG_DIR"
 
 section "GENERATING SSH KEY"
 

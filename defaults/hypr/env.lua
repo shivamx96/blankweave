@@ -13,7 +13,5 @@ hl.env("XDG_SESSION_DESKTOP", "Hyprland")
 -- while XDG_CURRENT_DESKTOP is set, and xdg-utils merely routes xdg-open through
 -- gio open, which honours the same mimeapps.list.
 hl.env("GNOME_DESKTOP_SESSION_ID", "hyprarch")
-hl.env("HYPRCURSOR_THEME", "rose-pine-hyprcursor")
 hl.env("HYPRCURSOR_SIZE", "24")
-hl.env("XCURSOR_THEME", "rose-pine-hyprcursor")
 hl.env("XCURSOR_SIZE", "24")

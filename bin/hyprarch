@@ -104,12 +104,40 @@ command_version() {
     printf 'repository: %s\n' "$repository_revision"
 }
 
+# Folder colours and the boot splash need root, so a theme switch from a
+# terminal finishes with a sudo step; the bar's picker cannot prompt and leaves
+# them for `hyprarch theme sync`.
+command_theme_sync() {
+    local repository
+
+    repository=$(configured_repository)
+    validate_repository "$repository"
+    if [[ ! -t 0 ]]; then
+        printf 'Folder colours and boot splash need a terminal: run hyprarch theme sync\n' >&2
+        return 0
+    fi
+    printf 'Applying folder colours and boot splash (sudo)...\n'
+    sudo "$repository/scripts/theme-system.sh" "$HOME" "${XDG_CONFIG_HOME:-$HOME/.config}"
+}
+
 command_theme() {
     local script=$HYPRARCH_DATA_DIR/shell/theme-apply.sh
 
     require_normal_user
     [[ -x "$script" ]] || die "theme support is not deployed yet; run: hyprarch update"
-    exec "$script" "$@"
+    case "${1:-}" in
+        set)
+            "$script" "$@"
+            command_theme_sync
+            ;;
+        sync)
+            [[ $# -eq 1 ]] || die "sync does not accept arguments"
+            command_theme_sync
+            ;;
+        *)
+            exec "$script" "$@"
+            ;;
+    esac
 }
 
 command_update() {
@@ -140,7 +168,7 @@ Usage: hyprarch <command>
 Commands:
   version   Show the CLI version and installed/repository revisions
   update    Fast-forward the managed repository and apply the update
-  theme     Manage the desktop theme: list, status, set <id>, mode <dark|light>, toggle
+  theme     Manage the desktop theme: list, status, set <id>, mode <dark|light>, toggle, sync
   help      Show this help
 EOF
 }
