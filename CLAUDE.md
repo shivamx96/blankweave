@@ -46,9 +46,11 @@ the new revision; `scripts/relocate-legacy.sh` (user-scoped, idempotent, run
 by `install.sh` before anything is read) renames the old directories
 wholesale so the theme selection, preferences, and user wallpapers carry
 over, and `install.sh` then repoints `REPO_DIR` because the managed checkout
-moved with them; and `bin/blankweave` accepts both GitHub remotes until the
-repository is renamed. Old migrations keep their old paths — they are
-history, and a fresh install finds nothing at them.
+moved with them; and `bin/blankweave` and `bootstrap.sh` accept the old
+GitHub remote as well as `shivamx96/blankweave`, because checkouts made
+before the repository was renamed still carry it and GitHub redirects it.
+Old migrations keep their old paths — they are history, and a fresh install
+finds nothing at them.
 
 ### Install and update lifecycle
 

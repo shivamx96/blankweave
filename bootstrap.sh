@@ -2,7 +2,8 @@
 
 set -eu
 
-repository_url=https://github.com/shivamx96/hyprarch.git
+repository_url=https://github.com/shivamx96/blankweave.git
+legacy_repository_url=https://github.com/shivamx96/hyprarch.git
 blankweave_dir=$HOME/.local/share/blankweave
 repository=$blankweave_dir/repository
 temporary_repository=
@@ -47,7 +48,7 @@ if [ -e "$repository" ]; then
     origin=$(git -C "$repository" remote get-url origin 2>/dev/null) \
         || die "existing repository has no origin remote"
     case "$origin" in
-        "$repository_url"|https://github.com/shivamx96/blankweave.git) ;;
+        "$repository_url"|"$legacy_repository_url") ;;
         *) die "existing repository has an unexpected origin: $origin" ;;
     esac
     exec "$repository/bin/blankweave" update </dev/tty

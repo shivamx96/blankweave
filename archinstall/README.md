@@ -19,7 +19,7 @@ Boot the Arch ISO in UEFI mode, connect to the network, and download the baselin
 
 ```bash
 curl -fL \
-  https://raw.githubusercontent.com/shivamx96/hyprarch/main/archinstall/user_configuration.json \
+  https://raw.githubusercontent.com/shivamx96/blankweave/main/archinstall/user_configuration.json \
   -o /tmp/blankweave-archinstall.json
 
 archinstall --config /tmp/blankweave-archinstall.json
@@ -61,7 +61,7 @@ After Archinstall finishes, reboot into the new system and run:
 
 ```bash
 curl --proto '=https' --tlsv1.2 -fsSL \
-  https://raw.githubusercontent.com/shivamx96/hyprarch/refs/heads/main/bootstrap.sh | sh
+  https://raw.githubusercontent.com/shivamx96/blankweave/refs/heads/main/bootstrap.sh | sh
 ```
 
 The bootstrap creates a managed checkout under
