@@ -1,5 +1,6 @@
 import QtQuick
 import QtQuick.Layouts
+import Quickshell.Widgets
 
 Item {
     id: root
@@ -9,6 +10,13 @@ Item {
 
     property string icon: ""
     property string iconMark: ""
+    // Icon-theme artwork for a specific application. Marks and glyphs are the
+    // bar's own monochrome language; this is the exception, for showing which
+    // app a widget is actually about.
+    property url iconImage: ""
+    // Sized so a full-bleed icon lands on the bar's optical target; artwork
+    // that carries its own margin reads slightly smaller, as its author meant.
+    property int iconImageSize: theme.barIconSize - 2
     property int iconVisualSize: theme.barIconSize + 1
     property int iconPixelSize: theme.barIconSize
     property string label: ""
@@ -37,6 +45,14 @@ Item {
         anchors.centerIn: parent
         spacing: root.label ? theme.widgetContentGap : 0
 
+        IconImage {
+            visible: root.iconImage.toString() !== ""
+            Layout.preferredWidth: root.iconImageSize
+            Layout.preferredHeight: root.iconImageSize
+            source: root.iconImage
+            mipmap: true
+        }
+
         VectorMark {
             mark: root.iconMark
             markColor: root.foreground
@@ -45,7 +61,7 @@ Item {
         }
 
         Text {
-            visible: root.iconMark === "" && root.icon !== ""
+            visible: root.iconImage.toString() === "" && root.iconMark === "" && root.icon !== ""
             text: root.icon
             color: root.foreground
             font.family: theme.iconFontFamily

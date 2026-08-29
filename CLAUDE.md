@@ -130,6 +130,12 @@ brightness and network marks run large) correct with `iconPixelSize`; measure
 the rendered ink before adding one, and never move `barIconSize` itself to fix a
 single widget. `theme.iconSize` remains the smaller size used inside panels.
 
+`WidgetFrame.iconImage` is the one exception to the bar's monochrome language:
+it draws icon-theme artwork for a specific application, resolved through
+`DesktopEntries` and `Quickshell.iconPath(name, true)`. Use it only where the
+widget is about one identifiable app, and always keep a glyph fallback for when
+nothing resolves.
+
 Vector artwork lives in `Assets/marks.js` as tokenised SVG templates and is
 drawn through `Components/VectorMark.qml`, which resolves `{fg}` to the caller's
 foreground and `{accent}` to the accent detail. Marks are drawn to a shared
