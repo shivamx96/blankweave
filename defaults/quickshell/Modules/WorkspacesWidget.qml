@@ -8,12 +8,26 @@ Item {
     required property var bar
     required property var theme
 
+    // Workspaces follow focus between monitors, so each bar lists the ones
+    // living on its own monitor: the 1-5 placeholders plus whatever else is
+    // here, minus anything currently shown on another monitor (its bar has
+    // it). Super+N or a click pulls a workspace over from elsewhere, and
+    // clicking the one already showing here sends it on to the next monitor.
     readonly property var workspaceIds: {
         const ids = [1, 2, 3, 4, 5]
+        const screenName = String((root.bar.screen && root.bar.screen.name) || "")
         const values = Hyprland.workspaces ? Hyprland.workspaces.values : []
         for (let index = 0; index < values.length; index++) {
-            const workspaceId = values[index].id
-            if (workspaceId > 5 && workspaceId <= 10 && ids.indexOf(workspaceId) === -1)
+            const workspace = values[index]
+            const workspaceId = workspace.id
+            if (workspaceId < 1 || workspaceId > 10)
+                continue
+            const monitorName = workspace.monitor ? String(workspace.monitor.name || "") : ""
+            const elsewhere = monitorName !== "" && monitorName !== screenName
+            const position = ids.indexOf(workspaceId)
+            if (elsewhere && position !== -1)
+                ids.splice(position, 1)
+            else if (!elsewhere && position === -1)
                 ids.push(workspaceId)
         }
         return ids.sort((left, right) => left - right)
@@ -28,10 +42,23 @@ Item {
         return null
     }
 
-    function activateWorkspace(workspaceId) {
-        const request = Hyprland.usingLua
-            ? "hl.dsp.focus({ workspace = \"" + workspaceId + "\" })"
-            : "workspace " + workspaceId
+    readonly property int monitorCount: Hyprland.monitors ? Hyprland.monitors.values.length : 0
+
+    function activateWorkspace(workspaceId, showingHere) {
+        // Hovering the bar has already focused its monitor, so "current
+        // monitor" is the one this bar belongs to. Mirrors summon_workspace
+        // in keybindings.lua.
+        let request
+        if (showingHere && root.monitorCount > 1) {
+            request = Hyprland.usingLua
+                ? "hl.dsp.workspace.move({ monitor = \"+1\" })"
+                : "movecurrentworkspacetomonitor +1"
+        }
+        else {
+            request = Hyprland.usingLua
+                ? "hl.dsp.focus({ workspace = " + workspaceId + ", on_current_monitor = true })"
+                : "focusworkspaceoncurrentmonitor " + workspaceId
+        }
         Hyprland.dispatch(request)
     }
 
@@ -57,6 +84,7 @@ Item {
                 readonly property bool activeWorkspace: workspace
                     && workspace.active
                     && workspace.monitor
+                    && root.bar.screen
                     && workspace.monitor.name === root.bar.screen.name
 
                 Layout.preferredWidth: 24
@@ -119,7 +147,7 @@ Item {
                     cursorShape: Qt.PointingHandCursor
                     onEntered: root.bar.showTooltip(workspaceButton, "Workspace " + workspaceButton.modelData)
                     onExited: root.bar.hideTooltip(workspaceButton)
-                    onClicked: root.activateWorkspace(workspaceButton.modelData)
+                    onClicked: root.activateWorkspace(workspaceButton.modelData, workspaceButton.activeWorkspace)
                 }
             }
         }
