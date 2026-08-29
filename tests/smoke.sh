@@ -45,9 +45,12 @@ git -C "$migration_repository" config user.email 'ci@blankweave.invalid'
 git -C "$migration_repository" add migrations
 git -C "$migration_repository" commit --quiet -m 'test fixture'
 
-mkdir -p "$test_root/cache/blankweave"
-touch "$test_root/cache/blankweave/git-prs.json"
-touch "$test_root/cache/blankweave/git-login"
+# The git-widget cache migration predates the rename and clears the old
+# cache directory; a fresh install finds nothing there, an upgraded one has
+# already had it relocated, so the fixture uses the path it actually clears.
+mkdir -p "$test_root/cache/hyprarch"
+touch "$test_root/cache/hyprarch/git-prs.json"
+touch "$test_root/cache/hyprarch/git-login"
 
 HOME="$test_root/home" \
     XDG_CACHE_HOME="$test_root/cache" \
@@ -58,7 +61,7 @@ state_dir=$test_root/state/blankweave
 [[ $(< "$state_dir/repository") == "$migration_repository" ]]
 [[ $(< "$state_dir/installed-revision") == "$(git -C "$migration_repository" rev-parse HEAD)" ]]
 [[ -f "$state_dir/migrations-applied" ]]
-[[ ! -e "$test_root/cache/blankweave/git-prs.json" ]]
-[[ ! -e "$test_root/cache/blankweave/git-login" ]]
+[[ ! -e "$test_root/cache/hyprarch/git-prs.json" ]]
+[[ ! -e "$test_root/cache/hyprarch/git-login" ]]
 
 printf 'CLI and migration smoke tests passed.\n'
