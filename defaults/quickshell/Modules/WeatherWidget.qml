@@ -204,7 +204,6 @@ WidgetFrame {
     }
 
     iconMark: root.weatherMark
-    iconVisualSize: root.theme.iconSize + 2
     label: root.available ? root.temperature + "°" : ""
     tooltip: !root.configured
         ? "Weather location not set\nClick to configure"

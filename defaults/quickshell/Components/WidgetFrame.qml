@@ -9,8 +9,8 @@ Item {
 
     property string icon: ""
     property string iconMark: ""
-    property int iconVisualSize: theme.iconSize + 1
-    property int iconPixelSize: theme.iconSize
+    property int iconVisualSize: theme.barIconSize + 1
+    property int iconPixelSize: theme.barIconSize
     property string label: ""
     property string tooltip: ""
     property bool active: false

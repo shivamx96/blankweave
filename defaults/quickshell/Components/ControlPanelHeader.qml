@@ -19,7 +19,7 @@ RowLayout {
     VectorMark {
         mark: root.iconMark
         markColor: root.theme.accentBright
-        visualSize: root.theme.heroIconSize
+        visualSize: root.theme.heroIconSize + 1
     }
 
     Text {

@@ -8,6 +8,12 @@ detail carries its own stroke or fill opacity rather than a second baked
 colour. Render marks through `Components/VectorMark.qml`; nothing should build
 an image source by hand.
 
+Every mark is drawn to the same keyline: its ink is centred in the 24-unit
+viewBox and spans exactly 20 units on its long axis, matching the grid the Nerd
+Font glyphs use. A mark's rendered size is therefore its optical size, and a new
+mark needs no per-widget size correction — normalise the artwork with a wrapping
+`<g transform>` instead of resizing the widget.
+
 The processor, memory, and graphics-card symbols are original HyprArch assets.
 
 The Tailscale connected and disconnected dot patterns follow the canonical

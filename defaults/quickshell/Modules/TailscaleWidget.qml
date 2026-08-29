@@ -183,7 +183,6 @@ WidgetFrame {
 
     visible: running
     iconMark: root.tailscaleMark
-    iconVisualSize: root.theme.iconSize
     iconOnly: true
     active: tailscalePanel.open
     attention: running && !connected

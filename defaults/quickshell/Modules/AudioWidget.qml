@@ -47,6 +47,7 @@ WidgetFrame {
 
     visible: sink !== null
     icon: muted ? "󰝟" : (percentage < 35 ? "󰕿" : (percentage < 70 ? "󰖀" : "󰕾"))
+    iconPixelSize: theme.barIconSize + 3
     label: muted ? "Muted" : percentage + "%"
     tooltip: (sink ? root.nodeLabel(sink) : "No audio output")
         + "\nClick for controls · Scroll to adjust · Right-click to mute"

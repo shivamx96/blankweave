@@ -11,6 +11,7 @@ WidgetFrame {
         : "Desktop"
 
     icon: activeWindow ? "󰖯" : "󰇄"
+    iconPixelSize: theme.barIconSize + 4
     label: windowTitle.length > 34 ? windowTitle.slice(0, 33) + "…" : windowTitle
     tooltip: activeWindow ? windowTitle : "No active window"
     horizontalPadding: 10

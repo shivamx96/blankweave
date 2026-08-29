@@ -92,7 +92,6 @@ WidgetFrame {
 
     visible: Boolean(status.available)
     iconMark: root.gpuMark
-    iconVisualSize: root.theme.iconSize + 2
     horizontalPadding: 7
     labelWidth: theme.metricLabelWidth
     label: String(status.text ?? "—") + "%"
