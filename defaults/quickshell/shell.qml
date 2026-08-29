@@ -4,11 +4,13 @@ import Quickshell.Hyprland
 import Quickshell.Io
 import "Bar"
 import "Launcher"
+import "Services"
 
 ShellRoot {
     id: root
 
     property Theme theme: Theme { }
+    property ShellPreferences preferences: ShellPreferences { }
     property bool launcherOpen: false
 
     function toggleLauncher() {
