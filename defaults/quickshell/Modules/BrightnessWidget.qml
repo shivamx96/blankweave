@@ -55,6 +55,7 @@ WidgetFrame {
 
     visible: percentage >= 0
     icon: percentage < 34 ? "󰃞" : (percentage < 67 ? "󰃟" : "󰃠")
+    iconPixelSize: theme.barIconSize - 2
     label: percentage >= 0 ? percentage + "%" : ""
     tooltip: percentage >= 0
         ? displayName + ": " + percentage + "%\nClick for controls · Scroll to adjust"

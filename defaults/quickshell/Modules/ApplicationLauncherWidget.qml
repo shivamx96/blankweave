@@ -5,6 +5,7 @@ WidgetFrame {
     id: root
 
     icon: "󰕰"
+    iconPixelSize: theme.barIconSize + 2
     iconOnly: true
     active: Boolean(root.bar.shell.launcherOpen)
     tooltip: "Applications\nRight-click: Fuzzel fallback"

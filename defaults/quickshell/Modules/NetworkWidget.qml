@@ -402,6 +402,7 @@ WidgetFrame {
             : (wifiDevice && Networking.wifiEnabled ? "Scanning for networks" : "Disconnected"))
 
     icon: root.networkIcon
+    iconPixelSize: theme.barIconSize - 2
     label: String(info.text || "")
     tooltip: String(info.tooltip || "No network connection") + "\nClick for controls"
     attention: kind === "disconnected"

@@ -34,6 +34,11 @@ QtObject {
     readonly property int smallTextSize: 12
     readonly property int microTextSize: 11
     readonly property int iconSize: 15
+    // The bar's optical target: a Nerd Font glyph fills roughly 7/8 of its em
+    // box and a vector mark 5/6 of its keyline, so 18 here and 19 for a mark
+    // both land on ~15.8px of ink. Widgets whose glyph deviates from that fill
+    // correct with iconPixelSize rather than moving this.
+    readonly property int barIconSize: 18
     readonly property int controlIconSize: 17
     readonly property int heroIconSize: 21
 

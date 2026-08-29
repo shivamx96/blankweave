@@ -63,6 +63,7 @@ WidgetFrame {
     }
 
     icon: "󰣇"
+    iconPixelSize: theme.barIconSize + 1
     iconOnly: true
     active: systemPanel.open
     tooltip: "System overview\nRight-click: full terminal report"

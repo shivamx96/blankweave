@@ -28,6 +28,7 @@ WidgetFrame {
     }
 
     icon: "󰐥"
+    iconPixelSize: theme.barIconSize + 3
     iconOnly: true
     tooltip: "Session and power"
     horizontalPadding: 6

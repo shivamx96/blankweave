@@ -121,9 +121,20 @@ Each feature is an internal QML module under `defaults/quickshell/Modules/`.
 Reusable presentation lives under `Components/`, and process-backed data goes
 through `Services/ScriptPoller.qml`.
 
+Bar icons share one optical size, `theme.barIconSize` — every glyph and mark
+carries about 15.8px of ink on its long axis. A Nerd Font glyph fills roughly
+7/8 of its em box and a vector mark 5/6 of its keyline, which is why the frame
+defaults to `barIconSize` for glyphs and `barIconSize + 1` for marks. Glyphs
+that deviate from that fill (the volume, power, and window marks run small; the
+brightness and network marks run large) correct with `iconPixelSize`; measure
+the rendered ink before adding one, and never move `barIconSize` itself to fix a
+single widget. `theme.iconSize` remains the smaller size used inside panels.
+
 Vector artwork lives in `Assets/marks.js` as tokenised SVG templates and is
 drawn through `Components/VectorMark.qml`, which resolves `{fg}` to the caller's
-foreground and `{accent}` to the accent detail. A mark therefore follows the
+foreground and `{accent}` to the accent detail. Marks are drawn to a shared
+keyline — ink centred in the 24-unit viewBox, spanning 20 units on the long
+axis — so a mark's rendered size is its optical size. A mark therefore follows the
 theme and a widget's active state exactly like an icon-font glyph; never add a
 per-theme image file or build an image source by hand. Because marks now honour
 `foreground`, a widget's `active` must mean the panel is open or the state is
