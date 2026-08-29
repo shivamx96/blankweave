@@ -333,3 +333,4 @@ include. Do not run placeholder substitutions over the Hyprlock layout.
 - GTK3 apps (Thunar) don't react to live gsettings changes on Hyprland — only libadwaita apps do
 - Commands registered by `autostart.lua` run in parallel; chain with `&&` for ordering
 - `force_default_wallpaper = 0` and `disable_hyprland_logo = true` in `hyprland.lua` — otherwise Hyprland flashes its own wallpaper on startup
+- `focus_on_activate = true` in `hyprland.lua` — otherwise Hyprland drops xdg-activation requests, so clicking a link opens the tab in the already-running browser without ever moving you to its workspace. Hyprland exposes no per-window rule for this, so the setting is necessarily global and any app that requests activation can pull focus
