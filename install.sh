@@ -270,6 +270,7 @@ cp -rv "$REPO_DIR/defaults/fuzzel" "$DOTS_DIR/" || { echo "Failed to copy fuzzel
 cp -rv "$REPO_DIR/defaults/xdg-desktop-portal" "$DOTS_DIR/" || { echo "Failed to copy xdg-desktop-portal"; exit 1; }
 cp -rv "$REPO_DIR/defaults/fontconfig" "$DOTS_DIR/" || { echo "Failed to copy fontconfig"; exit 1; }
 cp -rv "$REPO_DIR/defaults/shell" "$DOTS_DIR/" || { echo "Failed to copy shell"; exit 1; }
+cp -rv "$REPO_DIR/defaults/webapps" "$DOTS_DIR/" || { echo "Failed to copy webapps"; exit 1; }
 # The boot splash is rendered here by theme-apply.sh and installed by root below.
 cp -rv "$REPO_DIR/defaults/plymouth" "$DOTS_DIR/" || { echo "Failed to copy plymouth"; exit 1; }
 
@@ -413,6 +414,19 @@ if ! sudo -H -u "$SUDO_USER" env \
     "$DOTS_DIR/shell/theme-apply.sh"; then
     echo "Error: Could not apply the theme."
     exit 1
+fi
+
+section "SYNCING WEB APPS"
+
+# Bundled web apps are desktop entries that open a site in Helium's app mode.
+# Helium ships with the optional desktop profile, so the script skips itself
+# when the browser is absent; a failed icon download is not worth aborting an
+# apply over.
+if ! sudo -H -u "$SUDO_USER" env \
+    HOME="$USER_HOME" \
+    XDG_CONFIG_HOME="$CONFIG_DIR" \
+    "$DOTS_DIR/shell/webapp.sh" sync; then
+    warn "Could not sync the web apps; run: blankweave webapp sync"
 fi
 
 section "CONFIGURING NVIDIA (PC ONLY)"

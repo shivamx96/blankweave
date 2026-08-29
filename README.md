@@ -137,6 +137,8 @@ software already present.
 - **Themes** — each theme provides the shell palette, lock-screen treatment, and
   wallpapers for both dark and light modes; `blankweave theme` switches them and
   personal themes live under `~/.config/blankweave/themes/`
+- **Web apps** — sites as standalone windows through Helium's app mode, with
+  launcher entries managed by `blankweave webapp`
 
 ## Renamed from hyprarch
 
@@ -171,6 +173,26 @@ Two themes are bundled: `obsidian` (Obsidian dark / Porcelain light, blue) and
 `defaults/themes/obsidian/` to `~/.config/blankweave/themes/<id>/`, edit
 `theme.json`, and run `blankweave theme set <id>`; a personal theme with the same
 id as a bundled one takes precedence.
+
+## Web apps
+
+A web app is a site opened as its own window, Omarchy-style, through
+[Helium](https://github.com/imputnet/helium)'s app mode: no tabs or address
+bar, its own entry in the launcher, and its own window class for Hyprland.
+Helium comes with the `desktop` profile, and app windows share the browser's
+logins. WhatsApp, Google Messages, YouTube, ChatGPT, GitHub, and Figma are
+bundled; add your own with an icon URL or file (PNG or SVG):
+
+```
+blankweave webapp list
+blankweave webapp install "Google Calendar" https://calendar.google.com/ \
+    https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/png/google-calendar.png
+blankweave webapp remove "Google Calendar"
+blankweave webapp sync          # re-converge the bundled entries
+```
+
+To bind one, call `~/.local/share/blankweave/shell/webapp.sh launch <url>`
+from `keybindings.lua`.
 
 ## Wallpapers
 

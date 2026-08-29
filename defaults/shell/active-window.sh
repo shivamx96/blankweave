@@ -5,6 +5,8 @@ MAX_LENGTH=40
 get_icon() {
     case "$1" in
         zen)                icon="󰈹 " ;;
+        helium)             icon=" " ;;
+        chrome-*-Default)   icon=" " ;;   # a web app in Helium's app mode
         dev.zed.Zed)        icon=" " ;;
         com.mitchellh.ghostty) icon=" " ;;
         jetbrains-idea)     icon=" " ;;
@@ -20,6 +22,8 @@ format_title() {
     case "$class" in
         zen)
             title="${title% — Zen Browser}" ;;
+        helium)
+            title="${title% - Helium}" ;;
         dev.zed.Zed)
             title="${title% - Zed}" ;;
         jetbrains-idea)
