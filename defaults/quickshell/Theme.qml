@@ -81,7 +81,7 @@ QtObject {
     readonly property int widgetRadius: 4
     // Panels hang below the bar as separate surfaces, so they take the same
     // gentle curve as the compositor's windows rather than the bar's tighter one.
-    readonly property int panelRadius: 10
+    readonly property int panelRadius: 14
     readonly property int sectionPadding: 7
     readonly property int widgetPadding: 6
     readonly property int metricLabelWidth: 32
