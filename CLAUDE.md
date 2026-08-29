@@ -28,7 +28,7 @@ hyprarch/
   bin/hyprarch       # User-facing version/update command
   bootstrap.sh       # First-install managed-checkout bootstrap
   migrations/        # Ordered, user-scoped, run-once migrations
-  scripts/           # Installer/update support scripts, wallpaper tinting tool
+  scripts/           # Installer/update support scripts, wallpaper renderer
   install.sh         # Internal apply engine (also usable by developers)
 ```
 
@@ -428,11 +428,14 @@ GPU monitoring script (`gpu-usage.sh`) auto-detects at runtime: tries `nvidia-sm
    `~/.config/hyprarch/themes/<id>/` for a personal theme, and edit
    `theme.json`. Both modes and every palette token are required; wallpaper
    paths are relative to the theme directory.
-2. Derive the wallpapers with `scripts/tint-wallpaper.py <source> <output>
-   <from-accent> <to-accent>` (runs under `uv`, needs no install): the bundled
-   renders share one scene whose only saturated element is the accent river,
-   so a hue rotation from the source theme's accent to the new one moves the
-   river and the neutral tint together and keeps the family recognisable.
+2. Render the wallpapers with `scripts/render-wallpaper.py <theme.json>
+   <dark|light> <output>` (runs under `uv`, needs no install). The
+   composition is fixed — a tilted field with a luminous ribbon and fine
+   grain — and only the colours come from the palette, so a rendered
+   wallpaper is always in keeping with its theme; Obsidian keeps its
+   original renders. Tune the palette, not the script, when the result is
+   off, and view both modes: a light mode needs far stronger weights than
+   a dark one because its accent is mixed into a near-white field.
 3. Retune `lock` for the new wallpapers instead of copying the palette into
    it; the lock screen needs more contrast than the bar.
 4. Check both modes with `theme-apply.sh set <id>` and `theme-apply.sh mode
