@@ -75,7 +75,7 @@ assert_contains nvidia-open-dkms "${packages[@]}"
 assert_contains cuda "${packages[@]}"
 assert_contains steam "${packages[@]}"
 resolve_package_manifests "$repository" pc aur aur_packages
-[[ "${#aur_packages[@]}" -eq 14 ]]
+[[ "${#aur_packages[@]}" -eq 15 ]]
 resolve_package_manifests "$repository" pc providers provider_packages
 [[ "${#provider_packages[@]}" -eq 3 ]]
 
