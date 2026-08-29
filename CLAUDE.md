@@ -203,7 +203,10 @@ review-requested), so rows are cross-referenced against the local scan by
 `owner/name` to decide whether an IDE action is offered. Authentication is
 delegated entirely to `gh`; never read or pass a token yourself. Poll the pull
 request script slowly while the panel is closed so the review badge stays live
-without burning the search budget.
+without burning the search budget. Cache files are keyed by the active GitHub
+host and login so switching `gh` accounts cannot reuse another account's data.
+Only offer the IntelliJ project action when `git-repos.sh` reports that `idea`
+is available; otherwise use the required `xdg-open` fallback.
 
 The right section is grouped into process-aware application indicators,
 icon-only system controls, and hardware metrics plus power. Add watched apps

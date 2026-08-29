@@ -40,12 +40,20 @@ git -C "$migration_repository" config user.email 'ci@hyprarch.invalid'
 git -C "$migration_repository" add migrations
 git -C "$migration_repository" commit --quiet -m 'test fixture'
 
-XDG_STATE_HOME="$test_root/state" \
+mkdir -p "$test_root/cache/hyprarch"
+touch "$test_root/cache/hyprarch/git-prs.json"
+touch "$test_root/cache/hyprarch/git-login"
+
+HOME="$test_root/home" \
+    XDG_CACHE_HOME="$test_root/cache" \
+    XDG_STATE_HOME="$test_root/state" \
     "$repository/scripts/run-migrations.sh" "$migration_repository"
 
 state_dir=$test_root/state/hyprarch
 [[ $(< "$state_dir/repository") == "$migration_repository" ]]
 [[ $(< "$state_dir/installed-revision") == "$(git -C "$migration_repository" rev-parse HEAD)" ]]
 [[ -f "$state_dir/migrations-applied" ]]
+[[ ! -e "$test_root/cache/hyprarch/git-prs.json" ]]
+[[ ! -e "$test_root/cache/hyprarch/git-login" ]]
 
 printf 'CLI and migration smoke tests passed.\n'

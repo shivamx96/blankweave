@@ -12,8 +12,7 @@ case "${1:-}" in
 esac
 
 cache_dir=${XDG_CACHE_HOME:-$HOME/.cache}/hyprarch
-cache_file=$cache_dir/git-prs.json
-login_file=$cache_dir/git-login
+cache_file=
 fields=number,title,url,repository,author,isDraft,updatedAt,commentsCount
 
 emit_unavailable() {
@@ -37,6 +36,28 @@ if ! command -v gh >/dev/null 2>&1; then
     exit 0
 fi
 
+github_host=${GH_HOST:-github.com}
+if ! timeout 8 gh auth token --hostname "$github_host" >/dev/null 2>&1; then
+    emit_unavailable "Not signed in to GitHub" false
+    exit 0
+fi
+
+login=$(timeout 8 gh auth status \
+    --active \
+    --hostname "$github_host" \
+    --json hosts \
+    --jq '[.hosts[][] | select(.active == true)][0].login // ""' \
+    2>/dev/null)
+if [[ ! "$login" =~ ^[a-zA-Z0-9-]+$ ]]; then
+    emit_unavailable "Could not identify the active GitHub account" false
+    exit 0
+fi
+
+# Account and host are part of the cache identity, so `gh auth switch` cannot
+# expose another account's cached pull requests or username.
+cache_key=$(printf '%s@%s' "$login" "$github_host" | tr -c 'a-zA-Z0-9._-' '_')
+cache_file=$cache_dir/git-prs-$cache_key.json
+
 if [ -s "$cache_file" ]; then
     age=$(( $(date +%s) - $(stat -c %Y "$cache_file" 2>/dev/null || printf 0) ))
     if [ "$age" -ge 0 ] && [ "$age" -le "$max_age" ]; then
@@ -45,18 +66,7 @@ if [ -s "$cache_file" ]; then
     fi
 fi
 
-if ! timeout 8 gh auth token >/dev/null 2>&1; then
-    emit_unavailable "Not signed in to GitHub" false
-    exit 0
-fi
-
 mkdir -p "$cache_dir"
-
-login=$(cat "$login_file" 2>/dev/null)
-if [ -z "$login" ]; then
-    login=$(timeout 12 gh api user --jq .login 2>/dev/null)
-    [ -n "$login" ] && printf '%s\n' "$login" >"$login_file"
-fi
 
 authored=$(timeout 12 gh search prs --author=@me --state=open --limit 40 --json "$fields" 2>/dev/null)
 review=$(timeout 12 gh search prs --review-requested=@me --state=open --limit 40 --json "$fields" 2>/dev/null)
