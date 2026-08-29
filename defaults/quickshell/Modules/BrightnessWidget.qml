@@ -1,4 +1,5 @@
 import QtQuick
+import QtQuick.Layouts
 import Quickshell
 import Quickshell.Io
 import "../Components"
@@ -7,108 +8,120 @@ import "../Services"
 WidgetFrame {
     id: root
 
-    property int percentage: -1
-    property string backend: ""
-    property int pendingPercentage: -1
-    property int applyingPercentage: -1
-    property bool immediatePending: false
-
     readonly property string shellDir: Quickshell.env("HOME") + "/.local/share/hyprarch/shell"
-    readonly property string connector: String(root.bar.screen.name || "")
-    readonly property string reportedModel: String(root.bar.screen.model || "")
-    readonly property string displayName: reportedModel === "LG HDR 4K"
-        ? "LG UltraFine 27UL850"
-        : (reportedModel || connector || "Display")
-    readonly property string backendName: backend === "ddc" ? "DDC/CI" : "Hardware backlight"
 
-    function queuePercentage(value) {
-        const next = Math.max(5, Math.min(100, Math.round(value)))
-        root.percentage = next
-        root.pendingPercentage = next
-        root.immediatePending = false
-        applyTimer.restart()
+    // The bar entry is about the screen it is drawn on; the panel covers
+    // every screen, this one first.
+    readonly property DisplayBrightness display: ownDisplay
+    readonly property var otherScreens: {
+        // The bar's screen is cleared before the bar itself is torn down.
+        const own = root.bar.screen
+        if (!own)
+            return []
+        const screens = Quickshell.screens
+        const others = []
+        for (let index = 0; index < screens.length; index++) {
+            if (screens[index] !== own && screens[index].name !== own.name)
+                others.push(screens[index])
+        }
+        return others
+    }
+    property var displays: [ownDisplay]
+
+    // Arrangement, keyed by connector, from monitor-layout.sh. Read when the
+    // panel opens and after every change; the script owns the persisted file.
+    property var placements: ({})
+    property string pendingPlacementConnector: ""
+    property string pendingPlacementPosition: ""
+    readonly property var positionChoices: [
+        { "id": "left", "label": "Left" },
+        { "id": "right", "label": "Right" },
+        { "id": "above", "label": "Above" },
+        { "id": "below", "label": "Below" },
+        { "id": "auto", "label": "Auto" }
+    ]
+
+    // What an external display's position is relative to: the built-in panel
+    // when there is one, otherwise whatever else is already laid out.
+    readonly property string placementAnchor: {
+        for (let index = 0; index < root.displays.length; index++) {
+            if (root.displays[index].internal)
+                return root.displays[index].displayName
+        }
+        return "other displays"
     }
 
-    function commitPercentage(value) {
-        const next = Math.max(5, Math.min(100, Math.round(value)))
-        root.percentage = next
-        root.pendingPercentage = next
-        root.immediatePending = true
-        applyTimer.stop()
-        root.applyPending()
+    function placementFor(connector) {
+        return root.placements[connector] || null
     }
 
-    function applyPending() {
-        if (root.pendingPercentage < 0 || applyProcess.running)
+    function setPlacement(connector, position) {
+        if (placementProcess.running)
             return
 
-        root.applyingPercentage = root.pendingPercentage
-        root.immediatePending = false
-        applyProcess.command = [
-            root.shellDir + "/brightness.sh",
-            "set",
-            String(root.applyingPercentage),
-            root.connector
-        ]
-        applyProcess.running = true
+        root.pendingPlacementConnector = connector
+        root.pendingPlacementPosition = position
+        placementProcess.command = [root.shellDir + "/monitor-layout.sh", "set", connector, position]
+        placementProcess.running = true
     }
 
-    visible: percentage >= 0
-    icon: percentage < 34 ? "󰃞" : (percentage < 67 ? "󰃟" : "󰃠")
+    function syncDisplays() {
+        const list = [ownDisplay]
+        for (let index = 0; index < otherDisplays.count; index++)
+            list.push(otherDisplays.objectAt(index))
+        root.displays = list
+    }
+
+    visible: display.available
+    icon: display.percentage < 34 ? "󰃞" : (display.percentage < 67 ? "󰃟" : "󰃠")
     iconPixelSize: theme.barIconSize - 2
-    label: percentage >= 0 ? percentage + "%" : ""
-    tooltip: percentage >= 0
-        ? displayName + ": " + percentage + "%\nClick for controls · Scroll to adjust"
+    label: display.available ? display.percentage + "%" : ""
+    tooltip: display.available
+        ? display.displayName + ": " + display.percentage + "%\nClick for controls · Scroll to adjust"
         : ""
 
-    ScriptPoller {
-        id: poller
-        command: root.shellDir + "/brightness.sh status " + root.connector
-        interval: 10000
-        onUpdated: payload => {
-            if (!payload)
-                return
-
-            try {
-                const status = JSON.parse(payload)
-                const next = Number(status.percentage)
-                if (Number.isFinite(next) && !brightnessControl.pressed && !applyTimer.running && !applyProcess.running)
-                    root.percentage = Math.round(next)
-                root.backend = String(status.backend || "")
-            } catch (error) {
-                root.percentage = -1
-                root.backend = ""
-            }
-        }
+    DisplayBrightness {
+        id: ownDisplay
+        screen: root.bar.screen
     }
 
-    Timer {
-        id: applyTimer
-        interval: root.backend === "ddc" ? 100 : 30
-        onTriggered: root.applyPending()
+    Instantiator {
+        id: otherDisplays
+        model: root.otherScreens
+        delegate: DisplayBrightness {
+            required property var modelData
+            screen: modelData
+            active: brightnessPanel.open
+        }
+        onObjectAdded: (index, object) => root.syncDisplays()
+        onObjectRemoved: (index, object) => root.syncDisplays()
+    }
+
+    ScriptPoller {
+        id: placementPoller
+        command: root.shellDir + "/monitor-layout.sh status"
+        interval: 0
+        onUpdated: payload => {
+            const next = {}
+            try {
+                const status = JSON.parse(payload)
+                const monitors = Array.isArray(status.monitors) ? status.monitors : []
+                for (let index = 0; index < monitors.length; index++)
+                    next[String(monitors[index].name || "")] = monitors[index]
+            } catch (error) {
+            }
+            root.placements = next
+        }
     }
 
     Process {
-        id: applyProcess
+        id: placementProcess
 
         onExited: {
-            if (root.pendingPercentage !== root.applyingPercentage) {
-                if (root.immediatePending)
-                    Qt.callLater(root.applyPending)
-                else
-                    applyTimer.restart()
-            }
-            else {
-                root.immediatePending = false
-                settleTimer.restart()
-            }
+            root.pendingPlacementConnector = ""
+            root.pendingPlacementPosition = ""
+            placementPoller.refresh()
         }
-    }
-
-    Timer {
-        id: settleTimer
-        interval: root.backend === "ddc" ? 900 : 300
-        onTriggered: poller.refresh()
     }
 
     onPressed: button => {
@@ -119,8 +132,8 @@ WidgetFrame {
     }
 
     onScrolled: delta => {
-        if (root.percentage >= 0)
-            root.queuePercentage(root.percentage + (delta > 0 ? 2 : -2))
+        if (display.available)
+            display.queuePercentage(display.percentage + (delta > 0 ? 2 : -2))
     }
 
     ControlPopup {
@@ -129,11 +142,18 @@ WidgetFrame {
         theme: root.theme
         anchorItem: root
 
+        onOpenChanged: {
+            if (open)
+                placementPoller.refresh()
+        }
+
         ControlPanelHeader {
             theme: root.theme
             icon: "󰃠"
             title: "DISPLAY"
-            subtitle: root.displayName + " · " + root.backendName
+            subtitle: root.displays.length > 1
+                ? root.displays.length + " displays"
+                : root.display.displayName + " · " + root.display.backendName
             actions: [
                 { "id": "theme", "icon": root.theme.dark ? "󰖙" : "󰖔" }
             ]
@@ -146,21 +166,84 @@ WidgetFrame {
             }
         }
 
-        ControlSectionLabel {
-            theme: root.theme
-            text: "BRIGHTNESS"
-        }
+        Repeater {
+            model: root.displays
 
-        ControlValueRow {
-            id: brightnessControl
-            theme: root.theme
-            from: 5
-            to: 100
-            value: root.percentage
-            stepSize: 1
-            valueText: root.percentage + "%"
-            onValueMoved: value => root.queuePercentage(value)
-            onValueCommitted: value => root.commitPercentage(value)
+            delegate: ColumnLayout {
+                id: displayRow
+
+                required property var modelData
+                readonly property var placement: root.placementFor(displayRow.modelData.connector)
+                // Only an external display is placed; the internal panel is
+                // what it is placed against, and a lone display has nowhere
+                // to go.
+                readonly property bool placeable: root.displays.length > 1
+                    && placement !== null
+                    && !placement.internal
+                readonly property bool placing: root.pendingPlacementConnector === displayRow.modelData.connector
+                readonly property string currentPosition: placing
+                    ? root.pendingPlacementPosition
+                    : String((placement && placement.position) || "auto")
+
+                Layout.fillWidth: true
+                spacing: 10
+                visible: modelData.available || placeable
+
+                ControlSectionLabel {
+                    theme: root.theme
+                    text: root.displays.length > 1
+                        ? displayRow.modelData.displayName.toUpperCase()
+                            + (displayRow.modelData.available ? " · " + displayRow.modelData.backendName.toUpperCase() : "")
+                        : "BRIGHTNESS"
+                }
+
+                ControlValueRow {
+                    id: brightnessControl
+                    visible: displayRow.modelData.available
+                    theme: root.theme
+                    from: 5
+                    to: 100
+                    value: displayRow.modelData.percentage
+                    stepSize: 1
+                    valueText: displayRow.modelData.percentage + "%"
+                    onValueMoved: value => displayRow.modelData.queuePercentage(value)
+                    onValueCommitted: value => displayRow.modelData.commitPercentage(value)
+                }
+
+                Binding {
+                    target: displayRow.modelData
+                    property: "held"
+                    value: brightnessControl.pressed
+                }
+
+                ControlSectionLabel {
+                    visible: displayRow.placeable
+                    theme: root.theme
+                    text: "POSITION RELATIVE TO " + root.placementAnchor.toUpperCase()
+                }
+
+                RowLayout {
+                    visible: displayRow.placeable
+                    Layout.fillWidth: true
+                    spacing: 5
+
+                    Repeater {
+                        model: root.positionChoices
+
+                        delegate: ControlChoice {
+                            required property var modelData
+
+                            Layout.fillWidth: true
+                            theme: root.theme
+                            text: String(modelData.label)
+                            selected: displayRow.currentPosition === String(modelData.id)
+                            busy: displayRow.placing && displayRow.currentPosition === String(modelData.id)
+                            enabled: !placementProcess.running
+                            onPressed: root.setPlacement(displayRow.modelData.connector, String(modelData.id))
+                        }
+                    }
+                }
+            }
         }
     }
 

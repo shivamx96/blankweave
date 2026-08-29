@@ -45,9 +45,26 @@ hl.bind(main_mod .. " + SHIFT + K", hl.dsp.window.move({ monitor = "+1" }))
 hl.bind(main_mod .. " + CTRL + right", hl.dsp.focus({ workspace = "e+1" }))
 hl.bind(main_mod .. " + CTRL + left", hl.dsp.focus({ workspace = "e-1" }))
 
+-- Workspaces are not bound to monitors. Super+N brings workspace N to the
+-- focused monitor (swapping with whatever it was showing) instead of moving
+-- focus to wherever N happens to live, and pressing it again while N is
+-- already there sends N on to the next monitor, so repeated presses cycle a
+-- workspace through the displays. The bar's workspace buttons do the same.
+local function summon_workspace(workspace)
+    return function()
+        local monitor = hl.get_active_monitor()
+        local active = monitor and monitor.active_workspace
+        if active and active.id == workspace and #hl.get_monitors() > 1 then
+            hl.dispatch(hl.dsp.workspace.move({ monitor = "+1" }))
+        else
+            hl.dispatch(hl.dsp.focus({ workspace = workspace, on_current_monitor = true }))
+        end
+    end
+end
+
 -- Switch workspaces and move windows to workspaces. Workspace 10 maps to key 0.
 for workspace = 1, 10 do
     local key = workspace % 10
-    hl.bind(main_mod .. " + " .. key, hl.dsp.focus({ workspace = workspace }))
+    hl.bind(main_mod .. " + " .. key, summon_workspace(workspace))
     hl.bind(main_mod .. " + SHIFT + " .. key, hl.dsp.window.move({ workspace = workspace }))
 end

@@ -109,7 +109,7 @@ software already present.
 - `Super + P` – pseudo-tile
 
 ### Workspaces
-- `Super + 1-9/0` – switch workspaces (1-10)
+- `Super + 1-9/0` – bring workspace 1-10 to the focused monitor; press again to send it to the next monitor
 - `Super + Shift + 1-9/0` – move window to workspace
 
 ### Screenshots
