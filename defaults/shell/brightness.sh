@@ -11,8 +11,8 @@
 #   brightness.sh dim <maximum> [connector]
 #   brightness.sh save|restore [connector]
 
-RUNTIME_BASE="${XDG_RUNTIME_DIR:-/tmp}/hyprarch"
-BACKLIGHT_ROOT="${HYPRARCH_BACKLIGHT_ROOT:-/sys/class/backlight}"
+RUNTIME_BASE="${XDG_RUNTIME_DIR:-/tmp}/blankweave"
+BACKLIGHT_ROOT="${BLANKWEAVE_BACKLIGHT_ROOT:-/sys/class/backlight}"
 mkdir -p "$RUNTIME_BASE" 2>/dev/null || true
 
 CMD=${1:-get}

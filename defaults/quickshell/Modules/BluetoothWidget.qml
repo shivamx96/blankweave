@@ -11,7 +11,7 @@ WidgetFrame {
     readonly property var adapter: Bluetooth.defaultAdapter
     readonly property var rawDevices: Bluetooth.devices ? Bluetooth.devices.values : []
     readonly property var pipewireNodes: Pipewire.nodes ? Pipewire.nodes.values : []
-    readonly property string shellDir: Quickshell.env("HOME") + "/.local/share/hyprarch/shell"
+    readonly property string shellDir: Quickshell.env("HOME") + "/.local/share/blankweave/shell"
     readonly property bool enabled: adapter && adapter.enabled
 
     property var pendingActions: ({})

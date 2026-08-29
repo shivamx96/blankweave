@@ -7,7 +7,7 @@ import "../Services"
 WidgetFrame {
     id: root
 
-    readonly property string shellDir: Quickshell.env("HOME") + "/.local/share/hyprarch/shell"
+    readonly property string shellDir: Quickshell.env("HOME") + "/.local/share/blankweave/shell"
     readonly property string memoryMark: "memory"
     property var status: ({
         "text": "—",

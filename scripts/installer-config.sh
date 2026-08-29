@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-# Safe parser for ~/.config/hyprarch/install.conf. This file is sourced by the
+# Safe parser for ~/.config/blankweave/install.conf. This file is sourced by the
 # installer and intentionally never sources or evaluates the user's config.
 
 INSTALLER_CONFIG_VERSION=1
@@ -8,7 +8,7 @@ INSTALLER_AVAILABLE_PROFILES=(desktop development communication gaming)
 INSTALLER_PROFILES=()
 
 installer_config_error() {
-    printf 'Invalid Hyprarch installer config: %s\n' "$*" >&2
+    printf 'Invalid Blankweave installer config: %s\n' "$*" >&2
     return 1
 }
 

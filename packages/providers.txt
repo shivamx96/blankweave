@@ -1,4 +1,4 @@
-# Concrete implementations for virtual dependencies used by Hyprarch packages.
+# Concrete implementations for virtual dependencies used by Blankweave packages.
 # Install these before the main manifests so pacman never chooses a provider
 # implicitly. Keep this list limited to deliberate, repository-backed policy.
 pipewire-jack

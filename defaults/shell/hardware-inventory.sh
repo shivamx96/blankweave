@@ -26,7 +26,7 @@ if [ -z "$account_home" ] || [ ! -d "$account_home" ]; then
     exit 1
 fi
 
-dots_dir="$account_home/.local/share/hyprarch"
+dots_dir="$account_home/.local/share/blankweave"
 inventory_file="$dots_dir/system-hardware.json"
 overrides_file="$dots_dir/hardware-overrides.json"
 mkdir -p "$dots_dir"

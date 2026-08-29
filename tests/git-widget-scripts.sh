@@ -38,7 +38,7 @@ for login in first-user second-user; do
     [[ $(jq -r '.authenticated' <<< "$prs_payload") == true ]]
 done
 
-cache_count=$(find "$test_root/cache/hyprarch" -type f -name 'git-prs-*.json' | wc -l)
+cache_count=$(find "$test_root/cache/blankweave" -type f -name 'git-prs-*.json' | wc -l)
 [[ "$cache_count" -eq 2 ]]
 
 printf 'Git widget script tests passed.\n'

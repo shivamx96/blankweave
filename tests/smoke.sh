@@ -15,12 +15,17 @@ trap cleanup EXIT HUP INT TERM
 version_output=$(
     HOME="$test_root/home" \
         XDG_STATE_HOME="$test_root/state" \
-        "$repository/bin/hyprarch" version
+        "$repository/bin/blankweave" version
 )
-grep -Fxq "hyprarch $(head -n 1 "$repository/VERSION")" <<< "$version_output"
+grep -Fxq "blankweave $(head -n 1 "$repository/VERSION")" <<< "$version_output"
 grep -Fq 'installed:  not-recorded' <<< "$version_output"
 
-if "$repository/bin/hyprarch" unknown > /dev/null 2>&1; then
+# The old command name hands over to the new one so an installed
+# `hyprarch update` can exec the fetched revision.
+grep -Fxq "blankweave $(head -n 1 "$repository/VERSION")" \
+    <<< "$(HOME="$test_root/home" XDG_STATE_HOME="$test_root/state" "$repository/bin/hyprarch" version)"
+
+if "$repository/bin/blankweave" unknown > /dev/null 2>&1; then
     printf 'Unknown CLI commands must fail.\n' >&2
     exit 1
 else
@@ -35,25 +40,25 @@ migration_repository=$test_root/repository
 mkdir -p "$migration_repository"
 cp -R "$repository/migrations" "$migration_repository/"
 git -C "$migration_repository" init --quiet
-git -C "$migration_repository" config user.name 'Hyprarch CI'
-git -C "$migration_repository" config user.email 'ci@hyprarch.invalid'
+git -C "$migration_repository" config user.name 'Blankweave CI'
+git -C "$migration_repository" config user.email 'ci@blankweave.invalid'
 git -C "$migration_repository" add migrations
 git -C "$migration_repository" commit --quiet -m 'test fixture'
 
-mkdir -p "$test_root/cache/hyprarch"
-touch "$test_root/cache/hyprarch/git-prs.json"
-touch "$test_root/cache/hyprarch/git-login"
+mkdir -p "$test_root/cache/blankweave"
+touch "$test_root/cache/blankweave/git-prs.json"
+touch "$test_root/cache/blankweave/git-login"
 
 HOME="$test_root/home" \
     XDG_CACHE_HOME="$test_root/cache" \
     XDG_STATE_HOME="$test_root/state" \
     "$repository/scripts/run-migrations.sh" "$migration_repository"
 
-state_dir=$test_root/state/hyprarch
+state_dir=$test_root/state/blankweave
 [[ $(< "$state_dir/repository") == "$migration_repository" ]]
 [[ $(< "$state_dir/installed-revision") == "$(git -C "$migration_repository" rev-parse HEAD)" ]]
 [[ -f "$state_dir/migrations-applied" ]]
-[[ ! -e "$test_root/cache/hyprarch/git-prs.json" ]]
-[[ ! -e "$test_root/cache/hyprarch/git-login" ]]
+[[ ! -e "$test_root/cache/blankweave/git-prs.json" ]]
+[[ ! -e "$test_root/cache/blankweave/git-login" ]]
 
 printf 'CLI and migration smoke tests passed.\n'

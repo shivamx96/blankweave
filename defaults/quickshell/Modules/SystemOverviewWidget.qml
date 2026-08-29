@@ -7,7 +7,7 @@ import "../Services"
 WidgetFrame {
     id: root
 
-    readonly property string shellDir: Quickshell.env("HOME") + "/.local/share/hyprarch/shell"
+    readonly property string shellDir: Quickshell.env("HOME") + "/.local/share/blankweave/shell"
     property var systemInfo: ({
         "available": false,
         "hostname": "",
@@ -100,7 +100,7 @@ WidgetFrame {
             title: "SYSTEM OVERVIEW"
             subtitle: root.systemInfo.available
                 ? String(root.systemInfo.hostname || "System") + " · " + String(root.systemInfo.os || "Linux")
-                : "Hyprarch machine snapshot"
+                : "Blankweave machine snapshot"
             actions: [
                 { "id": "refresh", "icon": "󰑐" },
                 { "id": "report", "icon": "󰋊" }

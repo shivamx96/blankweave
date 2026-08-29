@@ -16,7 +16,7 @@
 
 ## Installer UX
 
-- [ ] Add `hyprarch setup`, a guided terminal flow for first-install preferences.
+- [ ] Add `blankweave setup`, a guided terminal flow for first-install preferences.
       Keep `bootstrap.sh` focused on acquiring the managed checkout and handing
       off to the CLI.
 - [x] Define required core/hardware manifests plus optional `desktop`,
@@ -25,7 +25,7 @@
       profile validation and compatibility defaults for existing machines.
 - [ ] Offer optional Git identity (`user.name` and `user.email`), GitHub SSH-key
       generation, and a clear skip path. Never collect credentials or upload keys.
-- [ ] Save non-secret choices in an inspectable user config so `hyprarch update`
+- [ ] Save non-secret choices in an inspectable user config so `blankweave update`
       can converge without asking the setup questions again.
 - [ ] Add a final review before package or system changes, plus a non-interactive
       mode that consumes an existing config for repeatable installs.
@@ -75,7 +75,7 @@ Hyprland 0.55+ deprecated Hyprlang (`.conf`) in favour of Lua.
 
 - [ ] `playerctl` is installed here but in no package list — a fresh install won't have it.
 - [x] `gnome-keyring` — Secret Service daemon behind `libsecret`; unlocked by the
-      `hyprarch-lock` PAM service hyprlock authenticates against.
+      `blankweave-lock` PAM service hyprlock authenticates against.
 - [ ] `man-db` — no man pages currently.
 - [ ] `ripgrep`, `fd` — fills the gap next to existing fzf/zoxide/lazygit.
 - [ ] `pacman-contrib` — `checkupdates`, `paccache` for cache cleanup.

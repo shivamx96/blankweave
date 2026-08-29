@@ -33,7 +33,7 @@ PanelWindow {
         right: true
     }
 
-    WlrLayershell.namespace: "hyprarch-launcher"
+    WlrLayershell.namespace: "blankweave-launcher"
     WlrLayershell.layer: WlrLayer.Overlay
     WlrLayershell.keyboardFocus: WlrKeyboardFocus.Exclusive
 

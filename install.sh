@@ -6,7 +6,7 @@ if [ "$EUID" -ne 0 ]; then
     echo ""
     echo "#############################################################################"
     echo "###"
-    echo "###   hyprarch — Arch + Hyprland bootstrap"
+    echo "###   blankweave — Arch + Hyprland bootstrap"
     echo "###"
     echo "###   This will install and configure:"
     echo "###     - Hyprland (window manager)"
@@ -15,12 +15,12 @@ if [ "$EUID" -ne 0 ]; then
     echo "###     - ZSH with Powerlevel10k"
     echo "###     - Host-specific GPU drivers (auto-detected)"
     echo "###"
-    echo "###   Configs: ~/.config    Defaults: ~/.local/share/hyprarch"
+    echo "###   Configs: ~/.config    Defaults: ~/.local/share/blankweave"
     echo "###"
     echo "#############################################################################"
     echo ""
     exec sudo env \
-        HYPRARCH_USER_STATE_HOME="${XDG_STATE_HOME:-$HOME/.local/state}" \
+        BLANKWEAVE_USER_STATE_HOME="${XDG_STATE_HOME:-$HOME/.local/state}" \
         "$0" "$@"
 elif [ -z "$SUDO_USER" ]; then
     echo "Do not run as root directly. Just run: ./install.sh"
@@ -47,7 +47,7 @@ copy_file_atomically() {
     local target_file="$2"
     local staged_file
 
-    staged_file=$(mktemp "$(dirname "$target_file")/.hyprarch.XXXXXX")
+    staged_file=$(mktemp "$(dirname "$target_file")/.blankweave.XXXXXX")
     install -m 0644 "$source_file" "$staged_file"
     mv -f "$staged_file" "$target_file"
 }
@@ -75,26 +75,40 @@ REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 USER_HOME="$(getent passwd "$SUDO_USER" | cut -d: -f6)"
 [ -n "$USER_HOME" ] || { echo "Could not resolve the home directory for $SUDO_USER" >&2; exit 1; }
 USER_UID="$(id -u "$SUDO_USER")"
+USER_STATE_HOME_EARLY="${BLANKWEAVE_USER_STATE_HOME:-$USER_HOME/.local/state}"
+
+# A hyprarch-era install keeps its data under the old names. Move it before
+# anything is read or deployed so the theme selection, preferences, and user
+# wallpapers carry over. The managed checkout lives inside that data
+# directory, and bash keeps reading this script from the moved inode, so the
+# only thing to fix up afterwards is the path the rest of the run uses.
+LEGACY_REPO_DIR="$USER_HOME/.local/share/hyprarch/repository"
+sudo -H -u "$SUDO_USER" env HOME="$USER_HOME" XDG_STATE_HOME="$USER_STATE_HOME_EARLY" \
+    "$REPO_DIR/scripts/relocate-legacy.sh" "$USER_HOME"
+if [ "$REPO_DIR" = "$LEGACY_REPO_DIR" ]; then
+    REPO_DIR="$USER_HOME/.local/share/blankweave/repository"
+fi
+rm -f /etc/pam.d/hyprarch-lock
 USER_RUNTIME_DIR="/run/user/$USER_UID"
-USER_STATE_HOME="${HYPRARCH_USER_STATE_HOME:-$USER_HOME/.local/state}"
+USER_STATE_HOME="${BLANKWEAVE_USER_STATE_HOME:-$USER_HOME/.local/state}"
 PARU_BUILD_DIR=""
 
 # Grant temporary NOPASSWD to avoid repeated password prompts during install
-SUDOERS_TMP="/etc/sudoers.d/hyprarch-install"
+SUDOERS_TMP="/etc/sudoers.d/blankweave-install"
 echo "$SUDO_USER ALL=(ALL) NOPASSWD: ALL" > "$SUDOERS_TMP"
 chmod 440 "$SUDOERS_TMP"
 
 cleanup_install() {
     rm -f "$SUDOERS_TMP"
-    if [[ -n "$PARU_BUILD_DIR" && "$PARU_BUILD_DIR" == /tmp/hyprarch-paru.* ]]; then
+    if [[ -n "$PARU_BUILD_DIR" && "$PARU_BUILD_DIR" == /tmp/blankweave-paru.* ]]; then
         rm -rf -- "$PARU_BUILD_DIR"
     fi
 }
 trap cleanup_install EXIT
 
-DOTS_DIR="$USER_HOME/.local/share/hyprarch"
+DOTS_DIR="$USER_HOME/.local/share/blankweave"
 CONFIG_DIR="$USER_HOME/.config"
-INSTALLER_CONFIG_FILE="$CONFIG_DIR/hyprarch/install.conf"
+INSTALLER_CONFIG_FILE="$CONFIG_DIR/blankweave/install.conf"
 
 # shellcheck source=scripts/installer-config.sh
 source "$REPO_DIR/scripts/installer-config.sh"
@@ -128,7 +142,7 @@ section "INSTALLING AUR HELPER"
 if ! command -v paru &> /dev/null; then
     echo "Installing paru (AUR helper)..."
     pacman -S --noconfirm --needed base-devel
-    PARU_BUILD_DIR=$(mktemp -d /tmp/hyprarch-paru.XXXXXX)
+    PARU_BUILD_DIR=$(mktemp -d /tmp/blankweave-paru.XXXXXX)
     chown "$SUDO_USER:$SUDO_USER" "$PARU_BUILD_DIR"
     sudo -H -u "$SUDO_USER" git clone https://aur.archlinux.org/paru.git "$PARU_BUILD_DIR"
     sudo -H -u "$SUDO_USER" bash -c 'cd "$1" && makepkg -si --noconfirm' _ "$PARU_BUILD_DIR"
@@ -224,12 +238,12 @@ section "CONFIGURING KEYRING UNLOCK"
 # it with, so the login keyring would stay locked until an app prompts for it.
 # Hyprlock is the first real authentication on this setup; give it a PAM
 # service that also hands the password to the keyring daemon.
-cat > /etc/pam.d/hyprarch-lock << 'PAM'
+cat > /etc/pam.d/blankweave-lock << 'PAM'
 #%PAM-1.0
 auth        include     login
 -auth       optional    pam_gnome_keyring.so
 PAM
-chmod 0644 /etc/pam.d/hyprarch-lock
+chmod 0644 /etc/pam.d/blankweave-lock
 
 section "COPYING DEFAULTS"
 
@@ -239,7 +253,7 @@ mkdir -p "$CONFIG_DIR"
 echo "Copying defaults to $DOTS_DIR..."
 
 mkdir -p "$USER_HOME/.local/bin"
-install -m 0755 "$REPO_DIR/bin/hyprarch" "$USER_HOME/.local/bin/hyprarch"
+install -m 0755 "$REPO_DIR/bin/blankweave" "$USER_HOME/.local/bin/blankweave"
 copy_file_atomically "$REPO_DIR/VERSION" "$DOTS_DIR/VERSION"
 
 mkdir -p "$DOTS_DIR/hypr"
@@ -268,7 +282,7 @@ fi
 rm -rf "$DOTS_DIR/wallpapers"
 cp -rv "$REPO_DIR/defaults/wallpapers" "$DOTS_DIR/" || { echo "Failed to copy wallpapers"; exit 1; }
 
-# Bundled themes are mirrored the same way; user themes live under ~/.config/hyprarch/themes.
+# Bundled themes are mirrored the same way; user themes live under ~/.config/blankweave/themes.
 rm -rf "$DOTS_DIR/themes"
 cp -rv "$REPO_DIR/defaults/themes" "$DOTS_DIR/" || { echo "Failed to copy themes"; exit 1; }
 
@@ -288,14 +302,14 @@ HYPRLAND_LUA_STAGED=$(mktemp "$CONFIG_DIR/hypr/.hyprland.lua.XXXXXX")
 cat > "$HYPRLAND_LUA_STAGED" << 'EOF'
 local home = os.getenv("HOME")
 
-require(home .. "/.local/share/hyprarch/hypr/hyprland")
+require(home .. "/.local/share/blankweave/hypr/hyprland")
 require(home .. "/.config/hypr/env")
 require(home .. "/.config/hypr/monitors")
 
 -- Monitor arrangement chosen in the bar's display panel. The file is written
 -- only by monitor-layout.sh and is absent until a position has been picked;
 -- a broken or missing file must never keep the compositor from starting.
-pcall(dofile, home .. "/.config/hyprarch/monitors.lua")
+pcall(dofile, home .. "/.config/blankweave/monitors.lua")
 EOF
 chmod 0644 "$HYPRLAND_LUA_STAGED"
 mv -f "$HYPRLAND_LUA_STAGED" "$CONFIG_DIR/hypr/hyprland.lua"
@@ -391,7 +405,7 @@ chown "$SUDO_USER:$SUDO_USER" "$SHELL_RC"
 section "APPLYING THEME"
 
 # Renders every themed config from its template and records the selection in
-# ~/.config/hyprarch/theme.json. Runs as the user once ownership is fixed so
+# ~/.config/blankweave/theme.json. Runs as the user once ownership is fixed so
 # the rendered files and the state are user-owned from the start.
 if ! sudo -H -u "$SUDO_USER" env \
     HOME="$USER_HOME" \
@@ -493,7 +507,7 @@ section "DONE"
 
 echo "Installation complete!"
 echo "  Host: $HOST"
-echo "  Defaults: ~/.local/share/hyprarch"
+echo "  Defaults: ~/.local/share/blankweave"
 echo "  User configs: ~/.config"
 echo "  Auto-login and Hyprland auto-start configured"
 if [ "$HOST" = "pc" ]; then

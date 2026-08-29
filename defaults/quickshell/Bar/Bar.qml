@@ -65,7 +65,7 @@ PanelWindow {
         }
     }
 
-    WlrLayershell.namespace: "hyprarch-bar"
+    WlrLayershell.namespace: "blankweave-bar"
     WlrLayershell.layer: WlrLayer.Top
 
     function run(command) {

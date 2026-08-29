@@ -2,20 +2,20 @@
 
 set -uo pipefail
 
-runtime_dir="${XDG_RUNTIME_DIR:-/tmp/hyprarch-cpu-${UID}}"
-state_file="$runtime_dir/hyprarch-cpu-usage.state"
-process_state_file="$runtime_dir/hyprarch-cpu-processes.state"
-current_file=$(mktemp "${runtime_dir}/hyprarch-cpu-current.XXXXXX" 2>/dev/null || true)
+runtime_dir="${XDG_RUNTIME_DIR:-/tmp/blankweave-cpu-${UID}}"
+state_file="$runtime_dir/blankweave-cpu-usage.state"
+process_state_file="$runtime_dir/blankweave-cpu-processes.state"
+current_file=$(mktemp "${runtime_dir}/blankweave-cpu-current.XXXXXX" 2>/dev/null || true)
 
 if [[ -z "$current_file" ]]; then
-    runtime_dir="/tmp/hyprarch-cpu-${UID}"
+    runtime_dir="/tmp/blankweave-cpu-${UID}"
     mkdir -p "$runtime_dir"
     chmod 700 "$runtime_dir"
-    state_file="$runtime_dir/hyprarch-cpu-usage.state"
-    process_state_file="$runtime_dir/hyprarch-cpu-processes.state"
-    current_file=$(mktemp "${runtime_dir}/hyprarch-cpu-current.XXXXXX")
+    state_file="$runtime_dir/blankweave-cpu-usage.state"
+    process_state_file="$runtime_dir/blankweave-cpu-processes.state"
+    current_file=$(mktemp "${runtime_dir}/blankweave-cpu-current.XXXXXX")
 fi
-current_process_file=$(mktemp "${runtime_dir}/hyprarch-cpu-processes.XXXXXX")
+current_process_file=$(mktemp "${runtime_dir}/blankweave-cpu-processes.XXXXXX")
 
 cleanup() {
     rm -f "$current_file" "$current_process_file"

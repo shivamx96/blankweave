@@ -2,9 +2,9 @@
 
 # Wallpaper manager for awww
 
-WALLPAPER_DIR="$HOME/.local/share/hyprarch/wallpapers"
-CURRENT_WALLPAPER="$HOME/.cache/hyprarch-wallpaper"
-THEME_STATE="${XDG_CONFIG_HOME:-$HOME/.config}/hyprarch/theme.json"
+WALLPAPER_DIR="$HOME/.local/share/blankweave/wallpapers"
+CURRENT_WALLPAPER="$HOME/.cache/blankweave-wallpaper"
+THEME_STATE="${XDG_CONFIG_HOME:-$HOME/.config}/blankweave/theme.json"
 
 # Create wallpaper directory if it doesn't exist
 mkdir -p "$WALLPAPER_DIR"
@@ -22,7 +22,7 @@ set_wallpaper() {
     # This keeps Hyprlock deterministic during session startup.
     mkdir -p "$(dirname "$CURRENT_WALLPAPER")"
     printf '%s\n' "$wallpaper" > "$CURRENT_WALLPAPER"
-    ln -sfn "$wallpaper" "$HOME/.cache/hyprarch-current-wallpaper"
+    ln -sfn "$wallpaper" "$HOME/.cache/blankweave-current-wallpaper"
 
     # Wait for awww daemon to be ready
     for i in $(seq 1 10); do

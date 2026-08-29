@@ -1,5 +1,5 @@
 .idea
-hyprarch.iml
+blankweave.iml
 
 # Archinstall secrets and machine-specific destructive disk layouts
 archinstall/user_credentials.json

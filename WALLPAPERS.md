@@ -1,17 +1,17 @@
 # Wallpaper Setup
 
-Hyprarch uses **awww** for beautiful dynamic wallpaper management on Wayland.
+Blankweave uses **awww** for beautiful dynamic wallpaper management on Wayland.
 
 ## How to Use
 
 1. **Add wallpapers to:**
    ```bash
-   ~/.local/share/hyprarch/wallpapers/
+   ~/.local/share/blankweave/wallpapers/
    ```
 
 2. **Change wallpaper:**
    - `Super + Shift + W` – cycle through wallpapers
-   - Or manually: `~/.local/share/hyprarch/shell/wallpaper.sh set /path/to/wallpaper.jpg`
+   - Or manually: `~/.local/share/blankweave/shell/wallpaper.sh set /path/to/wallpaper.jpg`
 
 3. **Set random on startup:**
    - Already configured in autostart
@@ -37,13 +37,13 @@ Download beautiful Catppuccin-themed wallpapers from:
 
 ```bash
 # Set random wallpaper
-~/.local/share/hyprarch/shell/wallpaper.sh random
+~/.local/share/blankweave/shell/wallpaper.sh random
 
 # Cycle to next wallpaper
-~/.local/share/hyprarch/shell/wallpaper.sh cycle
+~/.local/share/blankweave/shell/wallpaper.sh cycle
 
 # Set specific wallpaper
-~/.local/share/hyprarch/shell/wallpaper.sh set /path/to/image.jpg
+~/.local/share/blankweave/shell/wallpaper.sh set /path/to/image.jpg
 ```
 
 ## Tips
@@ -57,10 +57,10 @@ Download beautiful Catppuccin-themed wallpapers from:
 
 ```bash
 # Create wallpapers directory
-mkdir -p ~/.local/share/hyprarch/wallpapers
+mkdir -p ~/.local/share/blankweave/wallpapers
 
 # Download a few Catppuccin wallpapers
-cd ~/.local/share/hyprarch/wallpapers
+cd ~/.local/share/blankweave/wallpapers
 # Download your favorite wallpapers here
 ```
 

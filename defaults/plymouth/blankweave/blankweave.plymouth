@@ -1,0 +1,8 @@
+[Plymouth Theme]
+Name=Blankweave
+Description=Blankweave boot splash in the active theme
+ModuleName=script
+
+[script]
+ImageDir=/usr/share/plymouth/themes/blankweave
+ScriptFile=/usr/share/plymouth/themes/blankweave/blankweave.script

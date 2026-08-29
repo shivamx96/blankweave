@@ -29,7 +29,7 @@ done
 ln -s "$repository/tests/fixtures/fake-gdbus.sh" "$fake_bin/gdbus"
 
 home=$test_root/home
-data=$home/.local/share/hyprarch
+data=$home/.local/share/blankweave
 mkdir -p "$data" "$home/.config"
 for directory in dunst fuzzel ghostty hypr plymouth shell themes; do
     cp -R "$repository/defaults/$directory" "$data/"
@@ -43,18 +43,18 @@ export WAYLAND_DISPLAY=wayland-test
 export HYPRLAND_INSTANCE_SIGNATURE=test
 # The root-owned parts are looked up, never written, here; point the lookups
 # at an empty sandbox so the developer's machine never leaks into a result.
-export HYPRARCH_ICONS_DIR=$test_root/icons
-export HYPRARCH_PLYMOUTH_DIR=$test_root/plymouth
+export BLANKWEAVE_ICONS_DIR=$test_root/icons
+export BLANKWEAVE_PLYMOUTH_DIR=$test_root/plymouth
 : > "$FAKE_LOG"
 
 script=$data/shell/theme-apply.sh
-state=$XDG_CONFIG_HOME/hyprarch/theme.json
+state=$XDG_CONFIG_HOME/blankweave/theme.json
 dunstrc=$data/dunst/dunstrc
 fuzzel=$data/fuzzel/fuzzel.ini
 ghostty=$data/ghostty/config
 hyprlock=$data/hypr/hyprlock-theme.conf
-hypr_theme=$XDG_CONFIG_HOME/hyprarch/theme.lua
-plymouth=$data/plymouth/hyprarch/hyprarch.script
+hypr_theme=$XDG_CONFIG_HOME/blankweave/theme.lua
+plymouth=$data/plymouth/blankweave/blankweave.script
 
 assert_rendered() {
     local file
@@ -93,7 +93,7 @@ grep -Fq 'inactive_border = "rgba(33476aff)",' "$hypr_theme"
 grep -Fq 'cursor_theme = "Bibata-Modern-Ice",' "$hypr_theme"
 grep -Fxq 'Window.SetBackgroundTopColor(0.02, 0.031, 0.059);' "$plymouth"
 grep -Fxq 'Window.SetBackgroundBottomColor(0.02, 0.031, 0.059);' "$plymouth"
-cmp -s "$data/plymouth/hyprarch/logo.png" "$data/themes/obsidian/plymouth/logo.png"
+cmp -s "$data/plymouth/blankweave/logo.png" "$data/themes/obsidian/plymouth/logo.png"
 grep -Fxq 'gtk-application-prefer-dark-theme=1' "$XDG_CONFIG_HOME/gtk-3.0/settings.ini"
 grep -Fxq 'gtk-icon-theme-name=Papirus-Dark' "$XDG_CONFIG_HOME/gtk-3.0/settings.ini"
 grep -Fxq 'gtk-cursor-theme-name=Bibata-Modern-Ice' "$XDG_CONFIG_HOME/gtk-4.0/settings.ini"
@@ -106,7 +106,7 @@ grep -Fq "awww img $data/themes/obsidian/obsidian-dark.png" "$FAKE_LOG"
 grep -Fxq 'hyprctl reload' "$FAKE_LOG"
 grep -Fxq "dunstctl reload $dunstrc" "$FAKE_LOG"
 grep -Fq 'gdbus call --session --dest com.mitchellh.ghostty --object-path /com/mitchellh/ghostty --method org.gtk.Actions.Activate reload-config [] {}' "$FAKE_LOG"
-[[ $(< "$home/.cache/hyprarch-wallpaper") == "$data/themes/obsidian/obsidian-dark.png" ]]
+[[ $(< "$home/.cache/blankweave-wallpaper") == "$data/themes/obsidian/obsidian-dark.png" ]]
 
 # The rendered configs are complete files, not just colour lines.
 grep -Fxq 'font = Atkinson Hyperlegible Next 11' "$dunstrc"
@@ -141,7 +141,7 @@ expect_failure grep -Fq 'Activate reload-config' "$FAKE_LOG"
 
 # The wallpaper script hands the boot-time restore the theme's wallpaper.
 bash "$data/shell/wallpaper.sh" theme > /dev/null
-[[ $(< "$home/.cache/hyprarch-wallpaper") == "$data/themes/obsidian/porcelain-light.png" ]]
+[[ $(< "$home/.cache/blankweave-wallpaper") == "$data/themes/obsidian/porcelain-light.png" ]]
 
 # Applying with no state honours the pre-theme mode file so an update never
 # flips an existing light-mode install back to dark.
@@ -173,7 +173,7 @@ done
 "$script" mode light
 
 # A user theme under ~/.config shadows the bundled set and is listed as such.
-user_theme=$XDG_CONFIG_HOME/hyprarch/themes/ember
+user_theme=$XDG_CONFIG_HOME/blankweave/themes/ember
 mkdir -p "$user_theme"
 jq '.name = "Ember"
     | .description = "Test theme"
@@ -215,7 +215,7 @@ expect_failure "$script" bogus
 [[ $(cat "$state" "$dunstrc") == "$before" ]]
 
 # A theme missing a companion token is rejected with a message naming it.
-broken=$XDG_CONFIG_HOME/hyprarch/themes/nocursor
+broken=$XDG_CONFIG_HOME/blankweave/themes/nocursor
 mkdir -p "$broken"
 jq 'del(.modes.dark.cursorTheme)' "$data/themes/obsidian/theme.json" > "$broken/theme.json"
 if "$script" set nocursor 2> "$test_root/nocursor.err"; then
@@ -225,7 +225,7 @@ fi
 grep -Fq 'missing: cursorTheme' "$test_root/nocursor.err"
 
 # A theme missing a palette token is rejected rather than rendered with holes.
-broken=$XDG_CONFIG_HOME/hyprarch/themes/broken
+broken=$XDG_CONFIG_HOME/blankweave/themes/broken
 mkdir -p "$broken"
 jq 'del(.modes.dark.colors.accent)' "$data/themes/obsidian/theme.json" > "$broken/theme.json"
 if "$script" set broken 2> "$test_root/broken.err"; then

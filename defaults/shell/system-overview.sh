@@ -19,7 +19,7 @@ if ! fastfetch \
 fi
 
 hostname=$(uname -n 2>/dev/null || printf 'unknown')
-inventory_file="$HOME/.local/share/hyprarch/system-hardware.json"
+inventory_file="$HOME/.local/share/blankweave/system-hardware.json"
 motherboard_name=""
 motherboard_vendor=""
 memory_spec=""

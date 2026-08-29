@@ -18,7 +18,7 @@ QtObject {
     // dropped the next time the file is written, and an unreadable file falls
     // back to these defaults and is repaired by the next write.
     readonly property string directory: (Quickshell.env("XDG_CONFIG_HOME")
-        || (Quickshell.env("HOME") + "/.config")) + "/hyprarch"
+        || (Quickshell.env("HOME") + "/.config")) + "/blankweave"
 
     // Writes wait for the first read to finish, so a preference changed while
     // the file is still loading cannot overwrite what is on disk with defaults.

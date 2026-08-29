@@ -30,7 +30,7 @@ ln -s "$repository/tests/fixtures/fake-gdbus.sh" "$fake_bin/gdbus"
 ln -s "$repository/tests/fixtures/fake-papirus-folders.sh" "$fake_bin/papirus-folders"
 
 home=$test_root/home
-data=$home/.local/share/hyprarch
+data=$home/.local/share/blankweave
 system=$test_root/system
 mkdir -p "$data" "$home/.config" "$system/share/plymouth/themes" "$system/boot/entries"
 for directory in dunst fuzzel ghostty hypr plymouth shell themes; do
@@ -50,15 +50,15 @@ export HOME=$home
 export XDG_CONFIG_HOME=$home/.config
 export FAKE_LOG=$test_root/side-effects.log
 export PATH=$fake_bin:$PATH
-export HYPRARCH_ICONS_DIR=$system/share/icons
-export HYPRARCH_PLYMOUTH_DIR=$system/share/plymouth/themes/hyprarch
-export HYPRARCH_BOOT_ENTRIES=$system/boot/entries
+export BLANKWEAVE_ICONS_DIR=$system/share/icons
+export BLANKWEAVE_PLYMOUTH_DIR=$system/share/plymouth/themes/blankweave
+export BLANKWEAVE_BOOT_ENTRIES=$system/boot/entries
 : > "$FAKE_LOG"
 
 apply=$data/shell/theme-apply.sh
 sync=$repository/scripts/theme-system.sh
-stage=$data/plymouth/hyprarch
-installed=$HYPRARCH_PLYMOUTH_DIR
+stage=$data/plymouth/blankweave
+installed=$BLANKWEAVE_PLYMOUTH_DIR
 
 # Without an applied theme there is nothing to install.
 expect_failure "$sync" "$home"
@@ -66,11 +66,11 @@ expect_failure "$sync" "$home"
 # Applying stages the splash for root: the script rendered with Plymouth's
 # float colours and the theme's artwork copied in next to it.
 "$apply" set moss
-[[ -f $stage/hyprarch.script ]]
-grep -Fxq 'Window.SetBackgroundTopColor(0.02, 0.051, 0.039);' "$stage/hyprarch.script"
+[[ -f $stage/blankweave.script ]]
+grep -Fxq 'Window.SetBackgroundTopColor(0.02, 0.051, 0.039);' "$stage/blankweave.script"
 cmp -s "$stage/logo.png" "$data/themes/moss/plymouth/logo.png"
 cmp -s "$stage/progress_bar.png" "$data/themes/moss/plymouth/progress_bar.png"
-[[ ! -f $stage/hyprarch.script.tmpl ]] || true
+[[ ! -f $stage/blankweave.script.tmpl ]] || true
 status=$("$apply" status)
 [[ $(jq -r '.system.folders' <<< "$status") == true ]]
 [[ $(jq -r '.system.bootSplash' <<< "$status") == true ]]
@@ -83,11 +83,11 @@ for theme in Papirus Papirus-Dark Papirus-Light; do
     [[ $(readlink "$system/share/icons/$theme/48x48/places/folder.svg") == folder-green.svg ]]
     grep -Fxq "papirus-folders -C green -t $theme" "$FAKE_LOG"
 done
-for file in hyprarch.plymouth hyprarch.script logo.png progress_bar.png progress_box.png; do
+for file in blankweave.plymouth blankweave.script logo.png progress_bar.png progress_box.png; do
     cmp -s "$stage/$file" "$installed/$file"
 done
-[[ ! -e $installed/hyprarch.script.tmpl ]]
-[[ $(grep -c 'plymouth-set-default-theme -R hyprarch' "$FAKE_LOG") == 1 ]]
+[[ ! -e $installed/blankweave.script.tmpl ]]
+[[ $(grep -c 'plymouth-set-default-theme -R blankweave' "$FAKE_LOG") == 1 ]]
 grep -Fq 'vt.default_red=5 vt.default_grn=13 vt.default_blu=10' "$system/boot/entries/arch.conf"
 expect_failure grep -Fq 'vt.default' "$system/boot/entries/plain.conf"
 [[ $(jq -r '.system.pending' <<< "$("$apply" status)") == false ]]
@@ -104,14 +104,14 @@ grep -Fq 'Boot splash already current' "$test_root/sync.out"
 [[ $(jq -r '.system.pending' <<< "$("$apply" status)") == true ]]
 "$sync" "$home" > /dev/null
 [[ $(readlink "$system/share/icons/Papirus/48x48/places/folder.svg") == folder-blue.svg ]]
-grep -Fxq 'Window.SetBackgroundTopColor(0.02, 0.031, 0.059);' "$installed/hyprarch.script"
+grep -Fxq 'Window.SetBackgroundTopColor(0.02, 0.031, 0.059);' "$installed/blankweave.script"
 : > "$FAKE_LOG"
 "$apply" toggle
 [[ $(jq -r '.system.pending' <<< "$("$apply" status)") == false ]]
 
 # A theme without splash artwork leaves the installed splash alone rather
 # than shipping a stage with another theme's logo.
-plain=$XDG_CONFIG_HOME/hyprarch/themes/plain
+plain=$XDG_CONFIG_HOME/blankweave/themes/plain
 mkdir -p "$plain"
 jq 'del(.plymouth) | del(.folderColor) | .name = "Plain"' "$data/themes/obsidian/theme.json" > "$plain/theme.json"
 "$apply" set plain

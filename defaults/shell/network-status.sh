@@ -16,7 +16,7 @@ tx=$(<"$tx_file")
 now=$(date +%s)
 
 runtime_dir=${XDG_RUNTIME_DIR:-/tmp}
-state_file="$runtime_dir/hyprarch-network-${UID}-${interface}"
+state_file="$runtime_dir/blankweave-network-${UID}-${interface}"
 previous_time=$now
 previous_rx=$rx
 previous_tx=$tx
