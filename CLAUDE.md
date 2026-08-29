@@ -85,6 +85,17 @@ Dunst, Ghostty, Fuzzel, and Fontconfig are symlinked from `~/.config/` back to `
 - Running `hyprarch update` updates the managed checkout and reapplies configs
 - Users can break a symlink and replace it with a custom file to override
 
+### Secret Service and keyring unlock
+
+`gnome-keyring` is the D-Bus Secret Service behind `libsecret` (Slack, Bruno,
+T3 Connect, and anything using Clerk-style token persistence). SDDM's
+`sddm-autologin` PAM stack already auto-starts the daemon, but auto-login never
+collects a password, so the login keyring would stay locked. Hyprlock is the
+first real authentication on this setup: `install.sh` writes
+`/etc/pam.d/hyprarch-lock`, which includes `login` and then unlocks the keyring,
+and `hyprlock.conf` selects it via `auth:pam:module`. Keep that PAM service
+hyprarch-owned rather than editing the package-owned `/etc/pam.d/hyprlock`.
+
 ### Package placement
 
 - `packages/base.txt` — required official repository packages, shared across all hosts

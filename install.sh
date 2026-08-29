@@ -219,6 +219,18 @@ systemctl enable sddm.service
 # Remove TTY autologin if present (replaced by SDDM)
 rm -f /etc/systemd/system/getty@tty1.service.d/autologin.conf
 
+section "CONFIGURING KEYRING UNLOCK"
+# SDDM's autologin PAM stack starts gnome-keyring but has no password to unlock
+# it with, so the login keyring would stay locked until an app prompts for it.
+# Hyprlock is the first real authentication on this setup; give it a PAM
+# service that also hands the password to the keyring daemon.
+cat > /etc/pam.d/hyprarch-lock << 'PAM'
+#%PAM-1.0
+auth        include     login
+-auth       optional    pam_gnome_keyring.so
+PAM
+chmod 0644 /etc/pam.d/hyprarch-lock
+
 section "COPYING DEFAULTS"
 
 mkdir -p "$DOTS_DIR"
