@@ -14,9 +14,9 @@ const MARKS = {
     "blankweave": `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
   <!-- The blankweave mark: cascaded translucent panes with the ribbon through them. -->
   <g fill="{fg}">
-    <rect x="2" y="3" width="11" height="10" rx="2.2" fill-opacity="0.5"/>
-    <rect x="6.5" y="7" width="11" height="10" rx="2.2" fill-opacity="0.72"/>
-    <rect x="11" y="11" width="11" height="10" rx="2.2" fill-opacity="0.95"/>
+    <rect x="2" y="3" width="14" height="12" rx="2.4" fill-opacity="0.5"/>
+    <rect x="5" y="6" width="14" height="12" rx="2.4" fill-opacity="0.72"/>
+    <rect x="8" y="9" width="14" height="12" rx="2.4" fill-opacity="0.95"/>
   </g>
   <g stroke="{accent}" fill="none" stroke-linecap="round">
     <path d="M3 15.5C7.5 15.5 9 8.8 13.5 9.6S19.5 14 21 11.8" stroke-width="1.6"/>
