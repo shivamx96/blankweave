@@ -33,6 +33,46 @@ set_wallpaper() {
     awww img "$wallpaper" --transition-type wipe --transition-duration 1
 }
 
+# The wallpaper the session is meant to show: the last one set, or the
+# theme's default when nothing has been set yet.
+current_wallpaper() {
+    local wallpaper=""
+
+    [ -f "$CURRENT_WALLPAPER" ] && read -r wallpaper < "$CURRENT_WALLPAPER"
+    if [ -n "$wallpaper" ] && [ -f "$wallpaper" ]; then
+        printf '%s\n' "$wallpaper"
+    else
+        theme_wallpaper
+    fi
+}
+
+# Repaint the current wallpaper on one output (or all of them) without a
+# transition. awww only paints the outputs that exist when `img` runs and its
+# cache is keyed by connector name, so a newly connected monitor would
+# otherwise stay black. Called from Hyprland's monitor.added hook.
+restore_wallpaper() {
+    local output="$1"
+    local wallpaper
+
+    # No daemon means the session is still starting; `theme` paints
+    # everything once it is up, so there is nothing to restore yet.
+    awww query >/dev/null 2>&1 || return 0
+
+    wallpaper=$(current_wallpaper) || return 1
+
+    if [ -n "$output" ]; then
+        # The compositor announces the monitor before the daemon has a
+        # surface for it, so wait until awww lists the output.
+        for _ in $(seq 1 10); do
+            awww query 2>/dev/null | grep -q "^: $output: " && break
+            sleep 0.5
+        done
+        awww img "$wallpaper" --outputs "$output" --transition-type none
+    else
+        awww img "$wallpaper" --transition-type none
+    fi
+}
+
 # Return the wallpaper paired with the persisted shell theme.
 theme_wallpaper() {
     local theme="dark"
@@ -109,8 +149,11 @@ case "${1:-random}" in
     cycle)
         cycle_wallpaper
         ;;
+    restore)
+        restore_wallpaper "$2"
+        ;;
     *)
-        echo "Usage: $0 {set <path>|random|theme|cycle}"
+        echo "Usage: $0 {set <path>|random|theme|cycle|restore [output]}"
         exit 1
         ;;
 esac
