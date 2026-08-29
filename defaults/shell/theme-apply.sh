@@ -222,6 +222,19 @@ reload_services() {
     if command -v dunstctl > /dev/null; then
         dunstctl reload "$DOTS_DIR/dunst/dunstrc" 2> /dev/null || true
     fi
+    # Ghostty notices the touched symlink and reloads, but a surface that is
+    # already open keeps the light/dark theme pair it resolved at creation;
+    # only the explicit reload-config action re-resolves it. Ghostty is D-Bus
+    # activatable, so check it owns its name first or the call would launch it.
+    if command -v gdbus > /dev/null \
+        && [[ $(gdbus call --session --dest org.freedesktop.DBus \
+                --object-path /org/freedesktop/DBus \
+                --method org.freedesktop.DBus.NameHasOwner \
+                com.mitchellh.ghostty 2> /dev/null) == "(true,)" ]]; then
+        gdbus call --session --dest com.mitchellh.ghostty \
+            --object-path /com/mitchellh/ghostty \
+            --method org.gtk.Actions.Activate reload-config '[]' '{}' > /dev/null 2>&1 || true
+    fi
     if [[ -n ${HYPRLAND_INSTANCE_SIGNATURE:-} ]] && command -v hyprctl > /dev/null; then
         hyprctl reload > /dev/null 2>&1 || true
     fi

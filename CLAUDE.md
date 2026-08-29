@@ -359,8 +359,12 @@ last good palette. The state file is rewritten in place with a single write
 rather than renamed, because Quickshell watches that path. `wallpaper.sh
 theme` reads the same file at startup. Ghostty is not re-rendered per mode:
 its template emits `theme = light:…,dark:…` from both modes and Ghostty
-follows the portal colour scheme. GTK3 apps (Thunar) still only pick a change
-up on restart.
+follows the portal colour scheme. A theme switch changes that pair, and a
+surface that is already open keeps the pair it resolved at creation even
+after Ghostty's own file-watch reload, so the script activates Ghostty's
+`reload-config` D-Bus action — guarded by `NameHasOwner`, because the name is
+activatable and a bare call would launch a terminal. GTK3 apps (Thunar) still
+only pick a change up on restart.
 
 `hyprarch theme list|status|set <id>|mode dark|light|toggle` is the public
 entry point and delegates to the deployed script. Fonts, geometry,

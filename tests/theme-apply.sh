@@ -26,6 +26,7 @@ mkdir -p "$fake_bin"
 for command in gsettings dunstctl hyprctl awww; do
     ln -s "$repository/tests/fixtures/fake-log.sh" "$fake_bin/$command"
 done
+ln -s "$repository/tests/fixtures/fake-gdbus.sh" "$fake_bin/gdbus"
 
 home=$test_root/home
 data=$home/.local/share/hyprarch
@@ -90,6 +91,7 @@ grep -Fxq 'gsettings set org.gnome.desktop.interface color-scheme prefer-dark' "
 grep -Fq "awww img $data/themes/obsidian/obsidian-dark.png" "$FAKE_LOG"
 grep -Fxq 'hyprctl reload' "$FAKE_LOG"
 grep -Fxq "dunstctl reload $dunstrc" "$FAKE_LOG"
+grep -Fq 'gdbus call --session --dest com.mitchellh.ghostty --object-path /com/mitchellh/ghostty --method org.gtk.Actions.Activate reload-config [] {}' "$FAKE_LOG"
 [[ $(< "$home/.cache/hyprarch-wallpaper") == "$data/themes/obsidian/obsidian-dark.png" ]]
 
 # The rendered configs are complete files, not just colour lines.
@@ -111,6 +113,14 @@ grep -Fq 'active_border = { "rgba(2563ebff)", "rgba(1d4ed8ff)" },' "$hypr_theme"
 grep -Fxq 'gtk-application-prefer-dark-theme=0' "$XDG_CONFIG_HOME/gtk-3.0/settings.ini"
 grep -Fxq 'gsettings set org.gnome.desktop.interface color-scheme prefer-light' "$FAKE_LOG"
 grep -Fq "awww img $data/themes/obsidian/porcelain-light.png" "$FAKE_LOG"
+
+# Ghostty is D-Bus activatable, so when it is not running the reload must not
+# be sent or it would launch a terminal.
+: > "$FAKE_LOG"
+FAKE_GDBUS_OWNED=false "$script" toggle
+grep -Fq 'NameHasOwner com.mitchellh.ghostty' "$FAKE_LOG"
+expect_failure grep -Fq 'Activate reload-config' "$FAKE_LOG"
+"$script" toggle
 
 # The wallpaper script hands the boot-time restore the theme's wallpaper.
 bash "$data/shell/wallpaper.sh" theme > /dev/null
