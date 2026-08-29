@@ -4,7 +4,7 @@
 
 WALLPAPER_DIR="$HOME/.local/share/hyprarch/wallpapers"
 CURRENT_WALLPAPER="$HOME/.cache/hyprarch-wallpaper"
-THEME_FILE="$HOME/.local/share/hyprarch/theme"
+THEME_STATE="${XDG_CONFIG_HOME:-$HOME/.config}/hyprarch/theme.json"
 
 # Create wallpaper directory if it doesn't exist
 mkdir -p "$WALLPAPER_DIR"
@@ -20,6 +20,7 @@ set_wallpaper() {
 
     # Publish the lock-screen source before waiting for the wallpaper daemon.
     # This keeps Hyprlock deterministic during session startup.
+    mkdir -p "$(dirname "$CURRENT_WALLPAPER")"
     printf '%s\n' "$wallpaper" > "$CURRENT_WALLPAPER"
     ln -sfn "$wallpaper" "$HOME/.cache/hyprarch-current-wallpaper"
 
@@ -73,20 +74,15 @@ restore_wallpaper() {
     fi
 }
 
-# Return the wallpaper paired with the persisted shell theme.
+# Return the active theme's wallpaper, resolved by theme-apply.sh.
 theme_wallpaper() {
-    local theme="dark"
-    local wallpaper
+    local wallpaper=""
 
-    [ -f "$THEME_FILE" ] && read -r theme < "$THEME_FILE"
-
-    if [ "$theme" = "light" ]; then
-        wallpaper="$WALLPAPER_DIR/hyprarch-porcelain-blue-light.png"
-    else
-        wallpaper="$WALLPAPER_DIR/hyprarch-obsidian-blue-dark.png"
+    if [ -r "$THEME_STATE" ]; then
+        wallpaper=$(jq -r '.wallpaper // empty' "$THEME_STATE" 2>/dev/null)
     fi
 
-    if [ -f "$wallpaper" ]; then
+    if [ -n "$wallpaper" ] && [ -f "$wallpaper" ]; then
         printf '%s\n' "$wallpaper"
     else
         random_wallpaper

@@ -81,7 +81,7 @@ Hyprland 0.55+ deprecated Hyprlang (`.conf`) in favour of Lua.
 - [ ] `pacman-contrib` — `checkupdates`, `paccache` for cache cleanup.
 - [ ] `hyprpicker` — colour picker.
 - [ ] `qt6ct` — Qt apps are unstyled while GTK gets themed on toggle, despite
-      `QT_QPA_PLATFORM` being set. Would need wiring into `theme-toggle.sh`.
+      `QT_QPA_PLATFORM` being set. Would need wiring into `theme-apply.sh`.
 - [x] `power-profiles-daemon` for laptop battery.
 - [ ] `hyprpolkitagent` — native replacement for the `polkit-gnome` we autostart.
 

@@ -5,26 +5,56 @@ import Quickshell.Io
 QtObject {
     id: root
 
-    property bool dark: true
+    // The palette is resolved by theme-apply.sh into ~/.config/hyprarch/theme.json,
+    // the only file it is read from. Until the first apply has run, the bundled
+    // default theme's dark mode stands in so the shell never draws unthemed.
+    readonly property string configDirectory: (Quickshell.env("XDG_CONFIG_HOME")
+        || (Quickshell.env("HOME") + "/.config")) + "/hyprarch"
+    readonly property string bundledDefault: Quickshell.env("HOME")
+        + "/.local/share/hyprarch/themes/obsidian/theme.json"
 
-    readonly property color canvas: dark ? "#05080f" : "#edf4ff"
-    readonly property color barSurface: dark ? "#b3070b12" : "#b3f8fbff"
-    readonly property color panelSurface: dark ? "#e60b111c" : "#e8f8fbff"
-    readonly property color surface: dark ? "#e60a101b" : "#f5ffffff"
-    readonly property color surfaceRaised: dark ? "#f0111a2a" : "#fff7fbff"
-    readonly property color surfaceHover: dark ? "#182944" : "#e3efff"
-    readonly property color surfacePressed: dark ? "#213b62" : "#cfe3ff"
-    readonly property color text: dark ? "#f4f8ff" : "#081426"
-    readonly property color textMuted: dark ? "#8798ae" : "#607087"
-    readonly property color accent: dark ? "#3b82f6" : "#2563eb"
-    readonly property color accentBright: dark ? "#67a6ff" : "#1d4ed8"
-    readonly property color accentSurface: dark ? "#253b82f6" : "#1f2563eb"
-    readonly property color outline: dark ? "#33476a" : "#bdd3f3"
-    readonly property color outlineStrong: dark ? "#4f75ad" : "#8ab4ed"
-    readonly property color divider: dark ? "#607da6" : "#91add4"
-    readonly property color success: dark ? "#3ddc97" : "#07894f"
-    readonly property color warning: dark ? "#f4bf50" : "#b46608"
-    readonly property color critical: dark ? "#ff6b8a" : "#d52149"
+    property var resolved: null
+    property var fallback: null
+    readonly property var palette: (resolved && resolved.colors)
+        || (fallback && fallback.colors)
+        || ({})
+
+    readonly property string themeId: resolved ? String(resolved.theme || "obsidian") : "obsidian"
+    readonly property string mode: resolved ? String(resolved.mode || "dark") : "dark"
+    readonly property bool dark: mode !== "light"
+
+    // Theme files use CSS #rrggbb[aa]; Qt reads a nine-digit literal as
+    // #aarrggbb. Magenta is deliberately loud: theme-apply.sh validates every
+    // token, so a hole here means both theme files failed to load.
+    function token(name) {
+        const value = String(palette[name] || "")
+        if (/^#[0-9a-fA-F]{6}$/.test(value))
+            return value
+        if (/^#[0-9a-fA-F]{8}$/.test(value))
+            return "#" + value.slice(7, 9) + value.slice(1, 7)
+        return "#ff00ff"
+    }
+
+    readonly property color canvas: token("canvas")
+    readonly property color barSurface: token("barSurface")
+    readonly property color barHighlight: token("barHighlight")
+    readonly property color panelSurface: token("panelSurface")
+    readonly property color surface: token("surface")
+    readonly property color surfaceRaised: token("surfaceRaised")
+    readonly property color surfaceHover: token("surfaceHover")
+    readonly property color surfacePressed: token("surfacePressed")
+    readonly property color scrim: token("scrim")
+    readonly property color text: token("text")
+    readonly property color textMuted: token("textMuted")
+    readonly property color accent: token("accent")
+    readonly property color accentBright: token("accentBright")
+    readonly property color accentSurface: token("accentSurface")
+    readonly property color outline: token("outline")
+    readonly property color outlineStrong: token("outlineStrong")
+    readonly property color divider: token("divider")
+    readonly property color success: token("success")
+    readonly property color warning: token("warning")
+    readonly property color critical: token("critical")
 
     readonly property string fontFamily: "Atkinson Hyperlegible Next"
     readonly property string monoFontFamily: "JetBrainsMono Nerd Font"
@@ -52,16 +82,35 @@ QtObject {
     readonly property int barItemGap: 0
     readonly property int dividerMargin: 5
 
-    function applyTheme(value) {
-        root.dark = String(value || "").trim() !== "light"
+    function parse(text) {
+        try {
+            return JSON.parse(text)
+        } catch (error) {
+            return null
+        }
     }
 
+    // theme-apply.sh rewrites the state in place, so a read that lands
+    // mid-write can be empty; keep the last good palette rather than flashing
+    // the fallback until the next change notification.
     property FileView stateFile: FileView {
-        path: Quickshell.env("HOME") + "/.local/share/hyprarch/theme"
+        path: root.configDirectory + "/theme.json"
         watchChanges: true
         printErrors: false
-        onLoaded: root.applyTheme(text())
+        onLoaded: {
+            const next = root.parse(text())
+            if (next && next.colors)
+                root.resolved = next
+        }
         onFileChanged: reload()
-        onLoadFailed: root.dark = true
+    }
+
+    property FileView fallbackFile: FileView {
+        path: root.bundledDefault
+        printErrors: false
+        onLoaded: {
+            const theme = root.parse(text())
+            root.fallback = theme && theme.modes ? theme.modes.dark : null
+        }
     }
 }

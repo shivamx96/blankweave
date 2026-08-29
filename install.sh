@@ -247,16 +247,6 @@ for hypr_config in "$REPO_DIR/defaults/hypr/"*; do
     echo "Deploying $hypr_config"
     copy_file_atomically "$hypr_config" "$DOTS_DIR/hypr/$(basename "$hypr_config")"
 done
-
-# Hyprlock sources a generated theme include. Preserve an existing light-mode
-# preference on reinstall; otherwise match the shell's dark default.
-HYPRLOCK_THEME=dark
-if [ -r "$DOTS_DIR/theme" ] && [ "$(cat "$DOTS_DIR/theme")" = light ]; then
-    HYPRLOCK_THEME=light
-fi
-copy_file_atomically \
-    "$DOTS_DIR/hypr/hyprlock-theme-${HYPRLOCK_THEME}.conf" \
-    "$DOTS_DIR/hypr/hyprlock-theme.conf"
 # Quickshell is a code tree, so mirror it exactly and do not retain removed modules.
 rm -rf "$DOTS_DIR/quickshell"
 cp -rv "$REPO_DIR/defaults/quickshell" "$DOTS_DIR/" || { echo "Failed to copy quickshell"; exit 1; }
@@ -275,6 +265,10 @@ fi
 # Mirror wallpapers exactly so removals in the repo propagate (cp alone never deletes stale files)
 rm -rf "$DOTS_DIR/wallpapers"
 cp -rv "$REPO_DIR/defaults/wallpapers" "$DOTS_DIR/" || { echo "Failed to copy wallpapers"; exit 1; }
+
+# Bundled themes are mirrored the same way; user themes live under ~/.config/hyprarch/themes.
+rm -rf "$DOTS_DIR/themes"
+cp -rv "$REPO_DIR/defaults/themes" "$DOTS_DIR/" || { echo "Failed to copy themes"; exit 1; }
 
 chmod +x "$DOTS_DIR/shell"/*.sh
 
@@ -391,6 +385,19 @@ chown -R "$SUDO_USER:$SUDO_USER" "$CONFIG_DIR"
 chown "$SUDO_USER:$SUDO_USER" "$SHELL_RC"
 [ -d "$USER_HOME/.cache" ] && chown -R "$SUDO_USER:$SUDO_USER" "$USER_HOME/.cache"
 [ -d "$USER_HOME/.local" ] && chown -R "$SUDO_USER:$SUDO_USER" "$USER_HOME/.local"
+
+section "APPLYING THEME"
+
+# Renders every themed config from its template and records the selection in
+# ~/.config/hyprarch/theme.json. Runs as the user once ownership is fixed so
+# the rendered files and the state are user-owned from the start.
+if ! sudo -H -u "$SUDO_USER" env \
+    HOME="$USER_HOME" \
+    XDG_CONFIG_HOME="$CONFIG_DIR" \
+    "$DOTS_DIR/shell/theme-apply.sh"; then
+    echo "Error: Could not apply the theme."
+    exit 1
+fi
 
 section "CONFIGURING NVIDIA (PC ONLY)"
 

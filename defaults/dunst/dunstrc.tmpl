@@ -1,3 +1,4 @@
+# Rendered by theme-apply.sh from the active theme; edit the template, not the output.
 [global]
 # Compact notification cards aligned with the native Hyprarch shell.
 monitor = 0
@@ -16,14 +17,14 @@ padding = 12
 horizontal_padding = 14
 text_icon_padding = 12
 frame_width = 1
-frame_color = "#4f75ad"
+frame_color = "{{colors.outlineStrong}}"
 separator_color = frame
 
-background = "#0b111c"
-foreground = "#f4f8ff"
+background = "{{colors.panelSurface:rgb}}"
+foreground = "{{colors.text}}"
 font = Atkinson Hyperlegible Next 11
 line_height = 3
-format = "<span size='small' foreground='#8798ae'>%a</span>\n<b>%s</b>\n%b"
+format = "<span size='small' foreground='{{colors.textMuted}}'>%a</span>\n<b>%s</b>\n%b"
 alignment = left
 vertical_alignment = center
 show_age_threshold = 60
@@ -64,25 +65,25 @@ mouse_right_click = context
 pause_on_mouse_over = true
 
 [urgency_low]
-background = "#0b111c"
-foreground = "#8798ae"
-frame_color = "#33476a"
-highlight = "#607da6"
+background = "{{colors.panelSurface:rgb}}"
+foreground = "{{colors.textMuted}}"
+frame_color = "{{colors.outline}}"
+highlight = "{{colors.divider}}"
 timeout = 4s
 default_icon = dialog-information
 
 [urgency_normal]
-background = "#0b111c"
-foreground = "#f4f8ff"
-frame_color = "#4f75ad"
-highlight = "#67a6ff"
+background = "{{colors.panelSurface:rgb}}"
+foreground = "{{colors.text}}"
+frame_color = "{{colors.outlineStrong}}"
+highlight = "{{colors.accentBright}}"
 timeout = 6s
 default_icon = dialog-information
 
 [urgency_critical]
-background = "#0b111c"
-foreground = "#f4f8ff"
-frame_color = "#ff6b8a"
-highlight = "#ff6b8a"
+background = "{{colors.panelSurface:rgb}}"
+foreground = "{{colors.text}}"
+frame_color = "{{colors.critical}}"
+highlight = "{{colors.critical}}"
 timeout = 0
 default_icon = dialog-warning

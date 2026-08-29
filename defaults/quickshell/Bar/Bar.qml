@@ -40,7 +40,7 @@ PanelWindow {
             anchors.left: parent.left
             anchors.right: parent.right
             height: 1
-            color: root.theme.dark ? "#18ffffff" : "#70ffffff"
+            color: root.theme.barHighlight
         }
 
         Rectangle {
