@@ -96,6 +96,9 @@ Dunst, Ghostty, Fuzzel, and Fontconfig are symlinked from `~/.config/` back to `
 - `hosts/$HOST/packages.txt` — host-specific official repository packages
 - `hosts/$HOST/aur.txt` — optional host-specific exact AUR packages
 - `hosts/$HOST/profiles/` — host-specific additions to an optional profile
+- Anything the bar shells out to at runtime belongs in the required manifests,
+  never an optional profile: a core widget must not depend on a profile the
+  user may have deselected
 - Check with `pacman -Si <package>` before choosing a manifest; use `aur.txt`
   only when the exact package is absent from the configured repositories
 - When pacman offers multiple implementations for a virtual dependency, record
@@ -124,7 +127,9 @@ shared angular slider treatment. Interactive panels compose
 `ControlPanelHeader`, `ControlValueRow`, `ControlDivider`,
 `ControlSectionLabel`, and `ControlAction`; extend those primitives instead of
 recreating panel headers, value rows, section labels, or footer actions inside
-individual widgets. Widget-wide controls belong in `ControlPanelHeader.actions`;
+individual widgets. `ControlTabs.qml` provides the panel-level tab strip with
+optional per-tab badge counts; use it when a widget owns two peer views with
+independent refresh semantics, not to separate sections of one view. Widget-wide controls belong in `ControlPanelHeader.actions`;
 reserve `ControlAction` footer rows for secondary navigation. The audio widget
 uses PipeWire's logical default sink and
 discovers available output nodes at runtime; never encode host card IDs or
@@ -159,6 +164,20 @@ Wi-Fi hardware. Public-address lookups run only when the panel is opened and
 are cached until the active interface changes. DNS choices modify only the
 active NetworkManager connection and must never replace ISP/DHCP DNS unless the
 user explicitly selects a provider.
+
+The Git widget lists repositories under `~/IdeaProjects` and the pull requests
+attached to the signed-in GitHub account. The two concerns stay in separate
+scripts because they have different costs: `git-repos.sh` is local-only and may
+be re-run freely while the panel is open, whereas `git-prs.sh` spends GitHub
+search requests and therefore caches to
+`${XDG_CACHE_HOME:-~/.cache}/hyprarch/`, serves the cache until it ages out,
+falls back to stale results when the network fails, and guards every `gh` call
+with `timeout`. Pull requests are searched account-wide (authored plus
+review-requested), so rows are cross-referenced against the local scan by
+`owner/name` to decide whether an IDE action is offered. Authentication is
+delegated entirely to `gh`; never read or pass a token yourself. Poll the pull
+request script slowly while the panel is closed so the review badge stays live
+without burning the search budget.
 
 The right section is grouped into process-aware application indicators,
 icon-only system controls, and hardware metrics plus power. Add watched apps
