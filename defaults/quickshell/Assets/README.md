@@ -14,4 +14,5 @@ adapted to HyprArch's dark and light interface palettes.
 The Docker whale is sourced from Docker's
 [`assets/icons/Whale.svg`](https://github.com/docker/docs/blob/main/assets/icons/Whale.svg)
 under the docker/docs Apache-2.0 license. Its dark/light variants use the
-neutral HyprArch interface palette.
+primary HyprArch foreground so the mark carries the same weight as the
+icon-font glyphs beside it.

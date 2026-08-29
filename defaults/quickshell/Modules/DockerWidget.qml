@@ -132,7 +132,7 @@ WidgetFrame {
 
     visible: running
     iconSource: root.dockerIconSource
-    iconVisualSize: root.theme.iconSize + 3
+    iconVisualSize: root.theme.iconSize + 4
     iconOnly: true
     active: running || dockerPanel.open
     tooltip: Number(status.runningContainers || 0) > 0
