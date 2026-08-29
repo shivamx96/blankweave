@@ -1,5 +1,4 @@
 zed
-github-cli
 uv
 go
 docker

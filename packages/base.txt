@@ -36,6 +36,7 @@ noto-fonts-emoji
 papirus-icon-theme
 base-devel
 git
+github-cli
 openssh
 less
 linux-headers
@@ -50,6 +51,7 @@ grim
 slurp
 polkit-gnome
 xdg-user-dirs
+xdg-utils
 file-roller
 thunar-archive-plugin
 unzip
