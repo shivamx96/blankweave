@@ -230,13 +230,22 @@ apply_desktop_preferences() {
     cursor_theme=$(jq -r '.cursorTheme' <<< "$RESOLVED")
     if [[ $MODE == light ]]; then
         scheme=prefer-light
-        gtk_theme=Adwaita
         prefer_dark=0
     else
         scheme=prefer-dark
-        gtk_theme=Adwaita-dark
         prefer_dark=1
     fi
+
+    # The GTK theme name is pinned to Adwaita in both modes; the mode travels
+    # as the portal colour scheme and as gtk-application-prefer-dark-theme in
+    # settings.ini. Chromium (every Electron app) derives the colour scheme it
+    # hands the page from the window background of the GTK theme it has
+    # loaded, and recomputes it whenever gtk-theme-name changes. With Adwaita
+    # that background follows the portal, because the portal toggles GTK's
+    # prefer-dark-theme and Adwaita's dark variant with it; the name
+    # "Adwaita-dark" evaluated light instead and overrode the portal's answer,
+    # so after the first switch Electron apps stopped following the mode.
+    gtk_theme=Adwaita
 
     # Portal-aware apps (libadwaita, Ghostty, browsers) follow gsettings.
     if command -v gsettings > /dev/null; then

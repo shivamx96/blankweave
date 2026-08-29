@@ -392,6 +392,9 @@ setcursor` (`env()` in the config only seeds a new session; running GTK apps
 keep their cursor until relaunched). Those side effects are guarded by `command -v`,
 `WAYLAND_DISPLAY`, and `HYPRLAND_INSTANCE_SIGNATURE`, so the same script runs
 from `install.sh` (as the user, after ownership is fixed) with no session.
+The GTK theme name is pinned to `Adwaita` in both modes; the mode reaches
+GTK 3 through `gtk-application-prefer-dark-theme` in `settings.ini` and
+everything else through the portal colour scheme (see the Electron gotcha).
 
 `Theme.qml` reads `~/.config/blankweave/theme.json` through a watched
 `FileView`, converts CSS `#rrggbbaa` to Qt's `#aarrggbb`, and exposes `dark`,
@@ -518,6 +521,18 @@ GPU monitoring script (`gpu-usage.sh`) auto-detects at runtime: tries `nvidia-sm
 - Quickshell colours come from the resolved theme through `Theme.qml`;
   geometry and fonts stay in `Theme.qml`
 - GTK3 apps (Thunar) don't react to live gsettings changes on Hyprland — only libadwaita apps do
+- Never switch `gtk-theme` between `Adwaita` and `Adwaita-dark` to express the
+  mode. Chromium, and so every Electron app, derives the colour scheme it
+  gives the page from the window background of the GTK theme it has loaded
+  and recomputes it on every `gtk-theme-name` change; `Adwaita-dark`
+  evaluates light there and overrides the portal's `color-scheme`, so
+  Obsidian and T3 Code followed the first `Super+D` after launch and ignored
+  every later one. The name stays `Adwaita` and the portal's `SetDarkTheme`
+  flips GTK's prefer-dark-theme itself. GTK 3 never restyled on the name
+  flip anyway. Verify Electron behaviour by launching the app with
+  `--remote-debugging-port` and reading `matchMedia('(prefers-color-scheme:
+  dark)')` over CDP while toggling; unset `ELECTRON_RUN_AS_NODE` first when
+  running from inside an Electron-hosted shell
 - Commands registered by `autostart.lua` run in parallel; chain with `&&` for ordering
 - `awww img` only paints the outputs that exist when it runs, and the daemon's cache is keyed by connector name, so a monitor plugged in after startup stays black. `autostart.lua` subscribes to `monitor.added` (the callback receives the compositor's monitor object; its `.name` is the connector) and runs `wallpaper.sh restore <output>`, which repaints the current wallpaper without a transition once awww lists the output. Test hotplug paths with `hyprctl output create headless` / `hyprctl output remove HEADLESS-N`, and register hooks at runtime with `hyprctl eval` rather than reloading the config
 - `force_default_wallpaper = 0` and `disable_hyprland_logo = true` in `hyprland.lua` — otherwise Hyprland flashes its own wallpaper on startup
