@@ -41,6 +41,8 @@ The initial release sequence is:
   discovery without a diagnostic.
 - `0.4.2` — treat disabled Secure Boot as successful ESP validation instead of
   leaking its boolean probe status into the installer.
+- `0.4.3` — always show the Limine menu, extend its timeout for multi-boot
+  systems, and expose firmware USB handoff when available.
 
 Config-file schema numbers belong to their individual formats and are not
 Blankweave release versions.

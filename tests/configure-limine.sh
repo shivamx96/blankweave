@@ -45,13 +45,14 @@ printf '%s\n' \
 printf '%s\n' \
     'BootCurrent: 0004' \
     'Timeout: 1 seconds' \
-    'BootOrder: 0004,0000,0006,0009,0005,0002,0003' \
+    'BootOrder: 0004,0000,0006,0009,0005,0002,0003,2001' \
     $'Boot0000* Windows Boot Manager\tHD(1,GPT,windows)/\\EFI\\Microsoft\\Boot\\bootmgfw.efi' \
     $'Boot0002* UEFI: PXE IPv4 Realtek\tPciRoot()/IPv4()' \
     $'Boot0003* UEFI: PXE IPv6 Realtek\tPciRoot()/IPv6()' \
     $'Boot0004* Linux Boot Manager\tHD(1,GPT,blankweave)/\\EFI\\systemd\\systemd-bootx64.efi' \
     $'Boot0006* Ubuntu\tHD(1,GPT,ubuntu)/\\EFI\\ubuntu\\shimx64.efi' \
     $'Boot0009* My Custom Linux\tHD(1,GPT,custom)/\\EFI\\custom\\loader.efi' \
+    $'Boot2001* EFI USB Device\tRC' \
     $'Boot0005* UEFI OS\tHD(1,GPT,blankweave)/\\EFI\\BOOT\\BOOTX64.EFI' \
     > "$efi_state"
 
@@ -127,7 +128,8 @@ run_configure > "$test_root/first-run.log"
 config=$esp/EFI/blankweave/limine.conf
 loader=$esp/EFI/blankweave/limine-x64.efi
 cmp -s "$test_root/BOOTX64.EFI" "$loader"
-grep -Fxq 'quiet: yes' "$config"
+grep -Fxq 'timeout: 5' "$config"
+grep -Fxq 'quiet: no' "$config"
 grep -Fxq 'default_entry: 1' "$config"
 grep -Fxq '    path: boot():/vmlinuz-linux' "$config"
 grep -Fxq '    module_path: boot():/intel-ucode.img' "$config"
@@ -138,21 +140,37 @@ grep -Fxq '    entry: Linux Boot Manager' "$config"
 grep -Fxq '/Windows Boot Manager' "$config"
 grep -Fxq '/Ubuntu' "$config"
 grep -Fxq '/My Custom Linux' "$config"
+grep -Fxq '/Boot from USB (EFI USB Device)' "$config"
+grep -Fxq '    entry: EFI USB Device' "$config"
 if grep -Fq 'PXE' "$config" || grep -Fq '/UEFI OS' "$config"; then
     printf 'A generic firmware device was imported as an operating system.\n' >&2
     exit 1
 fi
 [[ $(grep -n '^/Arch Linux' "$config" | head -n 1 | cut -d: -f1) -lt \
    $(grep -n '^/Arch Linux' "$config" | tail -n 1 | cut -d: -f1) ]]
-grep -Fxq 'BootOrder: 0007,0004,0000,0006,0009,0005,0002,0003' "$efi_state"
+grep -Fxq 'BootOrder: 0007,0004,0000,0006,0009,0005,0002,0003,2001' "$efi_state"
 grep -Fq 'create-only Blankweave Boot Manager' "$efi_log"
-grep -Fxq 'bootorder 0007,0004,0000,0006,0009,0005,0002,0003' "$efi_log"
+grep -Fxq 'bootorder 0007,0004,0000,0006,0009,0005,0002,0003,2001' "$efi_log"
 [[ $(sha256sum "$entries"/*.conf) == "$systemd_checksum" ]]
 
 # Reconciliation is byte-for-byte idempotent and does not duplicate NVRAM.
 before=$(sha256sum "$config" "$loader" "$efi_state" "$efi_log")
 run_configure > "$test_root/second-run.log"
 [[ $(sha256sum "$config" "$loader" "$efi_state" "$efi_log") == "$before" ]]
+
+# Persistent generic USB firmware records are useful menu targets but do not
+# prove a USB is currently inserted. A Linux-only firmware order still shows
+# its kernel, recovery, and USB choices, but keeps the shorter timeout.
+sed -i 's/^BootOrder:.*/BootOrder: 0007,0004,0005,0002,0003,2001/' "$efi_state"
+run_configure > "$test_root/linux-only.log"
+grep -Fxq 'timeout: 3' "$config"
+grep -Fxq 'quiet: no' "$config"
+grep -Fxq '/Boot from USB (EFI USB Device)' "$config"
+if grep -Fq '/Windows Boot Manager' "$config"; then
+    printf 'An OS outside BootOrder remained in the generated menu.\n' >&2
+    exit 1
+fi
+before=$(sha256sum "$config" "$loader" "$efi_state" "$efi_log")
 
 # Disabled Secure Boot must be a successful validation result, while enabled
 # Secure Boot fails before changing the already-valid deployment.
@@ -192,7 +210,7 @@ config_checksum=$(sha256sum "$config")
 # Duplicate targetable firmware labels are rejected because Limine resolves
 # efi_boot_entry entries by description rather than by Boot#### number.
 printf '%s\n' $'Boot0008* Ubuntu\tHD(1,GPT,other)/\\EFI\\ubuntu\\shimx64.efi' >> "$efi_state"
-sed -i 's/^BootOrder: /BootOrder: 0008,/' "$efi_state"
+sed -i 's/^BootOrder: /BootOrder: 0008,0006,/' "$efi_state"
 if run_configure > /dev/null 2>&1; then
     printf 'Duplicate Ubuntu firmware labels unexpectedly passed.\n' >&2
     exit 1
