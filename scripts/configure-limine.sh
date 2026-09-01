@@ -37,6 +37,10 @@ trim() {
 secure_boot_enabled() {
     local variable value
 
+    if [[ $TEST_MODE == true ]]; then
+        [[ ${BLANKWEAVE_TEST_SECURE_BOOT:-false} == true ]]
+        return
+    fi
     for variable in /sys/firmware/efi/efivars/SecureBoot-*; do
         [[ -r $variable ]] || continue
         value=$(od -An -t u1 -j 4 -N 1 "$variable" 2>/dev/null | tr -d '[:space:]')
@@ -63,16 +67,20 @@ validate_esp() {
     local esp=$1 filesystem
 
     [[ -w $esp ]] || die "EFI System Partition is not writable: $esp"
-    [[ $TEST_MODE == true ]] && return
-    [[ $EUID -eq 0 ]] || die 'run as root'
-    [[ -d /sys/firmware/efi ]] || die 'Limine migration requires UEFI firmware'
-    mountpoint -q "$esp" || die "EFI System Partition is not mounted: $esp"
-    filesystem=$($FINDMNT -n -o FSTYPE --target "$esp" 2>/dev/null || true)
-    case "$filesystem" in
-        vfat|fat|msdos) ;;
-        *) die "expected a FAT EFI System Partition at $esp, found ${filesystem:-unknown}" ;;
-    esac
-    secure_boot_enabled && die 'Secure Boot is enabled; signed Limine support is not configured'
+    if [[ $TEST_MODE != true ]]; then
+        [[ $EUID -eq 0 ]] || die 'run as root'
+        [[ -d /sys/firmware/efi ]] || die 'Limine migration requires UEFI firmware'
+        mountpoint -q "$esp" || die "EFI System Partition is not mounted: $esp"
+        filesystem=$($FINDMNT -n -o FSTYPE --target "$esp" 2>/dev/null || true)
+        case "$filesystem" in
+            vfat|fat|msdos) ;;
+            *) die "expected a FAT EFI System Partition at $esp, found ${filesystem:-unknown}" ;;
+        esac
+    fi
+    if secure_boot_enabled; then
+        die 'Secure Boot is enabled; signed Limine support is not configured'
+    fi
+    return 0
 }
 
 validate_boot_path() {

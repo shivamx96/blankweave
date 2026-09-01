@@ -39,6 +39,8 @@ The initial release sequence is:
   recovery.
 - `0.4.1` — prevent ignored trailing UEFI firmware records from aborting Limine
   discovery without a diagnostic.
+- `0.4.2` — treat disabled Secure Boot as successful ESP validation instead of
+  leaking its boolean probe status into the installer.
 
 Config-file schema numbers belong to their individual formats and are not
 Blankweave release versions.

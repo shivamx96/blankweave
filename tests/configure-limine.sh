@@ -112,6 +112,7 @@ run_configure() {
     FAKE_EFI_STATE="$efi_state" \
     FAKE_EFI_LOG="$efi_log" \
     BLANKWEAVE_LIMINE_TEST=true \
+    BLANKWEAVE_TEST_SECURE_BOOT="${BLANKWEAVE_TEST_SECURE_BOOT:-false}" \
     BLANKWEAVE_ESP_PATH="$esp" \
     BLANKWEAVE_DEFAULT_ENTRY_ID=arch.conf \
     BLANKWEAVE_LIMINE_SOURCE="$test_root/BOOTX64.EFI" \
@@ -151,6 +152,15 @@ grep -Fxq 'bootorder 0007,0004,0000,0006,0009,0005,0002,0003' "$efi_log"
 # Reconciliation is byte-for-byte idempotent and does not duplicate NVRAM.
 before=$(sha256sum "$config" "$loader" "$efi_state" "$efi_log")
 run_configure > "$test_root/second-run.log"
+[[ $(sha256sum "$config" "$loader" "$efi_state" "$efi_log") == "$before" ]]
+
+# Disabled Secure Boot must be a successful validation result, while enabled
+# Secure Boot fails before changing the already-valid deployment.
+if BLANKWEAVE_TEST_SECURE_BOOT=true run_configure > "$test_root/secure-boot.log" 2>&1; then
+    printf 'Enabled Secure Boot unexpectedly passed unsigned Limine validation.\n' >&2
+    exit 1
+fi
+grep -Fq 'Secure Boot is enabled' "$test_root/secure-boot.log"
 [[ $(sha256sum "$config" "$loader" "$efi_state" "$efi_log") == "$before" ]]
 
 # A malformed Linux entry fails before replacing a known-good configuration.
