@@ -491,15 +491,12 @@ if command -v plymouth-set-default-theme &> /dev/null; then
         fi
     fi
 
-    # Add splash, quiet, and loglevel to systemd-boot kernel cmdline
+    # Reconcile every Linux entry even when it already has a partial quiet
+    # setup. The theme sync below then replaces the seeded console colour with
+    # the active theme's dark canvas.
     BOOT_ENTRIES="/boot/loader/entries"
     if [ -d "$BOOT_ENTRIES" ]; then
-        for entry in "$BOOT_ENTRIES"/*.conf; do
-            if ! grep -q "splash" "$entry"; then
-                sed -i '/^options/ s/$/ quiet loglevel=3 splash vt.default_red=0 vt.default_grn=0 vt.default_blu=0/' "$entry"
-                echo "Updated boot entry: $entry"
-            fi
-        done
+        "$REPO_DIR/scripts/configure-kernel-command-line.sh" "$BOOT_ENTRIES"
     fi
 fi
 

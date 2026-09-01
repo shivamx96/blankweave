@@ -77,6 +77,11 @@ profile starts Hyprland with
 `uwsm check may-start` approves the local tty1 login. SDDM is neither installed
 nor enabled. During an upgrade, it is disabled and uninstalled without stopping
 the current SDDM-launched session; the console login takes over after reboot.
+The getty uses `--skip-login --nonewline --noissue` so Arch's issue banner does
+not appear between Plymouth and Hyprland; tty2 and the other consoles remain
+normal recovery logins. The boot command line hides the VT cursor globally, so
+`/etc/issue.d/blankweave-cursor.issue` restores it on those recovery gettys;
+tty1 suppresses issue files and remains clean during the graphical handoff.
 
 Do not restore a graphical-startup Hyprlock. The LUKS prompt is the boot-time
 authentication boundary. Hyprlock remains in manual keybindings and in
@@ -382,7 +387,12 @@ artwork under `~/.local/share/blankweave/`, and `status` reports
 stage. `scripts/theme-system.sh` (root) installs them: `papirus-folders` per
 Papirus variant, the staged splash into `/usr/share/plymouth/themes/blankweave`
 with an initramfs rebuild only when a file changed, and the `vt.default_*`
-console colours in the systemd-boot entries. `install.sh` runs it on every
+console colours in the systemd-boot entries. The Plymouth message callback
+renders status text only in `boot` and `resume` modes; shutdown/reboot/halt keep
+the full splash clean. `scripts/configure-kernel-command-line.sh` reconciles
+the quiet kernel, systemd, udev, and cursor tokens in every Linux systemd-boot
+entry without replacing unrelated options or the active theme's console
+colour. `install.sh` runs these on every
 apply, `blankweave theme set` runs it through sudo, and `blankweave theme sync`
 runs it alone for a switch made from the bar, which cannot prompt.
 

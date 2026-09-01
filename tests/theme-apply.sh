@@ -97,6 +97,8 @@ grep -Fxq 'global.password_bullet_image = Image.Text("*", 0.404, 0.651, 1);' "$p
 grep -Fxq 'Plymouth.SetDisplayNormalFunction(display_normal_callback);' "$plymouth"
 grep -Fxq 'Plymouth.SetDisplayPasswordFunction(display_password_callback);' "$plymouth"
 grep -Fxq 'Plymouth.SetDisplayMessageFunction(display_message_callback);' "$plymouth"
+grep -Fxq '    mode = Plymouth.GetMode();' "$plymouth"
+grep -Fxq '    if (mode == "boot" || mode == "resume") {' "$plymouth"
 cmp -s "$data/plymouth/blankweave/logo.png" "$data/themes/obsidian/plymouth/logo.png"
 grep -Fxq 'gtk-application-prefer-dark-theme=1' "$XDG_CONFIG_HOME/gtk-3.0/settings.ini"
 grep -Fxq 'gtk-icon-theme-name=Papirus-Dark' "$XDG_CONFIG_HOME/gtk-3.0/settings.ini"
