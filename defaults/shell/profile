@@ -4,7 +4,8 @@ export SDL_VIDEODRIVER=wayland
 export EDITOR=nano
 export TERMINAL=ghostty
 
-# Auto-start Hyprland on TTY1
-if [ -z "$DISPLAY" ] && [ -z "$WAYLAND_DISPLAY" ] && [ "$(tty)" = "/dev/tty1" ]; then
-    exec start-hyprland
+# Start the managed graphical session only from a suitable local tty1 login.
+# uwsm performs the tty, login-shell, D-Bus, and active-session checks.
+if uwsm check may-start; then
+    exec uwsm start -e -D Hyprland hyprland.desktop
 fi

@@ -39,9 +39,9 @@ blankweave/
 
 The rice was hyprarch until 2026-08-29. Everything user-facing now says
 blankweave — the command, `~/.local/share/blankweave`,
-`~/.config/blankweave`, the state and cache directories, the PAM service
-`blankweave-lock`, the Plymouth theme — and the transition is handled in
-three places: `bin/hyprarch` is a shim that execs `bin/blankweave`, because
+`~/.config/blankweave`, the state and cache directories, and the Plymouth
+theme — and the transition is handled in three places: `bin/hyprarch` is a
+shim that execs `bin/blankweave`, because
 an installed `hyprarch update` fast-forwards and then execs that path from
 the new revision; `scripts/relocate-legacy.sh` (user-scoped, idempotent, run
 by `install.sh` before anything is read) renames the old directories
@@ -67,6 +67,20 @@ finds nothing at them.
 
 Do not add a public `blankweave install` command. First installation is the
 bootstrap's responsibility; subsequent convergence is `blankweave update`.
+
+### Login and graphical session
+
+Blankweave assumes its root filesystem is LUKS-encrypted. It configures
+`getty@tty1` to log in the installed user automatically, and the managed shell
+profile starts Hyprland with
+`uwsm start -e -D Hyprland hyprland.desktop` only when
+`uwsm check may-start` approves the local tty1 login. SDDM is neither installed
+nor enabled. During an upgrade, it is disabled and uninstalled without stopping
+the current SDDM-launched session; the console login takes over after reboot.
+
+Do not restore a graphical-startup Hyprlock. The LUKS prompt is the boot-time
+authentication boundary. Hyprlock remains in manual keybindings and in
+Hypridle for idle, suspend, and resume protection.
 
 ### Config deployment flow
 
@@ -124,12 +138,11 @@ a passwordless `Default_keyring` through
 collection. The helper recognises only GNOME Keyring's plaintext key-file
 format as passwordless and never overwrites an existing encrypted collection.
 
-An upgraded install keeps `/etc/pam.d/blankweave-lock` temporarily so its
-existing Login keyring continues to unlock at boot. Seahorse is the lossless
-migration path: change the Login keyring's password to empty, then re-run the
-installer. The helper detects the converted plaintext collection and makes it
-the explicit default. The startup lock and this compatibility PAM service can
-only be removed after that helper succeeds.
+Seahorse is the lossless migration path for an older encrypted Login keyring:
+change its password to empty, then re-run the installer. The helper detects the
+converted plaintext collection and makes it the explicit default. The installer
+stops before changing login/session management if the keyring is not ready;
+there is no Hyprlock-specific PAM service or second boot password.
 
 Electron applications only reach that keyring when Chromium's `os_crypt`
 recognises the desktop. `XDG_CURRENT_DESKTOP=Hyprland` is unknown to it, so it

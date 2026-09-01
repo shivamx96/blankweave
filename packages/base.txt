@@ -62,4 +62,3 @@ alsa-utils
 alsa-ucm-conf
 alsa-plugins
 plymouth
-sddm
