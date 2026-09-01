@@ -174,4 +174,15 @@ grep -Fq 'checkout restored' "$test_root/failed-update.log"
 [[ $(git -C "$fixture" rev-parse HEAD) == "$previous" ]]
 [[ $(recovery_read status) == apply-failed ]]
 
+RECOVERY_DIR=$test_root/empty-recovery
+RECOVERY_STATE=$RECOVERY_DIR/state
+mkdir -p "$RECOVERY_DIR"
+if (command_rollback) > "$test_root/empty-recovery.log" 2>&1; then
+    printf 'Rollback unexpectedly accepted an empty recovery directory.\n' >&2
+    exit 1
+fi
+grep -Fq 'no rollback point is recorded' "$test_root/empty-recovery.log"
+grep -Fq 'The next tagged update will create one before applying changes' \
+    "$test_root/empty-recovery.log"
+
 printf 'Update recovery tests passed.\n'

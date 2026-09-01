@@ -67,6 +67,10 @@ remains available for manual full-system recovery.
 
 Recovery records both release versions and Git revisions, verifies that they
 still match their annotated tags, and will not cross `MIN_ROLLBACK_VERSION`.
+Recovery protection begins with updates initiated by `v0.2.0` or newer. An
+upgrade initiated by an older client—including a direct `v0.1.0` to `v0.2.0`
+upgrade—cannot have a rollback point reconstructed safely; the next tagged
+update creates the first one before making changes.
 
 `blankweave doctor` performs read-only checks of the managed checkout, runtime
 commands, generated Hyprland configuration, tty1/UWSM session, keyring, and

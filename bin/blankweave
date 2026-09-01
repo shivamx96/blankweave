@@ -536,8 +536,11 @@ EOF
     [[ -z "$(git -C "$repository" status --porcelain)" ]] \
         || die "managed repository has local changes; refusing to roll back"
 
+    if [[ ! -s $RECOVERY_STATE ]]; then
+        die "no rollback point is recorded; updates initiated before v0.2.0 could not create one. The next tagged update will create one before applying changes"
+    fi
     [[ $(recovery_read schema 2>/dev/null || true) == 1 ]] \
-        || die "recovery metadata is missing or uses an unsupported schema"
+        || die "recovery metadata uses an unsupported schema"
     previous=$(recovery_read previous_revision) || die "no recovery revision is recorded"
     previous_version=$(recovery_read previous_version) || die "no recovery version is recorded"
     target=$(recovery_read target_revision) || die "recovery state has no target revision"
