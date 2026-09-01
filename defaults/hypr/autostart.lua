@@ -1,6 +1,6 @@
 local startup_commands = {
     "awww-daemon",
-    "~/.local/share/blankweave/shell/wallpaper.sh theme && sleep 1 && hyprlock",
+    "~/.local/share/blankweave/shell/wallpaper.sh theme",
     "quickshell -n -p ~/.local/share/blankweave/quickshell",
     "dunst",
     "hypridle",

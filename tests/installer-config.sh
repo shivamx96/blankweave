@@ -58,8 +58,9 @@ assert_excludes() {
 installer_config_load "$test_root/missing.conf" laptop
 assert_profiles 'desktop development communication'
 resolve_package_manifests "$repository" laptop repository packages
-[[ "${#packages[@]}" -eq 86 ]]
+[[ "${#packages[@]}" -eq 85 ]]
 assert_contains seahorse "${packages[@]}"
+assert_excludes sddm "${packages[@]}"
 assert_contains intel-media-driver "${packages[@]}"
 assert_contains docker "${packages[@]}"
 assert_excludes steam "${packages[@]}"
@@ -71,7 +72,7 @@ resolve_package_manifests "$repository" laptop providers provider_packages
 installer_config_load "$test_root/missing.conf" pc
 assert_profiles 'desktop development communication gaming'
 resolve_package_manifests "$repository" pc repository packages
-[[ "${#packages[@]}" -eq 97 ]]
+[[ "${#packages[@]}" -eq 96 ]]
 assert_contains nvidia-open-dkms "${packages[@]}"
 assert_contains cuda "${packages[@]}"
 assert_contains steam "${packages[@]}"

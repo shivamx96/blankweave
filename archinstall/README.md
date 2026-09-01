@@ -87,8 +87,8 @@ stolen. A future UKI + Secure Boot + TPM2-with-PIN setup can improve boot
 integrity and convenience, but should be introduced and recovery-tested as a
 separate change.
 
-Once every supported machine has an encrypted root, the automatic Hyprlock call
-at graphical-session startup can be removed to avoid two consecutive boot
-prompts. Hyprlock should remain enabled for manual locking, idle timeout,
-suspend, and resume. Do not remove the startup lock while an unencrypted machine
-still relies on it after SDDM autologin.
+Blankweave assumes this encrypted-root baseline and uses the LUKS prompt as its
+boot-time authentication boundary. TTY1 logs in the installed user
+automatically and starts Hyprland through UWSM, without SDDM or a second
+graphical-startup Hyprlock prompt. Hyprlock remains enabled for manual locking,
+idle timeout, suspend, and resume.

@@ -40,6 +40,7 @@ and then records successful one-time migrations.
 The script will:
 - Detect hardware
 - Install packages (Hyprland, Quickshell, Dunst, Ghostty, etc.)
+- Configure tty1 automatic login and launch Hyprland through UWSM
 - Set up defaults in `~/.local/share/blankweave/`
 - Generate user configs in `~/.config/`
 - Capture a sanitized hardware inventory for the native system panel
