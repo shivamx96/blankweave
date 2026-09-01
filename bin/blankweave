@@ -22,6 +22,8 @@ REPOSITORY_STATE=$BLANKWEAVE_STATE_DIR/repository
 INSTALLED_REVISION_STATE=$BLANKWEAVE_STATE_DIR/installed-revision
 INSTALLED_VERSION_STATE=$BLANKWEAVE_STATE_DIR/installed-version
 INSTALLED_RELEASE_TAG_STATE=$BLANKWEAVE_STATE_DIR/installed-release-tag
+RECOVERY_DIR=$BLANKWEAVE_STATE_DIR/recovery
+RECOVERY_STATE=$RECOVERY_DIR/latest
 
 die() {
     printf '%s: %s\n' "$PROGRAM_NAME" "$*" >&2
@@ -104,6 +106,170 @@ apply_repository() {
     require_normal_user
     validate_repository "$repository"
     "$repository/install.sh"
+}
+
+validate_revision() {
+    [[ "$1" =~ ^[0-9a-f]{40,64}$ ]]
+}
+
+recovery_write() {
+    local previous="$1"
+    local previous_version="$2"
+    local target="$3"
+    local target_version="$4"
+    local status="$5"
+    local snapshot=${6:-}
+    local staged
+
+    validate_revision "$previous" || die "refusing invalid recovery revision: $previous"
+    validate_revision "$target" || die "refusing invalid recovery revision: $target"
+    blankweave_release_version_valid "$previous_version" \
+        || die "refusing invalid recovery version: $previous_version"
+    blankweave_release_version_valid "$target_version" \
+        || die "refusing invalid recovery version: $target_version"
+    [[ "$status" =~ ^[a-z-]+$ ]] || die "refusing invalid recovery status: $status"
+    [[ -z "$snapshot" || "$snapshot" =~ ^[0-9]+$ ]] \
+        || die "refusing invalid snapshot number: $snapshot"
+
+    mkdir -p "$RECOVERY_DIR"
+    chmod 700 "$RECOVERY_DIR"
+    staged=$(mktemp "$RECOVERY_DIR/.latest.XXXXXX")
+    printf '%s\n' \
+        'schema=1' \
+        "previous_revision=$previous" \
+        "previous_version=$previous_version" \
+        "target_revision=$target" \
+        "target_version=$target_version" \
+        "status=$status" \
+        "snapper_pre=$snapshot" \
+        > "$staged"
+    chmod 600 "$staged"
+    mv -f "$staged" "$RECOVERY_STATE"
+}
+
+recovery_read() {
+    local requested="$1"
+    local line key value found=
+
+    [[ -r "$RECOVERY_STATE" ]] || return 1
+    while IFS= read -r line || [[ -n "$line" ]]; do
+        [[ "$line" == *=* ]] || continue
+        key=${line%%=*}
+        value=${line#*=}
+        if [[ "$key" == "$requested" ]]; then
+            [[ -z "$found" ]] || return 1
+            found=$value
+        fi
+    done < "$RECOVERY_STATE"
+    [[ -n "$found" ]] || return 1
+    printf '%s\n' "$found"
+}
+
+recovery_update_status() {
+    local status="$1"
+    local previous previous_version target target_version snapshot=
+
+    previous=$(recovery_read previous_revision) || die "recovery state has no previous revision"
+    previous_version=$(recovery_read previous_version) || die "recovery state has no previous version"
+    target=$(recovery_read target_revision) || die "recovery state has no target revision"
+    target_version=$(recovery_read target_version) || die "recovery state has no target version"
+    snapshot=$(recovery_read snapper_pre 2>/dev/null || true)
+    recovery_write "$previous" "$previous_version" "$target" "$target_version" "$status" "$snapshot"
+}
+
+restore_checkout() {
+    local repository="$1"
+    local revision="$2"
+
+    validate_revision "$revision" || die "refusing invalid rollback revision: $revision"
+    git -C "$repository" cat-file -e "$revision^{commit}" 2>/dev/null \
+        || die "rollback revision is unavailable: ${revision:0:12}"
+    [[ -z "$(git -C "$repository" status --porcelain)" ]] \
+        || die "managed repository changed during the update; refusing automatic checkout recovery"
+    git -C "$repository" reset --hard "$revision" > /dev/null
+}
+
+detect_update_host() {
+    if lspci 2>/dev/null | grep -q 'Intel.*Arc'; then
+        printf 'laptop\n'
+    elif lspci 2>/dev/null | grep -q NVIDIA; then
+        printf 'pc\n'
+    else
+        printf 'laptop\n'
+    fi
+}
+
+validate_install_plan() (
+    local repository="$1"
+    local host config_file
+    local -a repository_packages=()
+    local -a aur_packages=()
+    local -a provider_packages=()
+
+    host=$(detect_update_host)
+    config_file=${XDG_CONFIG_HOME:-$HOME/.config}/blankweave/install.conf
+    # shellcheck source=scripts/installer-config.sh
+    source "$repository/scripts/installer-config.sh" || return
+    # shellcheck source=scripts/package-manifests.sh
+    source "$repository/scripts/package-manifests.sh" || return
+    installer_config_load "$config_file" "$host" || return
+    resolve_package_manifests "$repository" "$host" repository repository_packages || return
+    resolve_package_manifests "$repository" "$host" aur aur_packages || return
+    resolve_package_manifests "$repository" "$host" providers provider_packages || return
+
+    printf 'Install plan: host=%s profiles=%s packages=%d aur=%d providers=%d\n' \
+        "$host" "${INSTALLER_PROFILES[*]:-none}" \
+        "${#repository_packages[@]}" "${#aur_packages[@]}" "${#provider_packages[@]}"
+)
+
+validate_target_plan() {
+    local repository="$1"
+    local target="$2"
+    local target_tree
+    local validation_status
+
+    target_tree=$(mktemp -d /tmp/blankweave-update-plan.XXXXXX)
+    if ! git -C "$repository" archive "$target" | tar -x -C "$target_tree"; then
+        rm -rf -- "$target_tree"
+        die "could not inspect the target revision"
+    fi
+    if validate_install_plan "$target_tree"; then
+        validation_status=0
+    else
+        validation_status=$?
+    fi
+    rm -rf -- "$target_tree"
+    (( validation_status == 0 )) || die "target revision has an invalid install plan"
+}
+
+create_pre_snapshot() {
+    local previous="$1"
+    local target="$2"
+    local number
+
+    SNAPSHOT_NUMBER=
+    command -v snapper > /dev/null 2>&1 || return 0
+    sudo snapper -c root get-config > /dev/null 2>&1 || return 0
+    if number=$(sudo snapper -c root create --type pre --print-number \
+        --description "blankweave update ${previous:0:12} -> ${target:0:12}"); then
+        [[ "$number" =~ ^[0-9]+$ ]] || die "snapper returned an invalid snapshot number"
+        SNAPSHOT_NUMBER=$number
+        printf 'Created Snapper pre-update snapshot %s.\n' "$number"
+    else
+        die "could not create the configured Snapper pre-update snapshot"
+    fi
+}
+
+create_post_snapshot() {
+    local number="$1"
+    local target="$2"
+
+    [[ -n "$number" ]] || return 0
+    if ! sudo snapper -c root create --type post --pre-number "$number" \
+        --description "blankweave update ${target:0:12}" > /dev/null; then
+        return 1
+    fi
+    printf 'Created the paired Snapper post-update snapshot.\n'
 }
 
 command_version() {
@@ -201,28 +367,42 @@ command_doctor() {
 }
 
 command_update() {
-    local repository branch current target current_version target_version
-    local current_tag target_tag rollback_floor
+    local repository branch mode=apply current target current_version target_version
+    local current_tag target_tag rollback_floor commit_count update_log doctor_script apply_status
+    local SNAPSHOT_NUMBER=
+
+    case "${1:-}" in
+        '') ;;
+        --check) mode=check ;;
+        --dry-run) mode=dry-run ;;
+        --help|-h)
+            cat <<'EOF'
+Usage: blankweave update [--check|--dry-run]
+
+  --check    Fetch and report whether a tagged update is available.
+  --dry-run  Validate the tagged update and print its install plan without applying it.
+EOF
+            return 0
+            ;;
+        *) die "update accepts only --check or --dry-run" ;;
+    esac
+    (( $# <= 1 )) || die "update accepts only one option"
 
     require_normal_user
     repository=$(configured_repository)
     validate_repository "$repository"
 
     branch=$(git -C "$repository" branch --show-current)
-    [[ "$branch" == main ]] || die "managed repository must be on main, found: ${branch:-detached HEAD}"
+    [[ $branch == main ]] || die "managed repository must be on main, found: ${branch:-detached HEAD}"
     [[ -z "$(git -C "$repository" status --porcelain)" ]] \
         || die "managed repository has local changes; refusing to update"
 
-    printf 'Fetching Blankweave updates...\n'
+    printf 'Fetching Blankweave releases...\n'
     git -C "$repository" fetch --prune --tags origin main
     git -C "$repository" merge-base --is-ancestor HEAD origin/main \
         || die "origin/main is not a fast-forward of the local checkout"
     current=$(git -C "$repository" rev-parse HEAD)
     target=$(git -C "$repository" rev-parse origin/main)
-    if [[ $current == "$target" ]]; then
-        printf 'Blankweave is already up to date at %s.\n' "${current:0:12}"
-        return 0
-    fi
 
     # shellcheck source=scripts/release-version.sh
     source "$repository/scripts/release-version.sh"
@@ -230,6 +410,13 @@ command_update() {
         || die "current checkout has an invalid VERSION"
     current_tag=$(blankweave_release_tag_at "$repository" "$current") \
         || die "current checkout is not an annotated release matching VERSION"
+
+    if [[ $current == "$target" ]]; then
+        printf 'Blankweave %s (%s) is already up to date at %s.\n' \
+            "$current_version" "$current_tag" "${current:0:12}"
+        return 0
+    fi
+
     target_version=$(blankweave_release_version_at "$repository" "$target") \
         || die "target revision has an invalid VERSION"
     target_tag=$(blankweave_release_tag_at "$repository" "$target") \
@@ -241,11 +428,155 @@ command_update() {
     blankweave_release_version_greater_or_equal "$current_version" "$rollback_floor" \
         || die "target requires rollback floor $rollback_floor, but current is $current_version"
 
-    printf 'Applying release %s (%s) over %s...\n' \
-        "$target_version" "$target_tag" "$current_tag"
-    git -C "$repository" merge --ff-only origin/main
+    commit_count=$(git -C "$repository" rev-list --count "$current..$target")
+    printf '%s update(s) available: %s (%s) -> %s (%s)\n' \
+        "$commit_count" "$current_tag" "${current:0:12}" \
+        "$target_tag" "${target:0:12}"
+    git -C "$repository" log --oneline --no-decorate "$current..$target"
 
-    exec "$repository/bin/blankweave" _apply "$repository"
+    if [[ $mode == check ]]; then
+        return 0
+    fi
+
+    validate_target_plan "$repository" "$target"
+    [[ ! -e /var/lib/pacman/db.lck ]] \
+        || die "pacman is already running (/var/lib/pacman/db.lck exists)"
+
+    if [[ $mode == dry-run ]]; then
+        printf 'Dry run complete; the managed checkout and system were not changed.\n'
+        return 0
+    fi
+
+    printf 'Validating sudo before changing the checkout...\n'
+    sudo -v
+    recovery_write "$current" "$current_version" "$target" "$target_version" prepared
+    doctor_script=$repository/scripts/doctor.sh
+    if ! "$doctor_script" "$repository" --report > "$RECOVERY_DIR/preflight-report.txt"; then
+        printf 'Warning: pre-update doctor found existing failures; its report was saved for comparison.\n' >&2
+    fi
+    chmod 600 "$RECOVERY_DIR/preflight-report.txt"
+
+    create_pre_snapshot "$current" "$target"
+    recovery_write "$current" "$current_version" "$target" "$target_version" prepared "$SNAPSHOT_NUMBER"
+    git -C "$repository" merge --ff-only origin/main
+    recovery_update_status applying
+
+    update_log=$RECOVERY_DIR/update.log
+    if apply_repository "$repository" 2>&1 | tee "$update_log"; then
+        chmod 600 "$update_log"
+    else
+        apply_status=${PIPESTATUS[0]}
+        chmod 600 "$update_log"
+        recovery_update_status apply-failed
+        restore_checkout "$repository" "$current"
+        die "update apply failed with status $apply_status; checkout restored to ${current:0:12}. Run blankweave rollback to reconverge managed configuration"
+    fi
+
+    if ! create_post_snapshot "$SNAPSHOT_NUMBER" "$target"; then
+        recovery_update_status snapshot-post-failed
+        die "update applied, but the Snapper post-update snapshot failed; the pre-update snapshot remains available"
+    fi
+    doctor_script=$repository/scripts/doctor.sh
+    if ! "$doctor_script" "$repository" --report > "$RECOVERY_DIR/postflight-report.txt"; then
+        chmod 600 "$RECOVERY_DIR/postflight-report.txt"
+        recovery_update_status degraded
+        printf 'Update applied, but post-update health checks failed.\n' >&2
+        printf 'Review %s or run blankweave rollback.\n' "$RECOVERY_DIR/postflight-report.txt" >&2
+        return 1
+    fi
+    chmod 600 "$RECOVERY_DIR/postflight-report.txt"
+    recovery_update_status complete
+    printf 'Blankweave %s update complete. Recovery release: %s (%s)\n' \
+        "$target_tag" "$current_tag" "${current:0:12}"
+}
+
+command_rollback() {
+    local repository branch previous previous_version target target_version status current
+    local rollback_floor rollback_log rollback_status snapshot=
+
+    case "${1:-}" in
+        '') ;;
+        --help|-h)
+            cat <<'EOF'
+Usage: blankweave rollback
+
+Restore the previous Blankweave revision and reconverge managed configuration.
+Packages and completed one-time migrations are not reversed. If a Snapper
+pre-update snapshot was recorded, its number is shown for manual system recovery.
+Rollback never crosses the release floor recorded by the applied update.
+EOF
+            return 0
+            ;;
+        *) die "rollback does not accept arguments" ;;
+    esac
+    (( $# <= 1 )) || die "rollback does not accept arguments"
+
+    require_normal_user
+    repository=$(configured_repository)
+    validate_repository "$repository"
+    # shellcheck source=scripts/release-version.sh
+    source "$repository/scripts/release-version.sh"
+    branch=$(git -C "$repository" branch --show-current)
+    [[ "$branch" == main ]] || die "managed repository must be on main, found: ${branch:-detached HEAD}"
+    [[ -z "$(git -C "$repository" status --porcelain)" ]] \
+        || die "managed repository has local changes; refusing to roll back"
+
+    [[ $(recovery_read schema 2>/dev/null || true) == 1 ]] \
+        || die "recovery metadata is missing or uses an unsupported schema"
+    previous=$(recovery_read previous_revision) || die "no recovery revision is recorded"
+    previous_version=$(recovery_read previous_version) || die "no recovery version is recorded"
+    target=$(recovery_read target_revision) || die "recovery state has no target revision"
+    target_version=$(recovery_read target_version) || die "recovery state has no target version"
+    status=$(recovery_read status) || die "recovery state has no status"
+    snapshot=$(recovery_read snapper_pre 2>/dev/null || true)
+    validate_revision "$previous" || die "recorded recovery revision is invalid"
+    validate_revision "$target" || die "recorded target revision is invalid"
+    blankweave_release_version_valid "$previous_version" \
+        || die "recorded recovery version is invalid"
+    blankweave_release_version_valid "$target_version" \
+        || die "recorded target version is invalid"
+    [[ $(blankweave_release_tag_at "$repository" "$previous" 2>/dev/null || true) == "v$previous_version" ]] \
+        || die "recorded recovery revision does not match tagged release v$previous_version"
+    [[ $(blankweave_release_tag_at "$repository" "$target" 2>/dev/null || true) == "v$target_version" ]] \
+        || die "recorded target revision does not match tagged release v$target_version"
+    rollback_floor=$(blankweave_release_floor_at "$repository" "$target") \
+        || die "recorded target has an invalid rollback floor"
+    blankweave_release_version_greater_or_equal "$previous_version" "$rollback_floor" \
+        || die "refusing rollback to $previous_version; minimum supported release is $rollback_floor"
+    current=$(git -C "$repository" rev-parse HEAD)
+
+    if [[ "$current" != "$target" && "$current" != "$previous" ]]; then
+        die "checkout ${current:0:12} does not match the recorded update; refusing to roll back"
+    fi
+    if [[ "$status" == rolled-back && "$current" == "$previous" ]]; then
+        printf 'Blankweave is already rolled back to %s (%s).\n' \
+            "$previous_version" "${previous:0:12}"
+        return 0
+    fi
+
+    printf 'Rolling Blankweave back to %s (%s)...\n' \
+        "$previous_version" "${previous:0:12}"
+    sudo -v
+    if [[ "$current" != "$previous" ]]; then
+        restore_checkout "$repository" "$previous"
+    fi
+    recovery_update_status rolling-back
+    rollback_log=$RECOVERY_DIR/rollback.log
+    if apply_repository "$repository" 2>&1 | tee "$rollback_log"; then
+        chmod 600 "$rollback_log"
+        recovery_update_status rolled-back
+        printf 'Managed configuration is restored to %s (%s).\n' \
+            "$previous_version" "${previous:0:12}"
+        printf 'Arch packages and completed one-time migrations were not reversed.\n'
+        if [[ -n "$snapshot" ]]; then
+            printf 'Snapper pre-update snapshot available for manual recovery: %s\n' "$snapshot"
+        fi
+    else
+        rollback_status=${PIPESTATUS[0]}
+        chmod 600 "$rollback_log"
+        recovery_update_status rollback-failed
+        die "rollback apply failed with status $rollback_status; checkout remains at ${previous:0:12} for recovery"
+    fi
 }
 
 print_help() {
@@ -254,7 +585,8 @@ Usage: blankweave <command>
 
 Commands:
   version   Show the CLI version and installed/repository revisions
-  update    Fast-forward the managed repository and apply the update
+  update    Check, preview, or safely apply a fast-forward update
+  rollback  Restore the previous Blankweave revision and managed configuration
   doctor    Run read-only health checks; add --report for shareable diagnostics
   theme     Manage the desktop theme: list, status, set <id>, mode <dark|light>, toggle, sync
   webapp    Manage Helium web apps: list, install <name> <url> <icon>, remove <name>, sync
@@ -272,8 +604,10 @@ main() {
             command_version
             ;;
         update)
-            [[ $# -eq 0 ]] || die "update does not accept arguments"
-            command_update
+            command_update "$@"
+            ;;
+        rollback)
+            command_rollback "$@"
             ;;
         doctor)
             command_doctor "$@"
@@ -300,4 +634,6 @@ main() {
     esac
 }
 
-main "$@"
+if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
+    main "$@"
+fi

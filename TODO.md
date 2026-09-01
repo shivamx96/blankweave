@@ -20,6 +20,11 @@
       `0.1.0` minimum rollback boundary.
 - [x] Add `blankweave doctor` with read-only health checks and a sanitized,
       shareable support report.
+- [x] Add update check/dry-run modes, last-known-good revision state, installer
+      logs, postflight health validation, optional Snapper integration, and
+      configuration rollback without claiming to downgrade Arch packages.
+- [x] Establish SemVer releases, revision/version-paired recovery metadata, and
+      an explicit `0.1.0` minimum rollback boundary.
 - [ ] Add `blankweave setup`, a guided terminal flow for first-install preferences.
       Keep `bootstrap.sh` focused on acquiring the managed checkout and handing
       off to the CLI.
@@ -99,4 +104,6 @@ Hyprland 0.55+ deprecated Hyprlang (`.conf`) in favour of Lua.
 
 - [ ] `windowrules.lua` still has its "convert these to floating windows" TODO unresolved.
 - [ ] No firewall (`ufw`).
-- [ ] No snapshots/backups (`snapper` + `snap-pac`, or `timeshift`).
+- [ ] Provision and recovery-test Snapper on fresh Btrfs installations.
+      `blankweave update` already uses an existing root Snapper configuration,
+      but Blankweave does not create one or automate full-system rollback yet.
