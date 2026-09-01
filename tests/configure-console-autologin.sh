@@ -38,8 +38,9 @@ PATH="$fake_bin:$PATH" \
 dropin=$system_root/etc/systemd/system/getty@tty1.service.d/autologin.conf
 grep -Fxq '[Service]' "$dropin"
 grep -Fxq 'ExecStart=' "$dropin"
-grep -Fxq "ExecStart=-/usr/bin/agetty --autologin blankweave --noreset --noclear - \${TERM}" "$dropin"
+grep -Fxq "ExecStart=-/usr/bin/agetty --skip-login --nonewline --noissue --autologin blankweave --noreset --noclear - \${TERM}" "$dropin"
 [[ $(stat -c %a "$dropin") == 644 ]]
+[[ $(od -An -tx1 "$system_root/etc/issue.d/blankweave-cursor.issue" | tr -d ' \n') == 1b5b3f3235680a ]]
 [[ ! -e $system_root/etc/sddm.conf.d/autologin.conf ]]
 [[ -e $system_root/etc/sddm.conf.d/preserved.conf ]]
 

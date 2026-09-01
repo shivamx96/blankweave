@@ -91,4 +91,6 @@ Blankweave assumes this encrypted-root baseline and uses the LUKS prompt as its
 boot-time authentication boundary. TTY1 logs in the installed user
 automatically and starts Hyprland through UWSM, without SDDM or a second
 graphical-startup Hyprlock prompt. Hyprlock remains enabled for manual locking,
-idle timeout, suspend, and resume.
+idle timeout, suspend, and resume. The tty1 login banner and console cursor are
+suppressed during the Plymouth-to-Hyprland handoff; tty2 remains an ordinary
+recovery login.

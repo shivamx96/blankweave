@@ -21,6 +21,7 @@ system_root=${BLANKWEAVE_SYSTEM_ROOT:-}
 
 dropin_dir=$system_root/etc/systemd/system/getty@tty1.service.d
 dropin_file=$dropin_dir/autologin.conf
+issue_dir=$system_root/etc/issue.d
 staged=
 
 cleanup() {
@@ -33,11 +34,18 @@ staged=$(mktemp "$dropin_dir/.autologin.XXXXXX")
 cat > "$staged" <<EOF
 [Service]
 ExecStart=
-ExecStart=-/usr/bin/agetty --autologin $username --noreset --noclear - \${TERM}
+ExecStart=-/usr/bin/agetty --skip-login --nonewline --noissue --autologin $username --noreset --noclear - \${TERM}
 EOF
 chmod 0644 "$staged"
 mv -f "$staged" "$dropin_file"
 staged=
+
+# The boot command line hides the VT cursor during the graphical handoff.
+# tty1 suppresses issue files, while ordinary recovery gettys print this small
+# terminal sequence and restore their visible cursor.
+mkdir -p "$issue_dir"
+printf '\033[?25h\n' > "$issue_dir/blankweave-cursor.issue"
+chmod 0644 "$issue_dir/blankweave-cursor.issue"
 
 # Disable SDDM for the next boot, but never stop it during an apply: the
 # installer is normally running inside the graphical session SDDM launched.
