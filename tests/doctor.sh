@@ -24,6 +24,7 @@ mkdir -p \
     "$system_root/etc/systemd/system/plymouth-quit.service.d" \
     "$system_root/etc/issue.d" \
     "$system_root/etc/pam.d" \
+    "$system_root/boot/EFI/blankweave" \
     "$system_root/boot/loader/entries" \
     "$fake_bin"
 
@@ -53,8 +54,25 @@ printf 'HOOKS=(base systemd plymouth autodetect microcode modconf kms keyboard s
 printf '%s\n' \
     'title Arch Linux' \
     'linux /vmlinuz-linux' \
+    'initrd /initramfs-linux.img' \
     'options root=UUID=redacted rw quiet splash loglevel=3' \
     > "$system_root/boot/loader/entries/arch.conf"
+touch "$system_root/boot/vmlinuz-linux" "$system_root/boot/initramfs-linux.img"
+printf 'fixture Limine EFI executable\n' \
+    > "$system_root/boot/EFI/blankweave/limine-x64.efi"
+printf '%s\n' \
+    'timeout: 3' \
+    'quiet: yes' \
+    'default_entry: 1' \
+    '/Arch Linux' \
+    '    protocol: linux' \
+    '    path: boot():/vmlinuz-linux' \
+    '    module_path: boot():/initramfs-linux.img' \
+    '    cmdline: root=UUID=redacted rw quiet splash loglevel=3' \
+    '/Blankweave recovery (systemd-boot)' \
+    '    protocol: efi_boot_entry' \
+    '    entry: Linux Boot Manager' \
+    > "$system_root/boot/EFI/blankweave/limine.conf"
 printf 'NAME=Arch Linux\nPRETTY_NAME="Arch Linux"\n' > "$system_root/etc/os-release"
 git -C "$repository" rev-parse HEAD > "$state/blankweave/installed-revision"
 
@@ -73,6 +91,17 @@ cat > "$fake_bin/pacman" <<'EOF'
 printf '%s 1.0-1\n' "$2"
 EOF
 chmod +x "$fake_bin/pacman"
+
+cat > "$fake_bin/efibootmgr" <<'EOF'
+#!/usr/bin/env bash
+printf '%s\n' \
+    'BootCurrent: 0007' \
+    'BootOrder: 0007,0004,0000' \
+    $'Boot0000* Windows Boot Manager\tHD(1,GPT,windows)/\\EFI\\Microsoft\\Boot\\bootmgfw.efi' \
+    $'Boot0004* Linux Boot Manager\tHD(1,GPT,blankweave)/\\EFI\\systemd\\systemd-bootx64.efi' \
+    $'Boot0007* Blankweave Boot Manager\tHD(1,GPT,blankweave)/\\EFI\\blankweave\\limine-x64.efi'
+EOF
+chmod +x "$fake_bin/efibootmgr"
 
 run_doctor() {
     PATH="$fake_bin:/usr/bin" \
@@ -98,6 +127,10 @@ grep -Fq 'PASS  runtime commands' <<< "$output"
 grep -Fq 'PASS  tty1 automatic login' <<< "$output"
 grep -Fq 'PASS  Plymouth handoff' <<< "$output"
 grep -Fq 'PASS  initramfs microcode' <<< "$output"
+grep -Fq 'PASS  Limine EFI executable' <<< "$output"
+grep -Fq 'PASS  Limine BLS handoff' <<< "$output"
+grep -Fq 'PASS  UEFI boot order' <<< "$output"
+grep -Fq 'PASS  bootloader recovery' <<< "$output"
 grep -Fq 'PASS  CPU microcode package' <<< "$output"
 grep -Fq '0 failures' <<< "$output"
 
@@ -105,11 +138,22 @@ report=$(run_doctor --report)
 grep -Fq 'Sanitized report' <<< "$report"
 grep -Fq 'hyprlock: 1.0-1' <<< "$report"
 grep -Fq 'intel-ucode: 1.0-1' <<< "$report"
+grep -Fq 'limine: 1.0-1' <<< "$report"
 grep -Fq 'serial numbers omitted' <<< "$report"
 if grep -Fq "$home" <<< "$report"; then
     printf 'Sanitized report exposed the fixture home path.\n' >&2
     exit 1
 fi
+
+cp "$system_root/boot/EFI/blankweave/limine.conf" "$test_root/limine.conf.good"
+sed -i 's/root=UUID=redacted/root=UUID=drifted/' \
+    "$system_root/boot/EFI/blankweave/limine.conf"
+if run_doctor > "$test_root/boot-drift.log" 2>&1; then
+    printf 'Doctor unexpectedly accepted a drifted Limine kernel command line.\n' >&2
+    exit 1
+fi
+grep -Fq 'FAIL  Limine BLS handoff' "$test_root/boot-drift.log"
+mv "$test_root/limine.conf.good" "$system_root/boot/EFI/blankweave/limine.conf"
 
 rm "$fake_bin/blankweave-doctor-fixture"
 if run_doctor > "$test_root/failure.log" 2>&1; then

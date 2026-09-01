@@ -32,6 +32,9 @@ human on the target machine.
 The file preselects the stable system choices: a minimal profile, Linux kernel,
 systemd-boot, NetworkManager, PipeWire, Bluetooth, zram, locale, timezone, and the
 small package set required to clone and run this repository after first boot.
+Systemd-boot is the intentionally conservative first-boot loader. The
+Blankweave stage installs Limine as primary only after it can import and validate
+these working entries, and preserves systemd-boot for firmware-menu recovery.
 
 ## Required interactive choices
 
@@ -83,8 +86,9 @@ forward-only across a Blankweave rollback.
 At the graphical boot splash, Plymouth displays the LUKS prompt and masked
 keystrokes. If a theme or graphics regression ever hides the prompt, press
 **Esc** to switch to the text console and enter the passphrase there. To bypass
-Plymouth for one boot, edit the systemd-boot entry with **e** and append
-`plymouth.enable=0 disablehooks=plymouth` to its options.
+Plymouth for one boot, reveal Limine by pressing a key during its three-second
+timeout, choose `Blankweave recovery (systemd-boot)`, edit the Linux entry with
+**e**, and append `plymouth.enable=0 disablehooks=plymouth` to its options.
 
 ## Encryption policy
 
