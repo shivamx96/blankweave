@@ -59,3 +59,5 @@ alsa-utils
 alsa-ucm-conf
 alsa-plugins
 plymouth
+limine
+efibootmgr

@@ -2,6 +2,12 @@
 
 Arch + Hyprland bootstrap with automatic hardware detection.
 
+Blankweave boots through Limine on UEFI systems. It imports the proven Linux
+kernel, initramfs, and command line from Archinstall's Boot Loader Specification
+entries, so LUKS unlocking remains an initramfs/Plymouth concern rather than a
+boot-manager concern. Existing systemd-boot files and its `Linux Boot Manager`
+firmware entry are deliberately retained as a recovery path.
+
 Hardware support is capability-based rather than tied to machine labels. The
 installer detects Intel and AMD CPUs, Intel, AMD, and NVIDIA GPUs, batteries,
 internal panels and backlights, DDC/CI displays, Bluetooth controllers, and
@@ -76,14 +82,30 @@ update creates the first one before making changes.
 
 `blankweave doctor` performs read-only checks of the managed checkout, runtime
 commands, generated Hyprland configuration, tty1/UWSM session, keyring, and
-Plymouth boot handoff. Use `blankweave doctor --report` to append package and
-system versions with usernames, hostnames, network addresses, disk identifiers,
-and hardware serial numbers deliberately omitted.
+Plymouth boot handoff. It also verifies the Limine executable and Linux entries,
+UEFI boot order, and systemd-boot recovery path. Use `blankweave doctor --report`
+to append package and system versions with usernames, hostnames, network
+addresses, disk identifiers, and hardware serial numbers deliberately omitted.
+
+Limine is installed as `Blankweave Boot Manager` and placed first in UEFI
+`BootOrder` only after its executable and configuration have been staged. Its
+three-second quiet timeout boots Blankweave normally; press any key during that
+window to reveal the menu. Active operating-system EFI entries are added without
+mounting or copying their EFI System Partitions or maintaining a distribution
+allowlist. Selecting one uses that operating system's existing UEFI entry. The
+menu also contains `Blankweave recovery (systemd-boot)`.
+
+If Limine cannot boot Blankweave, open the machine's firmware boot menu and
+select `Linux Boot Manager`. That is the untouched systemd-boot installation
+created by the Archinstall baseline. Secure Boot must remain disabled until
+Blankweave gains a signed-boot flow; the installer refuses to activate unsigned
+Limine when Secure Boot is enabled.
 
 The script will:
 - Detect hardware
 - Install packages (Hyprland, Quickshell, Dunst, Ghostty, etc.)
 - Configure tty1 automatic login and launch Hyprland through UWSM
+- Install Limine while preserving systemd-boot as boot recovery
 - Set up defaults in `~/.local/share/blankweave/`
 - Generate user configs in `~/.config/`
 - Capture a sanitized hardware inventory for the native system panel

@@ -522,6 +522,19 @@ fi
 # staged copies and only rebuilds the initramfs when the splash changed.
 "$REPO_DIR/scripts/theme-system.sh" "$USER_HOME" "$CONFIG_DIR"
 
+section "CONFIGURING LIMINE BOOT MANAGER"
+
+# Keep Archinstall's systemd-boot files and firmware entry as a recovery path.
+# Limine imports those proven BLS kernel/initramfs/cmdline records verbatim and
+# becomes first in BootOrder only after its executable and config are staged.
+install -D -m 0755 \
+    "$REPO_DIR/scripts/configure-limine.sh" \
+    /usr/local/lib/blankweave/configure-limine
+install -D -m 0644 \
+    "$REPO_DIR/defaults/pacman-hooks/95-blankweave-limine.hook" \
+    /etc/pacman.d/hooks/95-blankweave-limine.hook
+"$REPO_DIR/scripts/configure-limine.sh"
+
 section "CONFIGURING GIT AND SSH"
 
 SSH_KEY="$USER_HOME/.ssh/id_ed25519"

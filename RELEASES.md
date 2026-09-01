@@ -34,6 +34,9 @@ The initial release sequence is:
   has been recorded yet.
 - `0.3.0` — capability-based hardware detection, packages, configuration, and
   widget tooling across Intel, AMD, and NVIDIA systems.
+- `0.4.0` — Limine becomes the primary UEFI boot manager, with exact BLS/LUKS
+  handoff, native Windows/Linux firmware entries, and retained systemd-boot
+  recovery.
 
 Config-file schema numbers belong to their individual formats and are not
 Blankweave release versions.

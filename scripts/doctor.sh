@@ -58,6 +58,14 @@ root_path() {
     printf '%s%s\n' "$SYSTEM_ROOT" "$1"
 }
 
+trim_space() {
+    local value=$1
+
+    value=${value#"${value%%[![:space:]]*}"}
+    value=${value%"${value##*[![:space:]]}"}
+    printf '%s\n' "$value"
+}
+
 short_revision() {
     local repository="$1"
     git -C "$repository" rev-parse --short=12 HEAD 2>/dev/null || printf 'unknown\n'
@@ -252,6 +260,123 @@ check_plymouth() {
     fi
 }
 
+check_bootloader() {
+    local executable config entries entry kernel cmdline initrd output order first line prefix label id lower
+    local linux_entries=0 recovery_entries=0 source_entries=0 handoff_drift=0 available
+    local limine_path_valid=true
+    local -a limine_ids=() initrds=()
+
+    executable=$(root_path /boot/EFI/blankweave/limine-x64.efi)
+    config=$(root_path /boot/EFI/blankweave/limine.conf)
+    entries=$(root_path /boot/loader/entries)
+
+    if [[ -r $executable ]]; then
+        pass 'Limine EFI executable' 'installed on the EFI System Partition'
+    else
+        fail 'Limine EFI executable' 'managed loader is missing'
+    fi
+    if [[ -r $config ]]; then
+        linux_entries=$(grep -Ec '^[[:space:]]+protocol:[[:space:]]+linux[[:space:]]*$' "$config" || true)
+        if (( linux_entries > 0 )) \
+            && grep -Eq '^[[:space:]]+path:[[:space:]]+boot\(\):/' "$config" \
+            && grep -Eq '^[[:space:]]+module_path:[[:space:]]+boot\(\):/' "$config" \
+            && grep -Eq '^[[:space:]]+cmdline:[[:space:]]+[^[:space:]]' "$config"; then
+            pass 'Limine Linux entries' "$linux_entries direct boot entries are configured"
+        else
+            fail 'Limine Linux entries' 'config lacks a complete direct Linux entry'
+        fi
+    else
+        fail 'Limine Linux entries' 'limine.conf is missing'
+    fi
+
+    if [[ -r $config && -d $entries ]]; then
+        while IFS= read -r -d '' entry; do
+            mapfile -t initrds < <(sed -n -E \
+                's/^[[:space:]]*initrd[[:space:]]+//p' "$entry")
+            kernel=$(sed -n -E 's/^[[:space:]]*linux[[:space:]]+//p' "$entry" | head -n 1)
+            cmdline=$(sed -n -E 's/^[[:space:]]*options[[:space:]]+//p' "$entry" | head -n 1)
+            [[ -n $kernel && -n $cmdline && ${#initrds[@]} -gt 0 ]] || continue
+            available=true
+            [[ -f "$(root_path "/boot$kernel")" ]] || available=false
+            for initrd in "${initrds[@]}"; do
+                [[ -f "$(root_path "/boot$initrd")" ]] || available=false
+            done
+            [[ $available == true ]] || continue
+
+            source_entries=$((source_entries + 1))
+            grep -Fqx -- "    path: boot():$kernel" "$config" \
+                || handoff_drift=$((handoff_drift + 1))
+            grep -Fqx -- "    cmdline: $cmdline" "$config" \
+                || handoff_drift=$((handoff_drift + 1))
+            for initrd in "${initrds[@]}"; do
+                grep -Fqx -- "    module_path: boot():$initrd" "$config" \
+                    || handoff_drift=$((handoff_drift + 1))
+            done
+        done < <(find "$entries" -maxdepth 1 -type f -name '*.conf' -print0 2>/dev/null)
+
+        if (( source_entries == 0 )); then
+            fail 'Limine BLS handoff' 'no complete source Linux entries are available'
+        elif (( handoff_drift == 0 )); then
+            pass 'Limine BLS handoff' "$source_entries source entries match exactly"
+        else
+            fail 'Limine BLS handoff' "$handoff_drift generated fields differ from the BLS source"
+        fi
+    else
+        fail 'Limine BLS handoff' 'source or generated boot entries are unreadable'
+    fi
+
+    if ! command -v efibootmgr > /dev/null 2>&1; then
+        fail 'UEFI boot order' 'efibootmgr is unavailable'
+        return
+    fi
+    if ! output=$(efibootmgr -v 2>/dev/null); then
+        fail 'UEFI boot order' 'firmware entries are unreadable'
+        return
+    fi
+    order=$(sed -n 's/^BootOrder:[[:space:]]*//p' <<< "$output" | head -n 1)
+    first=${order%%,*}
+
+    while IFS= read -r line; do
+        [[ $line =~ ^Boot([0-9A-Fa-f]{4})(\*)?[[:space:]] ]] || continue
+        id=${BASH_REMATCH[1]^^}
+        prefix=${line%%$'\t'*}
+        label=${prefix#Boot????}
+        label=${label#\*}
+        label=$(trim_space "$label")
+        case "$label" in
+            'Blankweave Boot Manager')
+                limine_ids+=("$id")
+                lower=${line,,}
+                [[ $lower == *'\efi\blankweave\limine-x64.efi'* ]] \
+                    || limine_path_valid=false
+                ;;
+            'Linux Boot Manager')
+                if [[ ",${order^^}," == *",$id,"* ]]; then
+                    recovery_entries=$((recovery_entries + 1))
+                fi
+                ;;
+        esac
+    done <<< "$output"
+
+    if (( ${#limine_ids[@]} == 1 )) && [[ ${limine_ids[0]} == "${first^^}" ]] \
+        && [[ $limine_path_valid == true ]]; then
+        pass 'UEFI boot order' "Blankweave Limine is first (Boot${limine_ids[0]})"
+    elif (( ${#limine_ids[@]} == 1 )); then
+        fail 'UEFI boot order' 'Blankweave Limine is not first or points to the wrong loader'
+    else
+        fail 'UEFI boot order' "expected one Blankweave Limine entry, found ${#limine_ids[@]}"
+    fi
+
+    if (( recovery_entries == 1 )) && [[ -r $config ]] \
+        && grep -Fq '    entry: Linux Boot Manager' "$config"; then
+        pass 'bootloader recovery' 'systemd-boot remains available from Limine and firmware'
+    elif (( recovery_entries == 1 )); then
+        warn 'bootloader recovery' 'systemd-boot remains in firmware but is absent from the Limine menu'
+    else
+        warn 'bootloader recovery' 'a unique Linux Boot Manager recovery entry was not found'
+    fi
+}
+
 check_cpu_microcode() {
     local repository=$1 package
 
@@ -312,7 +437,7 @@ check_services() {
 print_report() {
     local repository="$1"
     local os_release kernel session desktop package version os_file capabilities
-    local -a packages=(hyprland hyprlock uwsm quickshell plymouth)
+    local -a packages=(hyprland hyprlock uwsm quickshell plymouth limine efibootmgr)
 
     os_file=$(root_path /etc/os-release)
     os_release=unknown
@@ -385,6 +510,7 @@ main() {
     check_console_session
     check_keyring
     check_plymouth
+    check_bootloader
     check_cpu_microcode "$repository"
     check_services "$repository"
 
