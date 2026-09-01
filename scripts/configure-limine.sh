@@ -301,6 +301,11 @@ discover_firmware_entries() {
         [[ $label == "$RECOVERY_LABEL" || $label == "$LIMINE_LABEL" ]] && continue
         foreign_entry_supported "$label" "$line" && FOREIGN_LABELS+=("$label")
     done <<< "$output"
+
+    # A rejected final firmware record is an ordinary discovery result, not
+    # the status of this operation. Without an explicit success here, `set -e`
+    # exits silently on common layouts whose last record is UEFI OS or PXE.
+    return 0
 }
 
 recovery_entry_available() {
@@ -394,6 +399,7 @@ entry_ids_for_label() {
         label=$(trim "${rest%%$'\t'*}")
         [[ ${label,,} == "${requested,,}" ]] && printf '%s\n' "$id"
     done <<< "$output"
+    return 0
 }
 
 register_limine() {

@@ -50,9 +50,9 @@ printf '%s\n' \
     $'Boot0002* UEFI: PXE IPv4 Realtek\tPciRoot()/IPv4()' \
     $'Boot0003* UEFI: PXE IPv6 Realtek\tPciRoot()/IPv6()' \
     $'Boot0004* Linux Boot Manager\tHD(1,GPT,blankweave)/\\EFI\\systemd\\systemd-bootx64.efi' \
-    $'Boot0005* UEFI OS\tHD(1,GPT,blankweave)/\\EFI\\BOOT\\BOOTX64.EFI' \
     $'Boot0006* Ubuntu\tHD(1,GPT,ubuntu)/\\EFI\\ubuntu\\shimx64.efi' \
     $'Boot0009* My Custom Linux\tHD(1,GPT,custom)/\\EFI\\custom\\loader.efi' \
+    $'Boot0005* UEFI OS\tHD(1,GPT,blankweave)/\\EFI\\BOOT\\BOOTX64.EFI' \
     > "$efi_state"
 
 cat > "$fake_bin/efibootmgr" <<'EOF'

@@ -37,6 +37,8 @@ The initial release sequence is:
 - `0.4.0` — Limine becomes the primary UEFI boot manager, with exact BLS/LUKS
   handoff, native Windows/Linux firmware entries, and retained systemd-boot
   recovery.
+- `0.4.1` — prevent ignored trailing UEFI firmware records from aborting Limine
+  discovery without a diagnostic.
 
 Config-file schema numbers belong to their individual formats and are not
 Blankweave release versions.
