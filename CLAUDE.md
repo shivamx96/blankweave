@@ -27,6 +27,7 @@ blankweave/
     aur.txt          # Required exact AUR packages (shared)
     profiles/        # Optional capability manifests by package source
     install.conf.example  # Versioned, non-executable selection example
+    setup.conf.example    # Versioned, non-secret first-run choices example
   bin/blankweave       # User-facing version/update command
   bootstrap.sh       # First-install managed-checkout bootstrap
   migrations/        # Ordered, user-scoped, run-once migrations
@@ -59,8 +60,10 @@ finds nothing at them.
 ### Install and update lifecycle
 
 1. `bootstrap.sh` clones the trusted `main` branch to
-   `~/.local/share/blankweave/repository`.
-2. The repository CLI invokes `install.sh`, which deploys the public command to
+   `~/.local/share/blankweave/repository` and hands off to `blankweave setup`.
+2. Guided setup reviews profiles, theme, optional Git identity, and local SSH
+   key generation before saving strict data configs and invoking `install.sh`,
+   which deploys the public command to
    `~/.local/bin/blankweave` along with the desktop configuration.
 3. `install.sh` runs `scripts/run-migrations.sh` as the normal user only after a
    successful apply. Applied migration filenames are recorded under
@@ -99,7 +102,9 @@ untagged commits are not releases. Follow `RELEASES.md` for every release and
 treat `MIN_ROLLBACK_VERSION` as an explicit compatibility decision.
 
 Do not add a public `blankweave install` command. First installation is the
-bootstrap's responsibility; subsequent convergence is `blankweave update`.
+bootstrap plus `blankweave setup`; subsequent convergence is `blankweave
+update`. `setup --non-interactive` requires both saved configs and is the
+repeatable-provisioning path.
 
 ### Login and graphical session
 
@@ -219,6 +224,14 @@ small `key=value` format. Never source this user-owned file. Extend
 `scripts/installer-config.sh` with explicit parsing and validation when the
 schema changes. Core and detected hardware packages are mandatory; optional
 profiles are additive and deselection never implies package removal.
+
+The other non-secret guided choices live in
+`~/.config/blankweave/setup.conf`, parsed only by `scripts/setup-config.sh`.
+Keep this separate from `install.conf` because setup selections such as the
+initial theme are not ongoing package convergence policy. Setup seeds the chosen
+theme once; ordinary updates must not force it back after the user switches
+themes. Git keys are generated locally only when explicitly selected and are
+never uploaded.
 
 ### Shell scripts
 

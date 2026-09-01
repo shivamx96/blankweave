@@ -1,0 +1,8 @@
+# Non-secret choices recorded by blankweave setup. This file is parsed, not sourced.
+version=1
+theme=obsidian
+mode=dark
+git_identity=skip
+git_name=
+git_email=
+ssh_key=skip

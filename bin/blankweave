@@ -201,18 +201,22 @@ detect_update_host() {
 
 validate_install_plan() (
     local repository="$1"
-    local host config_file
+    local host config_file setup_config_file
     local -a repository_packages=()
     local -a aur_packages=()
     local -a provider_packages=()
 
     host=$(detect_update_host)
     config_file=${XDG_CONFIG_HOME:-$HOME/.config}/blankweave/install.conf
+    setup_config_file=${XDG_CONFIG_HOME:-$HOME/.config}/blankweave/setup.conf
     # shellcheck source=scripts/installer-config.sh
     source "$repository/scripts/installer-config.sh" || return
+    # shellcheck source=scripts/setup-config.sh
+    source "$repository/scripts/setup-config.sh" || return
     # shellcheck source=scripts/package-manifests.sh
     source "$repository/scripts/package-manifests.sh" || return
     installer_config_load "$config_file" "$host" || return
+    setup_config_load "$setup_config_file" || return
     resolve_package_manifests "$repository" "$host" repository repository_packages || return
     resolve_package_manifests "$repository" "$host" aur aur_packages || return
     resolve_package_manifests "$repository" "$host" providers provider_packages || return
@@ -364,6 +368,17 @@ command_doctor() {
     repository=$(configured_repository)
     validate_repository "$repository"
     exec "$repository/scripts/doctor.sh" "$repository" "$@"
+}
+
+command_setup() {
+    local repository
+
+    repository=$(configured_repository)
+    validate_repository "$repository"
+    if [[ ${1:-} != --help && ${1:-} != -h ]]; then
+        require_normal_user
+    fi
+    exec "$repository/scripts/setup.sh" "$@"
 }
 
 command_update() {
@@ -585,6 +600,7 @@ Usage: blankweave <command>
 
 Commands:
   version   Show the CLI version and installed/repository revisions
+  setup     Guide first-install choices; use --non-interactive with saved configs
   update    Check, preview, or safely apply a fast-forward update
   rollback  Restore the previous Blankweave revision and managed configuration
   doctor    Run read-only health checks; add --report for shareable diagnostics
@@ -605,6 +621,9 @@ main() {
             ;;
         update)
             command_update "$@"
+            ;;
+        setup)
+            command_setup "$@"
             ;;
         rollback)
             command_rollback "$@"

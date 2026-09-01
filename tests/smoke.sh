@@ -37,6 +37,11 @@ grep -Fq 'Usage: blankweave rollback' <<< "$(
         XDG_STATE_HOME="$test_root/state" \
         "$repository/bin/blankweave" rollback --help
 )"
+grep -Fq 'Usage: blankweave setup [--non-interactive]' <<< "$(
+    HOME="$test_root/home" \
+        XDG_STATE_HOME="$test_root/state" \
+        "$repository/bin/blankweave" setup --help
+)"
 
 # The old command name hands over to the new one so an installed
 # `hyprarch update` can exec the fetched revision.

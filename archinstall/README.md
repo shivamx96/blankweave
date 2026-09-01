@@ -65,9 +65,11 @@ curl --proto '=https' --tlsv1.2 -fsSL \
 ```
 
 The bootstrap creates a managed checkout under
-`~/.local/share/blankweave/repository`. The second stage detects the Intel laptop
-or NVIDIA desktop and installs the matching drivers, AUR packages, services,
-and user configuration. Future updates are applied with `blankweave update`.
+`~/.local/share/blankweave/repository`, then opens `blankweave setup` for a final
+review of profiles, theme, and optional Git/SSH choices. The second stage
+detects the Intel laptop or NVIDIA desktop and installs the matching drivers,
+AUR packages, services, and user configuration. Future updates are applied with
+`blankweave update`.
 
 Before applying one, `blankweave update --dry-run` validates the fetched
 revision and prints its host/profile package plan. Successful applies retain a

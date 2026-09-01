@@ -22,14 +22,15 @@ curl --proto '=https' --tlsv1.2 -fsSL \
 
 It clones the managed repository to
 `~/.local/share/blankweave/repository`, installs the `blankweave` command in
-`~/.local/bin`, and applies the system configuration. The bootstrap requires an
-interactive terminal because package installation and a few first-run choices
-need user input.
+`~/.local/bin`, and opens the guided setup before applying system configuration.
+The bootstrap requires an interactive terminal so profiles, theme, and optional
+Git/SSH choices can be reviewed before package or system changes begin.
 
 After the first install, use:
 
 ```bash
 blankweave version
+blankweave setup
 blankweave update
 blankweave doctor
 ```
@@ -116,11 +117,26 @@ The config is parsed as data and is never sourced as shell code. Profile order
 does not matter, duplicate names are ignored, and unknown keys, versions, or
 profiles stop the installer before package changes begin.
 
-Until the guided `blankweave setup` command is added, a missing config preserves
-the historical installation exactly: laptop enables desktop, development, and
-communication; PC additionally enables gaming. Removing a profile only stops
-Blankweave from requesting those packages in future runs—it does not uninstall
-software already present.
+`blankweave setup` guides these profile choices, the initial theme and mode, an
+optional global Git identity, and optional local Ed25519 key generation. It
+shows a final review before writing anything, never asks for credentials, and
+never uploads the public key. Removing a profile only stops Blankweave from
+requesting those packages in future runs—it does not uninstall software already
+present.
+
+Non-secret first-run choices are saved separately in
+`~/.config/blankweave/setup.conf`; both files are strict data formats and are
+never sourced as shell. For repeatable provisioning, review those files and run:
+
+```bash
+blankweave setup --non-interactive
+```
+
+This mode requires both configs, validates them, prints the same review, and
+then applies without prompting. A missing profile config outside setup retains
+the historical defaults: laptop enables desktop, development, and
+communication; PC additionally enables gaming. Ordinary updates consume the
+saved package/Git/SSH choices but preserve any theme selected after setup.
 
 ## Keybindings
 

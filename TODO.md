@@ -25,18 +25,18 @@
       configuration rollback without claiming to downgrade Arch packages.
 - [x] Establish SemVer releases, revision/version-paired recovery metadata, and
       an explicit `0.1.0` minimum rollback boundary.
-- [ ] Add `blankweave setup`, a guided terminal flow for first-install preferences.
+- [x] Add `blankweave setup`, a guided terminal flow for first-install preferences.
       Keep `bootstrap.sh` focused on acquiring the managed checkout and handing
       off to the CLI.
 - [x] Define required core/hardware manifests plus optional `desktop`,
       `development`, `communication`, and `gaming` profiles.
 - [x] Add a versioned, non-executable installer config parser with strict key and
       profile validation and compatibility defaults for existing machines.
-- [ ] Offer optional Git identity (`user.name` and `user.email`), GitHub SSH-key
+- [x] Offer optional Git identity (`user.name` and `user.email`), GitHub SSH-key
       generation, and a clear skip path. Never collect credentials or upload keys.
-- [ ] Save non-secret choices in an inspectable user config so `blankweave update`
+- [x] Save non-secret choices in an inspectable user config so `blankweave update`
       can converge without asking the setup questions again.
-- [ ] Add a final review before package or system changes, plus a non-interactive
+- [x] Add a final review before package or system changes, plus a non-interactive
       mode that consumes an existing config for repeatable installs.
 
 ## Hyprland: Lua config migration
