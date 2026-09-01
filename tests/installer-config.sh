@@ -55,60 +55,81 @@ assert_excludes() {
     done
 }
 
-installer_config_load "$test_root/missing.conf" laptop
+laptop_capabilities='cpu-intel gpu-intel audio-intel battery internal-display internal-backlight bluetooth gaming'
+desktop_capabilities='cpu-amd gpu-nvidia ddc-display bluetooth gaming'
+amd_capabilities='cpu-amd gpu-amd ddc-display gaming'
+
+installer_config_load "$test_root/missing.conf" "$laptop_capabilities"
 assert_profiles 'desktop development communication'
-resolve_package_manifests "$repository" laptop repository packages
-[[ "${#packages[@]}" -eq 85 ]]
+resolve_package_manifests "$repository" "$laptop_capabilities" repository packages
 assert_contains seahorse "${packages[@]}"
 assert_excludes sddm "${packages[@]}"
 assert_contains intel-media-driver "${packages[@]}"
+assert_contains intel-ucode "${packages[@]}"
+assert_contains linux-firmware "${packages[@]}"
+assert_contains intel-gpu-tools "${packages[@]}"
+assert_contains nvtop "${packages[@]}"
+assert_contains playerctl "${packages[@]}"
+assert_contains brightnessctl "${packages[@]}"
+assert_contains bluez "${packages[@]}"
+assert_contains upower "${packages[@]}"
 assert_contains docker "${packages[@]}"
 assert_excludes steam "${packages[@]}"
-resolve_package_manifests "$repository" laptop aur aur_packages
-[[ "${#aur_packages[@]}" -eq 13 ]]
-resolve_package_manifests "$repository" laptop providers provider_packages
-[[ "${#provider_packages[@]}" -eq 3 ]]
+resolve_package_manifests "$repository" "$laptop_capabilities" aur aur_packages
+resolve_package_manifests "$repository" "$laptop_capabilities" providers provider_packages
 
-installer_config_load "$test_root/missing.conf" pc
+installer_config_load "$test_root/missing.conf" "$desktop_capabilities"
 assert_profiles 'desktop development communication gaming'
-resolve_package_manifests "$repository" pc repository packages
-[[ "${#packages[@]}" -eq 96 ]]
+resolve_package_manifests "$repository" "$desktop_capabilities" repository packages
 assert_contains nvidia-open-dkms "${packages[@]}"
+assert_contains amd-ucode "${packages[@]}"
 assert_contains cuda "${packages[@]}"
+assert_contains nvtop "${packages[@]}"
+assert_contains ddcutil "${packages[@]}"
+assert_excludes brightnessctl "${packages[@]}"
+assert_excludes upower "${packages[@]}"
 assert_contains steam "${packages[@]}"
-resolve_package_manifests "$repository" pc aur aur_packages
-[[ "${#aur_packages[@]}" -eq 15 ]]
-resolve_package_manifests "$repository" pc providers provider_packages
-[[ "${#provider_packages[@]}" -eq 3 ]]
+resolve_package_manifests "$repository" "$desktop_capabilities" aur aur_packages
+resolve_package_manifests "$repository" "$desktop_capabilities" providers provider_packages
+
+installer_config_load "$test_root/missing.conf" "$amd_capabilities"
+assert_profiles 'desktop development communication gaming'
+resolve_package_manifests "$repository" "$amd_capabilities" repository packages
+assert_contains mesa "${packages[@]}"
+assert_contains amd-ucode "${packages[@]}"
+assert_contains vulkan-radeon "${packages[@]}"
+assert_contains lib32-vulkan-radeon "${packages[@]}"
+assert_contains nvtop "${packages[@]}"
+assert_excludes nvidia-open-dkms "${packages[@]}"
 
 config_file=$test_root/install.conf
 printf '%s\n' \
     '# Explicit order is normalized.' \
     'version = 1' \
     'profiles = gaming desktop gaming' > "$config_file"
-installer_config_load "$config_file" laptop
+installer_config_load "$config_file" "$laptop_capabilities"
 assert_profiles 'desktop gaming'
 
-resolve_package_manifests "$repository" laptop repository packages
+resolve_package_manifests "$repository" "$laptop_capabilities" repository packages
 assert_contains firefox "${packages[@]}"
 assert_contains steam "${packages[@]}"
 assert_contains lib32-vulkan-intel "${packages[@]}"
 assert_excludes docker "${packages[@]}"
 
-resolve_package_manifests "$repository" laptop aur aur_packages
+resolve_package_manifests "$repository" "$laptop_capabilities" aur aur_packages
 assert_contains zen-browser-bin "${aur_packages[@]}"
 assert_contains proton-ge-custom-bin "${aur_packages[@]}"
 assert_excludes slack-desktop "${aur_packages[@]}"
 
-resolve_package_manifests "$repository" laptop providers provider_packages
+resolve_package_manifests "$repository" "$laptop_capabilities" providers provider_packages
 assert_contains pipewire-jack "${provider_packages[@]}"
 assert_excludes iptables "${provider_packages[@]}"
 assert_excludes jdk21-openjdk "${provider_packages[@]}"
 
 printf '%s\n' 'version=1' 'profiles=' > "$config_file"
-installer_config_load "$config_file" laptop
+installer_config_load "$config_file" "$laptop_capabilities"
 assert_profiles ''
-resolve_package_manifests "$repository" laptop repository packages
+resolve_package_manifests "$repository" "$laptop_capabilities" repository packages
 assert_excludes firefox "${packages[@]}"
 assert_excludes docker "${packages[@]}"
 
@@ -117,7 +138,7 @@ for invalid_config in \
     $'version=1\nprofiles=unknown' \
     $'version=1\nprofiles=desktop\nfuture=true'; do
     printf '%s\n' "$invalid_config" > "$config_file"
-    if installer_config_load "$config_file" laptop 2> /dev/null; then
+    if installer_config_load "$config_file" "$laptop_capabilities" 2> /dev/null; then
         printf 'Invalid config unexpectedly passed: %s\n' "$invalid_config" >&2
         exit 1
     fi

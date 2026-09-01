@@ -162,6 +162,16 @@ WidgetFrame {
 
         ApplicationListRow {
             visible: Boolean(root.systemInfo.available)
+                && (root.systemInfo.capabilities || []).length > 0
+            theme: root.theme
+            rowHeight: 44
+            icon: "󰒋"
+            title: "Detected capabilities"
+            subtitle: (root.systemInfo.capabilities || []).join(" · ")
+        }
+
+        ApplicationListRow {
+            visible: Boolean(root.systemInfo.available)
             theme: root.theme
             rowHeight: 44
             icon: "󰍛"

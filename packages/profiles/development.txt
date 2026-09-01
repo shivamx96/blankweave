@@ -9,3 +9,5 @@ lazydocker
 nvm
 opencode
 shellcheck
+cmake
+python-huggingface-hub

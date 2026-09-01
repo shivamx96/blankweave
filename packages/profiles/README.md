@@ -10,9 +10,9 @@ Each profile may provide:
 - `<profile>.providers.txt` for deliberate repository-backed virtual dependency
   providers.
 
-Host-specific additions use the same filenames under
-`hosts/<host>/profiles/`. Missing files mean that a profile needs no packages of
-that kind for the host.
+Hardware-specific additions use the same filenames under
+`packages/capabilities/<capability>/profiles/`. Missing files mean that a
+profile needs no packages of that kind for the detected capability.
 
 Profiles currently available:
 

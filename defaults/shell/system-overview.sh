@@ -20,11 +20,17 @@ fi
 
 hostname=$(uname -n 2>/dev/null || printf 'unknown')
 inventory_file="$HOME/.local/share/blankweave/system-hardware.json"
+capabilities_file="$HOME/.local/share/blankweave/hardware-capabilities.json"
 motherboard_name=""
 motherboard_vendor=""
 memory_spec=""
 memory_details=""
 display_model=""
+capabilities='[]'
+
+if [ -r "$capabilities_file" ]; then
+    capabilities=$(jq -c '.capabilities // []' "$capabilities_file" 2>/dev/null || printf '[]')
+fi
 
 if [ -r "$inventory_file" ]; then
     motherboard_name=$(jq -r '.motherboard.name // ""' "$inventory_file" 2>/dev/null || true)
@@ -60,7 +66,8 @@ jq -c \
     --arg motherboardVendor "$motherboard_vendor" \
     --arg memorySpec "$memory_spec" \
     --arg memoryDetails "$memory_details" \
-    --arg displayModel "$display_model" '
+    --arg displayModel "$display_model" \
+    --argjson capabilities "$capabilities" '
     def result_for($name): map(select(.type == $name and .error == null))[0].result;
     . as $modules
     | ($modules | result_for("OS")) as $os
@@ -91,6 +98,7 @@ jq -c \
         physicalCores:($cpu.cores.physical // 0),
         logicalCores:($cpu.cores.logical // 0),
         gpu:(($gpus // []) | map(.name // empty) | unique | join(" · ")),
+        capabilities:$capabilities,
         motherboardName:$motherboardName,
         motherboardVendor:$motherboardVendor,
         memorySpec:$memorySpec,

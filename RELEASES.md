@@ -32,6 +32,8 @@ The initial release sequence is:
   repeatable setup.
 - `0.2.1` — clarify the first protected-update boundary when no rollback point
   has been recorded yet.
+- `0.3.0` — capability-based hardware detection, packages, configuration, and
+  widget tooling across Intel, AMD, and NVIDIA systems.
 
 Config-file schema numbers belong to their individual formats and are not
 Blankweave release versions.

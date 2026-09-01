@@ -4,4 +4,3 @@ nvtop
 libva-nvidia-driver
 vulkan-icd-loader
 egl-wayland
-socat

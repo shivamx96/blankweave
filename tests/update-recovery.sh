@@ -97,7 +97,7 @@ if blankweave_release_version_greater 0.1.0 0.1.0 \
 fi
 
 plan=$(validate_install_plan "$repository")
-grep -Eq '^Install plan: host=(laptop|pc) profiles=.* packages=[0-9]+ aur=[0-9]+ providers=[0-9]+$' <<< "$plan"
+grep -Eq '^Install plan: capabilities=.* profiles=.* packages=[0-9]+ aur=[0-9]+ providers=[0-9]+$' <<< "$plan"
 
 mkdir -p "$test_root/invalid-config/blankweave"
 printf '%s\n' 'version=1' 'profiles=not-a-profile' \

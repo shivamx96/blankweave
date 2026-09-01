@@ -21,10 +21,11 @@ installer_config_trim() {
 }
 
 installer_config_defaults() {
-    local host="$1"
+    local capabilities="$1"
 
     INSTALLER_PROFILES=(desktop development communication)
-    if [[ "$host" == pc ]]; then
+    if [[ " $capabilities " == *' gaming '* \
+        && " $capabilities " != *' battery '* ]]; then
         INSTALLER_PROFILES+=(gaming)
     fi
 }
@@ -41,7 +42,7 @@ installer_config_profile_known() {
 
 installer_config_load() {
     local config_file="$1"
-    local host="$2"
+    local capabilities="$2"
     local line key value profile available
     local config_version=
     local profiles_value=
@@ -50,7 +51,7 @@ installer_config_load() {
     local -a requested_profiles=()
 
     if [[ ! -e "$config_file" && ! -L "$config_file" ]]; then
-        installer_config_defaults "$host"
+        installer_config_defaults "$capabilities"
         return 0
     fi
     [[ -f "$config_file" && -r "$config_file" ]] || {
