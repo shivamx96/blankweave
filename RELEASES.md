@@ -30,6 +30,8 @@ The initial release sequence is:
 - `0.1.1` — annotated-tag release infrastructure;
 - `0.2.0` — health diagnostics, safe update and bounded recovery, and guided
   repeatable setup.
+- `0.2.1` — clarify the first protected-update boundary when no rollback point
+  has been recorded yet.
 
 Config-file schema numbers belong to their individual formats and are not
 Blankweave release versions.
