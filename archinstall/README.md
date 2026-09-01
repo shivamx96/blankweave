@@ -69,6 +69,14 @@ The bootstrap creates a managed checkout under
 or NVIDIA desktop and installs the matching drivers, AUR packages, services,
 and user configuration. Future updates are applied with `blankweave update`.
 
+Before applying one, `blankweave update --dry-run` validates the fetched
+revision and prints its host/profile package plan. Successful applies retain a
+last-known-good Blankweave revision for `blankweave rollback`. That command
+restores managed configuration but does not downgrade Arch packages; when a
+root Snapper configuration exists, the updater records a pre-update snapshot
+number for manual full-system recovery. Completed one-time migrations remain
+forward-only across a Blankweave rollback.
+
 At the graphical boot splash, Plymouth displays the LUKS prompt and masked
 keystrokes. If a theme or graphics regression ever hides the prompt, press
 **Esc** to switch to the text console and enter the passphrase there. To bypass

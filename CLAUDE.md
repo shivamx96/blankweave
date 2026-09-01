@@ -65,16 +65,18 @@ finds nothing at them.
 3. `install.sh` runs `scripts/run-migrations.sh` as the normal user only after a
    successful apply. Applied migration filenames are recorded under
    `${XDG_STATE_HOME:-~/.local/state}/blankweave/`.
-4. `blankweave update` validates the origin, branch, and clean worktree, then
-   accepts only a fast-forward target carrying an annotated `v<VERSION>` tag on
-   that exact commit. Its version must advance and its rollback floor must
-   include the current release before the new CLI is applied.
-
-`VERSION` is a stable `MAJOR.MINOR.PATCH` declaration. A commit becomes a
-release only when the matching annotated `vMAJOR.MINOR.PATCH` tag exists on that
-exact commit; lightweight tags and untagged commits are not releases. Config
-schema numbers remain local to their formats. Follow `RELEASES.md` for every
-release and treat `MIN_ROLLBACK_VERSION` as an explicit compatibility decision.
+4. `blankweave update` validates the origin, branch, clean worktree, target
+   ancestry, matching annotated `v<VERSION>` release tag, installer config, and
+   package manifests before applying a fast-forward-only update. The target
+   version must advance and its rollback floor must include the current release.
+   `--check` only fetches and reports; `--dry-run` also validates and prints the
+   target install plan.
+5. A real update writes the previous/target revisions and private diagnostic
+   logs under `~/.local/state/blankweave/recovery/`. Recovery metadata pairs
+   each revision with its SemVer release and enforces `MIN_ROLLBACK_VERSION`.
+   An existing root Snapper
+   configuration receives paired pre/post snapshots. The postflight doctor
+   must pass before the recovery state is marked complete.
 
 `blankweave doctor` delegates to `scripts/doctor.sh`. It is strictly read-only:
 checks may report warnings or failures but must not repair files, restart
@@ -82,6 +84,19 @@ services, prompt for sudo, or contact the network. A failure exits non-zero;
 warnings alone do not. `--report` may include versions and session types, but
 must not expose usernames, home paths, hostnames, network addresses, disk
 identifiers, UUIDs, or hardware serial numbers.
+
+`blankweave rollback` is deliberately a Blankweave configuration rollback. It
+resets only the already-validated, clean managed checkout to the recorded
+previous commit and runs that revision's installer to converge managed files.
+It does not downgrade packages, delete user data, or automatically restore a
+Snapper snapshot. Applied migrations remain forward-only and are not removed
+from their ledger. Keep this boundary explicit in help and failure messages.
+
+`VERSION` is a stable `MAJOR.MINOR.PATCH` declaration, not a config schema. A
+commit becomes a release only when the matching annotated
+`vMAJOR.MINOR.PATCH` tag points to that exact commit; lightweight tags and
+untagged commits are not releases. Follow `RELEASES.md` for every release and
+treat `MIN_ROLLBACK_VERSION` as an explicit compatibility decision.
 
 Do not add a public `blankweave install` command. First installation is the
 bootstrap's responsibility; subsequent convergence is `blankweave update`.

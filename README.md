@@ -48,6 +48,25 @@ supported rollback boundary is the tagged `v0.1.0` known-working baseline.
 
 See [RELEASES.md](RELEASES.md) for the release and tagging procedure.
 
+Updates can be inspected before they are applied:
+
+```bash
+blankweave update --check
+blankweave update --dry-run
+```
+
+An apply records the previous and target revisions, saves preflight and
+postflight doctor reports plus the installer log under
+`~/.local/state/blankweave/recovery/`, and runs a final health check. If a root
+Snapper configuration already exists, Blankweave also creates paired pre/post
+snapshots. `blankweave rollback` restores the previous repository revision and
+reconverges its managed configuration; it deliberately does not downgrade Arch
+packages or reverse completed one-time migrations. A recorded Snapper snapshot
+remains available for manual full-system recovery.
+
+Recovery records both release versions and Git revisions, verifies that they
+still match their annotated tags, and will not cross `MIN_ROLLBACK_VERSION`.
+
 `blankweave doctor` performs read-only checks of the managed checkout, runtime
 commands, generated Hyprland configuration, tty1/UWSM session, keyring, and
 Plymouth boot handoff. Use `blankweave doctor --report` to append package and
