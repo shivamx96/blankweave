@@ -233,11 +233,31 @@ systemctl enable sddm.service
 # Remove TTY autologin if present (replaced by SDDM)
 rm -f /etc/systemd/system/getty@tty1.service.d/autologin.conf
 
-section "CONFIGURING KEYRING UNLOCK"
-# SDDM's autologin PAM stack starts gnome-keyring but has no password to unlock
-# it with, so the login keyring would stay locked until an app prompts for it.
-# Hyprlock is the first real authentication on this setup; give it a PAM
-# service that also hands the password to the keyring daemon.
+section "CONFIGURING DEFAULT KEYRING"
+
+# Automatic login cannot provide a password to pam_gnome_keyring. Fresh
+# installs therefore use a passwordless default collection, with LUKS as the
+# at-rest protection. Existing encrypted collections require their current
+# password for a lossless conversion, so preserve them and give the user the
+# one-time Seahorse procedure instead of replacing any secrets.
+if sudo -H -u "$SUDO_USER" env \
+    HOME="$USER_HOME" \
+    XDG_DATA_HOME="$USER_HOME/.local/share" \
+    "$REPO_DIR/scripts/configure-default-keyring.sh"; then
+    :
+else
+    KEYRING_STATUS=$?
+    if [ "$KEYRING_STATUS" -eq 2 ]; then
+        warn "Existing Login keyring needs a one-time empty-password migration in Seahorse before boot-time Hyprlock can be removed."
+    else
+        echo "Error: Could not configure the default keyring." >&2
+        exit "$KEYRING_STATUS"
+    fi
+fi
+
+# Keep the current Hyprlock PAM bridge while boot-time locking remains so an
+# upgraded machine continues unlocking its encrypted Login keyring. Removing
+# that lock must be gated on this helper reporting a passwordless keyring.
 cat > /etc/pam.d/blankweave-lock << 'PAM'
 #%PAM-1.0
 auth        include     login

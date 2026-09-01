@@ -117,13 +117,19 @@ Dunst, Ghostty, Fuzzel, and Fontconfig are symlinked from `~/.config/` back to `
 ### Secret Service and keyring unlock
 
 `gnome-keyring` is the D-Bus Secret Service behind `libsecret` (Slack, Bruno,
-T3 Connect, and anything using Clerk-style token persistence). SDDM's
-`sddm-autologin` PAM stack already auto-starts the daemon, but auto-login never
-collects a password, so the login keyring would stay locked. Hyprlock is the
-first real authentication on this setup: `install.sh` writes
-`/etc/pam.d/blankweave-lock`, which includes `login` and then unlocks the keyring,
-and `hyprlock.conf` selects it via `auth:pam:module`. Keep that PAM service
-blankweave-owned rather than editing the package-owned `/etc/pam.d/hyprlock`.
+T3 Connect, and anything using Clerk-style token persistence). Automatic login
+never supplies a password to `pam_gnome_keyring`, so a fresh install provisions
+a passwordless `Default_keyring` through
+`scripts/configure-default-keyring.sh`. LUKS is the at-rest protection for that
+collection. The helper recognises only GNOME Keyring's plaintext key-file
+format as passwordless and never overwrites an existing encrypted collection.
+
+An upgraded install keeps `/etc/pam.d/blankweave-lock` temporarily so its
+existing Login keyring continues to unlock at boot. Seahorse is the lossless
+migration path: change the Login keyring's password to empty, then re-run the
+installer. The helper detects the converted plaintext collection and makes it
+the explicit default. The startup lock and this compatibility PAM service can
+only be removed after that helper succeeds.
 
 Electron applications only reach that keyring when Chromium's `os_crypt`
 recognises the desktop. `XDG_CURRENT_DESKTOP=Hyprland` is unknown to it, so it
@@ -133,11 +139,7 @@ would be false, and Clerk-style logins (T3 Code) drop their tokens and 401.
 fallback, which flips the backend to `gnome_libsecret` without touching
 `XDG_CURRENT_DESKTOP`. Verify any change here with
 `safeStorage.getSelectedStorageBackend()` under a scratch `electron` script
-rather than by reasoning about it. One first-boot caveat: the login keyring is
-created by the first hyprlock unlock after install, and the daemon instance that
-created it does not expose the new collection on D-Bus until it restarts, so a
-fresh install needs one re-login (or
-`systemctl --user restart gnome-keyring-daemon`) before libsecret clients work.
+rather than by reasoning about it.
 
 ### Package placement
 
