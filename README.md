@@ -88,12 +88,19 @@ to append package and system versions with usernames, hostnames, network
 addresses, disk identifiers, and hardware serial numbers deliberately omitted.
 
 Limine is installed as `Blankweave Boot Manager` and placed first in UEFI
-`BootOrder` only after its executable and configuration have been staged. Its
-three-second quiet timeout boots Blankweave normally; press any key during that
-window to reveal the menu. Active operating-system EFI entries are added without
-mounting or copying their EFI System Partitions or maintaining a distribution
-allowlist. Selecting one uses that operating system's existing UEFI entry. The
-menu also contains `Blankweave recovery (systemd-boot)`.
+`BootOrder` only after its executable and configuration have been staged. Limine
+shows its menu on every boot: for three seconds on Linux-only systems and five
+seconds when another installed operating system is detected. This keeps the
+current kernel, LTS kernel, recovery path, and alternate operating systems
+discoverable. Active operating-system EFI entries are added without mounting or
+copying their EFI System Partitions or maintaining a distribution allowlist.
+Selecting one uses that operating system's existing UEFI entry. The menu also
+contains `Blankweave recovery (systemd-boot)`.
+
+When firmware provides a generic `EFI USB Device` record, Limine also offers a
+`Boot from USB` handoff. That record is commonly persistent even when no drive
+is inserted, so its presence is not treated as proof of attached media. The
+visible menu and the machine's firmware boot menu both remain available.
 
 If Limine cannot boot Blankweave, open the machine's firmware boot menu and
 select `Linux Boot Manager`. That is the untouched systemd-boot installation
