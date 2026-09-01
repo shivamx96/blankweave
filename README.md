@@ -31,6 +31,7 @@ After the first install, use:
 ```bash
 blankweave version
 blankweave update
+blankweave doctor
 ```
 
 `blankweave update` refuses dirty, divergent, or non-`main` managed checkouts. It
@@ -46,6 +47,12 @@ for local development, but `blankweave update` will never install it. The first
 supported rollback boundary is the tagged `v0.1.0` known-working baseline.
 
 See [RELEASES.md](RELEASES.md) for the release and tagging procedure.
+
+`blankweave doctor` performs read-only checks of the managed checkout, runtime
+commands, generated Hyprland configuration, tty1/UWSM session, keyring, and
+Plymouth boot handoff. Use `blankweave doctor --report` to append package and
+system versions with usernames, hostnames, network addresses, disk identifiers,
+and hardware serial numbers deliberately omitted.
 
 The script will:
 - Detect hardware

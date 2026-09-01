@@ -1,0 +1,353 @@
+#!/usr/bin/env bash
+
+set -uo pipefail
+
+PROGRAM_NAME=blankweave
+SYSTEM_ROOT=${BLANKWEAVE_SYSTEM_ROOT:-}
+USER_HOME=${BLANKWEAVE_USER_HOME:-$HOME}
+STATE_HOME=${XDG_STATE_HOME:-$USER_HOME/.local/state}
+CONFIG_HOME=${XDG_CONFIG_HOME:-$USER_HOME/.config}
+REPORT=false
+PASSED=0
+WARNED=0
+FAILED=0
+SKIPPED=0
+
+usage() {
+    cat <<'EOF'
+Usage: blankweave doctor [--report]
+
+Run read-only health checks. --report adds sanitized system and package
+versions suitable for sharing in a bug report.
+EOF
+}
+
+emit() {
+    local level="$1"
+    local label="$2"
+    local detail=${3:-}
+
+    if [[ -n "$detail" ]]; then
+        printf '%-4s  %-24s %s\n' "$level" "$label" "$detail"
+    else
+        printf '%-4s  %s\n' "$level" "$label"
+    fi
+}
+
+pass() {
+    PASSED=$((PASSED + 1))
+    emit PASS "$1" "${2:-}"
+}
+
+warn() {
+    WARNED=$((WARNED + 1))
+    emit WARN "$1" "${2:-}"
+}
+
+fail() {
+    FAILED=$((FAILED + 1))
+    emit FAIL "$1" "${2:-}"
+}
+
+skip() {
+    SKIPPED=$((SKIPPED + 1))
+    emit SKIP "$1" "${2:-}"
+}
+
+root_path() {
+    printf '%s%s\n' "$SYSTEM_ROOT" "$1"
+}
+
+short_revision() {
+    local repository="$1"
+    git -C "$repository" rev-parse --short=12 HEAD 2>/dev/null || printf 'unknown\n'
+}
+
+check_repository() {
+    local repository="$1"
+    local installed_file=$STATE_HOME/blankweave/installed-revision
+    local repository_revision installed_revision
+
+    if [[ ! -d "$repository/.git" || ! -f "$repository/install.sh" || ! -x "$repository/bin/blankweave" ]]; then
+        fail repository 'managed checkout is incomplete'
+        return
+    fi
+
+    repository_revision=$(short_revision "$repository")
+    pass repository "$repository_revision"
+
+    if [[ -n "$(git -C "$repository" status --porcelain 2>/dev/null)" ]]; then
+        warn 'repository state' 'managed checkout has local changes'
+    else
+        pass 'repository state' 'clean'
+    fi
+
+    if [[ ! -r "$installed_file" ]]; then
+        warn 'installed revision' 'not recorded; run blankweave update'
+        return
+    fi
+
+    IFS= read -r installed_revision < "$installed_file"
+    if [[ "$installed_revision" == "$(git -C "$repository" rev-parse HEAD 2>/dev/null)" ]]; then
+        pass 'installed revision' "${installed_revision:0:12}"
+    else
+        warn 'installed revision' "differs from checkout ($repository_revision)"
+    fi
+}
+
+check_commands() {
+    local executable
+    local required_value=${BLANKWEAVE_DOCTOR_COMMANDS:-Hyprland uwsm qs hyprlock hypridle awww-daemon dunst ghostty fuzzel jq}
+    local -a required=()
+    local -a missing=()
+
+    read -r -a required <<< "$required_value"
+    for executable in "${required[@]}"; do
+        command -v "$executable" > /dev/null 2>&1 || missing+=("$executable")
+    done
+
+    if (( ${#missing[@]} == 0 )); then
+        pass 'runtime commands' 'core desktop commands are available'
+    else
+        fail 'runtime commands' "missing: ${missing[*]}"
+    fi
+}
+
+check_user_configuration() {
+    local file
+    local -a required=(
+        "$CONFIG_HOME/hypr/hyprland.lua"
+        "$CONFIG_HOME/hypr/env.lua"
+        "$CONFIG_HOME/hypr/monitors.lua"
+        "$CONFIG_HOME/hypr/hypridle.conf"
+        "$CONFIG_HOME/hypr/hyprlock.conf"
+        "$USER_HOME/.zprofile"
+    )
+    local -a missing=()
+
+    for file in "${required[@]}"; do
+        [[ -r "$file" ]] || missing+=("${file#"$USER_HOME/"}")
+    done
+
+    if (( ${#missing[@]} == 0 )); then
+        pass 'user configuration' 'managed entry points are readable'
+    else
+        fail 'user configuration' "missing: ${missing[*]}"
+    fi
+
+    if command -v hyprland > /dev/null 2>&1 && [[ -r "$CONFIG_HOME/hypr/hyprland.lua" ]]; then
+        if hyprland --verify-config --config "$CONFIG_HOME/hypr/hyprland.lua" > /dev/null 2>&1; then
+            pass 'Hyprland configuration' 'valid'
+        else
+            fail 'Hyprland configuration' 'validation failed'
+        fi
+    else
+        skip 'Hyprland configuration' 'validator or configuration unavailable'
+    fi
+}
+
+check_console_session() {
+    local autologin cursor_issue legacy_pam
+
+    autologin=$(root_path /etc/systemd/system/getty@tty1.service.d/autologin.conf)
+    cursor_issue=$(root_path /etc/issue.d/blankweave-cursor.issue)
+    legacy_pam=$(root_path /etc/pam.d/blankweave-lock)
+
+    if [[ -r "$autologin" ]] && grep -Fq -- '--autologin' "$autologin"; then
+        pass 'tty1 automatic login' 'configured'
+    else
+        fail 'tty1 automatic login' 'getty override is missing or invalid'
+    fi
+
+    if [[ -r "$cursor_issue" ]]; then
+        pass 'recovery console' 'tty cursor restoration is installed'
+    else
+        warn 'recovery console' 'cursor restoration snippet is missing'
+    fi
+
+    if [[ -e "$legacy_pam" || -L "$legacy_pam" ]]; then
+        fail 'Hyprlock PAM' 'obsolete blankweave-lock service remains'
+    else
+        pass 'Hyprlock PAM' 'uses the packaged service'
+    fi
+}
+
+check_keyring() {
+    local default_file=$USER_HOME/.local/share/keyrings/default
+    local default_name=
+    local keyring_file
+
+    if [[ -r "$default_file" ]]; then
+        IFS= read -r default_name < "$default_file"
+    fi
+
+    if [[ -z "$default_name" ]]; then
+        fail 'default keyring' 'selection is missing'
+        return
+    fi
+
+    if [[ ! "$default_name" =~ ^[A-Za-z0-9_.-]+$ ]]; then
+        fail 'default keyring' 'selection contains an invalid collection name'
+        return
+    fi
+
+    keyring_file=$USER_HOME/.local/share/keyrings/$default_name.keyring
+    if [[ -r "$keyring_file" ]] && head -n 1 "$keyring_file" | grep -Fxq '[keyring]'; then
+        pass 'default keyring' 'passwordless collection is selected'
+    else
+        fail 'default keyring' 'selected collection is absent or encrypted'
+    fi
+}
+
+check_plymouth() {
+    local dropin hooks entries entry options
+    local entries_checked=0
+    local entries_invalid=0
+
+    dropin=$(root_path /etc/systemd/system/plymouth-quit.service.d/blankweave.conf)
+    hooks=$(root_path /etc/mkinitcpio.conf)
+    entries=$(root_path /boot/loader/entries)
+
+    if [[ -r "$dropin" ]] && grep -Fq 'quit --retain-splash' "$dropin"; then
+        pass 'Plymouth handoff' 'retain-splash override is installed'
+    else
+        fail 'Plymouth handoff' 'systemd override is missing or invalid'
+    fi
+
+    if [[ -r "$hooks" ]]; then
+        if grep -E '^[[:space:]]*HOOKS=.*[([:space:]]plymouth[)[:space:]]' "$hooks" > /dev/null; then
+            pass 'initramfs Plymouth' 'hook is configured'
+        else
+            fail 'initramfs Plymouth' 'hook is absent from mkinitcpio.conf'
+        fi
+    else
+        skip 'initramfs Plymouth' 'mkinitcpio.conf is not readable'
+    fi
+
+    if [[ -d "$entries" ]]; then
+        while IFS= read -r -d '' entry; do
+            options=$(grep -E '^[[:space:]]*options[[:space:]]' "$entry" || true)
+            [[ -n "$options" ]] || continue
+            entries_checked=$((entries_checked + 1))
+            if [[ " $options " != *' quiet '* || " $options " != *' splash '* ]]; then
+                entries_invalid=$((entries_invalid + 1))
+            fi
+        done < <(find "$entries" -maxdepth 1 -type f -name '*.conf' -print0 2>/dev/null)
+
+        if (( entries_checked == 0 )); then
+            skip 'kernel command line' 'no readable Linux loader entries'
+        elif (( entries_invalid == 0 )); then
+            pass 'kernel command line' "$entries_checked Linux entries are quiet"
+        else
+            fail 'kernel command line' "$entries_invalid of $entries_checked Linux entries lack quiet splash"
+        fi
+    else
+        skip 'kernel command line' 'systemd-boot entries are not readable'
+    fi
+}
+
+check_services() {
+    local unit
+    local -a system_units=(NetworkManager.service bluetooth.service)
+
+    if ! command -v systemctl > /dev/null 2>&1; then
+        skip services 'systemctl is unavailable'
+        return
+    fi
+
+    for unit in "${system_units[@]}"; do
+        if systemctl is-enabled --quiet "$unit" 2>/dev/null; then
+            pass "$unit" 'enabled'
+        else
+            warn "$unit" 'not enabled'
+        fi
+    done
+
+    if systemctl --user is-active --quiet wayland-session@hyprland.desktop.target 2>/dev/null; then
+        pass 'UWSM session' 'active'
+    elif [[ "${XDG_SESSION_TYPE:-}" == wayland ]]; then
+        warn 'UWSM session' 'Wayland is active but the UWSM target is not'
+    else
+        skip 'UWSM session' 'not currently in the graphical session'
+    fi
+}
+
+print_report() {
+    local repository="$1"
+    local os_release kernel session desktop package version os_file
+    local -a packages=(hyprland hyprlock uwsm quickshell plymouth)
+
+    os_file=$(root_path /etc/os-release)
+    os_release=unknown
+    if [[ -r "$os_file" ]]; then
+        os_release=$(sed -n 's/^PRETTY_NAME=//p' "$os_file" | head -n 1)
+        os_release=${os_release#\"}
+        os_release=${os_release%\"}
+    fi
+    kernel=$(uname -r 2>/dev/null || printf 'unknown')
+    session=${XDG_SESSION_TYPE:-unknown}
+    desktop=${XDG_CURRENT_DESKTOP:-unknown}
+
+    printf '\nSanitized report\n'
+    printf '  blankweave: %s (%s)\n' "$(head -n 1 "$repository/VERSION" 2>/dev/null || printf unknown)" "$(short_revision "$repository")"
+    printf '  operating system: %s\n' "$os_release"
+    printf '  kernel: %s\n' "$kernel"
+    printf '  session: %s / %s\n' "$session" "$desktop"
+    printf '  packages:\n'
+    for package in "${packages[@]}"; do
+        version=not-installed
+        if command -v pacman > /dev/null 2>&1; then
+            version=$(pacman -Q "$package" 2>/dev/null | awk '{print $2}' || printf 'not-installed')
+        fi
+        printf '    %s: %s\n' "$package" "$version"
+    done
+    printf '  privacy: usernames, hostnames, network addresses, disk identifiers, and serial numbers omitted\n'
+}
+
+main() {
+    local repository
+
+    repository=${1:-}
+    [[ -n "$repository" ]] || {
+        printf '%s doctor: repository path is required\n' "$PROGRAM_NAME" >&2
+        return 2
+    }
+    shift
+
+    case "${1:-}" in
+        '') ;;
+        --report) REPORT=true ;;
+        --help|-h)
+            usage
+            return 0
+            ;;
+        *)
+            usage >&2
+            return 2
+            ;;
+    esac
+    (( $# <= 1 )) || {
+        usage >&2
+        return 2
+    }
+
+    printf 'Blankweave doctor\n\n'
+    check_repository "$repository"
+    check_commands
+    check_user_configuration
+    check_console_session
+    check_keyring
+    check_plymouth
+    check_services
+
+    printf '\nSummary: %d passed, %d warnings, %d failures, %d skipped\n' \
+        "$PASSED" "$WARNED" "$FAILED" "$SKIPPED"
+
+    if [[ "$REPORT" == true ]]; then
+        print_report "$repository"
+    fi
+
+    (( FAILED == 0 ))
+}
+
+main "$@"

@@ -192,6 +192,14 @@ command_webapp() {
     exec "$script" "$@"
 }
 
+command_doctor() {
+    local repository
+
+    repository=$(configured_repository)
+    validate_repository "$repository"
+    exec "$repository/scripts/doctor.sh" "$repository" "$@"
+}
+
 command_update() {
     local repository branch current target current_version target_version
     local current_tag target_tag rollback_floor
@@ -247,6 +255,7 @@ Usage: blankweave <command>
 Commands:
   version   Show the CLI version and installed/repository revisions
   update    Fast-forward the managed repository and apply the update
+  doctor    Run read-only health checks; add --report for shareable diagnostics
   theme     Manage the desktop theme: list, status, set <id>, mode <dark|light>, toggle, sync
   webapp    Manage Helium web apps: list, install <name> <url> <icon>, remove <name>, sync
   help      Show this help
@@ -265,6 +274,9 @@ main() {
         update)
             [[ $# -eq 0 ]] || die "update does not accept arguments"
             command_update
+            ;;
+        doctor)
+            command_doctor "$@"
             ;;
         theme)
             command_theme "$@"
