@@ -13,7 +13,7 @@ if [ "$EUID" -ne 0 ]; then
     echo "###     - Quickshell, Dunst, Ghostty, Fuzzel"
     echo "###     - PipeWire audio, Bluetooth, NetworkManager"
     echo "###     - ZSH with Powerlevel10k"
-    echo "###     - Host-specific GPU drivers (auto-detected)"
+    echo "###     - Capability-selected GPU drivers and hardware services"
     echo "###"
     echo "###   Configs: ~/.config    Defaults: ~/.local/share/blankweave"
     echo "###"
@@ -119,22 +119,15 @@ source "$REPO_DIR/scripts/installer-config.sh"
 source "$REPO_DIR/scripts/setup-config.sh"
 # shellcheck source=scripts/package-manifests.sh
 source "$REPO_DIR/scripts/package-manifests.sh"
+# shellcheck source=scripts/hardware-capabilities.sh
+source "$REPO_DIR/scripts/hardware-capabilities.sh"
 
-section "DETECTING HOST"
+section "DETECTING HARDWARE CAPABILITIES"
 
-detect_host() {
-    if lspci | grep -q "Intel.*Arc"; then
-        echo "laptop"
-    elif lspci | grep -q "NVIDIA"; then
-        echo "pc"
-    else
-        echo "laptop"  # default
-    fi
-}
-
-HOST=$(detect_host)
-echo "Detected host: $HOST"
-installer_config_load "$INSTALLER_CONFIG_FILE" "$HOST"
+hardware_capabilities_detect
+CAPABILITIES=$(hardware_capabilities_list)
+echo "Detected capabilities: ${CAPABILITIES:-none}"
+installer_config_load "$INSTALLER_CONFIG_FILE" "$CAPABILITIES"
 setup_config_load "$SETUP_CONFIG_FILE"
 echo "Required profile: core"
 if [ "${#INSTALLER_PROFILES[@]}" -gt 0 ]; then
@@ -175,18 +168,18 @@ echo "Installing base packages..."
 PROVIDER_PACKAGES=()
 REPO_PACKAGES=()
 AUR_PACKAGES=()
-resolve_package_manifests "$REPO_DIR" "$HOST" providers PROVIDER_PACKAGES
+resolve_package_manifests "$REPO_DIR" "$CAPABILITIES" providers PROVIDER_PACKAGES
 if [ "${#PROVIDER_PACKAGES[@]}" -gt 0 ]; then
     echo "Installing pinned virtual dependency providers..."
     pacman -S --noconfirm --needed "${PROVIDER_PACKAGES[@]}"
     verify_packages_installed "virtual dependency provider" "${PROVIDER_PACKAGES[@]}"
 fi
 
-resolve_package_manifests "$REPO_DIR" "$HOST" repository REPO_PACKAGES
+resolve_package_manifests "$REPO_DIR" "$CAPABILITIES" repository REPO_PACKAGES
 pacman -S --noconfirm --needed "${REPO_PACKAGES[@]}"
 verify_packages_installed "repository package" "${REPO_PACKAGES[@]}"
 
-resolve_package_manifests "$REPO_DIR" "$HOST" aur AUR_PACKAGES
+resolve_package_manifests "$REPO_DIR" "$CAPABILITIES" aur AUR_PACKAGES
 
 if [ "${#AUR_PACKAGES[@]}" -gt 0 ]; then
     echo "Installing exact AUR packages..."
@@ -203,9 +196,13 @@ echo "Package installation complete."
 
 section "ENABLING SERVICES"
 
-echo "Setting up Bluetooth..."
-systemctl enable bluetooth.service
-systemctl start bluetooth.service || warn "Could not start Bluetooth; it may need manual setup."
+if hardware_capability_has bluetooth; then
+    echo "Setting up Bluetooth..."
+    systemctl enable bluetooth.service
+    systemctl start bluetooth.service || warn "Could not start Bluetooth; it may need manual setup."
+else
+    echo "No Bluetooth controller detected; skipping the Bluetooth service."
+fi
 
 echo "Setting up NetworkManager..."
 systemctl enable NetworkManager.service
@@ -286,10 +283,10 @@ cp -rv "$REPO_DIR/defaults/webapps" "$DOTS_DIR/" || { echo "Failed to copy webap
 # The boot splash is rendered here by theme-apply.sh and installed by root below.
 cp -rv "$REPO_DIR/defaults/plymouth" "$DOTS_DIR/" || { echo "Failed to copy plymouth"; exit 1; }
 
-HARDWARE_OVERRIDES="$REPO_DIR/hosts/$HOST/hardware-overrides.json"
-if [ -f "$HARDWARE_OVERRIDES" ]; then
-    copy_file_atomically "$HARDWARE_OVERRIDES" "$DOTS_DIR/hardware-overrides.json"
-fi
+copy_file_atomically \
+    "$REPO_DIR/defaults/hardware/hardware-overrides.json" \
+    "$DOTS_DIR/hardware-overrides.json"
+hardware_capabilities_write_json "$DOTS_DIR/hardware-capabilities.json"
 
 # Mirror wallpapers exactly so removals in the repo propagate (cp alone never deletes stale files)
 rm -rf "$DOTS_DIR/wallpapers"
@@ -327,14 +324,23 @@ EOF
 chmod 0644 "$HYPRLAND_LUA_STAGED"
 mv -f "$HYPRLAND_LUA_STAGED" "$CONFIG_DIR/hypr/hyprland.lua"
 
-HOST_DIR="$REPO_DIR/hosts/$HOST/hypr"
-if [ -d "$HOST_DIR" ]; then
-    copy_file_atomically "$HOST_DIR/env.lua" "$CONFIG_DIR/hypr/env.lua"
-    copy_file_atomically "$HOST_DIR/monitors.lua" "$CONFIG_DIR/hypr/monitors.lua"
-    copy_file_atomically "$HOST_DIR/hypridle.conf" "$CONFIG_DIR/hypr/hypridle.conf"
+HARDWARE_CONFIG_DIR="$REPO_DIR/defaults/hardware"
+if hardware_capability_has gpu-nvidia; then
+    copy_file_atomically "$HARDWARE_CONFIG_DIR/env-nvidia.lua" "$CONFIG_DIR/hypr/env.lua"
+elif hardware_capability_has gpu-intel; then
+    copy_file_atomically "$HARDWARE_CONFIG_DIR/env-intel.lua" "$CONFIG_DIR/hypr/env.lua"
 else
-    echo "Error: No host config found at $HOST_DIR"
-    exit 1
+    copy_file_atomically "$HARDWARE_CONFIG_DIR/env-generic.lua" "$CONFIG_DIR/hypr/env.lua"
+fi
+if hardware_capability_has internal-display; then
+    copy_file_atomically "$HARDWARE_CONFIG_DIR/monitors-internal.lua" "$CONFIG_DIR/hypr/monitors.lua"
+else
+    copy_file_atomically "$HARDWARE_CONFIG_DIR/monitors-external.lua" "$CONFIG_DIR/hypr/monitors.lua"
+fi
+if hardware_capability_has battery; then
+    copy_file_atomically "$HARDWARE_CONFIG_DIR/hypridle-battery.conf" "$CONFIG_DIR/hypr/hypridle.conf"
+else
+    copy_file_atomically "$HARDWARE_CONFIG_DIR/hypridle-ac.conf" "$CONFIG_DIR/hypr/hypridle.conf"
 fi
 
 copy_file_atomically "$REPO_DIR/defaults/hypr/hyprlock.conf" "$CONFIG_DIR/hypr/hyprlock.conf"
@@ -443,9 +449,9 @@ if ! sudo -H -u "$SUDO_USER" env \
     warn "Could not sync the web apps; run: blankweave webapp sync"
 fi
 
-section "CONFIGURING NVIDIA (PC ONLY)"
+section "CONFIGURING NVIDIA"
 
-if [ "$HOST" = "pc" ]; then
+if hardware_capability_has gpu-nvidia; then
     echo "Configuring NVIDIA DRM..."
     mkdir -p /etc/modprobe.d
     echo "options nvidia_drm modeset=1" > /etc/modprobe.d/nvidia.conf
@@ -552,11 +558,11 @@ sudo -H -u "$SUDO_USER" env \
 section "DONE"
 
 echo "Installation complete!"
-echo "  Host: $HOST"
+echo "  Capabilities: ${CAPABILITIES:-none}"
 echo "  Defaults: ~/.local/share/blankweave"
 echo "  User configs: ~/.config"
 echo "  Auto-login and Hyprland auto-start configured"
-if [ "$HOST" = "pc" ]; then
+if hardware_capability_has gpu-nvidia; then
     echo "  NVIDIA DRM modeset and early KMS configured"
 fi
 echo ""

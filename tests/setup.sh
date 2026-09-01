@@ -112,7 +112,7 @@ guided_config=$guided_home/config/blankweave
 [[ -s $guided_home/apply-called ]]
 [[ $(stat -c %a "$guided_config/install.conf") == 600 ]]
 [[ $(stat -c %a "$guided_config/setup.conf") == 600 ]]
-installer_config_load "$guided_config/install.conf" laptop
+installer_config_load "$guided_config/install.conf" 'gpu-intel battery gaming'
 setup_config_load "$guided_config/setup.conf"
 [[ $SETUP_THEME == moss ]]
 [[ $SETUP_MODE == light ]]

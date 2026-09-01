@@ -324,7 +324,105 @@ emit_intel() {
         }'
 }
 
+amd_card() {
+    local vendor_file
+    for vendor_file in /sys/class/drm/card*/device/vendor; do
+        [[ -r $vendor_file ]] || continue
+        if [[ $(<"$vendor_file") == 0x1002 ]]; then
+            dirname "$(dirname "$vendor_file")"
+            return 0
+        fi
+    done
+    return 1
+}
+
+emit_amd() {
+    local card pci_address pci_line name driver usage temperature memory_used memory_total
+    local memory_usage frequency_mhz tooltip input
+
+    card=$(amd_card) || return 1
+    pci_address=$(basename "$(readlink -f "$card/device")")
+    pci_line=$(lspci -D -s "$pci_address" 2>/dev/null | sed -n '1p')
+    name=${pci_line#*: }
+    [[ -n $name && $name != "$pci_line" ]] || name='AMD graphics'
+    driver=$(basename "$(readlink -f "$card/device/driver" 2>/dev/null)" 2>/dev/null || true)
+    [[ -n $driver ]] || driver=amdgpu
+
+    usage=0
+    [[ -r $card/device/gpu_busy_percent ]] && usage=$(<"$card/device/gpu_busy_percent")
+    [[ $usage =~ ^[0-9]+([.][0-9]+)?$ ]] || usage=0
+    memory_used=0
+    memory_total=0
+    [[ -r $card/device/mem_info_vram_used ]] && memory_used=$(<"$card/device/mem_info_vram_used")
+    [[ -r $card/device/mem_info_vram_total ]] && memory_total=$(<"$card/device/mem_info_vram_total")
+    [[ $memory_used =~ ^[0-9]+$ ]] || memory_used=0
+    [[ $memory_total =~ ^[0-9]+$ ]] || memory_total=0
+    memory_usage=0
+    if (( memory_total > 0 )); then
+        memory_usage=$(awk -v used="$memory_used" -v total="$memory_total" \
+            'BEGIN { printf "%.1f", 100 * used / total }')
+    fi
+
+    temperature=
+    for input in "$card"/device/hwmon/hwmon*/temp1_input; do
+        [[ -r $input ]] || continue
+        temperature=$(awk -v raw="$(<"$input")" 'BEGIN { printf "%.0f", raw / 1000 }')
+        break
+    done
+    frequency_mhz=
+    if [[ -r $card/device/pp_dpm_sclk ]]; then
+        frequency_mhz=$(awk '$0 ~ /[*]/ { value=$2; gsub(/[^0-9.]/, "", value); print value; exit }' \
+            "$card/device/pp_dpm_sclk")
+    fi
+    tooltip=$(printf '%s: %.0f%%\nTemperature: %s\nVRAM: %.1f / %.1f GiB' \
+        "$name" "$usage" "${temperature:+$temperature°C}" \
+        "$(awk -v bytes="$memory_used" 'BEGIN { print bytes / 1073741824 }')" \
+        "$(awk -v bytes="$memory_total" 'BEGIN { print bytes / 1073741824 }')")
+
+    jq -cn \
+        --arg text "$(awk -v value="$usage" 'BEGIN { printf "%.0f", value }')" \
+        --arg tooltip "$tooltip" \
+        --arg name "$name" \
+        --arg driver "$driver" \
+        --arg usage "$usage" \
+        --arg memoryUsage "$memory_usage" \
+        --arg temperature "$temperature" \
+        --arg frequencyMHz "$frequency_mhz" \
+        --arg detailMode "$detail_mode" \
+        --argjson memoryUsedBytes "$memory_used" \
+        --argjson memoryTotalBytes "$memory_total" \
+        '{
+            available: true,
+            detailed: ($detailMode == "detail"),
+            text: $text,
+            tooltip: $tooltip,
+            backend: "amd",
+            vendor: "AMD",
+            name: $name,
+            driver: $driver,
+            accuracy: "live",
+            usage: ($usage | tonumber),
+            memoryUsage: ($memoryUsage | tonumber),
+            temperature: ($temperature | if length > 0 then tonumber else null end),
+            memoryUsedBytes: $memoryUsedBytes,
+            memoryTotalBytes: $memoryTotalBytes,
+            powerDrawWatts: null,
+            powerLimitWatts: null,
+            clockMHz: ($frequencyMHz | if length > 0 then tonumber else null end),
+            maxClockMHz: null,
+            fanPercent: null,
+            performanceState: "",
+            idlePercent: null,
+            engines: [{name: "Graphics", usage: ($usage | tonumber)}],
+            processes: []
+        }'
+}
+
 if command -v nvidia-smi >/dev/null 2>&1 && emit_nvidia; then
+    exit 0
+fi
+
+if emit_amd; then
     exit 0
 fi
 

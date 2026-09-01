@@ -1,0 +1,1 @@
+-- No vendor-specific environment is required for this GPU combination.

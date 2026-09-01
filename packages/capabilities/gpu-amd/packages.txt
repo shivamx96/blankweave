@@ -1,0 +1,4 @@
+mesa
+vulkan-radeon
+vulkan-icd-loader
+nvtop

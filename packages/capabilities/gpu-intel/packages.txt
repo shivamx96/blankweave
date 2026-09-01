@@ -1,6 +1,6 @@
 intel-media-driver
 libva-intel-driver
 vulkan-intel
+vulkan-icd-loader
 intel-gpu-tools
-power-profiles-daemon
-sof-firmware
+nvtop

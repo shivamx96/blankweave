@@ -10,9 +10,6 @@ dunst
 ghostty
 fuzzel
 thunar
-brightnessctl
-ddcutil
-upower
 btop
 fastfetch
 pipewire
@@ -20,9 +17,6 @@ pipewire-alsa
 pipewire-pulse
 wireplumber
 pavucontrol
-bluez
-bluez-utils
-blueman
 networkmanager
 tailscale
 curl
@@ -48,6 +42,8 @@ fzf
 zoxide
 wl-clipboard
 cliphist
+playerctl
+socat
 grim
 slurp
 polkit-gnome

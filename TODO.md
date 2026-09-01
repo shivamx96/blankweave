@@ -8,11 +8,9 @@
 
 ## Bugs
 
-- [ ] `nvtop` is referenced by the Quickshell GPU module (`on-click`) but only
-      listed in `hosts/pc/packages.txt` — clicking the module does nothing on laptop.
-      Either move to `base.txt` or make the click host-aware (`intel_gpu_top` on laptop).
-- [ ] Audit for other `defaults/` configs referencing host-only packages — this is the
-      same root cause that made `hyprsunset` fail silently on laptop.
+- [x] Resolve GPU monitoring tools from detected GPU capabilities; Intel systems
+      receive both `intel_gpu_top` and `nvtop`, while AMD/NVIDIA receive `nvtop`.
+- [x] Audit core widget commands against required/capability manifests.
 
 ## Installer UX
 
@@ -55,7 +53,7 @@ Hyprland 0.55+ deprecated Hyprlang (`.conf`) in favour of Lua.
 - [ ] No mouse move/resize: `bindm = $mainMod, mouse:272, movewindow` and
       `mouse:273, resizewindow`. Biggest single ergonomic win on a dwindle layout.
 - [ ] No keyboard window resizing (`resizeactive`).
-- [ ] No media keys — `XF86AudioPlay/Next/Prev` via playerctl.
+- [x] Media play/pause/next/previous keys are wired through `playerctl`.
 - [ ] `Super+M` = `exit` with no confirmation, one key from `Super+N`. Remove it or route
       it through `power-menu.sh`.
 - [ ] Special workspace / scratchpad (`Super+grave`) for a floating terminal.
@@ -82,7 +80,7 @@ Hyprland 0.55+ deprecated Hyprlang (`.conf`) in favour of Lua.
 
 ## Packages
 
-- [ ] `playerctl` is installed here but in no package list — a fresh install won't have it.
+- [x] `playerctl` is a required package and media keys control the active player.
 - [x] `gnome-keyring` — Secret Service daemon behind `libsecret`; fresh installs
       provision a passwordless default collection protected at rest by LUKS.
 - [ ] `man-db` — no man pages currently.

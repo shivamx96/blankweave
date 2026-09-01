@@ -97,7 +97,7 @@ check_repository() {
 
 check_commands() {
     local executable
-    local required_value=${BLANKWEAVE_DOCTOR_COMMANDS:-Hyprland uwsm qs hyprlock hypridle awww-daemon dunst ghostty fuzzel jq}
+    local required_value=${BLANKWEAVE_DOCTOR_COMMANDS:-Hyprland uwsm qs hyprlock hypridle awww-daemon dunst ghostty fuzzel jq playerctl}
     local -a required=()
     local -a missing=()
 
@@ -247,8 +247,15 @@ check_plymouth() {
 }
 
 check_services() {
-    local unit
-    local -a system_units=(NetworkManager.service bluetooth.service)
+    local repository=$1 unit
+    local -a system_units=(NetworkManager.service)
+
+    # shellcheck source=scripts/hardware-capabilities.sh
+    source "$repository/scripts/hardware-capabilities.sh"
+    hardware_capabilities_detect
+    if hardware_capability_has bluetooth; then
+        system_units+=(bluetooth.service)
+    fi
 
     if ! command -v systemctl > /dev/null 2>&1; then
         skip services 'systemctl is unavailable'
@@ -274,7 +281,7 @@ check_services() {
 
 print_report() {
     local repository="$1"
-    local os_release kernel session desktop package version os_file
+    local os_release kernel session desktop package version os_file capabilities
     local -a packages=(hyprland hyprlock uwsm quickshell plymouth)
 
     os_file=$(root_path /etc/os-release)
@@ -287,12 +294,17 @@ print_report() {
     kernel=$(uname -r 2>/dev/null || printf 'unknown')
     session=${XDG_SESSION_TYPE:-unknown}
     desktop=${XDG_CURRENT_DESKTOP:-unknown}
+    # shellcheck source=scripts/hardware-capabilities.sh
+    source "$repository/scripts/hardware-capabilities.sh"
+    hardware_capabilities_detect
+    capabilities=$(hardware_capabilities_list)
 
     printf '\nSanitized report\n'
     printf '  blankweave: %s (%s)\n' "$(head -n 1 "$repository/VERSION" 2>/dev/null || printf unknown)" "$(short_revision "$repository")"
     printf '  operating system: %s\n' "$os_release"
     printf '  kernel: %s\n' "$kernel"
     printf '  session: %s / %s\n' "$session" "$desktop"
+    printf '  capabilities: %s\n' "${capabilities:-none}"
     printf '  packages:\n'
     for package in "${packages[@]}"; do
         version=not-installed
@@ -338,7 +350,7 @@ main() {
     check_console_session
     check_keyring
     check_plymouth
-    check_services
+    check_services "$repository"
 
     printf '\nSummary: %d passed, %d warnings, %d failures, %d skipped\n' \
         "$PASSED" "$WARNED" "$FAILED" "$SKIPPED"

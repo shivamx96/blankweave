@@ -9,7 +9,7 @@ BLANKWEAVE_CONFIG_DIR=$CONFIG_HOME/blankweave
 INSTALL_CONFIG=$BLANKWEAVE_CONFIG_DIR/install.conf
 SETUP_CONFIG=$BLANKWEAVE_CONFIG_DIR/setup.conf
 THEME_STATE=$BLANKWEAVE_CONFIG_DIR/theme.json
-HOST=laptop
+CAPABILITIES=
 NON_INTERACTIVE=false
 TTY_FD=
 
@@ -27,16 +27,6 @@ are reviewed before the installer runs and saved under ~/.config/blankweave/.
 
   --non-interactive  Validate and apply existing install.conf and setup.conf.
 EOF
-}
-
-detect_host() {
-    if lspci 2>/dev/null | grep -q 'Intel.*Arc'; then
-        printf 'laptop\n'
-    elif lspci 2>/dev/null | grep -q NVIDIA; then
-        printf 'pc\n'
-    else
-        printf 'laptop\n'
-    fi
 }
 
 profile_enabled() {
@@ -104,7 +94,7 @@ theme_available() {
 load_initial_choices() {
     local existing_theme existing_mode existing_name existing_email
 
-    installer_config_load "$INSTALL_CONFIG" "$HOST"
+    installer_config_load "$INSTALL_CONFIG" "$CAPABILITIES"
     setup_config_load "$SETUP_CONFIG"
 
     if [[ ! -e $SETUP_CONFIG ]]; then
@@ -226,7 +216,7 @@ print_review() {
     fi
 
     printf '\nSetup review\n'
-    printf '  Host:         %s (detected)\n' "$HOST"
+    printf '  Capabilities: %s (detected)\n' "${CAPABILITIES:-none}"
     printf '  Profiles:     %s\n' "${INSTALLER_PROFILES[*]:-none}"
     printf '  Theme:        %s / %s\n' "$SETUP_THEME" "$SETUP_MODE"
     printf '  Git identity: %s\n' "$git_summary"
@@ -293,12 +283,15 @@ main() {
     source "$REPOSITORY/scripts/installer-config.sh"
     # shellcheck source=scripts/setup-config.sh
     source "$REPOSITORY/scripts/setup-config.sh"
-    HOST=$(detect_host)
+    # shellcheck source=scripts/hardware-capabilities.sh
+    source "$REPOSITORY/scripts/hardware-capabilities.sh"
+    hardware_capabilities_detect
+    CAPABILITIES=$(hardware_capabilities_list)
 
     if [[ $NON_INTERACTIVE == true ]]; then
         [[ -r $INSTALL_CONFIG ]] || die "$INSTALL_CONFIG is required for --non-interactive"
         [[ -r $SETUP_CONFIG ]] || die "$SETUP_CONFIG is required for --non-interactive"
-        installer_config_load "$INSTALL_CONFIG" "$HOST"
+        installer_config_load "$INSTALL_CONFIG" "$CAPABILITIES"
         setup_config_load "$SETUP_CONFIG"
     else
         if ! (: </dev/tty) 2>/dev/null; then
@@ -306,7 +299,8 @@ main() {
         fi
         exec {TTY_FD}<>/dev/tty
         load_initial_choices
-        printf 'Blankweave guided setup\nDetected host: %s\n' "$HOST" >&$TTY_FD
+        printf 'Blankweave guided setup\nDetected capabilities: %s\n' \
+            "${CAPABILITIES:-none}" >&$TTY_FD
         choose_profiles
         choose_theme
         choose_git

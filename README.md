@@ -2,9 +2,9 @@
 
 Arch + Hyprland bootstrap with automatic hardware detection.
 
-Supported hosts:
-- **laptop** — Intel Core Ultra 9 185H with Arc iGPU
-- **pc** — NVIDIA (RTX 5090 / any NVIDIA GPU) with AMD Ryzen
+Hardware support is capability-based rather than tied to machine labels. The
+installer detects Intel, AMD, and NVIDIA GPUs, batteries, internal panels and
+backlights, DDC/CI displays, Bluetooth controllers, and gaming-driver support.
 
 ## Install
 
@@ -137,10 +137,10 @@ blankweave setup --non-interactive
 ```
 
 This mode requires both configs, validates them, prints the same review, and
-then applies without prompting. A missing profile config outside setup retains
-the historical defaults: laptop enables desktop, development, and
-communication; PC additionally enables gaming. Ordinary updates consume the
-saved package/Git/SSH choices but preserve any theme selected after setup.
+then applies without prompting. A missing profile config enables desktop,
+development, and communication; gaming is also enabled on a gaming-capable
+machine without a battery. Ordinary updates consume the saved package/Git/SSH
+choices but preserve any theme selected after setup.
 
 ## Keybindings
 
@@ -181,10 +181,11 @@ saved package/Git/SSH choices but preserve any theme selected after setup.
 - `Fn + Volume Up/Down` – adjust volume (with OSD)
 - `Fn + Mute` – toggle mute
 - `Fn + Brightness Up/Down` – adjust brightness (with OSD)
+- Media play/pause, previous, and next keys – control the active MPRIS player
 
 ## Features
 
-- **Multi-host** with auto-detection (Intel laptop / NVIDIA desktop)
+- **Capability-based hardware** with Intel, AMD, and NVIDIA graphics support
 - **Audio support** via PipeWire with Pavucontrol GUI
 - **Bluetooth** with Blueman GUI manager
 - **Power management** via Hypridle (auto-lock, brightness control, suspend)

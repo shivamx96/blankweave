@@ -31,10 +31,10 @@ append_package_manifest() {
 
 resolve_package_manifests() {
     local repository="$1"
-    local host="$2"
+    local capabilities="$2"
     local kind="$3"
     local destination="$4"
-    local profile suffix base_manifest host_manifest
+    local profile capability suffix base_manifest capability_manifest
     declare -n resolved_packages_ref="$destination"
 
     # ShellCheck cannot observe that this nameref clears the caller's array.
@@ -44,17 +44,14 @@ resolve_package_manifests() {
         repository)
             suffix=.txt
             base_manifest=$repository/packages/base.txt
-            host_manifest=$repository/hosts/$host/packages.txt
             ;;
         aur)
             suffix=.aur.txt
             base_manifest=$repository/packages/aur.txt
-            host_manifest=$repository/hosts/$host/aur.txt
             ;;
         providers)
             suffix=.providers.txt
             base_manifest=$repository/packages/providers.txt
-            host_manifest=$repository/hosts/$host/providers.txt
             ;;
         *)
             printf 'Unknown package manifest kind: %s\n' "$kind" >&2
@@ -63,11 +60,25 @@ resolve_package_manifests() {
     esac
 
     append_package_manifest "$base_manifest" "$destination"
-    append_package_manifest "$host_manifest" "$destination"
+    for capability in $capabilities; do
+        [[ $capability =~ ^[a-z0-9][a-z0-9-]*$ ]] || {
+            printf 'Invalid hardware capability: %s\n' "$capability" >&2
+            return 1
+        }
+        case $kind in
+            repository) capability_manifest=$repository/packages/capabilities/$capability/packages.txt ;;
+            aur) capability_manifest=$repository/packages/capabilities/$capability/aur.txt ;;
+            providers) capability_manifest=$repository/packages/capabilities/$capability/providers.txt ;;
+        esac
+        append_package_manifest "$capability_manifest" "$destination"
+    done
     for profile in "${INSTALLER_PROFILES[@]}"; do
         append_package_manifest \
             "$repository/packages/profiles/$profile$suffix" "$destination"
-        append_package_manifest \
-            "$repository/hosts/$host/profiles/$profile$suffix" "$destination"
+        for capability in $capabilities; do
+            append_package_manifest \
+                "$repository/packages/capabilities/$capability/profiles/$profile$suffix" \
+                "$destination"
+        done
     done
 }

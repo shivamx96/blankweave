@@ -189,24 +189,13 @@ restore_checkout() {
     git -C "$repository" reset --hard "$revision" > /dev/null
 }
 
-detect_update_host() {
-    if lspci 2>/dev/null | grep -q 'Intel.*Arc'; then
-        printf 'laptop\n'
-    elif lspci 2>/dev/null | grep -q NVIDIA; then
-        printf 'pc\n'
-    else
-        printf 'laptop\n'
-    fi
-}
-
 validate_install_plan() (
     local repository="$1"
-    local host config_file setup_config_file
+    local capabilities config_file setup_config_file
     local -a repository_packages=()
     local -a aur_packages=()
     local -a provider_packages=()
 
-    host=$(detect_update_host)
     config_file=${XDG_CONFIG_HOME:-$HOME/.config}/blankweave/install.conf
     setup_config_file=${XDG_CONFIG_HOME:-$HOME/.config}/blankweave/setup.conf
     # shellcheck source=scripts/installer-config.sh
@@ -215,14 +204,18 @@ validate_install_plan() (
     source "$repository/scripts/setup-config.sh" || return
     # shellcheck source=scripts/package-manifests.sh
     source "$repository/scripts/package-manifests.sh" || return
-    installer_config_load "$config_file" "$host" || return
+    # shellcheck source=scripts/hardware-capabilities.sh
+    source "$repository/scripts/hardware-capabilities.sh" || return
+    hardware_capabilities_detect || return
+    capabilities=$(hardware_capabilities_list)
+    installer_config_load "$config_file" "$capabilities" || return
     setup_config_load "$setup_config_file" || return
-    resolve_package_manifests "$repository" "$host" repository repository_packages || return
-    resolve_package_manifests "$repository" "$host" aur aur_packages || return
-    resolve_package_manifests "$repository" "$host" providers provider_packages || return
+    resolve_package_manifests "$repository" "$capabilities" repository repository_packages || return
+    resolve_package_manifests "$repository" "$capabilities" aur aur_packages || return
+    resolve_package_manifests "$repository" "$capabilities" providers provider_packages || return
 
-    printf 'Install plan: host=%s profiles=%s packages=%d aur=%d providers=%d\n' \
-        "$host" "${INSTALLER_PROFILES[*]:-none}" \
+    printf 'Install plan: capabilities=%s profiles=%s packages=%d aur=%d providers=%d\n' \
+        "${capabilities:-none}" "${INSTALLER_PROFILES[*]:-none}" \
         "${#repository_packages[@]}" "${#aur_packages[@]}" "${#provider_packages[@]}"
 )
 

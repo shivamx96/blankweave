@@ -83,6 +83,10 @@ run_doctor() {
         XDG_CURRENT_DESKTOP=Hyprland \
         BLANKWEAVE_USER_HOME="$home" \
         BLANKWEAVE_SYSTEM_ROOT="$system_root" \
+        BLANKWEAVE_SYSFS_ROOT="$system_root/sys" \
+        BLANKWEAVE_TEST_LSPCI_OUTPUT='' \
+        BLANKWEAVE_TEST_LSUSB_OUTPUT='' \
+        BLANKWEAVE_TEST_DDC_DISPLAY=false \
         BLANKWEAVE_DOCTOR_COMMANDS=blankweave-doctor-fixture \
         "$repository/scripts/doctor.sh" "$repository" "$@"
 }
