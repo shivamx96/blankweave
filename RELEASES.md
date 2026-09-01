@@ -28,9 +28,8 @@ The initial release sequence is:
 
 - `0.1.0` — known-working baseline;
 - `0.1.1` — annotated-tag release infrastructure;
-- `0.2.0` — read-only `blankweave doctor`;
-- `0.3.0` — safe update and bounded recovery;
-- `0.4.0` — guided and repeatable `blankweave setup`.
+- `0.2.0` — health diagnostics, safe update and bounded recovery, and guided
+  repeatable setup.
 
 Config-file schema numbers belong to their individual formats and are not
 Blankweave release versions.

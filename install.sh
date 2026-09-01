@@ -21,6 +21,8 @@ if [ "$EUID" -ne 0 ]; then
     echo ""
     exec sudo env \
         BLANKWEAVE_USER_STATE_HOME="${XDG_STATE_HOME:-$HOME/.local/state}" \
+        BLANKWEAVE_SETUP_THEME="${BLANKWEAVE_SETUP_THEME:-}" \
+        BLANKWEAVE_SETUP_MODE="${BLANKWEAVE_SETUP_MODE:-}" \
         "$0" "$@"
 elif [ -z "$SUDO_USER" ]; then
     echo "Do not run as root directly. Just run: ./install.sh"
@@ -109,9 +111,12 @@ trap cleanup_install EXIT
 DOTS_DIR="$USER_HOME/.local/share/blankweave"
 CONFIG_DIR="$USER_HOME/.config"
 INSTALLER_CONFIG_FILE="$CONFIG_DIR/blankweave/install.conf"
+SETUP_CONFIG_FILE="$CONFIG_DIR/blankweave/setup.conf"
 
 # shellcheck source=scripts/installer-config.sh
 source "$REPO_DIR/scripts/installer-config.sh"
+# shellcheck source=scripts/setup-config.sh
+source "$REPO_DIR/scripts/setup-config.sh"
 # shellcheck source=scripts/package-manifests.sh
 source "$REPO_DIR/scripts/package-manifests.sh"
 
@@ -130,6 +135,7 @@ detect_host() {
 HOST=$(detect_host)
 echo "Detected host: $HOST"
 installer_config_load "$INSTALLER_CONFIG_FILE" "$HOST"
+setup_config_load "$SETUP_CONFIG_FILE"
 echo "Required profile: core"
 if [ "${#INSTALLER_PROFILES[@]}" -gt 0 ]; then
     printf 'Optional profiles: %s\n' "${INSTALLER_PROFILES[*]}"
@@ -417,6 +423,8 @@ section "APPLYING THEME"
 if ! sudo -H -u "$SUDO_USER" env \
     HOME="$USER_HOME" \
     XDG_CONFIG_HOME="$CONFIG_DIR" \
+    BLANKWEAVE_SETUP_THEME="${BLANKWEAVE_SETUP_THEME:-}" \
+    BLANKWEAVE_SETUP_MODE="${BLANKWEAVE_SETUP_MODE:-}" \
     "$DOTS_DIR/shell/theme-apply.sh"; then
     echo "Error: Could not apply the theme."
     exit 1
@@ -508,14 +516,30 @@ fi
 # staged copies and only rebuilds the initramfs when the splash changed.
 "$REPO_DIR/scripts/theme-system.sh" "$USER_HOME" "$CONFIG_DIR"
 
-section "GENERATING SSH KEY"
+section "CONFIGURING GIT AND SSH"
 
 SSH_KEY="$USER_HOME/.ssh/id_ed25519"
-if [ ! -f "$SSH_KEY" ]; then
-    read -r -p "Enter your email for GitHub SSH key: " GIT_EMAIL
-    echo "Generating SSH key for GitHub..."
-    sudo -u "$SUDO_USER" mkdir -p "$USER_HOME/.ssh"
-    sudo -u "$SUDO_USER" ssh-keygen -t ed25519 -C "$GIT_EMAIL" -f "$SSH_KEY" -N ""
+SSH_KEY_GENERATED=false
+if [ "$SETUP_GIT_IDENTITY" = configure ]; then
+    echo "Configuring the selected global Git identity..."
+    sudo -H -u "$SUDO_USER" env HOME="$USER_HOME" \
+        git config --global user.name "$SETUP_GIT_NAME"
+    sudo -H -u "$SUDO_USER" env HOME="$USER_HOME" \
+        git config --global user.email "$SETUP_GIT_EMAIL"
+else
+    echo "Leaving the global Git identity unchanged."
+fi
+if [ "$SETUP_SSH_KEY" = generate ] && [ ! -f "$SSH_KEY" ]; then
+    echo "Generating a local Ed25519 SSH key..."
+    sudo -H -u "$SUDO_USER" env HOME="$USER_HOME" mkdir -p "$USER_HOME/.ssh"
+    chmod 700 "$USER_HOME/.ssh"
+    sudo -H -u "$SUDO_USER" env HOME="$USER_HOME" \
+        ssh-keygen -t ed25519 -C "$SETUP_GIT_EMAIL" -f "$SSH_KEY" -N ""
+    SSH_KEY_GENERATED=true
+elif [ -f "$SSH_KEY" ]; then
+    echo "Keeping the existing Ed25519 SSH key."
+else
+    echo "SSH key generation skipped."
 fi
 
 section "APPLYING MIGRATIONS"
@@ -536,7 +560,7 @@ if [ "$HOST" = "pc" ]; then
     echo "  NVIDIA DRM modeset and early KMS configured"
 fi
 echo ""
-if [ -f "$SSH_KEY.pub" ]; then
+if [ "$SSH_KEY_GENERATED" = true ] && [ -f "$SSH_KEY.pub" ]; then
     echo "── GitHub SSH Key ──"
     echo "Add this to https://github.com/settings/ssh/new"
     echo ""

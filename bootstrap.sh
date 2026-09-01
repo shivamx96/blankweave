@@ -74,4 +74,4 @@ printf 'Verified %s.\n' "$release_tag"
 mv "$temporary_repository" "$repository"
 temporary_repository=
 
-exec "$repository/bin/blankweave" _apply "$repository" </dev/tty
+exec "$repository/bin/blankweave" setup </dev/tty

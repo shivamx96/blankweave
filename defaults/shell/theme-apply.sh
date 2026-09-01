@@ -372,6 +372,12 @@ main() {
     shift || true
 
     load_selection
+    if [[ -n ${BLANKWEAVE_SETUP_THEME:-} ]]; then
+        THEME=$BLANKWEAVE_SETUP_THEME
+    fi
+    if [[ -n ${BLANKWEAVE_SETUP_MODE:-} ]]; then
+        MODE=$BLANKWEAVE_SETUP_MODE
+    fi
     case $command in
         apply)
             [[ $# -eq 0 ]] || die "apply does not accept arguments"

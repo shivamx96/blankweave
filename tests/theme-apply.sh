@@ -157,6 +157,14 @@ printf 'light\n' > "$data/theme"
 [[ $(jq -r '.mode' "$state") == light ]]
 rm -f "$data/theme"
 
+# Guided setup passes its reviewed initial selection only to this apply. The
+# override wins over persisted state without becoming a permanent update rule.
+BLANKWEAVE_SETUP_THEME=moss BLANKWEAVE_SETUP_MODE=dark "$script"
+[[ $(jq -r '.theme' "$state") == moss ]]
+[[ $(jq -r '.mode' "$state") == dark ]]
+"$script" set obsidian
+"$script" mode light
+
 # Every bundled theme must resolve and render in both modes, so a palette
 # missing a token or a wallpaper can never ship.
 for theme_file in "$data"/themes/*/theme.json; do
