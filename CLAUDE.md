@@ -76,6 +76,13 @@ exact commit; lightweight tags and untagged commits are not releases. Config
 schema numbers remain local to their formats. Follow `RELEASES.md` for every
 release and treat `MIN_ROLLBACK_VERSION` as an explicit compatibility decision.
 
+`blankweave doctor` delegates to `scripts/doctor.sh`. It is strictly read-only:
+checks may report warnings or failures but must not repair files, restart
+services, prompt for sudo, or contact the network. A failure exits non-zero;
+warnings alone do not. `--report` may include versions and session types, but
+must not expose usernames, home paths, hostnames, network addresses, disk
+identifiers, UUIDs, or hardware serial numbers.
+
 Do not add a public `blankweave install` command. First installation is the
 bootstrap's responsibility; subsequent convergence is `blankweave update`.
 

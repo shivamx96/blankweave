@@ -21,6 +21,12 @@ grep -Fxq "blankweave $(head -n 1 "$repository/VERSION") (unreleased)" <<< "$ver
 grep -Fq 'installed:  not-recorded / not-recorded (not-recorded)' <<< "$version_output"
 grep -Fq 'rollback floor: 0.1.0' <<< "$version_output"
 
+grep -Fq 'Usage: blankweave doctor [--report]' <<< "$(
+    HOME="$test_root/home" \
+        XDG_STATE_HOME="$test_root/state" \
+        "$repository/bin/blankweave" doctor --help
+)"
+
 # The old command name hands over to the new one so an installed
 # `hyprarch update` can exec the fetched revision.
 grep -Fxq "blankweave $(head -n 1 "$repository/VERSION") (unreleased)" \
