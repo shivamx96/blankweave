@@ -35,6 +35,7 @@ github-cli
 openssh
 less
 linux-headers
+linux-firmware
 inter-font
 ttf-jetbrains-mono-nerd
 zsh

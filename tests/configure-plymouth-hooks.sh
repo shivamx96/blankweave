@@ -25,14 +25,14 @@ printf '%s\n' \
     'MODULES=()' \
     'HOOKS=(base udev autodetect keyboard block encrypt filesystems fsck)' > "$config"
 "$configure" "$config" > /dev/null
-assert_hooks 'HOOKS=(base udev plymouth autodetect keyboard block encrypt filesystems fsck)'
+assert_hooks 'HOOKS=(base udev plymouth autodetect microcode keyboard block encrypt filesystems fsck)'
 
 # Existing but unsafe placement is repaired, not duplicated.
 printf '%s\n' \
     'MODULES=()' \
     'HOOKS=(base udev autodetect keyboard block encrypt plymouth filesystems fsck)' > "$config"
 "$configure" "$config" > /dev/null
-assert_hooks 'HOOKS=(base udev plymouth autodetect keyboard block encrypt filesystems fsck)'
+assert_hooks 'HOOKS=(base udev plymouth autodetect microcode keyboard block encrypt filesystems fsck)'
 [[ $(grep -o 'plymouth' "$config" | wc -l) -eq 1 ]]
 
 # systemd initramfs uses the same Plymouth hook, placed before sd-encrypt.
@@ -40,7 +40,20 @@ printf '%s\n' \
     'MODULES=()' \
     'HOOKS=(base systemd autodetect keyboard sd-vconsole block sd-encrypt filesystems fsck) # managed' > "$config"
 "$configure" "$config" > /dev/null
-assert_hooks 'HOOKS=(base systemd plymouth autodetect keyboard sd-vconsole block sd-encrypt filesystems fsck) # managed'
+assert_hooks 'HOOKS=(base systemd plymouth autodetect microcode keyboard sd-vconsole block sd-encrypt filesystems fsck) # managed'
+
+# Existing microcode placement is normalized without duplicating the hook.
+printf '%s\n' \
+    'MODULES=()' \
+    'HOOKS=(base microcode udev plymouth autodetect modconf kms block filesystems)' > "$config"
+"$configure" "$config" > /dev/null
+assert_hooks 'HOOKS=(base udev plymouth autodetect microcode modconf kms block filesystems)'
+[[ $(grep -o 'microcode' "$config" | wc -l) -eq 1 ]]
+
+# Fallback images without autodetect still receive early microcode.
+printf '%s\n' 'HOOKS=(base udev modconf kms block filesystems)' > "$config"
+"$configure" "$config" > /dev/null
+assert_hooks 'HOOKS=(base udev plymouth microcode modconf kms block filesystems)'
 
 # A second pass must not rewrite an already-correct file.
 checksum=$(sha256sum "$config")

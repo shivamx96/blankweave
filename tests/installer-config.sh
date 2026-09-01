@@ -55,9 +55,9 @@ assert_excludes() {
     done
 }
 
-laptop_capabilities='gpu-intel audio-intel battery internal-display internal-backlight bluetooth gaming'
-desktop_capabilities='gpu-nvidia ddc-display bluetooth gaming'
-amd_capabilities='gpu-amd ddc-display gaming'
+laptop_capabilities='cpu-intel gpu-intel audio-intel battery internal-display internal-backlight bluetooth gaming'
+desktop_capabilities='cpu-amd gpu-nvidia ddc-display bluetooth gaming'
+amd_capabilities='cpu-amd gpu-amd ddc-display gaming'
 
 installer_config_load "$test_root/missing.conf" "$laptop_capabilities"
 assert_profiles 'desktop development communication'
@@ -65,6 +65,8 @@ resolve_package_manifests "$repository" "$laptop_capabilities" repository packag
 assert_contains seahorse "${packages[@]}"
 assert_excludes sddm "${packages[@]}"
 assert_contains intel-media-driver "${packages[@]}"
+assert_contains intel-ucode "${packages[@]}"
+assert_contains linux-firmware "${packages[@]}"
 assert_contains intel-gpu-tools "${packages[@]}"
 assert_contains nvtop "${packages[@]}"
 assert_contains playerctl "${packages[@]}"
@@ -80,6 +82,7 @@ installer_config_load "$test_root/missing.conf" "$desktop_capabilities"
 assert_profiles 'desktop development communication gaming'
 resolve_package_manifests "$repository" "$desktop_capabilities" repository packages
 assert_contains nvidia-open-dkms "${packages[@]}"
+assert_contains amd-ucode "${packages[@]}"
 assert_contains cuda "${packages[@]}"
 assert_contains nvtop "${packages[@]}"
 assert_contains ddcutil "${packages[@]}"
@@ -93,6 +96,7 @@ installer_config_load "$test_root/missing.conf" "$amd_capabilities"
 assert_profiles 'desktop development communication gaming'
 resolve_package_manifests "$repository" "$amd_capabilities" repository packages
 assert_contains mesa "${packages[@]}"
+assert_contains amd-ucode "${packages[@]}"
 assert_contains vulkan-radeon "${packages[@]}"
 assert_contains lib32-vulkan-radeon "${packages[@]}"
 assert_contains nvtop "${packages[@]}"

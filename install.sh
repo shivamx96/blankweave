@@ -496,14 +496,14 @@ echo "Setting up Plymouth boot splash..."
 if command -v plymouth-set-default-theme &> /dev/null; then
     "$REPO_DIR/scripts/configure-plymouth-transition.sh"
 
-    # Place Plymouth after the init implementation and before encrypt/sd-encrypt.
+    # Place Plymouth before encrypt/sd-encrypt and ensure early CPU microcode.
     # The helper understands both busybox/udev and systemd initramfs layouts.
     if [ -f /etc/mkinitcpio.conf ]; then
         HOOKS_BEFORE=$(grep -E '^[[:space:]]*HOOKS[[:space:]]*=' /etc/mkinitcpio.conf)
         "$REPO_DIR/scripts/configure-plymouth-hooks.sh"
         HOOKS_AFTER=$(grep -E '^[[:space:]]*HOOKS[[:space:]]*=' /etc/mkinitcpio.conf)
         if [ "$HOOKS_BEFORE" != "$HOOKS_AFTER" ]; then
-            echo "Rebuilding initramfs with plymouth..."
+            echo "Rebuilding initramfs with Plymouth and CPU microcode..."
             mkinitcpio -P
         fi
     fi

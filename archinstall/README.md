@@ -67,8 +67,9 @@ curl --proto '=https' --tlsv1.2 -fsSL \
 The bootstrap creates a managed checkout under
 `~/.local/share/blankweave/repository`, then opens `blankweave setup` for a final
 review of profiles, theme, and optional Git/SSH choices. The second stage
-detects GPU vendors, battery and display controls, Bluetooth, and other hardware
-capabilities, then installs only their drivers, services, and user configuration.
+detects CPU and GPU vendors, battery and display controls, Bluetooth, and other
+hardware capabilities, then installs the matching microcode, drivers, services,
+firmware, and user configuration.
 Future updates are applied with `blankweave update`.
 
 Before applying one, `blankweave update --dry-run` validates the fetched

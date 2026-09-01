@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Put Plymouth in the only safe part of mkinitcpio's hook order: after the
 # init implementation (udev or systemd), and before any encrypted-root hook.
+# Also ensure early CPU microcode loading immediately after autodetect.
 
 set -euo pipefail
 
@@ -28,27 +29,37 @@ suffix=${BASH_REMATCH[3]}
 read -r -a hooks <<< "$body"
 
 anchor=""
+has_autodetect=false
 for hook in "${hooks[@]}"; do
+    [[ $hook == autodetect ]] && has_autodetect=true
     if [[ $hook == systemd ]]; then
         anchor=systemd
-        break
-    elif [[ $hook == udev ]]; then
+    elif [[ $hook == udev && $anchor != systemd ]]; then
         anchor=udev
     fi
 done
 [[ -n $anchor ]] || die "HOOKS must contain udev or systemd"
 
 ordered=()
-inserted=false
+plymouth_inserted=false
+microcode_inserted=false
 for hook in "${hooks[@]}"; do
-    [[ $hook == plymouth ]] && continue
+    [[ $hook == plymouth || $hook == microcode ]] && continue
     ordered+=("$hook")
     if [[ $hook == "$anchor" ]]; then
         ordered+=(plymouth)
-        inserted=true
+        plymouth_inserted=true
+        if [[ $has_autodetect == false ]]; then
+            ordered+=(microcode)
+            microcode_inserted=true
+        fi
+    elif [[ $hook == autodetect ]]; then
+        ordered+=(microcode)
+        microcode_inserted=true
     fi
 done
-[[ $inserted == true ]] || die "could not place Plymouth after $anchor"
+[[ $plymouth_inserted == true ]] || die "could not place Plymouth after $anchor"
+[[ $microcode_inserted == true ]] || die 'could not place the microcode hook'
 
 new_line="$prefix${ordered[*]}$suffix"
 if [[ $new_line == "$line" ]]; then
@@ -69,4 +80,4 @@ chown --reference="$config" "$staged"
 mv -f -- "$staged" "$config"
 trap - EXIT HUP INT TERM
 
-printf 'Placed Plymouth after %s in %s.\n' "$anchor" "$config"
+printf 'Placed Plymouth and CPU microcode hooks in %s.\n' "$config"

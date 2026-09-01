@@ -48,7 +48,7 @@ printf '%s\n' \
     'ExecStart=-/usr/bin/plymouth deactivate' \
     'ExecStart=-/usr/bin/plymouth quit --retain-splash' \
     > "$system_root/etc/systemd/system/plymouth-quit.service.d/blankweave.conf"
-printf 'HOOKS=(base systemd plymouth autodetect modconf kms keyboard sd-vconsole block sd-encrypt filesystems fsck)\n' \
+printf 'HOOKS=(base systemd plymouth autodetect microcode modconf kms keyboard sd-vconsole block sd-encrypt filesystems fsck)\n' \
     > "$system_root/etc/mkinitcpio.conf"
 printf '%s\n' \
     'title Arch Linux' \
@@ -84,6 +84,7 @@ run_doctor() {
         BLANKWEAVE_USER_HOME="$home" \
         BLANKWEAVE_SYSTEM_ROOT="$system_root" \
         BLANKWEAVE_SYSFS_ROOT="$system_root/sys" \
+        BLANKWEAVE_TEST_CPU_VENDOR=GenuineIntel \
         BLANKWEAVE_TEST_LSPCI_OUTPUT='' \
         BLANKWEAVE_TEST_LSUSB_OUTPUT='' \
         BLANKWEAVE_TEST_DDC_DISPLAY=false \
@@ -96,11 +97,14 @@ grep -Eq '^PASS  +repository ' <<< "$output"
 grep -Fq 'PASS  runtime commands' <<< "$output"
 grep -Fq 'PASS  tty1 automatic login' <<< "$output"
 grep -Fq 'PASS  Plymouth handoff' <<< "$output"
+grep -Fq 'PASS  initramfs microcode' <<< "$output"
+grep -Fq 'PASS  CPU microcode package' <<< "$output"
 grep -Fq '0 failures' <<< "$output"
 
 report=$(run_doctor --report)
 grep -Fq 'Sanitized report' <<< "$report"
 grep -Fq 'hyprlock: 1.0-1' <<< "$report"
+grep -Fq 'intel-ucode: 1.0-1' <<< "$report"
 grep -Fq 'serial numbers omitted' <<< "$report"
 if grep -Fq "$home" <<< "$report"; then
     printf 'Sanitized report exposed the fixture home path.\n' >&2

@@ -3,8 +3,10 @@
 Arch + Hyprland bootstrap with automatic hardware detection.
 
 Hardware support is capability-based rather than tied to machine labels. The
-installer detects Intel, AMD, and NVIDIA GPUs, batteries, internal panels and
-backlights, DDC/CI displays, Bluetooth controllers, and gaming-driver support.
+installer detects Intel and AMD CPUs, Intel, AMD, and NVIDIA GPUs, batteries,
+internal panels and backlights, DDC/CI displays, Bluetooth controllers, and
+gaming-driver support. It installs the matching CPU microcode and GPU stack,
+plus the baseline device firmware used by modern Linux hardware.
 
 ## Install
 

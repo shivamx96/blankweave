@@ -46,17 +46,38 @@ hardware_capabilities_usb() {
     fi
 }
 
+hardware_capabilities_cpu_vendor() {
+    local proc_root=${BLANKWEAVE_PROCFS_ROOT:-/proc}
+
+    if [[ ${BLANKWEAVE_TEST_CPU_VENDOR+x} ]]; then
+        printf '%s\n' "$BLANKWEAVE_TEST_CPU_VENDOR"
+    elif [[ -r $proc_root/cpuinfo ]]; then
+        awk -F: '/^[[:space:]]*vendor_id[[:space:]]*:/ {
+            value = $2
+            gsub(/^[[:space:]]+|[[:space:]]+$/, "", value)
+            print value
+            exit
+        }' "$proc_root/cpuinfo"
+    fi
+}
+
 hardware_capabilities_detect() {
     local sys_root=${BLANKWEAVE_SYSFS_ROOT:-/sys}
     local pci_output usb_output line connector status_file type_file vendor_file vendor_id
-    local device class_id
+    local device class_id cpu_vendor
     local has_external_display=false has_gpu=false
     local -a power_supplies=() backlights=() bluetooth_adapters=() connectors=()
     local -a gpu_vendor_files=() pci_devices=()
 
     HARDWARE_CAPABILITIES=()
+    cpu_vendor=$(hardware_capabilities_cpu_vendor)
     pci_output=$(hardware_capabilities_pci)
     usb_output=$(hardware_capabilities_usb)
+
+    case $cpu_vendor in
+        GenuineIntel) hardware_capability_add cpu-intel ;;
+        AuthenticAMD) hardware_capability_add cpu-amd ;;
+    esac
 
     if grep -Eiq '(VGA compatible controller|3D controller|Display controller).*Intel' <<< "$pci_output"; then
         hardware_capability_add gpu-intel
@@ -156,7 +177,7 @@ hardware_capabilities_detect() {
 }
 
 hardware_capabilities_write_json() {
-    local destination=$1 capability separator='' gpu_vendor
+    local destination=$1 capability separator='' gpu_vendor cpu_vendor
     local staged
     local -a gpu_vendors=()
 
@@ -167,13 +188,20 @@ hardware_capabilities_write_json() {
             printf '%s"%s"' "$separator" "$capability"
             separator=', '
             case $capability in
+                cpu-*) cpu_vendor=${capability#cpu-} ;;
                 gpu-*)
                     gpu_vendor=${capability#gpu-}
                     gpu_vendors+=("$gpu_vendor")
                     ;;
             esac
         done
-        printf '],\n  "gpuVendors": ['
+        printf '],\n  "cpuVendor": '
+        if [[ -n $cpu_vendor ]]; then
+            printf '"%s",\n' "$cpu_vendor"
+        else
+            printf 'null,\n'
+        fi
+        printf '  "gpuVendors": ['
         separator=
         for gpu_vendor in "${gpu_vendors[@]}"; do
             printf '%s"%s"' "$separator" "$gpu_vendor"

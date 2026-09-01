@@ -220,8 +220,14 @@ check_plymouth() {
         else
             fail 'initramfs Plymouth' 'hook is absent from mkinitcpio.conf'
         fi
+        if grep -E '^[[:space:]]*HOOKS=.*[([:space:]]microcode[)[:space:]]' "$hooks" > /dev/null; then
+            pass 'initramfs microcode' 'early loading is configured'
+        else
+            fail 'initramfs microcode' 'hook is absent from mkinitcpio.conf'
+        fi
     else
         skip 'initramfs Plymouth' 'mkinitcpio.conf is not readable'
+        skip 'initramfs microcode' 'mkinitcpio.conf is not readable'
     fi
 
     if [[ -d "$entries" ]]; then
@@ -243,6 +249,30 @@ check_plymouth() {
         fi
     else
         skip 'kernel command line' 'systemd-boot entries are not readable'
+    fi
+}
+
+check_cpu_microcode() {
+    local repository=$1 package
+
+    # shellcheck source=scripts/hardware-capabilities.sh
+    source "$repository/scripts/hardware-capabilities.sh"
+    hardware_capabilities_detect
+    if hardware_capability_has cpu-intel; then
+        package=intel-ucode
+    elif hardware_capability_has cpu-amd; then
+        package=amd-ucode
+    else
+        skip 'CPU microcode package' 'CPU vendor is not Intel or AMD'
+        return
+    fi
+
+    if ! command -v pacman > /dev/null 2>&1; then
+        skip 'CPU microcode package' 'pacman is unavailable'
+    elif pacman -Q "$package" > /dev/null 2>&1; then
+        pass 'CPU microcode package' "$package is installed"
+    else
+        fail 'CPU microcode package' "$package is not installed"
     fi
 }
 
@@ -298,6 +328,11 @@ print_report() {
     source "$repository/scripts/hardware-capabilities.sh"
     hardware_capabilities_detect
     capabilities=$(hardware_capabilities_list)
+    if hardware_capability_has cpu-intel; then
+        packages+=(intel-ucode)
+    elif hardware_capability_has cpu-amd; then
+        packages+=(amd-ucode)
+    fi
 
     printf '\nSanitized report\n'
     printf '  blankweave: %s (%s)\n' "$(head -n 1 "$repository/VERSION" 2>/dev/null || printf unknown)" "$(short_revision "$repository")"
@@ -350,6 +385,7 @@ main() {
     check_console_session
     check_keyring
     check_plymouth
+    check_cpu_microcode "$repository"
     check_services "$repository"
 
     printf '\nSummary: %d passed, %d warnings, %d failures, %d skipped\n' \
