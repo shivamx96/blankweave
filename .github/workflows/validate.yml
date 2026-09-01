@@ -21,6 +21,11 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v5
 
+      - name: Trust container checkout
+        # Tests deliberately replace HOME with sandboxes, so the exception
+        # must not live in a HOME-scoped global config that then disappears.
+        run: git config --system --add safe.directory "$GITHUB_WORKSPACE"
+
       - name: Check shell syntax
         shell: bash
         run: |

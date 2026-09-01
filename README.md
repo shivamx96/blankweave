@@ -37,6 +37,16 @@ blankweave update
 only fast-forwards from the expected GitHub repository, applies the new version,
 and then records successful one-time migrations.
 
+## Releases
+
+Blankweave releases are stable SemVer versions with two matching markers:
+`VERSION` in the commit and an annotated `v<VERSION>` Git tag pointing to that
+exact commit. An untagged checkout is shown as `unreleased` and remains usable
+for local development, but `blankweave update` will never install it. The first
+supported rollback boundary is the tagged `v0.1.0` known-working baseline.
+
+See [RELEASES.md](RELEASES.md) for the release and tagging procedure.
+
 The script will:
 - Detect hardware
 - Install packages (Hyprland, Quickshell, Dunst, Ghostty, etc.)

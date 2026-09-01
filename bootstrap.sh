@@ -3,7 +3,13 @@
 set -eu
 
 repository_url=https://github.com/shivamx96/blankweave.git
+repository_url_no_suffix=https://github.com/shivamx96/blankweave
+repository_ssh_url=git@github.com:shivamx96/blankweave.git
+repository_ssh_url_no_suffix=git@github.com:shivamx96/blankweave
 legacy_repository_url=https://github.com/shivamx96/hyprarch.git
+legacy_repository_url_no_suffix=https://github.com/shivamx96/hyprarch
+legacy_repository_ssh_url=git@github.com:shivamx96/hyprarch.git
+legacy_repository_ssh_url_no_suffix=git@github.com:shivamx96/hyprarch
 blankweave_dir=$HOME/.local/share/blankweave
 repository=$blankweave_dir/repository
 temporary_repository=
@@ -48,7 +54,10 @@ if [ -e "$repository" ]; then
     origin=$(git -C "$repository" remote get-url origin 2>/dev/null) \
         || die "existing repository has no origin remote"
     case "$origin" in
-        "$repository_url"|"$legacy_repository_url") ;;
+        "$repository_url"|"$repository_url_no_suffix"|\
+        "$repository_ssh_url"|"$repository_ssh_url_no_suffix"|\
+        "$legacy_repository_url"|"$legacy_repository_url_no_suffix"|\
+        "$legacy_repository_ssh_url"|"$legacy_repository_ssh_url_no_suffix") ;;
         *) die "existing repository has an unexpected origin: $origin" ;;
     esac
     exec "$repository/bin/blankweave" update </dev/tty
@@ -57,6 +66,11 @@ fi
 temporary_repository=$(mktemp -d "$blankweave_dir/.repository.XXXXXX")
 printf 'Downloading Blankweave...\n'
 git clone --depth 1 --branch main "$repository_url" "$temporary_repository"
+git -C "$temporary_repository" fetch --force --tags origin
+release_tag=$("$temporary_repository/scripts/verify-release.sh" \
+    "$temporary_repository" HEAD) \
+    || die "downloaded main is not a tagged Blankweave release"
+printf 'Verified %s.\n' "$release_tag"
 mv "$temporary_repository" "$repository"
 temporary_repository=
 

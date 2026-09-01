@@ -260,6 +260,7 @@ echo "Copying defaults to $DOTS_DIR..."
 mkdir -p "$USER_HOME/.local/bin"
 install -m 0755 "$REPO_DIR/bin/blankweave" "$USER_HOME/.local/bin/blankweave"
 copy_file_atomically "$REPO_DIR/VERSION" "$DOTS_DIR/VERSION"
+copy_file_atomically "$REPO_DIR/MIN_ROLLBACK_VERSION" "$DOTS_DIR/MIN_ROLLBACK_VERSION"
 
 mkdir -p "$DOTS_DIR/hypr"
 for hypr_config in "$REPO_DIR/defaults/hypr/"*; do
