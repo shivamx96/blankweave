@@ -69,6 +69,12 @@ The bootstrap creates a managed checkout under
 or NVIDIA desktop and installs the matching drivers, AUR packages, services,
 and user configuration. Future updates are applied with `blankweave update`.
 
+At the graphical boot splash, Plymouth displays the LUKS prompt and masked
+keystrokes. If a theme or graphics regression ever hides the prompt, press
+**Esc** to switch to the text console and enter the passphrase there. To bypass
+Plymouth for one boot, edit the systemd-boot entry with **e** and append
+`plymouth.enable=0 disablehooks=plymouth` to its options.
+
 ## Encryption policy
 
 Use a LUKS2 passphrase at boot on both machines. Hyprlock remains necessary for
