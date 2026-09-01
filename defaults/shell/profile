@@ -7,5 +7,10 @@ export TERMINAL=ghostty
 # Start the managed graphical session only from a suitable local tty1 login.
 # uwsm performs the tty, login-shell, D-Bus, and active-session checks.
 if uwsm check may-start; then
-    exec uwsm start -e -D Hyprland hyprland.desktop
+    session_log_dir="${XDG_STATE_HOME:-$HOME/.local/state}/blankweave"
+    session_log="$session_log_dir/uwsm-session.log"
+    mkdir -p "$session_log_dir"
+    : > "$session_log"
+    chmod 600 "$session_log"
+    exec uwsm start -e -D Hyprland hyprland.desktop >> "$session_log" 2>&1
 fi

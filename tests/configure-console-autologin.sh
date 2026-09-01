@@ -66,7 +66,7 @@ fi
 # The deployed profile follows UWSM's guarded tty1 integration and the lock
 # screen remains available without being forced at graphical-session startup.
 grep -Fxq 'if uwsm check may-start; then' "$repository/defaults/shell/profile"
-grep -Fxq '    exec uwsm start -e -D Hyprland hyprland.desktop' "$repository/defaults/shell/profile"
+grep -Fxq "    exec uwsm start -e -D Hyprland hyprland.desktop >> \"\$session_log\" 2>&1" "$repository/defaults/shell/profile"
 if grep -Fq 'start-hyprland' "$repository/defaults/shell/profile"; then
     printf 'The profile still bypasses direct UWSM session startup.\n' >&2
     exit 1
@@ -79,5 +79,15 @@ if grep -Fq 'blankweave-lock' "$repository/defaults/hypr/hyprlock.conf"; then
     printf 'Hyprlock still selects the removed compatibility PAM service.\n' >&2
     exit 1
 fi
+
+# Once Hyprland owns DRM, its first startup helper clears the tty1 text buffer
+# that would otherwise be exposed briefly on the way to shutdown Plymouth.
+tty_fixture=$test_root/tty1
+: > "$tty_fixture"
+# shellcheck source=defaults/shell/clear-boot-console.sh
+source "$repository/defaults/shell/clear-boot-console.sh"
+clear_boot_console "$tty_fixture"
+[[ $(od -An -tx1 "$tty_fixture" | tr -d ' \n') == 1b5b3f32356c1b5b324a1b5b334a1b5b48 ]]
+grep -Fq 'clear-boot-console.sh' "$repository/defaults/hypr/autostart.lua"
 
 printf 'Console automatic-login configuration tests passed.\n'

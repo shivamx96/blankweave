@@ -82,6 +82,9 @@ not appear between Plymouth and Hyprland; tty2 and the other consoles remain
 normal recovery logins. The boot command line hides the VT cursor globally, so
 `/etc/issue.d/blankweave-cursor.issue` restores it on those recovery gettys;
 tty1 suppresses issue files and remains clean during the graphical handoff.
+The profile sends the small UWSM controller's stdout/stderr to
+`~/.local/state/blankweave/uwsm-session.log`; compositor and application units
+still log normally through the user journal.
 
 Do not restore a graphical-startup Hyprlock. The LUKS prompt is the boot-time
 authentication boundary. Hyprlock remains in manual keybindings and in
@@ -395,6 +398,17 @@ entry without replacing unrelated options or the active theme's console
 colour. `install.sh` runs these on every
 apply, `blankweave theme set` runs it through sudo, and `blankweave theme sync`
 runs it alone for a switch made from the bar, which cannot prompt.
+
+`scripts/configure-plymouth-transition.sh` restores the package-provided
+`plymouth-quit{,-wait}.service` units if a former display-manager
+handoff masked them, then overrides only the quit command with Plymouth's
+`deactivate` followed by `quit --retain-splash`. Getty waits on the existing
+quit synchronization point, so Hyprland replaces the retained framebuffer
+without a text-mode frame. Once Hyprland owns DRM,
+`clear-boot-console.sh` clears tty1's hidden text and scrollback buffers; when
+the compositor releases DRM during shutdown, the theme-coloured blank VT is
+shown until the package-provided shutdown Plymouth service takes over. Do not
+add sleeps, a custom shutdown service, or shortened global stop timeouts.
 
 `defaults/shell/theme-apply.sh` is the only writer of
 `~/.config/blankweave/theme.json` — the persisted `{theme, mode}` selection

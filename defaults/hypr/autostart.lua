@@ -1,4 +1,5 @@
 local startup_commands = {
+    "~/.local/share/blankweave/shell/clear-boot-console.sh",
     "awww-daemon",
     "~/.local/share/blankweave/shell/wallpaper.sh theme",
     "quickshell -n -p ~/.local/share/blankweave/quickshell",

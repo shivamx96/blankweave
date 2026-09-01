@@ -479,6 +479,8 @@ section "CONFIGURING PLYMOUTH"
 
 echo "Setting up Plymouth boot splash..."
 if command -v plymouth-set-default-theme &> /dev/null; then
+    "$REPO_DIR/scripts/configure-plymouth-transition.sh"
+
     # Place Plymouth after the init implementation and before encrypt/sd-encrypt.
     # The helper understands both busybox/udev and systemd initramfs layouts.
     if [ -f /etc/mkinitcpio.conf ]; then

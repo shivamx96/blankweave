@@ -93,4 +93,6 @@ automatically and starts Hyprland through UWSM, without SDDM or a second
 graphical-startup Hyprlock prompt. Hyprlock remains enabled for manual locking,
 idle timeout, suspend, and resume. The tty1 login banner and console cursor are
 suppressed during the Plymouth-to-Hyprland handoff; tty2 remains an ordinary
-recovery login.
+recovery login. Plymouth retains its final boot framebuffer until Hyprland
+replaces it, and tty1's hidden text buffer is cleared under the running
+compositor so the shutdown splash receives the same clean handoff.
