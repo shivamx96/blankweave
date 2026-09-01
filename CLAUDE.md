@@ -33,6 +33,9 @@ blankweave/
   scripts/           # Installer/update support, wallpaper and splash renderers,
                      # theme-system.sh (root-side theme sync)
   install.sh         # Internal apply engine (also usable by developers)
+  VERSION            # Intended stable SemVer for the release commit
+  MIN_ROLLBACK_VERSION # Oldest supported configuration rollback release
+  RELEASES.md        # Release, annotated-tag, and rollback-floor policy
 ```
 
 ### The rename from hyprarch
@@ -62,8 +65,16 @@ finds nothing at them.
 3. `install.sh` runs `scripts/run-migrations.sh` as the normal user only after a
    successful apply. Applied migration filenames are recorded under
    `${XDG_STATE_HOME:-~/.local/state}/blankweave/`.
-4. `blankweave update` validates the origin, branch, and clean worktree, performs
-   a fast-forward-only update, then re-executes the newly fetched CLI.
+4. `blankweave update` validates the origin, branch, and clean worktree, then
+   accepts only a fast-forward target carrying an annotated `v<VERSION>` tag on
+   that exact commit. Its version must advance and its rollback floor must
+   include the current release before the new CLI is applied.
+
+`VERSION` is a stable `MAJOR.MINOR.PATCH` declaration. A commit becomes a
+release only when the matching annotated `vMAJOR.MINOR.PATCH` tag exists on that
+exact commit; lightweight tags and untagged commits are not releases. Config
+schema numbers remain local to their formats. Follow `RELEASES.md` for every
+release and treat `MIN_ROLLBACK_VERSION` as an explicit compatibility decision.
 
 Do not add a public `blankweave install` command. First installation is the
 bootstrap's responsibility; subsequent convergence is `blankweave update`.

@@ -47,4 +47,15 @@ for migration in "${migrations[@]}"; do
 done
 
 write_state_file "$state_dir/repository" "$repository"
-write_state_file "$state_dir/installed-revision" "$(git -C "$repository" rev-parse HEAD)"
+installed_revision=$(git -C "$repository" rev-parse HEAD)
+# shellcheck source=scripts/release-version.sh
+source "$repository/scripts/release-version.sh"
+installed_version=$(blankweave_release_version_at "$repository" "$installed_revision") || {
+    printf 'Invalid Blankweave VERSION at %s\n' "${installed_revision:0:12}" >&2
+    exit 1
+}
+installed_tag=$(blankweave_release_tag_at \
+    "$repository" "$installed_revision" 2>/dev/null || printf 'unreleased\n')
+write_state_file "$state_dir/installed-revision" "$installed_revision"
+write_state_file "$state_dir/installed-version" "$installed_version"
+write_state_file "$state_dir/installed-release-tag" "$installed_tag"
