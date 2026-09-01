@@ -52,6 +52,7 @@ grim
 slurp
 polkit-gnome
 gnome-keyring
+seahorse
 xdg-user-dirs
 xdg-utils
 file-roller
