@@ -474,10 +474,13 @@ section "CONFIGURING PLYMOUTH"
 
 echo "Setting up Plymouth boot splash..."
 if command -v plymouth-set-default-theme &> /dev/null; then
-    # Add plymouth hook to mkinitcpio if not present
+    # Place Plymouth after the init implementation and before encrypt/sd-encrypt.
+    # The helper understands both busybox/udev and systemd initramfs layouts.
     if [ -f /etc/mkinitcpio.conf ]; then
-        if ! grep "^HOOKS=" /etc/mkinitcpio.conf | grep -q "plymouth"; then
-            sed -i 's/^HOOKS=(\(.*\)udev\(.*\))/HOOKS=(\1udev plymouth\2)/' /etc/mkinitcpio.conf
+        HOOKS_BEFORE=$(grep -E '^[[:space:]]*HOOKS[[:space:]]*=' /etc/mkinitcpio.conf)
+        "$REPO_DIR/scripts/configure-plymouth-hooks.sh"
+        HOOKS_AFTER=$(grep -E '^[[:space:]]*HOOKS[[:space:]]*=' /etc/mkinitcpio.conf)
+        if [ "$HOOKS_BEFORE" != "$HOOKS_AFTER" ]; then
             echo "Rebuilding initramfs with plymouth..."
             mkinitcpio -P
         fi

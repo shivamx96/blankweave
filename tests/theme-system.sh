@@ -86,6 +86,7 @@ done
 for file in blankweave.plymouth blankweave.script logo.png progress_bar.png progress_box.png; do
     cmp -s "$stage/$file" "$installed/$file"
 done
+grep -Fxq 'Plymouth.SetDisplayPasswordFunction(display_password_callback);' "$installed/blankweave.script"
 [[ ! -e $installed/blankweave.script.tmpl ]]
 [[ $(grep -c 'plymouth-set-default-theme -R blankweave' "$FAKE_LOG") == 1 ]]
 grep -Fq 'vt.default_red=5 vt.default_grn=13 vt.default_blu=10' "$system/boot/entries/arch.conf"
