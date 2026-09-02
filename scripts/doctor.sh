@@ -105,7 +105,7 @@ check_repository() {
 
 check_commands() {
     local executable
-    local required_value=${BLANKWEAVE_DOCTOR_COMMANDS:-Hyprland uwsm qs hyprlock hypridle awww-daemon dunst ghostty fuzzel jq playerctl}
+    local required_value=${BLANKWEAVE_DOCTOR_COMMANDS:-Hyprland uwsm qs hyprlock hypridle awww-daemon dunst ghostty cliphist wl-copy jq playerctl}
     local -a required=()
     local -a missing=()
 

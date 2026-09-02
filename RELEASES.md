@@ -43,6 +43,8 @@ The initial release sequence is:
   leaking its boolean probe status into the installer.
 - `0.4.3` — always show the Limine menu, extend its timeout for multi-boot
   systems, and expose firmware USB handoff when available.
+- `0.5.0` — retire Fuzzel for the native Quickshell launcher, give it a
+  clipboard-history view, and round the launcher and lock-screen input.
 
 Config-file schema numbers belong to their individual formats and are not
 Blankweave release versions.

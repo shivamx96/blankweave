@@ -6,11 +6,10 @@ hl.bind(main_mod .. " + B", hl.dsp.exec_cmd("zen-browser"))
 hl.bind(main_mod .. " + SHIFT + B", hl.dsp.exec_cmd("blueman-manager"))
 hl.bind(main_mod .. " + F", hl.dsp.exec_cmd("thunar"))
 hl.bind(main_mod .. " + space", hl.dsp.exec_cmd([[qs ipc -n -p "$HOME/.local/share/blankweave/quickshell" call blankweave launcher]]))
-hl.bind(main_mod .. " + SHIFT + space", hl.dsp.exec_cmd("fuzzel"))
 hl.bind(main_mod .. " + L", hl.dsp.exec_cmd("hyprlock"))
 hl.bind(main_mod .. " + D", hl.dsp.exec_cmd("~/.local/share/blankweave/shell/theme-apply.sh toggle"))
 hl.bind(main_mod .. " + SHIFT + W", hl.dsp.exec_cmd("~/.local/share/blankweave/shell/wallpaper.sh cycle"))
-hl.bind(main_mod .. " + SHIFT + V", hl.dsp.exec_cmd("cliphist list | fuzzel --dmenu | cliphist decode | wl-copy"))
+hl.bind(main_mod .. " + SHIFT + V", hl.dsp.exec_cmd([[qs ipc -n -p "$HOME/.local/share/blankweave/quickshell" call blankweave clipboard]]))
 hl.bind(main_mod .. " + Y", hl.dsp.exec_cmd([[qs ipc -n -p "$HOME/.local/share/blankweave/quickshell" call blankweave reload]]))
 
 -- Screenshots

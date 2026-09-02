@@ -12,9 +12,19 @@ ShellRoot {
     property Theme theme: Theme { }
     property ShellPreferences preferences: ShellPreferences { }
     property bool launcherOpen: false
+    property string launcherMode: "applications"
 
-    function toggleLauncher() {
-        root.launcherOpen = !root.launcherOpen
+    // The mode lives here rather than in the surface because Variants gives
+    // every screen its own launcher; a keybinding for the other view should
+    // switch the open one, not close it.
+    function toggleLauncher(mode) {
+        const next = mode || "applications"
+        if (root.launcherOpen && root.launcherMode === next) {
+            root.launcherOpen = false
+            return
+        }
+        root.launcherMode = next
+        root.launcherOpen = true
     }
 
     function closeLauncher() {
@@ -35,10 +45,12 @@ ShellRoot {
 
         delegate: ApplicationLauncher {
             theme: root.theme
+            mode: root.launcherMode
             open: root.launcherOpen
                 && (!Hyprland.focusedMonitor
                     || modelData.name === Hyprland.focusedMonitor.name)
             onDismissed: root.closeLauncher()
+            onModeRequested: next => root.launcherMode = next
         }
     }
 
@@ -50,7 +62,11 @@ ShellRoot {
         }
 
         function launcher() {
-            root.toggleLauncher()
+            root.toggleLauncher("applications")
+        }
+
+        function clipboard() {
+            root.toggleLauncher("clipboard")
         }
     }
 }
