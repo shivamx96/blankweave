@@ -780,12 +780,19 @@ WidgetFrame {
                             Layout.fillWidth: true
                             spacing: 1
 
+                            // The lock qualifies the name, so the SSID is capped
+                            // at its natural width and a spacer absorbs the
+                            // rest. Letting the SSID fill the row instead
+                            // pushed the glyph out to the column's right edge,
+                            // where it sat just left of the Connect action on a
+                            // different baseline and read as misaligned.
                             RowLayout {
                                 Layout.fillWidth: true
                                 spacing: 6
 
                                 Text {
                                     Layout.fillWidth: true
+                                    Layout.maximumWidth: implicitWidth
                                     text: networkDelegate.ssid
                                     color: root.theme.text
                                     elide: Text.ElideRight
@@ -797,11 +804,14 @@ WidgetFrame {
 
                                 Text {
                                     visible: networkDelegate.secured
+                                    Layout.alignment: Qt.AlignVCenter
                                     text: "󰌾"
                                     color: root.theme.textMuted
                                     font.family: root.theme.iconFontFamily
                                     font.pixelSize: root.theme.microTextSize
                                 }
+
+                                Item { Layout.fillWidth: true }
                             }
 
                             Text {
