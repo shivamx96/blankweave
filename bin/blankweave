@@ -3,17 +3,11 @@
 set -euo pipefail
 
 PROGRAM_NAME=blankweave
-# Checkouts made before the repository was renamed still carry the old
-# origin; GitHub redirects it, so both are accepted.
 EXPECTED_REMOTES=(
     https://github.com/shivamx96/blankweave
     https://github.com/shivamx96/blankweave.git
     git@github.com:shivamx96/blankweave
     git@github.com:shivamx96/blankweave.git
-    https://github.com/shivamx96/hyprarch
-    https://github.com/shivamx96/hyprarch.git
-    git@github.com:shivamx96/hyprarch
-    git@github.com:shivamx96/hyprarch.git
 )
 STATE_HOME=${XDG_STATE_HOME:-$HOME/.local/state}
 BLANKWEAVE_DATA_DIR=$HOME/.local/share/blankweave
