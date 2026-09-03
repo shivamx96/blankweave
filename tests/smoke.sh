@@ -27,7 +27,7 @@ grep -Fxq "blankweave $repository_version ($repository_release)" <<< "$version_o
 grep -Fq 'installed:  not-recorded / not-recorded (not-recorded)' <<< "$version_output"
 grep -Fq 'rollback floor: 0.1.0' <<< "$version_output"
 
-grep -Fq 'Usage: blankweave doctor [--report]' <<< "$(
+grep -Fq 'Usage: blankweave doctor [--full|--normal] [--report]' <<< "$(
     HOME="$test_root/home" \
         XDG_STATE_HOME="$test_root/state" \
         "$repository/bin/blankweave" doctor --help

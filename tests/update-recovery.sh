@@ -38,6 +38,7 @@ exit 0
 EOF
 cat > "$fixture/scripts/doctor.sh" <<'EOF'
 #!/usr/bin/env bash
+[[ ${2:-} == --normal && ${3:-} == --report ]]
 printf 'fixture doctor\n'
 EOF
 cp "$repository/scripts/release-version.sh" "$fixture/scripts/release-version.sh"
