@@ -12,7 +12,6 @@ blankweave/
     dunst/           # Notification daemon
     ghostty/         # Terminal emulator
     shell/           # Helper scripts (wallpaper, theme toggle, OSD popups, monitoring)
-    wallpapers/      # Bundled wallpapers
     themes/          # Bundled themes: palette, lock treatment, wallpapers, splash art
     webapps/         # Manifest of bundled web apps (name, URL, icon URL)
     plymouth/        # Boot splash: script template, master artwork to tint
@@ -508,7 +507,10 @@ everything else through the portal colour scheme (see the Electron gotcha).
 falls back to the bundled default's dark mode, and a mid-write read keeps the
 last good palette. The state file is rewritten in place with a single write
 rather than renamed, because Quickshell watches that path. `wallpaper.sh
-theme` reads the same file at startup. Ghostty is not re-rendered per mode:
+theme` reads the same file at startup. `Super+Shift+W` cycles that wallpaper
+together with extras in `~/.config/blankweave/wallpapers`, which the installer
+never deploys or wipes; an empty extras folder is a no-op back onto the theme.
+Ghostty is not re-rendered per mode:
 its template emits `theme = light:…,dark:…` from both modes and Ghostty
 follows the portal colour scheme. A theme switch changes that pair, and a
 surface that is already open keeps the pair it resolved at creation even
