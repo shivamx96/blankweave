@@ -178,6 +178,7 @@ choices but preserve any theme selected after setup.
 ### System
 - `Super + L` – lock screen
 - `Super + D` – toggle dark/light mode of the active theme
+- `Super + Shift + W` – cycle the theme wallpaper and any user extras
 - `Super + Y` – reload the desktop shell
 - `Super + M` – exit Hyprland
 
@@ -187,7 +188,6 @@ choices but preserve any theme selected after setup.
 - `Super + Shift + B` – Bluetooth manager
 - `Super + F` – file manager (Thunar)
 - `Super + Space` – native application launcher
-- `Super + Shift + Space` – Fuzzel fallback launcher
 
 ### Window Management
 - `Super + Arrow Keys` – focus windows
@@ -285,18 +285,13 @@ from `keybindings.lua`.
 
 ## Wallpapers
 
-Wallpapers are managed with **awww** (dynamic background for Wayland).
-
-- Add wallpapers to: `~/.local/share/blankweave/wallpapers/`
-- Change wallpaper: `Super + Shift + W` (cycles through that folder)
-- Each theme mode has its own wallpaper, restored at login and on every mode
-  switch
-- Set random: `~/.local/share/blankweave/shell/wallpaper.sh random`
-
-See [WALLPAPERS.md](WALLPAPERS.md) for recommended wallpaper sources and setup.
+Each theme mode has its own wallpaper, restored at login and on every theme
+or mode switch. `Super + Shift + W` cycles that wallpaper together with extras
+in `~/.config/blankweave/wallpapers/`; updates do not touch that folder. With
+no extras, the key restores the theme wallpaper.
 
 ## Customize
 
 Edit `~/.config/` to customize application settings. The Quickshell source is
-deployed to `~/.local/share/blankweave/quickshell/`; Dunst, Ghostty, and Fuzzel
-remain symlinked from `~/.config/`.
+deployed to `~/.local/share/blankweave/quickshell/`; Dunst and Ghostty remain
+symlinked from `~/.config/`.

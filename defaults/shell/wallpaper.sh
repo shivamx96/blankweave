@@ -1,13 +1,16 @@
 #!/usr/bin/env bash
 
-# Wallpaper manager for awww
+# Wallpaper manager for awww.
+#
+# Login and theme switches restore the active theme's wallpaper. Super+Shift+W
+# cycles that wallpaper together with extras the user dropped in
+# ~/.config/blankweave/wallpapers, which the installer never touches.
 
-WALLPAPER_DIR="$HOME/.local/share/blankweave/wallpapers"
+USER_WALLPAPER_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/blankweave/wallpapers"
 CURRENT_WALLPAPER="$HOME/.cache/blankweave-wallpaper"
 THEME_STATE="${XDG_CONFIG_HOME:-$HOME/.config}/blankweave/theme.json"
 
-# Create wallpaper directory if it doesn't exist
-mkdir -p "$WALLPAPER_DIR"
+mkdir -p "$USER_WALLPAPER_DIR"
 
 # Function to set wallpaper
 set_wallpaper() {
@@ -84,19 +87,45 @@ theme_wallpaper() {
 
     if [ -n "$wallpaper" ] && [ -f "$wallpaper" ]; then
         printf '%s\n' "$wallpaper"
-    else
-        random_wallpaper
+        return 0
+    fi
+
+    return 1
+}
+
+# User extras, then skip a duplicate of the theme wallpaper if the user
+# copied it into the extras folder.
+user_wallpapers() {
+    shopt -s nullglob
+    local files=("$USER_WALLPAPER_DIR"/*.{jpg,jpeg,png,JPG,JPEG,PNG})
+    shopt -u nullglob
+    if ((${#files[@]} > 0)); then
+        printf '%s\n' "${files[@]}"
     fi
 }
 
-# Function to get random wallpaper
-random_wallpaper() {
-    shopt -s nullglob
-    local wallpapers=("$WALLPAPER_DIR"/*.{jpg,jpeg,png,JPG,JPEG,PNG})
-    shopt -u nullglob
+# Theme wallpaper first so an empty extras folder is a no-op cycle, then
+# any user extras.
+cycle_wallpapers() {
+    local theme user
 
-    if [ ${#wallpapers[@]} -eq 0 ]; then
-        echo "No wallpapers found in $WALLPAPER_DIR" >&2
+    theme=$(theme_wallpaper) || theme=
+    if [ -n "$theme" ]; then
+        printf '%s\n' "$theme"
+    fi
+    while IFS= read -r user; do
+        [ -n "$user" ] || continue
+        [ "$user" = "$theme" ] && continue
+        printf '%s\n' "$user"
+    done < <(user_wallpapers)
+}
+
+random_wallpaper() {
+    local wallpapers=()
+
+    mapfile -t wallpapers < <(cycle_wallpapers)
+    if ((${#wallpapers[@]} == 0)); then
+        echo "No wallpapers available" >&2
         return 1
     fi
 
@@ -104,21 +133,16 @@ random_wallpaper() {
     echo "${wallpapers[$random_idx]}"
 }
 
-# Function to cycle wallpapers
 cycle_wallpaper() {
-    shopt -s nullglob
-    local wallpapers=("$WALLPAPER_DIR"/*.{jpg,jpeg,png,JPG,JPEG,PNG})
-    shopt -u nullglob
+    local wallpapers=() current next_idx=0 i
 
-    if [ ${#wallpapers[@]} -eq 0 ]; then
-        echo "No wallpapers found in $WALLPAPER_DIR" >&2
+    mapfile -t wallpapers < <(cycle_wallpapers)
+    if ((${#wallpapers[@]} == 0)); then
+        echo "No wallpapers available" >&2
         return 1
     fi
 
-    local current
     current=$(cat "$CURRENT_WALLPAPER" 2>/dev/null)
-    local next_idx=0
-
     for i in "${!wallpapers[@]}"; do
         if [ "${wallpapers[$i]}" = "$current" ]; then
             next_idx=$(( (i + 1) % ${#wallpapers[@]} ))

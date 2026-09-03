@@ -43,7 +43,6 @@ zoxide
 wl-clipboard
 cliphist
 playerctl
-socat
 grim
 slurp
 polkit-gnome
