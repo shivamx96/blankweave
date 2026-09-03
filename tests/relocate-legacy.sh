@@ -13,6 +13,15 @@ cleanup() {
 trap cleanup EXIT HUP INT TERM
 
 home=$test_root/home
+
+run_relocation() {
+    HOME="$home" \
+        XDG_CONFIG_HOME="$home/.config" \
+        XDG_STATE_HOME="$home/.local/state" \
+        XDG_CACHE_HOME="$home/.cache" \
+        "$repository/scripts/relocate-legacy.sh" "$home"
+}
+
 mkdir -p "$home/.local/share/hyprarch/repository/.git" \
     "$home/.local/share/hyprarch/wallpapers" \
     "$home/.config/hyprarch/themes/ember" \
@@ -27,7 +36,7 @@ touch "$home/.local/share/hyprarch/wallpapers/mine.png" \
 printf '/old/wallpaper.png\n' > "$home/.cache/hyprarch-wallpaper"
 printf 'export EDITOR=vim\nsource %s/.local/share/hyprarch/shell/profile\nexport FOO=bar\n' "$home" > "$home/.zprofile"
 
-"$repository/scripts/relocate-legacy.sh" "$home" > /dev/null
+run_relocation > /dev/null
 
 [[ -d $home/.local/share/blankweave/repository/.git ]]
 [[ -f $home/.local/share/blankweave/wallpapers/mine.png ]]
@@ -43,13 +52,13 @@ printf 'export EDITOR=vim\nsource %s/.local/share/hyprarch/shell/profile\nexport
 
 # Running again, or on a home that was never hyprarch, changes nothing.
 before=$(find "$home" | sort)
-"$repository/scripts/relocate-legacy.sh" "$home" > /dev/null
+run_relocation > /dev/null
 [[ $(find "$home" | sort) == "$before" ]]
 
 # An existing new-name directory is never overwritten by a stale old one.
 mkdir -p "$home/.config/hyprarch"
 printf 'stale\n' > "$home/.config/hyprarch/theme.json"
-"$repository/scripts/relocate-legacy.sh" "$home" 2> /dev/null
+run_relocation 2> /dev/null
 [[ $(jq -r '.theme' "$home/.config/blankweave/theme.json") == moss ]]
 [[ -f $home/.config/hyprarch/theme.json ]]
 
