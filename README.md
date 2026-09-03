@@ -137,12 +137,15 @@ The live shell never needs elevated privileges; it only reads this cached file.
 ## Installer profiles
 
 The required Blankweave environment and detected hardware support are always
-installed. Optional applications are grouped into four additive profiles:
+installed. Optional applications and features are grouped into five additive
+profiles:
 
 - `desktop` — browsers, notes, and personal desktop utilities;
 - `development` — editors, containers, language tooling, and coding tools;
 - `communication` — messaging and local sharing applications;
-- `gaming` — Steam, Proton, overlays, and host-appropriate 32-bit GPU support.
+- `gaming` — Steam, Proton, overlays, and host-appropriate 32-bit GPU support;
+- `voice-dictation` — fully local VoxType dictation, its verified `small.en`
+  model, compositor bindings, compact themed OSD, and bar controls.
 
 Selections can be stored in `~/.config/blankweave/install.conf`:
 
@@ -180,7 +183,9 @@ choices but preserve any theme selected after setup.
 
 ### System
 - `Super + L` – lock screen
-- `Super + D` – toggle dark/light mode of the active theme
+- `Super + T` – toggle dark/light mode of the active theme
+- `Super + D` – toggle local voice dictation when `voice-dictation` is enabled
+- `F12` (hold/release) – push-to-talk local voice dictation
 - `Super + Shift + W` – cycle the theme wallpaper and any user extras
 - `Super + Y` – reload the desktop shell
 - `Super + M` – exit Hyprland

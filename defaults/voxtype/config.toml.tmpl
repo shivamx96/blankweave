@@ -1,0 +1,74 @@
+# Managed by Blankweave when the voice-dictation profile is enabled.
+# Break the ~/.config/voxtype/config.toml symlink to keep a local override.
+
+state_file = "auto"
+
+[hotkey]
+# Hyprland owns both bindings, so VoxType never needs raw evdev access.
+enabled = false
+
+[audio]
+device = "default"
+sample_rate = 16000
+max_duration_secs = 60
+
+[audio.feedback]
+enabled = true
+theme = "subtle"
+volume = 0.5
+
+[whisper]
+# Blankweave voice dictation is intentionally local-only.
+mode = "local"
+model = "small.en"
+language = "en"
+translate = false
+
+[output]
+mode = "type"
+fallback_to_clipboard = true
+type_delay_ms = 0
+restore_clipboard = true
+restore_clipboard_delay_ms = 500
+
+[output.notification]
+on_recording_start = false
+on_recording_stop = false
+on_transcription = false
+
+[osd]
+frontend = "quickshell"
+style = "default"
+layout = "minimal"
+position = "bottom-center"
+width_px = 220
+height_px = 48
+margin_px = 28
+top_margin = 0.88
+waveform_gain = 8.0
+
+[osd.frame]
+background = "{{colors.surfaceRaised:rgb}}"
+border = "{{colors.outlineStrong:rgb}}"
+glow = false
+halo = false
+
+[[osd.visual.layers]]
+type = "bars"
+source = "peak"
+color = "{{colors.accentBright:rgb}}"
+x = 0.04
+y = 0.16
+width = 0.92
+height = 0.68
+order = 10
+gain = 1.0
+opacity = 1.0
+mirror = true
+radius = 3
+
+[vad]
+enabled = true
+backend = "energy"
+threshold = 0.5
+min_speech_duration_ms = 300

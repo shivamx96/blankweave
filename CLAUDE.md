@@ -385,8 +385,11 @@ what they are placed against, so `DisplayBrightness` names it "Built-in
 display" and the panel's section label says what the position is relative to.
 
 The right section is grouped into process-aware application indicators,
-icon-only system controls, and hardware metrics plus power. Add watched apps
-through `ApplicationIndicatorsWidget.qml` using `ProcessIndicator.qml`.
+icon-only system controls, and hardware metrics plus power. Optional features
+remain present in the universal Quickshell tree but derive visibility from the
+strict installer config. Voice dictation is the reference: `Services/Voxtype.qml`
+owns its single status watcher and `VoxtypeWidget.qml` consumes that shared
+state on every screen.
 
 Process-backed modules (CPU, GPU, memory, network) use scripts that output JSON:
 
@@ -484,7 +487,8 @@ add sleeps, a custom shutdown service, or shortened global stop timeouts.
 `~/.config/blankweave/theme.json` — the persisted `{theme, mode}` selection
 together with the resolved values of the active mode — and of every config
 rendered from a `.tmpl`: `dunst/dunstrc`,
-`ghostty/config`, and `hypr/hyprlock-theme.conf` next to their templates under
+`ghostty/config`, `hypr/hyprlock-theme.conf`, and the optional
+`voxtype/config.toml` next to their templates under
 `~/.local/share/blankweave/`, plus `~/.config/blankweave/theme.lua`, which
 `hyprland.lua` loads through `pcall` for the window border colours and the
 cursor theme with a built-in fallback. Templates use `{{path}}` placeholders

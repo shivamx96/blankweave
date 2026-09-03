@@ -11,6 +11,7 @@ ShellRoot {
 
     property Theme theme: Theme { }
     property ShellPreferences preferences: ShellPreferences { }
+    property Voxtype voxtype: Voxtype { }
     property bool launcherOpen: false
     property string launcherMode: "applications"
 
