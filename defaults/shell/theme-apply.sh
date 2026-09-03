@@ -188,6 +188,9 @@ render_all() {
     render_template css "$DOTS_DIR/ghostty/config.tmpl" "$DOTS_DIR/ghostty/config"
     render_template hypr "$DOTS_DIR/hypr/hyprlock-theme.conf.tmpl" "$DOTS_DIR/hypr/hyprlock-theme.conf"
     render_template hypr "$DOTS_DIR/hypr/theme.lua.tmpl" "$BLANKWEAVE_CONFIG_DIR/theme.lua"
+    if [[ -r $DOTS_DIR/voxtype/config.toml.tmpl ]]; then
+        render_template css "$DOTS_DIR/voxtype/config.toml.tmpl" "$DOTS_DIR/voxtype/config.toml"
+    fi
     render_template plymouth "$PLYMOUTH_STAGE/blankweave.script.tmpl" "$PLYMOUTH_STAGE/blankweave.script"
     stage_plymouth_artwork
 }
@@ -273,7 +276,7 @@ apply_wallpaper() {
 }
 
 reload_services() {
-    local link
+    local link voxtype_state voxtype_state_file
 
     # Symlink mtimes wake inotify-based readers such as Ghostty.
     for link in "$CONFIG_DIR/ghostty/config" "$CONFIG_DIR/dunst/dunstrc"; do
@@ -284,6 +287,20 @@ reload_services() {
     # Reload Dunst in place so the palette changes without discarding history.
     if command -v dunstctl > /dev/null; then
         dunstctl reload "$DOTS_DIR/dunst/dunstrc" 2> /dev/null || true
+    fi
+    # VoxType reads its OSD palette from the rendered config. Restart only an
+    # idle running daemon: a theme switch must never discard active speech.
+    if command -v systemctl > /dev/null \
+        && systemctl --user is-active --quiet voxtype.service 2> /dev/null; then
+        voxtype_state=idle
+        voxtype_state_file=${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/voxtype/state
+        if [[ -r $voxtype_state_file ]]; then
+            voxtype_state=$(< "$voxtype_state_file")
+        fi
+        if [[ $voxtype_state != recording && $voxtype_state != transcribing \
+            && $voxtype_state != streaming ]]; then
+            systemctl --user restart voxtype.service 2> /dev/null || true
+        fi
     fi
     # Ghostty notices the touched symlink and reloads, but a surface that is
     # already open keeps the light/dark theme pair it resolved at creation;

@@ -274,6 +274,10 @@ done
 # Quickshell is a code tree, so mirror it exactly and do not retain removed modules.
 rm -rf "$DOTS_DIR/quickshell"
 cp -rv "$REPO_DIR/defaults/quickshell" "$DOTS_DIR/" || { echo "Failed to copy quickshell"; exit 1; }
+rm -rf "$DOTS_DIR/voxtype"
+if installer_profile_enabled voice-dictation; then
+    cp -rv "$REPO_DIR/defaults/voxtype" "$DOTS_DIR/" || { echo "Failed to copy VoxType config"; exit 1; }
+fi
 cp -rv "$REPO_DIR/defaults/dunst" "$DOTS_DIR/" || { echo "Failed to copy dunst"; exit 1; }
 cp -rv "$REPO_DIR/defaults/ghostty" "$DOTS_DIR/" || { echo "Failed to copy ghostty"; exit 1; }
 cp -rv "$REPO_DIR/defaults/xdg-desktop-portal" "$DOTS_DIR/" || { echo "Failed to copy xdg-desktop-portal"; exit 1; }
@@ -324,6 +328,12 @@ require(home .. "/.config/hypr/monitors")
 -- a broken or missing file must never keep the compositor from starting.
 pcall(dofile, home .. "/.config/blankweave/monitors.lua")
 EOF
+if installer_profile_enabled voice-dictation; then
+    cat >> "$HYPRLAND_LUA_STAGED" << 'EOF'
+
+require(home .. "/.local/share/blankweave/hypr/voxtype")
+EOF
+fi
 chmod 0644 "$HYPRLAND_LUA_STAGED"
 mv -f "$HYPRLAND_LUA_STAGED" "$CONFIG_DIR/hypr/hyprland.lua"
 
@@ -385,6 +395,21 @@ mkdir -p "$CONFIG_DIR/fontconfig/conf.d"
 rm -f "$CONFIG_DIR/fontconfig/conf.d/local.conf"
 ln -s "$DOTS_DIR/fontconfig/local.conf" "$CONFIG_DIR/fontconfig/conf.d/local.conf"
 
+# Optional local voice dictation. A regular file is a deliberate user override;
+# only create or replace Blankweave's own symlink.
+VOXTYPE_CONFIG="$CONFIG_DIR/voxtype/config.toml"
+if installer_profile_enabled voice-dictation; then
+    mkdir -p "$CONFIG_DIR/voxtype"
+    if [[ ! -e $VOXTYPE_CONFIG || -L $VOXTYPE_CONFIG ]]; then
+        rm -f "$VOXTYPE_CONFIG"
+        ln -s "$DOTS_DIR/voxtype/config.toml" "$VOXTYPE_CONFIG"
+    else
+        warn "Keeping the existing VoxType config override: $VOXTYPE_CONFIG"
+    fi
+elif [[ -L $VOXTYPE_CONFIG && $(readlink "$VOXTYPE_CONFIG") == "$DOTS_DIR/voxtype/config.toml" ]]; then
+    rm -f "$VOXTYPE_CONFIG"
+fi
+
 section "SETTING UP ZSH"
 chsh -s /usr/bin/zsh "$SUDO_USER"
 
@@ -432,6 +457,32 @@ if ! sudo -H -u "$SUDO_USER" env \
     "$DOTS_DIR/shell/theme-apply.sh"; then
     echo "Error: Could not apply the theme."
     exit 1
+fi
+
+section "CONFIGURING VOICE DICTATION"
+
+if installer_profile_enabled voice-dictation; then
+    # VoxType chooses Vulkan/CUDA/MIGraphX for the detected machine and leaves
+    # its packaged CPU entry point in place when no accelerator is suitable.
+    if ! voxtype setup gpu --enable; then
+        warn "Could not enable VoxType GPU acceleration; local CPU inference remains available."
+    fi
+    if ! sudo -H -u "$SUDO_USER" env \
+        HOME="$USER_HOME" \
+        XDG_CONFIG_HOME="$CONFIG_DIR" \
+        XDG_DATA_HOME="$USER_HOME/.local/share" \
+        XDG_RUNTIME_DIR="$USER_RUNTIME_DIR" \
+        DBUS_SESSION_BUS_ADDRESS="unix:path=$USER_RUNTIME_DIR/bus" \
+        "$DOTS_DIR/shell/voxtype-setup.sh" enable; then
+        echo "Error: Could not configure local voice dictation." >&2
+        exit 1
+    fi
+else
+    sudo -H -u "$SUDO_USER" env \
+        HOME="$USER_HOME" \
+        XDG_RUNTIME_DIR="$USER_RUNTIME_DIR" \
+        DBUS_SESSION_BUS_ADDRESS="unix:path=$USER_RUNTIME_DIR/bus" \
+        "$DOTS_DIR/shell/voxtype-setup.sh" disable
 fi
 
 section "SYNCING WEB APPS"

@@ -16,7 +16,7 @@ jobs:
 
     steps:
       - name: Install validation tools
-        run: pacman -Syu --noconfirm git jq diffutils shellcheck qt6-declarative quickshell
+        run: pacman -Syu --noconfirm git jq diffutils shellcheck qt6-declarative quickshell python-gobject at-spi2-core
 
       - name: Check out repository
         uses: actions/checkout@v5

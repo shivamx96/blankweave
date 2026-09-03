@@ -4,7 +4,7 @@
 # installer and intentionally never sources or evaluates the user's config.
 
 INSTALLER_CONFIG_VERSION=1
-INSTALLER_AVAILABLE_PROFILES=(desktop development communication gaming)
+INSTALLER_AVAILABLE_PROFILES=(desktop development communication gaming voice-dictation)
 INSTALLER_PROFILES=()
 
 installer_config_error() {

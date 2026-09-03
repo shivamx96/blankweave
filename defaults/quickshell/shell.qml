@@ -4,6 +4,7 @@ import Quickshell.Hyprland
 import Quickshell.Io
 import "Bar"
 import "Launcher"
+import "Modules"
 import "Services"
 
 ShellRoot {
@@ -11,6 +12,7 @@ ShellRoot {
 
     property Theme theme: Theme { }
     property ShellPreferences preferences: ShellPreferences { }
+    property Voxtype voxtype: Voxtype { }
     property bool launcherOpen: false
     property string launcherMode: "applications"
 
@@ -37,6 +39,16 @@ ShellRoot {
         delegate: Bar {
             theme: root.theme
             shell: root
+        }
+    }
+
+    Variants {
+        model: Quickshell.screens
+
+        delegate: VoxtypeTranscriptToast {
+            modelData: modelData
+            theme: root.theme
+            voice: root.voxtype
         }
     }
 

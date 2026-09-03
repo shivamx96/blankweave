@@ -23,7 +23,7 @@ expect_failure() {
 # never touch the developer's real session.
 fake_bin=$test_root/fake-bin
 mkdir -p "$fake_bin"
-for command in gsettings dunstctl hyprctl awww; do
+for command in gsettings dunstctl hyprctl awww systemctl; do
     ln -s "$repository/tests/fixtures/fake-log.sh" "$fake_bin/$command"
 done
 ln -s "$repository/tests/fixtures/fake-gdbus.sh" "$fake_bin/gdbus"
@@ -31,7 +31,7 @@ ln -s "$repository/tests/fixtures/fake-gdbus.sh" "$fake_bin/gdbus"
 home=$test_root/home
 data=$home/.local/share/blankweave
 mkdir -p "$data" "$home/.config"
-for directory in dunst ghostty hypr plymouth shell themes; do
+for directory in dunst ghostty hypr plymouth shell themes voxtype; do
     cp -R "$repository/defaults/$directory" "$data/"
 done
 
@@ -41,11 +41,14 @@ export FAKE_LOG=$test_root/side-effects.log
 export PATH=$fake_bin:$PATH
 export WAYLAND_DISPLAY=wayland-test
 export HYPRLAND_INSTANCE_SIGNATURE=test
+export XDG_RUNTIME_DIR=$test_root/runtime
 # The root-owned parts are looked up, never written, here; point the lookups
 # at an empty sandbox so the developer's machine never leaks into a result.
 export BLANKWEAVE_ICONS_DIR=$test_root/icons
 export BLANKWEAVE_PLYMOUTH_DIR=$test_root/plymouth
 : > "$FAKE_LOG"
+mkdir -p "$XDG_RUNTIME_DIR/voxtype"
+printf 'idle\n' > "$XDG_RUNTIME_DIR/voxtype/state"
 
 script=$data/shell/theme-apply.sh
 state=$XDG_CONFIG_HOME/blankweave/theme.json
@@ -54,10 +57,11 @@ ghostty=$data/ghostty/config
 hyprlock=$data/hypr/hyprlock-theme.conf
 hypr_theme=$XDG_CONFIG_HOME/blankweave/theme.lua
 plymouth=$data/plymouth/blankweave/blankweave.script
+voxtype=$data/voxtype/config.toml
 
 assert_rendered() {
     local file
-    for file in "$dunstrc" "$ghostty" "$hyprlock" "$hypr_theme" "$plymouth"; do
+    for file in "$dunstrc" "$ghostty" "$hyprlock" "$hypr_theme" "$plymouth" "$voxtype"; do
         [[ -f $file ]]
         if grep -q '{{' "$file"; then
             printf 'Unrendered placeholder in %s\n' "$file" >&2
@@ -88,6 +92,9 @@ grep -Fq 'active_border = { "rgba(3b82f6ff)", "rgba(67a6ffff)" },' "$hypr_theme"
 grep -Fq 'inactive_border = "rgba(33476aff)",' "$hypr_theme"
 grep -Fq 'cursor_theme = "Bibata-Modern-Ice",' "$hypr_theme"
 grep -Fxq 'Window.SetBackgroundTopColor(0.02, 0.031, 0.059);' "$plymouth"
+grep -Fxq 'background = "#111a2a"' "$voxtype"
+grep -Fxq 'border = "#4f75ad"' "$voxtype"
+grep -Fxq 'color = "#67a6ff"' "$voxtype"
 grep -Fxq 'Window.SetBackgroundBottomColor(0.02, 0.031, 0.059);' "$plymouth"
 grep -Fxq 'global.password_bullet_image = Image.Text("*", 0.404, 0.651, 1);' "$plymouth"
 grep -Fxq 'Plymouth.SetDisplayNormalFunction(display_normal_callback);' "$plymouth"
@@ -108,7 +115,19 @@ grep -Fq "awww img $data/themes/obsidian/obsidian-dark.png" "$FAKE_LOG"
 grep -Fxq 'hyprctl reload' "$FAKE_LOG"
 grep -Fxq "dunstctl reload $dunstrc" "$FAKE_LOG"
 grep -Fq 'gdbus call --session --dest com.mitchellh.ghostty --object-path /com/mitchellh/ghostty --method org.gtk.Actions.Activate reload-config [] {}' "$FAKE_LOG"
+grep -Fxq 'systemctl --user restart voxtype.service' "$FAKE_LOG"
 [[ $(< "$home/.cache/blankweave-wallpaper") == "$data/themes/obsidian/obsidian-dark.png" ]]
+
+# A colour change must not discard an in-flight local recording. The new
+# palette is rendered now and picked up after VoxType next restarts.
+printf 'recording\n' > "$XDG_RUNTIME_DIR/voxtype/state"
+: > "$FAKE_LOG"
+"$script" mode dark
+if grep -Fq 'systemctl --user restart voxtype.service' "$FAKE_LOG"; then
+    printf 'Theme apply restarted an active VoxType recording.\n' >&2
+    exit 1
+fi
+printf 'idle\n' > "$XDG_RUNTIME_DIR/voxtype/state"
 
 # The rendered configs are complete files, not just colour lines.
 grep -Fxq 'font = Atkinson Hyperlegible Next 11' "$dunstrc"
@@ -122,6 +141,8 @@ assert_rendered
 [[ $(jq -r '.mode' "$state") == light ]]
 [[ $(jq -r '.label' "$state") == Porcelain ]]
 grep -Fxq 'background = "#f8fbff"' "$dunstrc"
+grep -Fxq 'background = "#f7fbff"' "$voxtype"
+grep -Fxq 'color = "#1d4ed8"' "$voxtype"
 grep -Fxq "\$accent = rgba(1d4ed8ff)" "$hyprlock"
 grep -Fq 'active_border = { "rgba(2563ebff)", "rgba(1d4ed8ff)" },' "$hypr_theme"
 grep -Fq 'cursor_theme = "Bibata-Modern-Classic",' "$hypr_theme"

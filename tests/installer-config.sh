@@ -133,6 +133,16 @@ resolve_package_manifests "$repository" "$laptop_capabilities" repository packag
 assert_excludes firefox "${packages[@]}"
 assert_excludes docker "${packages[@]}"
 
+printf '%s\n' 'version=1' 'profiles=voice-dictation' > "$config_file"
+installer_config_load "$config_file" "$laptop_capabilities"
+assert_profiles 'voice-dictation'
+resolve_package_manifests "$repository" "$laptop_capabilities" repository packages
+assert_contains wtype "${packages[@]}"
+assert_contains at-spi2-core "${packages[@]}"
+assert_contains python-gobject "${packages[@]}"
+resolve_package_manifests "$repository" "$laptop_capabilities" aur aur_packages
+assert_contains voxtype-bin "${aur_packages[@]}"
+
 for invalid_config in \
     $'version=2\nprofiles=desktop' \
     $'version=1\nprofiles=unknown' \

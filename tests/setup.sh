@@ -91,7 +91,7 @@ fi
 # requires for its confirmation prompts.
 cancel_home=$test_root/cancel-home
 mkdir -p "$cancel_home"
-printf '\n\n\n\n\n\nn\nn\nn\n' | \
+printf '\n\n\n\n\n\n\nn\nn\nn\n' | \
     HOME=$cancel_home \
     XDG_CONFIG_HOME=$cancel_home/config \
     BLANKWEAVE_SETUP_APPLY_COMMAND=$fake_apply \
@@ -103,7 +103,7 @@ printf '\n\n\n\n\n\nn\nn\nn\n' | \
 
 guided_home=$test_root/guided-home
 mkdir -p "$guided_home"
-printf '\n\n\n\nmoss\nlight\ny\nAda Lovelace\nada@example.com\ny\ny\n' | \
+printf '\n\n\n\n\nmoss\nlight\ny\nAda Lovelace\nada@example.com\ny\ny\n' | \
     HOME=$guided_home \
     XDG_CONFIG_HOME=$guided_home/config \
     BLANKWEAVE_SETUP_APPLY_COMMAND=$fake_apply \

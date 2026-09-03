@@ -118,7 +118,7 @@ choose_profiles() {
     local profile default
     local -a selected=()
 
-    printf '\nOptional application profiles\n' >&$TTY_FD
+    printf '\nOptional features and application profiles\n' >&$TTY_FD
     for profile in "${INSTALLER_AVAILABLE_PROFILES[@]}"; do
         if profile_enabled "$profile"; then default=yes; else default=no; fi
         prompt_yes_no "  Enable $profile?" "$default"
