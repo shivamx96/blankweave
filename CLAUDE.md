@@ -41,16 +41,15 @@ blankweave/
 The rice was hyprarch until 2026-08-29. Everything user-facing now says
 blankweave — the command, `~/.local/share/blankweave`,
 `~/.config/blankweave`, the state and cache directories, and the Plymouth
-theme — and the transition is handled in three places: `bin/hyprarch` is a
+theme — and the transition is handled in two places: `bin/hyprarch` is a
 shim that execs `bin/blankweave`, because
 an installed `hyprarch update` fast-forwards and then execs that path from
-the new revision; `scripts/relocate-legacy.sh` (user-scoped, idempotent, run
+the new revision; and `scripts/relocate-legacy.sh` (user-scoped, idempotent, run
 by `install.sh` before anything is read) renames the old directories
 wholesale so the theme selection, preferences, and user wallpapers carry
 over, and `install.sh` then repoints `REPO_DIR` because the managed checkout
-moved with them; and `bin/blankweave` and `bootstrap.sh` accept the old
-GitHub remote as well as `shivamx96/blankweave`, because checkouts made
-before the repository was renamed still carry it and GitHub redirects it.
+moved with them. `bin/blankweave` and `bootstrap.sh` accept only
+`shivamx96/blankweave`.
 Old migrations keep their old paths — they are history, and a fresh install
 finds nothing at them.
 

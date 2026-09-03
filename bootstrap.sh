@@ -6,10 +6,6 @@ repository_url=https://github.com/shivamx96/blankweave.git
 repository_url_no_suffix=https://github.com/shivamx96/blankweave
 repository_ssh_url=git@github.com:shivamx96/blankweave.git
 repository_ssh_url_no_suffix=git@github.com:shivamx96/blankweave
-legacy_repository_url=https://github.com/shivamx96/hyprarch.git
-legacy_repository_url_no_suffix=https://github.com/shivamx96/hyprarch
-legacy_repository_ssh_url=git@github.com:shivamx96/hyprarch.git
-legacy_repository_ssh_url_no_suffix=git@github.com:shivamx96/hyprarch
 blankweave_dir=$HOME/.local/share/blankweave
 repository=$blankweave_dir/repository
 temporary_repository=
@@ -55,9 +51,7 @@ if [ -e "$repository" ]; then
         || die "existing repository has no origin remote"
     case "$origin" in
         "$repository_url"|"$repository_url_no_suffix"|\
-        "$repository_ssh_url"|"$repository_ssh_url_no_suffix"|\
-        "$legacy_repository_url"|"$legacy_repository_url_no_suffix"|\
-        "$legacy_repository_ssh_url"|"$legacy_repository_ssh_url_no_suffix") ;;
+        "$repository_ssh_url"|"$repository_ssh_url_no_suffix") ;;
         *) die "existing repository has an unexpected origin: $origin" ;;
     esac
     exec "$repository/bin/blankweave" update </dev/tty
