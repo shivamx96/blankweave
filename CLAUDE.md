@@ -76,12 +76,17 @@ finds nothing at them.
    configuration receives paired pre/post snapshots. The postflight doctor
    must pass before the recovery state is marked complete.
 
-`blankweave doctor` delegates to `scripts/doctor.sh`. It is strictly read-only:
+`blankweave doctor` delegates to `scripts/doctor.sh` and is strictly read-only:
 checks may report warnings or failures but must not repair files, restart
-services, prompt for sudo, or contact the network. A failure exits non-zero;
-warnings alone do not. `--report` may include versions and session types, but
-must not expose usernames, home paths, hostnames, network addresses, disk
-identifiers, UUIDs, or hardware serial numbers.
+services, or contact the network. Interactive use offers a full scan by default
+and may prompt for sudo only to run the root-owned boot helper installed at
+`/usr/lib/blankweave/doctor-boot`; the rest of the checks remain in the invoking
+user's context. `--full` explicitly requests that path, `--normal` forbids
+elevation, and non-interactive use defaults to normal. Update preflight and
+postflight checks must pass `--normal`. A failure exits non-zero; warnings alone
+do not. `--report` may include versions and session types, but must not expose
+usernames, home paths, hostnames, network addresses, disk identifiers, UUIDs,
+or hardware serial numbers.
 
 `blankweave rollback` is deliberately a Blankweave configuration rollback. It
 resets only the already-validated, clean managed checkout to the recorded

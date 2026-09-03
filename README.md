@@ -82,9 +82,12 @@ update creates the first one before making changes.
 
 `blankweave doctor` performs read-only checks of the managed checkout, runtime
 commands, generated Hyprland configuration, tty1/UWSM session, keyring, and
-Plymouth boot handoff. It also verifies the Limine executable and Linux entries,
-UEFI boot order, and systemd-boot recovery path. Use `blankweave doctor --report`
-to append package and system versions with usernames, hostnames, network
+Plymouth boot handoff. In a terminal it offers a full scan by default, using
+sudo only for protected boot files; choose `--normal` to never elevate or
+`--full` to request the complete scan without the choice. Non-interactive use
+defaults to the normal scan. It also verifies the Limine executable and Linux
+entries, UEFI boot order, and systemd-boot recovery path. Add `--report` to
+either mode for package and system versions with usernames, hostnames, network
 addresses, disk identifiers, and hardware serial numbers deliberately omitted.
 
 Limine is installed as `Blankweave Boot Manager` and placed first in UEFI

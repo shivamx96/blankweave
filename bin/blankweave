@@ -352,6 +352,9 @@ command_webapp() {
 command_doctor() {
     local repository
 
+    if [[ ${1:-} != --help && ${1:-} != -h ]]; then
+        require_normal_user
+    fi
     repository=$(configured_repository)
     validate_repository "$repository"
     exec "$repository/scripts/doctor.sh" "$repository" "$@"
@@ -453,7 +456,7 @@ EOF
     sudo -v
     recovery_write "$current" "$current_version" "$target" "$target_version" prepared
     doctor_script=$repository/scripts/doctor.sh
-    if ! "$doctor_script" "$repository" --report > "$RECOVERY_DIR/preflight-report.txt"; then
+    if ! "$doctor_script" "$repository" --normal --report > "$RECOVERY_DIR/preflight-report.txt"; then
         printf 'Warning: pre-update doctor found existing failures; its report was saved for comparison.\n' >&2
     fi
     chmod 600 "$RECOVERY_DIR/preflight-report.txt"
@@ -479,7 +482,7 @@ EOF
         die "update applied, but the Snapper post-update snapshot failed; the pre-update snapshot remains available"
     fi
     doctor_script=$repository/scripts/doctor.sh
-    if ! "$doctor_script" "$repository" --report > "$RECOVERY_DIR/postflight-report.txt"; then
+    if ! "$doctor_script" "$repository" --normal --report > "$RECOVERY_DIR/postflight-report.txt"; then
         chmod 600 "$RECOVERY_DIR/postflight-report.txt"
         recovery_update_status degraded
         printf 'Update applied, but post-update health checks failed.\n' >&2

@@ -103,6 +103,18 @@ printf '%s\n' \
 EOF
 chmod +x "$fake_bin/efibootmgr"
 
+cat > "$fake_bin/sudo" <<'EOF'
+#!/usr/bin/env bash
+printf '%s\n' "$*" >> "$BLANKWEAVE_TEST_SUDO_LOG"
+if [[ ${1:-} == --non-interactive ]]; then
+    shift
+fi
+export BLANKWEAVE_TEST_ALLOW_BOOT_HELPER=true
+export BLANKWEAVE_TEST_BOOT_ACCESSIBLE=true
+exec "$@"
+EOF
+chmod +x "$fake_bin/sudo"
+
 run_doctor() {
     PATH="$fake_bin:/usr/bin" \
         HOME="$home" \
@@ -118,6 +130,9 @@ run_doctor() {
         BLANKWEAVE_TEST_LSUSB_OUTPUT='' \
         BLANKWEAVE_TEST_DDC_DISPLAY=false \
         BLANKWEAVE_TEST_BOOT_ACCESSIBLE="${BLANKWEAVE_TEST_BOOT_ACCESSIBLE:-true}" \
+        BLANKWEAVE_DOCTOR_BOOT_HELPER="$repository/scripts/doctor.sh" \
+        BLANKWEAVE_DOCTOR_SUDO="$fake_bin/sudo" \
+        BLANKWEAVE_TEST_SUDO_LOG="$test_root/sudo.log" \
         BLANKWEAVE_DOCTOR_COMMANDS=blankweave-doctor-fixture \
         "$repository/scripts/doctor.sh" "$repository" "$@"
 }
@@ -147,6 +162,16 @@ grep -Fq 'SKIP  Limine BLS handoff       /boot requires privileged inspection' \
 grep -Fq 'SKIP  bootloader recovery      firmware entry exists; /boot requires privileged inspection' \
     <<< "$restricted_boot_output"
 grep -Fq '0 failures' <<< "$restricted_boot_output"
+[[ ! -e $test_root/sudo.log ]]
+
+full_boot_output=$(BLANKWEAVE_TEST_BOOT_ACCESSIBLE=false run_doctor --full)
+grep -Fq 'PASS  kernel command line' <<< "$full_boot_output"
+grep -Fq 'PASS  Limine EFI executable' <<< "$full_boot_output"
+grep -Fq 'PASS  Limine BLS handoff' <<< "$full_boot_output"
+grep -Fq 'PASS  bootloader recovery' <<< "$full_boot_output"
+grep -Fq '0 failures' <<< "$full_boot_output"
+grep -Fxq -- "--non-interactive $repository/scripts/doctor.sh --boot-only" \
+    "$test_root/sudo.log"
 
 mv "$system_root/boot" "$system_root/boot.available"
 if run_doctor > "$test_root/missing-boot.log" 2>&1; then
@@ -189,6 +214,13 @@ grep -Fq 'missing: blankweave-doctor-fixture' "$test_root/failure.log"
 
 if run_doctor --unknown > /dev/null 2>&1; then
     printf 'Doctor unexpectedly accepted an unknown argument.\n' >&2
+    exit 1
+else
+    [[ $? -eq 2 ]]
+fi
+
+if run_doctor --full --normal > /dev/null 2>&1; then
+    printf 'Doctor unexpectedly combined full and normal scan modes.\n' >&2
     exit 1
 else
     [[ $? -eq 2 ]]

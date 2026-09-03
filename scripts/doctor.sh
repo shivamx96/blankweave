@@ -8,17 +8,25 @@ USER_HOME=${BLANKWEAVE_USER_HOME:-$HOME}
 STATE_HOME=${XDG_STATE_HOME:-$USER_HOME/.local/state}
 CONFIG_HOME=${XDG_CONFIG_HOME:-$USER_HOME/.config}
 REPORT=false
+SCAN_MODE=prompt
 PASSED=0
 WARNED=0
 FAILED=0
 SKIPPED=0
+BOOT_HELPER=${BLANKWEAVE_DOCTOR_BOOT_HELPER:-/usr/lib/blankweave/doctor-boot}
+SUDO_COMMAND=${BLANKWEAVE_DOCTOR_SUDO:-sudo}
 
 usage() {
     cat <<'EOF'
-Usage: blankweave doctor [--report]
+Usage: blankweave doctor [--full|--normal] [--report]
 
-Run read-only health checks. --report adds sanitized system and package
-versions suitable for sharing in a bug report.
+Run read-only health checks. Interactive use offers a full scan by default;
+only its protected boot-file checks use sudo. Non-interactive use defaults to
+a normal scan and never elevates.
+
+  --full   Request sudo and inspect protected boot files
+  --normal Never elevate; inaccessible boot-file checks are skipped
+  --report Add sanitized system and package versions
 EOF
 }
 
@@ -216,13 +224,10 @@ check_keyring() {
 }
 
 check_plymouth() {
-    local dropin hooks entries entry options
-    local entries_checked=0
-    local entries_invalid=0
+    local dropin hooks
 
     dropin=$(root_path /etc/systemd/system/plymouth-quit.service.d/blankweave.conf)
     hooks=$(root_path /etc/mkinitcpio.conf)
-    entries=$(root_path /boot/loader/entries)
 
     if [[ -r "$dropin" ]] && grep -Fq 'quit --retain-splash' "$dropin"; then
         pass 'Plymouth handoff' 'retain-splash override is installed'
@@ -245,6 +250,14 @@ check_plymouth() {
         skip 'initramfs Plymouth' 'mkinitcpio.conf is not readable'
         skip 'initramfs microcode' 'mkinitcpio.conf is not readable'
     fi
+}
+
+check_kernel_command_line() {
+    local entries entry options
+    local entries_checked=0
+    local entries_invalid=0
+
+    entries=$(root_path /boot/loader/entries)
 
     if ! boot_files_inspectable; then
         skip 'kernel command line' '/boot is not accessible to the current user'
@@ -267,6 +280,96 @@ check_plymouth() {
         fi
     else
         skip 'kernel command line' 'systemd-boot entries are not readable'
+    fi
+}
+
+consume_check_output() {
+    local output=$1 line level seen=false
+
+    while IFS= read -r line; do
+        level=${line%% *}
+        case "$level" in
+            PASS) PASSED=$((PASSED + 1)) ;;
+            WARN) WARNED=$((WARNED + 1)) ;;
+            FAIL) FAILED=$((FAILED + 1)) ;;
+            SKIP) SKIPPED=$((SKIPPED + 1)) ;;
+            *) continue ;;
+        esac
+        seen=true
+        printf '%s\n' "$line"
+    done <<< "$output"
+
+    [[ $seen == true ]]
+}
+
+run_privileged_boot_checks() {
+    local output status
+    local -a sudo_args=()
+
+    if [[ ! -x $BOOT_HELPER ]]; then
+        fail 'privileged boot scan' 'helper is not installed; run blankweave update'
+        check_kernel_command_line
+        check_bootloader
+        return
+    fi
+    if [[ ! -t 0 ]]; then
+        sudo_args+=(--non-interactive)
+    fi
+
+    output=$("$SUDO_COMMAND" "${sudo_args[@]}" "$BOOT_HELPER" --boot-only)
+    status=$?
+    if [[ -n $output ]] && consume_check_output "$output"; then
+        return
+    fi
+
+    if (( status == 0 )); then
+        fail 'privileged boot scan' 'helper returned no check results'
+    else
+        fail 'privileged boot scan' 'could not inspect protected boot files'
+    fi
+    check_kernel_command_line
+    check_bootloader
+}
+
+choose_scan_mode() {
+    local answer
+
+    [[ $SCAN_MODE == prompt ]] || return
+    if boot_files_inspectable; then
+        SCAN_MODE=full
+        return
+    fi
+    if [[ ! -t 0 || ! -t 1 ]]; then
+        SCAN_MODE=normal
+        return
+    fi
+
+    while true; do
+        printf 'Run a full scan of protected boot files with sudo? [Y/n] ' >&2
+        if ! IFS= read -r answer; then
+            SCAN_MODE=normal
+            return
+        fi
+        case ${answer,,} in
+            ''|y|yes)
+                SCAN_MODE=full
+                return
+                ;;
+            n|no)
+                SCAN_MODE=normal
+                return
+                ;;
+            *) printf 'Please answer yes or no.\n' >&2 ;;
+        esac
+    done
+}
+
+run_boot_checks() {
+    if boot_files_inspectable || [[ $SCAN_MODE == normal ]]; then
+        check_kernel_command_line
+        check_bootloader
+    else
+        run_privileged_boot_checks
     fi
 }
 
@@ -498,6 +601,19 @@ print_report() {
 main() {
     local repository
 
+    if [[ ${1:-} == --boot-only ]]; then
+        shift
+        (( $# == 0 )) || return 2
+        if (( EUID != 0 )) && [[ ${BLANKWEAVE_TEST_ALLOW_BOOT_HELPER:-false} != true ]]; then
+            printf '%s doctor: privileged boot helper must run as root\n' "$PROGRAM_NAME" >&2
+            return 2
+        fi
+        check_kernel_command_line
+        check_bootloader
+        (( FAILED == 0 ))
+        return
+    fi
+
     repository=${1:-}
     [[ -n "$repository" ]] || {
         printf '%s doctor: repository path is required\n' "$PROGRAM_NAME" >&2
@@ -505,22 +621,36 @@ main() {
     }
     shift
 
-    case "${1:-}" in
-        '') ;;
-        --report) REPORT=true ;;
-        --help|-h)
-            usage
-            return 0
-            ;;
-        *)
-            usage >&2
-            return 2
-            ;;
-    esac
-    (( $# <= 1 )) || {
-        usage >&2
-        return 2
-    }
+    while (( $# > 0 )); do
+        case "$1" in
+            --report) REPORT=true ;;
+            --full)
+                [[ $SCAN_MODE != normal ]] || {
+                    printf '%s doctor: --full and --normal cannot be combined\n' "$PROGRAM_NAME" >&2
+                    return 2
+                }
+                SCAN_MODE=full
+                ;;
+            --normal)
+                [[ $SCAN_MODE != full ]] || {
+                    printf '%s doctor: --full and --normal cannot be combined\n' "$PROGRAM_NAME" >&2
+                    return 2
+                }
+                SCAN_MODE=normal
+                ;;
+            --help|-h)
+                usage
+                return 0
+                ;;
+            *)
+                usage >&2
+                return 2
+                ;;
+        esac
+        shift
+    done
+
+    choose_scan_mode
 
     printf 'Blankweave doctor\n\n'
     check_repository "$repository"
@@ -529,7 +659,7 @@ main() {
     check_console_session
     check_keyring
     check_plymouth
-    check_bootloader
+    run_boot_checks
     check_cpu_microcode "$repository"
     check_services "$repository"
 
