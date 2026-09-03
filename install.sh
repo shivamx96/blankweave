@@ -289,9 +289,10 @@ copy_file_atomically \
     "$DOTS_DIR/hardware-overrides.json"
 hardware_capabilities_write_json "$DOTS_DIR/hardware-capabilities.json"
 
-# Mirror wallpapers exactly so removals in the repo propagate (cp alone never deletes stale files)
+# Theme artwork lives under themes/. Drop the pre-theme pack so those files
+# do not survive an update. User extras live in ~/.config/blankweave/wallpapers
+# and are not deployed from the repo.
 rm -rf "$DOTS_DIR/wallpapers"
-cp -rv "$REPO_DIR/defaults/wallpapers" "$DOTS_DIR/" || { echo "Failed to copy wallpapers"; exit 1; }
 
 # Bundled themes are mirrored the same way; user themes live under ~/.config/blankweave/themes.
 rm -rf "$DOTS_DIR/themes"
