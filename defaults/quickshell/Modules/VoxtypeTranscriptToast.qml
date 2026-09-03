@@ -16,6 +16,14 @@ PanelWindow {
     readonly property bool focusedScreen: !Hyprland.focusedMonitor
         || modelData.name === Hyprland.focusedMonitor.name
 
+    function copyTranscript() {
+        if (root.transcript === "")
+            return
+        Quickshell.clipboardText = root.transcript
+        root.copied = true
+        root.open = false
+    }
+
     screen: modelData
     visible: open && focusedScreen
     color: "transparent"
@@ -27,7 +35,7 @@ PanelWindow {
     anchors {
         bottom: true
     }
-    margins.bottom: root.copied ? 24 : 18
+    margins.bottom: 22
 
     WlrLayershell.namespace: "blankweave-voxtype-transcript"
     WlrLayershell.layer: WlrLayer.Overlay
@@ -43,17 +51,23 @@ PanelWindow {
             root.transcript = String(text || "")
             root.copied = copied
             root.open = root.transcript !== ""
-            hideTimer.interval = copied ? 6500 : 2200
+            hideTimer.interval = copied ? 6500 : 2500
             hideTimer.restart()
         }
     }
 
     Rectangle {
+        id: card
+
         anchors.fill: parent
         radius: root.copied ? 12 : 10
-        color: root.theme.panelSurface
+        color: cardMouse.containsMouse ? root.theme.surfaceHover : root.theme.panelSurface
         border.width: 1
         border.color: root.theme.outlineStrong
+
+        Behavior on color {
+            ColorAnimation { duration: 120 }
+        }
 
         RowLayout {
             anchors.fill: parent
@@ -107,29 +121,28 @@ PanelWindow {
                 Text {
                     anchors.centerIn: parent
                     text: "󰆏"
-                    color: root.theme.textMuted
+                    color: cardMouse.containsMouse
+                        ? root.theme.accentBright
+                        : root.theme.textMuted
                     font.family: root.theme.iconFontFamily
                     font.pixelSize: root.theme.iconSize
                     renderType: Text.NativeRendering
                 }
-
-                MouseArea {
-                    anchors.fill: parent
-                    hoverEnabled: true
-                    cursorShape: Qt.PointingHandCursor
-                    onClicked: {
-                        Quickshell.clipboardText = root.transcript
-                        root.copied = true
-                        root.open = false
-                    }
-                }
             }
+        }
+
+        MouseArea {
+            id: cardMouse
+            anchors.fill: parent
+            hoverEnabled: true
+            cursorShape: Qt.PointingHandCursor
+            onClicked: root.copyTranscript()
         }
     }
 
     Timer {
         id: hideTimer
-        interval: 2200
+        interval: 2500
         onTriggered: root.open = false
     }
 }

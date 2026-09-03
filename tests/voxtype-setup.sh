@@ -86,7 +86,11 @@ grep -Fq 'property Voxtype voxtype: Voxtype' "$repository/defaults/quickshell/sh
 grep -Fq 'VoxtypeTranscriptToast' "$repository/defaults/quickshell/shell.qml"
 grep -Fq 'implicitHeight: root.copied ? 54 : 30' \
     "$repository/defaults/quickshell/Modules/VoxtypeTranscriptToast.qml"
-grep -Fq 'hideTimer.interval = copied ? 6500 : 2200' \
+grep -Fq 'margins.bottom: 22' \
+    "$repository/defaults/quickshell/Modules/VoxtypeTranscriptToast.qml"
+grep -Fq 'hideTimer.interval = copied ? 6500 : 2500' \
+    "$repository/defaults/quickshell/Modules/VoxtypeTranscriptToast.qml"
+grep -Fq 'function copyTranscript()' \
     "$repository/defaults/quickshell/Modules/VoxtypeTranscriptToast.qml"
 grep -Fq 'VoxtypeWidget' "$repository/defaults/quickshell/Modules/ApplicationIndicatorsWidget.qml"
 grep -Fq 'voxtype status --follow' "$repository/defaults/quickshell/Services/Voxtype.qml"
