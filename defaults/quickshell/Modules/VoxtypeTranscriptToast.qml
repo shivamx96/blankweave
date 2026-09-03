@@ -12,7 +12,8 @@ PanelWindow {
     required property var voice
     property bool open: false
     property string transcript: ""
-    property bool copied: false
+    property bool deliveryCopied: false
+    property bool copyConfirmed: false
     readonly property bool focusedScreen: !Hyprland.focusedMonitor
         || modelData.name === Hyprland.focusedMonitor.name
 
@@ -20,15 +21,16 @@ PanelWindow {
         if (root.transcript === "")
             return
         Quickshell.clipboardText = root.transcript
-        root.copied = true
-        root.open = false
+        root.copyConfirmed = true
+        hideTimer.interval = 2500
+        hideTimer.restart()
     }
 
     screen: modelData
     visible: open && focusedScreen
     color: "transparent"
-    implicitWidth: root.copied ? 420 : 220
-    implicitHeight: root.copied ? 54 : 30
+    implicitWidth: root.deliveryCopied ? 420 : 220
+    implicitHeight: root.deliveryCopied ? 54 : 30
     exclusiveZone: 0
     surfaceFormat.opaque: false
 
@@ -49,7 +51,8 @@ PanelWindow {
             if (!root.focusedScreen)
                 return
             root.transcript = String(text || "")
-            root.copied = copied
+            root.deliveryCopied = copied
+            root.copyConfirmed = copied
             root.open = root.transcript !== ""
             hideTimer.interval = copied ? 6500 : 2500
             hideTimer.restart()
@@ -60,7 +63,7 @@ PanelWindow {
         id: card
 
         anchors.fill: parent
-        radius: root.copied ? 12 : 10
+        radius: root.deliveryCopied ? 12 : 10
         color: cardMouse.containsMouse ? root.theme.surfaceHover : root.theme.panelSurface
         border.width: 1
         border.color: root.theme.outlineStrong
@@ -71,12 +74,12 @@ PanelWindow {
 
         RowLayout {
             anchors.fill: parent
-            anchors.leftMargin: root.copied ? 13 : 10
+            anchors.leftMargin: root.deliveryCopied ? 13 : 10
             anchors.rightMargin: 7
-            spacing: root.copied ? 10 : 7
+            spacing: root.deliveryCopied ? 10 : 7
 
             Text {
-                visible: root.copied
+                visible: root.deliveryCopied
                 text: "󰅍"
                 color: root.theme.accentBright
                 font.family: root.theme.iconFontFamily
@@ -89,7 +92,7 @@ PanelWindow {
                 spacing: 1
 
                 Text {
-                    visible: root.copied
+                    visible: root.deliveryCopied
                     Layout.fillWidth: true
                     text: "Copied · focus a text box and paste"
                     color: root.theme.text
@@ -102,28 +105,34 @@ PanelWindow {
 
                 Text {
                     Layout.fillWidth: true
-                    text: root.transcript.replace(/\s+/g, " ").trim()
-                    color: root.copied ? root.theme.textMuted : root.theme.text
+                    text: root.copyConfirmed && !root.deliveryCopied
+                        ? "Copied to clipboard"
+                        : root.transcript.replace(/\s+/g, " ").trim()
+                    color: root.copyConfirmed && !root.deliveryCopied
+                        ? root.theme.success
+                        : (root.deliveryCopied ? root.theme.textMuted : root.theme.text)
                     elide: Text.ElideRight
                     font.family: root.theme.fontFamily
-                    font.pixelSize: root.copied
+                    font.pixelSize: root.deliveryCopied
                         ? root.theme.microTextSize
                         : root.theme.smallTextSize
-                    font.weight: root.copied ? Font.Normal : Font.Medium
+                    font.weight: root.deliveryCopied ? Font.Normal : Font.Medium
                     renderType: Text.NativeRendering
                 }
             }
 
             Item {
-                Layout.preferredWidth: root.copied ? 34 : 24
-                Layout.preferredHeight: root.copied ? 34 : 24
+                Layout.preferredWidth: root.deliveryCopied ? 34 : 24
+                Layout.preferredHeight: root.deliveryCopied ? 34 : 24
 
                 Text {
                     anchors.centerIn: parent
-                    text: "󰆏"
-                    color: cardMouse.containsMouse
-                        ? root.theme.accentBright
-                        : root.theme.textMuted
+                    text: root.copyConfirmed ? "󰄬" : "󰆏"
+                    color: root.copyConfirmed
+                        ? root.theme.success
+                        : (cardMouse.containsMouse
+                            ? root.theme.accentBright
+                            : root.theme.textMuted)
                     font.family: root.theme.iconFontFamily
                     font.pixelSize: root.theme.iconSize
                     renderType: Text.NativeRendering

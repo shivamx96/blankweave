@@ -16,6 +16,8 @@ model_valid() {
 }
 
 enable_voxtype() {
+    local daemon_state state_file staged
+
     command -v voxtype >/dev/null 2>&1 || {
         printf 'VoxType is not installed.\n' >&2
         return 1
@@ -42,13 +44,26 @@ enable_voxtype() {
         trap - RETURN
     fi
 
-    voxtype setup quickshell --force --skip-bridge
+    voxtype setup quickshell --force
     mkdir -p "$STATE_HOME/blankweave"
     if [[ ! -e $STATE_HOME/blankweave/voxtype-last-transcript.json ]]; then
         printf '{}\n' > "$STATE_HOME/blankweave/voxtype-last-transcript.json"
         chmod 600 "$STATE_HOME/blankweave/voxtype-last-transcript.json"
     fi
-    systemctl --user enable --now voxtype.service
+    systemctl --user enable voxtype.service
+    if systemctl --user is-active --quiet voxtype.service; then
+        daemon_state=idle
+        state_file=${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/voxtype/state
+        if [[ -r $state_file ]]; then
+            daemon_state=$(< "$state_file")
+        fi
+        if [[ $daemon_state != recording && $daemon_state != transcribing \
+            && $daemon_state != streaming ]]; then
+            systemctl --user restart voxtype.service
+        fi
+    else
+        systemctl --user start voxtype.service
+    fi
 }
 
 disable_voxtype() {

@@ -200,10 +200,11 @@ during `blankweave setup`). The profile performs this exact local setup:
 Audio and transcripts stay on the machine. A definite missing/non-editable
 target routes the result to the clipboard and shows a brief bottom preview.
 Apps that do not publish accessibility state continue through normal typing so
-Blankweave never overwrites the clipboard based on a guess; their preview says
-to copy only if insertion did not happen. Either way, only the latest transcript
-is retained at `~/.local/state/blankweave/voxtype-last-transcript.json`; it can
-be copied from the voice panel in the bar.
+Blankweave never overwrites the clipboard based on a guess; their preview offers
+one-click copy if insertion did not happen. Either way, only the latest
+transcript is retained at
+`~/.local/state/blankweave/voxtype-last-transcript.json`; it can be copied from
+the voice panel in the bar.
 
 Verify the installation with:
 
@@ -220,7 +221,8 @@ test -f ~/.local/share/voxtype/models/ggml-small.en.bin
 - `Super + L` – lock screen
 - `Super + T` – toggle dark/light mode of the active theme
 - `Super + D` – toggle local voice dictation when `voice-dictation` is enabled
-- `F12` (hold/release) – push-to-talk local voice dictation
+- `F12` (hold/release) – profile-gated push-to-talk; when enabled, this
+  replaces the focused application F12 binding (including browser DevTools)
 - `Super + Shift + W` – cycle the theme wallpaper and any user extras
 - `Super + Y` – reload the desktop shell
 - `Super + M` – exit Hyprland

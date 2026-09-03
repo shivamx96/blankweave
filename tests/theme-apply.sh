@@ -41,11 +41,14 @@ export FAKE_LOG=$test_root/side-effects.log
 export PATH=$fake_bin:$PATH
 export WAYLAND_DISPLAY=wayland-test
 export HYPRLAND_INSTANCE_SIGNATURE=test
+export XDG_RUNTIME_DIR=$test_root/runtime
 # The root-owned parts are looked up, never written, here; point the lookups
 # at an empty sandbox so the developer's machine never leaks into a result.
 export BLANKWEAVE_ICONS_DIR=$test_root/icons
 export BLANKWEAVE_PLYMOUTH_DIR=$test_root/plymouth
 : > "$FAKE_LOG"
+mkdir -p "$XDG_RUNTIME_DIR/voxtype"
+printf 'idle\n' > "$XDG_RUNTIME_DIR/voxtype/state"
 
 script=$data/shell/theme-apply.sh
 state=$XDG_CONFIG_HOME/blankweave/theme.json
@@ -112,7 +115,19 @@ grep -Fq "awww img $data/themes/obsidian/obsidian-dark.png" "$FAKE_LOG"
 grep -Fxq 'hyprctl reload' "$FAKE_LOG"
 grep -Fxq "dunstctl reload $dunstrc" "$FAKE_LOG"
 grep -Fq 'gdbus call --session --dest com.mitchellh.ghostty --object-path /com/mitchellh/ghostty --method org.gtk.Actions.Activate reload-config [] {}' "$FAKE_LOG"
+grep -Fxq 'systemctl --user restart voxtype.service' "$FAKE_LOG"
 [[ $(< "$home/.cache/blankweave-wallpaper") == "$data/themes/obsidian/obsidian-dark.png" ]]
+
+# A colour change must not discard an in-flight local recording. The new
+# palette is rendered now and picked up after VoxType next restarts.
+printf 'recording\n' > "$XDG_RUNTIME_DIR/voxtype/state"
+: > "$FAKE_LOG"
+"$script" mode dark
+if grep -Fq 'systemctl --user restart voxtype.service' "$FAKE_LOG"; then
+    printf 'Theme apply restarted an active VoxType recording.\n' >&2
+    exit 1
+fi
+printf 'idle\n' > "$XDG_RUNTIME_DIR/voxtype/state"
 
 # The rendered configs are complete files, not just colour lines.
 grep -Fxq 'font = Atkinson Hyperlegible Next 11' "$dunstrc"

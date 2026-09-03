@@ -70,6 +70,14 @@ printf 'recoverable unknown target' \
     | grep -Fxq 'recoverable unknown target'
 [[ $(jq -r '.delivery' "$transcript_state") == unverified ]]
 
+# Detector crashes and timeout(1)'s 124 status are uncertainty too. They must
+# never bypass the retained transcript and compact recovery chip.
+for uncertain_focus in timeout failure; do
+    run_record "$uncertain_focus" start
+    tail -n 1 "$log" | grep -Fxq 'record start'
+    [[ $(< "$runtime/blankweave/voxtype-output-mode") == unverified ]]
+done
+
 # Toggling an active recording stops it without re-evaluating its output mode.
 printf 'recording\n' > "$runtime/voxtype/state"
 run_record none toggle
@@ -85,6 +93,6 @@ else
     [[ $? -eq 1 ]]
 fi
 printf '{"address":"0x123","pid":42,"class":"com.mitchellh.ghostty"}\n' \
-    | "$repository/defaults/shell/voxtype-focus.py"
+    | python3 "$repository/defaults/shell/voxtype-focus.py"
 
 printf 'VoxType output routing tests passed.\n'

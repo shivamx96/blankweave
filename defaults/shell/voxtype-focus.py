@@ -12,7 +12,15 @@ import sys
 
 forced = os.environ.get("BLANKWEAVE_VOXTYPE_FOCUS", "").strip().lower()
 if forced:
-    sys.exit({"editable": 0, "none": 1, "unknown": 2}.get(forced, 2))
+    sys.exit(
+        {
+            "editable": 0,
+            "none": 1,
+            "unknown": 2,
+            "timeout": 124,
+            "failure": 126,
+        }.get(forced, 2)
+    )
 
 try:
     window = json.load(sys.stdin)
@@ -58,7 +66,7 @@ def parent_pid(process_id: int) -> int:
 
 
 def belongs_to_window(process_id: int) -> bool:
-    """Accept renderer/helper processes descended from the compositor PID."""
+    """Accept an AT-SPI process that is the window PID or a descendant of it."""
     seen = set()
     while process_id > 1 and process_id not in seen:
         if process_id == pid:

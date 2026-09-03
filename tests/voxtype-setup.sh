@@ -17,8 +17,9 @@ fake_home=$test_root/home
 fake_data=$test_root/data
 fake_config=$test_root/config
 fake_state=$test_root/state
+fake_runtime=$test_root/runtime
 log=$test_root/calls.log
-mkdir -p "$fake_bin" "$fake_home" "$fake_data" "$fake_config" "$fake_state"
+mkdir -p "$fake_bin" "$fake_home" "$fake_data" "$fake_config" "$fake_state" "$fake_runtime"
 
 cat > "$fake_bin/voxtype" <<'EOF'
 #!/usr/bin/env bash
@@ -39,6 +40,7 @@ run_setup() {
     XDG_DATA_HOME=$fake_data \
     XDG_CONFIG_HOME=$fake_config \
     XDG_STATE_HOME=$fake_state \
+    XDG_RUNTIME_DIR=$fake_runtime \
     PATH=$fake_bin:/usr/bin \
     VOXTYPE_TEST_LOG=$log \
     VOXTYPE_MODEL_URL=file://$model_source \
@@ -50,8 +52,9 @@ run_setup enable
 model=$fake_data/voxtype/models/ggml-small.en.bin
 [[ -f $model ]]
 [[ $(sha256sum "$model" | cut -d' ' -f1) == "$model_sha" ]]
-grep -Fxq $'voxtype\tsetup quickshell --force --skip-bridge' "$log"
-grep -Fxq $'systemctl\t--user enable --now voxtype.service' "$log"
+grep -Fxq $'voxtype\tsetup quickshell --force' "$log"
+grep -Fxq $'systemctl\t--user enable voxtype.service' "$log"
+grep -Fxq $'systemctl\t--user restart voxtype.service' "$log"
 transcript_state=$fake_state/blankweave/voxtype-last-transcript.json
 [[ -f $transcript_state ]]
 [[ $(jq -c . "$transcript_state") == '{}' ]]
@@ -59,7 +62,14 @@ transcript_state=$fake_state/blankweave/voxtype-last-transcript.json
 
 # An already verified model makes setup replayable without another download.
 rm "$model_source"
+mkdir -p "$fake_runtime/voxtype"
+printf 'recording\n' > "$fake_runtime/voxtype/state"
+: > "$log"
 run_setup enable
+if grep -Fq $'systemctl\t--user restart voxtype.service' "$log"; then
+    printf 'VoxType setup restarted an active recording.\n' >&2
+    exit 1
+fi
 
 run_setup disable
 grep -Fxq $'systemctl\t--user disable --now voxtype.service' "$log"
@@ -84,11 +94,13 @@ grep -Fq '"SUPER + D"' "$repository/defaults/hypr/voxtype.lua"
 grep -Fq 'voxtype-record.sh toggle' "$repository/defaults/hypr/voxtype.lua"
 grep -Fq 'property Voxtype voxtype: Voxtype' "$repository/defaults/quickshell/shell.qml"
 grep -Fq 'VoxtypeTranscriptToast' "$repository/defaults/quickshell/shell.qml"
-grep -Fq 'implicitHeight: root.copied ? 54 : 30' \
+grep -Fq 'implicitHeight: root.deliveryCopied ? 54 : 30' \
     "$repository/defaults/quickshell/Modules/VoxtypeTranscriptToast.qml"
 grep -Fq 'margins.bottom: 22' \
     "$repository/defaults/quickshell/Modules/VoxtypeTranscriptToast.qml"
-grep -Fq 'hideTimer.interval = copied ? 6500 : 2500' \
+grep -Fq 'root.copyConfirmed = true' \
+    "$repository/defaults/quickshell/Modules/VoxtypeTranscriptToast.qml"
+grep -Fq 'hideTimer.restart()' \
     "$repository/defaults/quickshell/Modules/VoxtypeTranscriptToast.qml"
 grep -Fq 'function copyTranscript()' \
     "$repository/defaults/quickshell/Modules/VoxtypeTranscriptToast.qml"
@@ -97,5 +109,7 @@ grep -Fq 'voxtype status --follow' "$repository/defaults/quickshell/Services/Vox
 grep -Fq 'voxtype-record.sh' "$repository/defaults/quickshell/Modules/VoxtypeWidget.qml"
 grep -Fq 'ControlCopyRow' "$repository/defaults/quickshell/Modules/VoxtypeWidget.qml"
 grep -Fq 'installer_profile_enabled voice-dictation' "$repository/install.sh"
+grep -Fq 'replaces the focused application F12 binding' "$repository/README.md"
+grep -Fq 'window PID or a descendant of it' "$repository/defaults/shell/voxtype-focus.py"
 
 printf 'VoxType setup tests passed.\n'

@@ -34,22 +34,25 @@ rm -f -- "$mode_file"
 
 focus_result=2
 if [[ -n ${BLANKWEAVE_VOXTYPE_FOCUS:-} ]]; then
-    "$script_dir/voxtype-focus.py" </dev/null
+    python3 "$script_dir/voxtype-focus.py" </dev/null
     focus_result=$?
 elif active_window=$(hyprctl -j activewindow 2>/dev/null); then
-    timeout 0.7s "$script_dir/voxtype-focus.py" <<< "$active_window"
+    timeout 0.7s python3 "$script_dir/voxtype-focus.py" <<< "$active_window"
     focus_result=$?
 fi
 
-if [[ $focus_result -eq 1 ]]; then
-    printf 'clipboard\n' > "$mode_file"
-    exec voxtype record "$action" --clipboard
-fi
-
-# Missing AT-SPI data is deliberately not treated as a missing field. Apps
-# that do expose accessibility get the Flow-style clipboard fallback; opaque
-# apps keep normal typing and surface a one-click recovery preview afterward.
-if [[ $focus_result -eq 2 ]]; then
-    printf 'unverified\n' > "$mode_file"
-fi
-exec voxtype record "$action"
+case $focus_result in
+    0)
+        exec voxtype record "$action"
+        ;;
+    1)
+        printf 'clipboard\n' > "$mode_file"
+        exec voxtype record "$action" --clipboard
+        ;;
+    *)
+        # Missing AT-SPI data, helper failures, and timeouts are all unknown.
+        # Keep normal typing, retain the text, and offer one-click recovery.
+        printf 'unverified\n' > "$mode_file"
+        exec voxtype record "$action"
+        ;;
+esac
