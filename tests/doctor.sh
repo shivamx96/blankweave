@@ -117,6 +117,7 @@ run_doctor() {
         BLANKWEAVE_TEST_LSPCI_OUTPUT='' \
         BLANKWEAVE_TEST_LSUSB_OUTPUT='' \
         BLANKWEAVE_TEST_DDC_DISPLAY=false \
+        BLANKWEAVE_TEST_BOOT_ACCESSIBLE="${BLANKWEAVE_TEST_BOOT_ACCESSIBLE:-true}" \
         BLANKWEAVE_DOCTOR_COMMANDS=blankweave-doctor-fixture \
         "$repository/scripts/doctor.sh" "$repository" "$@"
 }
@@ -133,6 +134,29 @@ grep -Fq 'PASS  UEFI boot order' <<< "$output"
 grep -Fq 'PASS  bootloader recovery' <<< "$output"
 grep -Fq 'PASS  CPU microcode package' <<< "$output"
 grep -Fq '0 failures' <<< "$output"
+
+restricted_boot_output=$(BLANKWEAVE_TEST_BOOT_ACCESSIBLE=false run_doctor)
+grep -Fq 'SKIP  kernel command line      /boot is not accessible to the current user' \
+    <<< "$restricted_boot_output"
+grep -Fq 'SKIP  Limine EFI executable    /boot requires privileged inspection' \
+    <<< "$restricted_boot_output"
+grep -Fq 'SKIP  Limine Linux entries     /boot requires privileged inspection' \
+    <<< "$restricted_boot_output"
+grep -Fq 'SKIP  Limine BLS handoff       /boot requires privileged inspection' \
+    <<< "$restricted_boot_output"
+grep -Fq 'SKIP  bootloader recovery      firmware entry exists; /boot requires privileged inspection' \
+    <<< "$restricted_boot_output"
+grep -Fq '0 failures' <<< "$restricted_boot_output"
+
+mv "$system_root/boot" "$system_root/boot.available"
+if run_doctor > "$test_root/missing-boot.log" 2>&1; then
+    printf 'Doctor unexpectedly accepted a missing /boot tree.\n' >&2
+    exit 1
+fi
+grep -Fq 'FAIL  Limine EFI executable' "$test_root/missing-boot.log"
+grep -Fq 'FAIL  Limine Linux entries' "$test_root/missing-boot.log"
+grep -Fq 'FAIL  Limine BLS handoff' "$test_root/missing-boot.log"
+mv "$system_root/boot.available" "$system_root/boot"
 
 report=$(run_doctor --report)
 grep -Fq 'Sanitized report' <<< "$report"

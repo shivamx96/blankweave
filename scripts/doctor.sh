@@ -58,6 +58,14 @@ root_path() {
     printf '%s%s\n' "$SYSTEM_ROOT" "$1"
 }
 
+boot_files_inspectable() {
+    local boot
+
+    [[ ${BLANKWEAVE_TEST_BOOT_ACCESSIBLE:-true} == true ]] || return 1
+    boot=$(root_path /boot)
+    [[ ! -e $boot || -x $boot ]]
+}
+
 trim_space() {
     local value=$1
 
@@ -238,7 +246,9 @@ check_plymouth() {
         skip 'initramfs microcode' 'mkinitcpio.conf is not readable'
     fi
 
-    if [[ -d "$entries" ]]; then
+    if ! boot_files_inspectable; then
+        skip 'kernel command line' '/boot is not accessible to the current user'
+    elif [[ -d "$entries" ]]; then
         while IFS= read -r -d '' entry; do
             options=$(grep -E '^[[:space:]]*options[[:space:]]' "$entry" || true)
             [[ -n "$options" ]] || continue
@@ -263,66 +273,73 @@ check_plymouth() {
 check_bootloader() {
     local executable config entries entry kernel cmdline initrd output order first line prefix label id lower
     local linux_entries=0 recovery_entries=0 source_entries=0 handoff_drift=0 available
-    local limine_path_valid=true
+    local limine_path_valid=true boot_accessible=true
     local -a limine_ids=() initrds=()
 
     executable=$(root_path /boot/EFI/blankweave/limine-x64.efi)
     config=$(root_path /boot/EFI/blankweave/limine.conf)
     entries=$(root_path /boot/loader/entries)
 
-    if [[ -r $executable ]]; then
-        pass 'Limine EFI executable' 'installed on the EFI System Partition'
+    if ! boot_files_inspectable; then
+        boot_accessible=false
+        skip 'Limine EFI executable' '/boot requires privileged inspection'
+        skip 'Limine Linux entries' '/boot requires privileged inspection'
+        skip 'Limine BLS handoff' '/boot requires privileged inspection'
     else
-        fail 'Limine EFI executable' 'managed loader is missing'
-    fi
-    if [[ -r $config ]]; then
-        linux_entries=$(grep -Ec '^[[:space:]]+protocol:[[:space:]]+linux[[:space:]]*$' "$config" || true)
-        if (( linux_entries > 0 )) \
-            && grep -Eq '^[[:space:]]+path:[[:space:]]+boot\(\):/' "$config" \
-            && grep -Eq '^[[:space:]]+module_path:[[:space:]]+boot\(\):/' "$config" \
-            && grep -Eq '^[[:space:]]+cmdline:[[:space:]]+[^[:space:]]' "$config"; then
-            pass 'Limine Linux entries' "$linux_entries direct boot entries are configured"
+        if [[ -r $executable ]]; then
+            pass 'Limine EFI executable' 'installed on the EFI System Partition'
         else
-            fail 'Limine Linux entries' 'config lacks a complete direct Linux entry'
+            fail 'Limine EFI executable' 'managed loader is missing'
         fi
-    else
-        fail 'Limine Linux entries' 'limine.conf is missing'
-    fi
+        if [[ -r $config ]]; then
+            linux_entries=$(grep -Ec '^[[:space:]]+protocol:[[:space:]]+linux[[:space:]]*$' "$config" || true)
+            if (( linux_entries > 0 )) \
+                && grep -Eq '^[[:space:]]+path:[[:space:]]+boot\(\):/' "$config" \
+                && grep -Eq '^[[:space:]]+module_path:[[:space:]]+boot\(\):/' "$config" \
+                && grep -Eq '^[[:space:]]+cmdline:[[:space:]]+[^[:space:]]' "$config"; then
+                pass 'Limine Linux entries' "$linux_entries direct boot entries are configured"
+            else
+                fail 'Limine Linux entries' 'config lacks a complete direct Linux entry'
+            fi
+        else
+            fail 'Limine Linux entries' 'limine.conf is missing'
+        fi
 
-    if [[ -r $config && -d $entries ]]; then
-        while IFS= read -r -d '' entry; do
-            mapfile -t initrds < <(sed -n -E \
-                's/^[[:space:]]*initrd[[:space:]]+//p' "$entry")
-            kernel=$(sed -n -E 's/^[[:space:]]*linux[[:space:]]+//p' "$entry" | head -n 1)
-            cmdline=$(sed -n -E 's/^[[:space:]]*options[[:space:]]+//p' "$entry" | head -n 1)
-            [[ -n $kernel && -n $cmdline && ${#initrds[@]} -gt 0 ]] || continue
-            available=true
-            [[ -f "$(root_path "/boot$kernel")" ]] || available=false
-            for initrd in "${initrds[@]}"; do
-                [[ -f "$(root_path "/boot$initrd")" ]] || available=false
-            done
-            [[ $available == true ]] || continue
+        if [[ -r $config && -d $entries ]]; then
+            while IFS= read -r -d '' entry; do
+                mapfile -t initrds < <(sed -n -E \
+                    's/^[[:space:]]*initrd[[:space:]]+//p' "$entry")
+                kernel=$(sed -n -E 's/^[[:space:]]*linux[[:space:]]+//p' "$entry" | head -n 1)
+                cmdline=$(sed -n -E 's/^[[:space:]]*options[[:space:]]+//p' "$entry" | head -n 1)
+                [[ -n $kernel && -n $cmdline && ${#initrds[@]} -gt 0 ]] || continue
+                available=true
+                [[ -f "$(root_path "/boot$kernel")" ]] || available=false
+                for initrd in "${initrds[@]}"; do
+                    [[ -f "$(root_path "/boot$initrd")" ]] || available=false
+                done
+                [[ $available == true ]] || continue
 
-            source_entries=$((source_entries + 1))
-            grep -Fqx -- "    path: boot():$kernel" "$config" \
-                || handoff_drift=$((handoff_drift + 1))
-            grep -Fqx -- "    cmdline: $cmdline" "$config" \
-                || handoff_drift=$((handoff_drift + 1))
-            for initrd in "${initrds[@]}"; do
-                grep -Fqx -- "    module_path: boot():$initrd" "$config" \
+                source_entries=$((source_entries + 1))
+                grep -Fqx -- "    path: boot():$kernel" "$config" \
                     || handoff_drift=$((handoff_drift + 1))
-            done
-        done < <(find "$entries" -maxdepth 1 -type f -name '*.conf' -print0 2>/dev/null)
+                grep -Fqx -- "    cmdline: $cmdline" "$config" \
+                    || handoff_drift=$((handoff_drift + 1))
+                for initrd in "${initrds[@]}"; do
+                    grep -Fqx -- "    module_path: boot():$initrd" "$config" \
+                        || handoff_drift=$((handoff_drift + 1))
+                done
+            done < <(find "$entries" -maxdepth 1 -type f -name '*.conf' -print0 2>/dev/null)
 
-        if (( source_entries == 0 )); then
-            fail 'Limine BLS handoff' 'no complete source Linux entries are available'
-        elif (( handoff_drift == 0 )); then
-            pass 'Limine BLS handoff' "$source_entries source entries match exactly"
+            if (( source_entries == 0 )); then
+                fail 'Limine BLS handoff' 'no complete source Linux entries are available'
+            elif (( handoff_drift == 0 )); then
+                pass 'Limine BLS handoff' "$source_entries source entries match exactly"
+            else
+                fail 'Limine BLS handoff' "$handoff_drift generated fields differ from the BLS source"
+            fi
         else
-            fail 'Limine BLS handoff' "$handoff_drift generated fields differ from the BLS source"
+            fail 'Limine BLS handoff' 'source or generated boot entries are unreadable'
         fi
-    else
-        fail 'Limine BLS handoff' 'source or generated boot entries are unreadable'
     fi
 
     if ! command -v efibootmgr > /dev/null 2>&1; then
@@ -367,7 +384,9 @@ check_bootloader() {
         fail 'UEFI boot order' "expected one Blankweave Limine entry, found ${#limine_ids[@]}"
     fi
 
-    if (( recovery_entries == 1 )) && [[ -r $config ]] \
+    if (( recovery_entries == 1 )) && [[ $boot_accessible != true ]]; then
+        skip 'bootloader recovery' 'firmware entry exists; /boot requires privileged inspection'
+    elif (( recovery_entries == 1 )) && [[ -r $config ]] \
         && grep -Fq '    entry: Linux Boot Manager' "$config"; then
         pass 'bootloader recovery' 'systemd-boot remains available from Limine and firmware'
     elif (( recovery_entries == 1 )); then
