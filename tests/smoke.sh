@@ -12,12 +12,18 @@ cleanup() {
 }
 trap cleanup EXIT HUP INT TERM
 
+repository_version=$(head -n 1 "$repository/VERSION")
+repository_release=unreleased
+if release=$("$repository/scripts/verify-release.sh" "$repository" HEAD 2>/dev/null); then
+    repository_release=$release
+fi
+
 version_output=$(
     HOME="$test_root/home" \
         XDG_STATE_HOME="$test_root/state" \
         "$repository/bin/blankweave" version
 )
-grep -Fxq "blankweave $(head -n 1 "$repository/VERSION") (unreleased)" <<< "$version_output"
+grep -Fxq "blankweave $repository_version ($repository_release)" <<< "$version_output"
 grep -Fq 'installed:  not-recorded / not-recorded (not-recorded)' <<< "$version_output"
 grep -Fq 'rollback floor: 0.1.0' <<< "$version_output"
 
@@ -45,7 +51,7 @@ grep -Fq 'Usage: blankweave setup [--non-interactive]' <<< "$(
 
 # The old command name hands over to the new one so an installed
 # `hyprarch update` can exec the fetched revision.
-grep -Fxq "blankweave $(head -n 1 "$repository/VERSION") (unreleased)" \
+grep -Fxq "blankweave $repository_version ($repository_release)" \
     <<< "$(HOME="$test_root/home" XDG_STATE_HOME="$test_root/state" "$repository/bin/hyprarch" version)"
 
 if "$repository/bin/blankweave" unknown > /dev/null 2>&1; then
