@@ -1,6 +1,6 @@
 # blankweave
 
-Arch Linux + Hyprland bootstrap with capability-based hardware detection. Deploys a complete desktop environment (Quickshell, Dunst, Ghostty, Fuzzel, PipeWire, etc.) across Intel, AMD, and NVIDIA systems without machine-class branches.
+Arch Linux + Hyprland bootstrap with capability-based hardware detection. Deploys a complete desktop environment (Quickshell, Dunst, Ghostty, PipeWire, etc.) across Intel, AMD, and NVIDIA systems without machine-class branches.
 
 ## Architecture
 
@@ -8,10 +8,9 @@ Arch Linux + Hyprland bootstrap with capability-based hardware detection. Deploy
 blankweave/
   defaults/          # Universal configs, deployed to ~/.local/share/blankweave/
     hypr/            # Hyprland configs (keybindings, animations, window rules, etc.)
-    quickshell/      # Native status bar, shared UI primitives, services, modules
+    quickshell/      # Native status bar and launcher, shared UI primitives, services, modules
     dunst/           # Notification daemon
     ghostty/         # Terminal emulator
-    fuzzel/          # App launcher
     shell/           # Helper scripts (wallpaper, theme toggle, OSD popups, monitoring)
     wallpapers/      # Bundled wallpapers
     themes/          # Bundled themes: palette, lock treatment, wallpapers, splash art
@@ -134,8 +133,8 @@ Hypridle for idle, suspend, and resume protection.
    `hardware-capabilities.json`
 3. Selects GPU environment, monitor, and Hypridle configuration from those capabilities
 4. Launches Quickshell directly from `~/.local/share/blankweave/quickshell/`
-5. Symlinks app configs: `~/.config/{dunst,ghostty,fuzzel}/` → `~/.local/share/blankweave/`
-6. Runs `theme-apply.sh` as the user, rendering `dunstrc`, `fuzzel.ini`,
+5. Symlinks app configs: `~/.config/{dunst,ghostty}/` → `~/.local/share/blankweave/`
+6. Runs `theme-apply.sh` as the user, rendering `dunstrc`,
    `ghostty/config`, `hyprlock-theme.conf`, and `~/.config/blankweave/theme.lua`
    from their `.tmpl` sources and writing `~/.config/blankweave/theme.json`
 
@@ -171,7 +170,7 @@ companion tools; only the Hyprland compositor config uses Lua.
 
 ### Symlink strategy
 
-Dunst, Ghostty, Fuzzel, and Fontconfig are symlinked from `~/.config/` back to `~/.local/share/blankweave/`. Quickshell runs directly from the deployed defaults. This means:
+Dunst, Ghostty, and Fontconfig are symlinked from `~/.config/` back to `~/.local/share/blankweave/`. Quickshell runs directly from the deployed defaults. This means:
 - Running `blankweave update` updates the managed checkout and reapplies configs
 - Users can break a symlink and replace it with a custom file to override
 
@@ -397,6 +396,28 @@ Process-backed modules (CPU, GPU, memory, network) use scripts that output JSON:
 services for reactive state such as Hyprland workspaces, PipeWire, Bluetooth,
 and UPower.
 
+### Launcher
+
+`Launcher/ApplicationLauncher.qml` is the only launcher; Fuzzel was removed on
+2026-09-02 and there is no dmenu in the rice. It is a layer-shell overlay with
+exclusive keyboard focus, instantiated per screen by `Variants` in `shell.qml`
+and shown only on the focused monitor. It carries two peer views selected
+through `Components/ControlTabs.qml`: applications, ranked from
+`DesktopEntries` with a favourites order ahead of an empty query, and clipboard
+history, read from `cliphist list` once per open. `Ctrl+Tab` cycles the views
+from the keyboard, so the tab strip is never the only way to reach one; plain
+`Tab` still steps the selection. The bar has no launcher
+button — `Super+Space` and `Super+Shift+V` are the entry points, and both go
+through the `blankweave` IPC handler (`launcher`, `clipboard`) rather than
+spawning anything.
+
+Because the surface is per-screen, the open state and the active view live on
+`ShellRoot`, not on the launcher: `toggleLauncher(mode)` switches views when
+the requested one is not already showing and only closes when it is, so the
+clipboard key never dismisses an open application list. A clipboard row is
+copied by passing its cliphist id as an argument to `sh -c`, never by splicing
+it into the command string, because a preview is arbitrary clipboard content.
+
 ### Theme system
 
 A theme is a directory holding `theme.json` with two modes, `dark` and
@@ -459,7 +480,7 @@ add sleeps, a custom shutdown service, or shortened global stop timeouts.
 `defaults/shell/theme-apply.sh` is the only writer of
 `~/.config/blankweave/theme.json` — the persisted `{theme, mode}` selection
 together with the resolved values of the active mode — and of every config
-rendered from a `.tmpl`: `dunst/dunstrc`, `fuzzel/fuzzel.ini`,
+rendered from a `.tmpl`: `dunst/dunstrc`,
 `ghostty/config`, and `hypr/hyprlock-theme.conf` next to their templates under
 `~/.local/share/blankweave/`, plus `~/.config/blankweave/theme.lua`, which
 `hyprland.lua` loads through `pcall` for the window border colours and the
@@ -631,8 +652,8 @@ amdgpu sysfs telemetry, and Intel uses `intel_gpu_top` with sysfs fallback.
 ## Gotchas
 
 - Colour notation differs per consumer and is handled by the renderer's
-  formats, never by hand: `css` (`#rrggbb[aa]`, Dunst), `fuzzel` (`rrggbbaa`,
-  no `#`), `hypr` (`rgba(rrggbbaa)`, Hyprland and Hyprlock), `rgb` (opaque
+  formats, never by hand: `css` (`#rrggbb[aa]`, Dunst),
+  `hypr` (`rgba(rrggbbaa)`, Hyprland and Hyprlock), `rgb` (opaque
   `#rrggbb`), `plymouth` (`r, g, b` as 0–1 floats for
   `Window.SetBackground*Color`). Hyprlock needs `##` before a Pango hex colour, so that template
   writes `#{{lock.placeholder:rgb}}`

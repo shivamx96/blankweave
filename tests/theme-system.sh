@@ -33,7 +33,7 @@ home=$test_root/home
 data=$home/.local/share/blankweave
 system=$test_root/system
 mkdir -p "$data" "$home/.config" "$system/share/plymouth/themes" "$system/boot/entries"
-for directory in dunst fuzzel ghostty hypr plymouth shell themes; do
+for directory in dunst ghostty hypr plymouth shell themes; do
     cp -R "$repository/defaults/$directory" "$data/"
 done
 for theme in Papirus Papirus-Dark Papirus-Light; do

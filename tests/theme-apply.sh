@@ -31,7 +31,7 @@ ln -s "$repository/tests/fixtures/fake-gdbus.sh" "$fake_bin/gdbus"
 home=$test_root/home
 data=$home/.local/share/blankweave
 mkdir -p "$data" "$home/.config"
-for directory in dunst fuzzel ghostty hypr plymouth shell themes; do
+for directory in dunst ghostty hypr plymouth shell themes; do
     cp -R "$repository/defaults/$directory" "$data/"
 done
 
@@ -50,7 +50,6 @@ export BLANKWEAVE_PLYMOUTH_DIR=$test_root/plymouth
 script=$data/shell/theme-apply.sh
 state=$XDG_CONFIG_HOME/blankweave/theme.json
 dunstrc=$data/dunst/dunstrc
-fuzzel=$data/fuzzel/fuzzel.ini
 ghostty=$data/ghostty/config
 hyprlock=$data/hypr/hyprlock-theme.conf
 hypr_theme=$XDG_CONFIG_HOME/blankweave/theme.lua
@@ -58,7 +57,7 @@ plymouth=$data/plymouth/blankweave/blankweave.script
 
 assert_rendered() {
     local file
-    for file in "$dunstrc" "$fuzzel" "$ghostty" "$hyprlock" "$hypr_theme" "$plymouth"; do
+    for file in "$dunstrc" "$ghostty" "$hyprlock" "$hypr_theme" "$plymouth"; do
         [[ -f $file ]]
         if grep -q '{{' "$file"; then
             printf 'Unrendered placeholder in %s\n' "$file" >&2
@@ -80,9 +79,6 @@ assert_rendered
 grep -Fxq 'background = "#0b111c"' "$dunstrc"
 grep -Fxq 'frame_color = "#4f75ad"' "$dunstrc"
 grep -Fq "foreground='#8798ae'" "$dunstrc"
-grep -Fxq 'background=0b111ce6' "$fuzzel"
-grep -Fxq 'selection=3b82f625' "$fuzzel"
-grep -Fxq 'icon-theme=Papirus-Dark' "$fuzzel"
 grep -Fxq 'theme = light:Catppuccin Latte,dark:Catppuccin Mocha' "$ghostty"
 grep -Fxq "\$accent = rgba(3b82f6ff)" "$hyprlock"
 grep -Fxq "\$input_border = rgba(33476aff) rgba(3b82f6ff) rgba(67a6ffff) 90deg" "$hyprlock"
@@ -116,7 +112,6 @@ grep -Fq 'gdbus call --session --dest com.mitchellh.ghostty --object-path /com/m
 
 # The rendered configs are complete files, not just colour lines.
 grep -Fxq 'font = Atkinson Hyperlegible Next 11' "$dunstrc"
-grep -Fxq 'match-mode=fzf' "$fuzzel"
 grep -Fxq 'font-family = JetBrains Mono Nerd Font' "$ghostty"
 
 # Toggling keeps the theme and flips only the mode, everywhere at once.
@@ -127,7 +122,6 @@ assert_rendered
 [[ $(jq -r '.mode' "$state") == light ]]
 [[ $(jq -r '.label' "$state") == Porcelain ]]
 grep -Fxq 'background = "#f8fbff"' "$dunstrc"
-grep -Fxq 'icon-theme=Papirus-Light' "$fuzzel"
 grep -Fxq "\$accent = rgba(1d4ed8ff)" "$hyprlock"
 grep -Fq 'active_border = { "rgba(2563ebff)", "rgba(1d4ed8ff)" },' "$hypr_theme"
 grep -Fq 'cursor_theme = "Bibata-Modern-Classic",' "$hypr_theme"
@@ -204,7 +198,6 @@ assert_rendered
 [[ $(jq -r '.mode' "$state") == dark ]]
 [[ $(jq -r '.colors.accent' "$state") == '#ff5500' ]]
 grep -Fxq 'highlight = "#ff7733"' "$dunstrc"
-grep -Fxq 'match=ff7733ff' "$fuzzel"
 grep -Fq 'active_border = { "rgba(ff5500ff)", "rgba(ff7733ff)" },' "$hypr_theme"
 # A missing wallpaper never blocks the palette change.
 expect_failure grep -Fq 'awww img /nonexistent' "$FAKE_LOG"

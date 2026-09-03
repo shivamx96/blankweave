@@ -2,8 +2,10 @@ import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
 import Quickshell
+import Quickshell.Io
 import Quickshell.Wayland
 import Quickshell.Widgets
+import "../Components"
 
 PanelWindow {
     id: root
@@ -11,14 +13,28 @@ PanelWindow {
     required property var modelData
     required property var theme
     property bool open: false
+    // "applications" or "clipboard". The two views are peers: applications come
+    // from DesktopEntries and are always current, while the clipboard is read
+    // from cliphist once per open, so they refresh independently.
+    property string mode: "applications"
     property string searchText: ""
     property int selectedIndex: 0
+    property var clipboardEntries: []
+    property bool clipboardAvailable: true
     readonly property var applicationEntries: DesktopEntries.applications
         ? DesktopEntries.applications.values
         : []
-    readonly property var applicationResults: root.rankApplications(root.searchText)
+    readonly property bool clipboardMode: root.mode === "clipboard"
+    readonly property var modes: [
+        { "id": "applications", "label": "APPLICATIONS" },
+        { "id": "clipboard", "label": "CLIPBOARD" }
+    ]
+    readonly property var results: root.clipboardMode
+        ? root.filterClipboard(root.searchText)
+        : root.rankApplications(root.searchText)
 
     signal dismissed
+    signal modeRequested(string mode)
 
     screen: modelData
     visible: open
@@ -98,37 +114,133 @@ PanelWindow {
         return ranked.map(item => item.entry)
     }
 
+    // `cliphist list` emits "<id>\t<single-line preview>", most recent first,
+    // and describes anything unprintable as "[[ binary data … ]]".
+    function parseClipboard(output) {
+        const rows = []
+        const lines = String(output || "").split("\n")
+        for (let index = 0; index < lines.length; index++) {
+            const line = lines[index]
+            const separator = line.indexOf("\t")
+            if (separator <= 0)
+                continue
+            const preview = line.slice(separator + 1)
+            rows.push({
+                "clipboardId": line.slice(0, separator),
+                "preview": preview,
+                "binary": preview.startsWith("[[ binary data")
+            })
+        }
+        return rows
+    }
+
+    // Recency is the clipboard's ordering, so filtering only narrows the list
+    // rather than re-ranking it the way application search does.
+    function filterClipboard(value) {
+        const query = root.normalized(value)
+        const rows = root.clipboardEntries || []
+        if (!query)
+            return rows
+        const terms = query.split(/\s+/).filter(term => term !== "")
+        return rows.filter(row => {
+            const haystack = root.normalized(row.preview)
+            return terms.every(term => haystack.includes(term))
+        })
+    }
+
+    function rowTitle(item) {
+        if (!item)
+            return ""
+        if (root.clipboardMode)
+            return String(item.preview || "")
+        return String(item.name || "Application")
+    }
+
+    function rowSubtitle(item) {
+        if (!item)
+            return ""
+        if (root.clipboardMode)
+            return item.binary ? "Binary clipboard entry" : ""
+        return String(item.genericName || item.comment || "")
+    }
+
     function clampSelection(value) {
-        if (root.applicationResults.length === 0)
+        if (root.results.length === 0)
             return 0
-        return Math.max(0, Math.min(root.applicationResults.length - 1, value))
+        return Math.max(0, Math.min(root.results.length - 1, value))
     }
 
     function moveSelection(offset) {
         root.selectedIndex = root.clampSelection(root.selectedIndex + offset)
-        Qt.callLater(() => applicationList.positionViewAtIndex(
+        Qt.callLater(() => resultList.positionViewAtIndex(
             root.selectedIndex,
             ListView.Contain
         ))
     }
 
-    function launch(entry) {
-        if (!entry)
+    function activate(item) {
+        if (!item)
             return
         root.dismissed()
-        Qt.callLater(() => entry.execute())
+        if (root.clipboardMode) {
+            // The id is passed as an argument rather than spliced into the
+            // shell string, so a preview can never become shell syntax.
+            clipboardCopy.command = [
+                "sh", "-c", 'cliphist decode "$1" | wl-copy', "sh",
+                String(item.clipboardId)
+            ]
+            clipboardCopy.running = true
+            return
+        }
+        Qt.callLater(() => item.execute())
     }
 
     function closeLauncher() {
         root.dismissed()
     }
 
-    onOpenChanged: {
-        if (open) {
-            searchText = ""
-            selectedIndex = 0
-            Qt.callLater(() => searchField.forceActiveFocus())
+    function selectMode(next) {
+        if (next === root.mode)
+            return
+        root.modeRequested(next)
+    }
+
+    function cycleMode(offset) {
+        const index = root.modes.findIndex(item => item.id === root.mode)
+        const count = root.modes.length
+        root.selectMode(root.modes[(index + offset + count) % count].id)
+    }
+
+    // Reads root.mode rather than clipboardMode because this also runs from
+    // onModeChanged, where the derived binding may not have re-evaluated yet.
+    function refresh() {
+        searchText = ""
+        selectedIndex = 0
+        if (root.mode === "clipboard" && !clipboardQuery.running) {
+            root.clipboardEntries = []
+            clipboardQuery.running = true
         }
+        Qt.callLater(() => searchField.forceActiveFocus())
+    }
+
+    onOpenChanged: if (open) root.refresh()
+    onModeChanged: if (open) root.refresh()
+
+    Process {
+        id: clipboardQuery
+
+        command: ["cliphist", "list"]
+        stdout: StdioCollector {
+            waitForEnd: true
+            onStreamFinished: root.clipboardEntries = root.parseClipboard(text)
+        }
+        onExited: (exitCode, exitStatus) => {
+            root.clipboardAvailable = exitCode === 0
+        }
+    }
+
+    Process {
+        id: clipboardCopy
     }
 
     Rectangle {
@@ -148,43 +260,12 @@ PanelWindow {
         width: Math.min(620, root.width - 48)
         height: Math.min(680, root.height - 64)
         color: root.theme.panelSurface
+        radius: root.theme.panelRadius
         border.width: 1
         border.color: root.theme.outlineStrong
 
         MouseArea {
             anchors.fill: parent
-        }
-
-        Rectangle {
-            anchors.top: parent.top
-            anchors.left: parent.left
-            width: 110
-            height: 2
-            color: root.theme.accentBright
-        }
-
-        Rectangle {
-            anchors.top: parent.top
-            anchors.right: parent.right
-            width: 34
-            height: 2
-            color: root.theme.divider
-        }
-
-        Rectangle {
-            anchors.bottom: parent.bottom
-            anchors.right: parent.right
-            width: 110
-            height: 2
-            color: root.theme.accentBright
-        }
-
-        Rectangle {
-            anchors.bottom: parent.bottom
-            anchors.left: parent.left
-            width: 34
-            height: 2
-            color: root.theme.divider
         }
 
         ColumnLayout {
@@ -213,6 +294,7 @@ PanelWindow {
                                 required property int index
                                 Layout.preferredWidth: 8
                                 Layout.preferredHeight: 8
+                                radius: 2
                                 color: index === 0 || index === 3
                                     ? root.theme.accentBright
                                     : root.theme.divider
@@ -226,7 +308,7 @@ PanelWindow {
                     spacing: 1
 
                     Text {
-                        text: "APPLICATIONS"
+                        text: "LAUNCHER"
                         color: root.theme.text
                         font.family: root.theme.fontFamily
                         font.pixelSize: root.theme.textSize + 2
@@ -236,9 +318,15 @@ PanelWindow {
                     }
 
                     Text {
-                        text: root.searchText.trim() === ""
-                            ? "Quick launch · " + root.applicationEntries.length + " installed"
-                            : root.applicationResults.length + " matching applications"
+                        text: {
+                            if (root.searchText.trim() !== "")
+                                return root.results.length + (root.clipboardMode
+                                    ? " matching entries"
+                                    : " matching applications")
+                            if (root.clipboardMode)
+                                return "Recent first · " + root.clipboardEntries.length + " entries"
+                            return "Quick launch · " + root.applicationEntries.length + " installed"
+                        }
                         color: root.theme.textMuted
                         font.family: root.theme.fontFamily
                         font.pixelSize: root.theme.microTextSize
@@ -246,14 +334,25 @@ PanelWindow {
                     }
                 }
 
+                Item { Layout.fillWidth: true }
+
+                // The only two keys here that are not already obvious from a
+                // search list, kept as legends rather than a hint row.
                 Text {
-                    text: "ESC"
+                    text: "CTRL+TAB   ESC"
                     color: root.theme.textMuted
                     font.family: root.theme.monoFontFamily
                     font.pixelSize: root.theme.microTextSize
                     font.weight: Font.DemiBold
                     renderType: Text.NativeRendering
                 }
+            }
+
+            ControlTabs {
+                theme: root.theme
+                currentId: root.mode
+                tabs: root.modes
+                onSelected: tabId => root.selectMode(tabId)
             }
 
             TextField {
@@ -263,7 +362,9 @@ PanelWindow {
                 Layout.preferredHeight: 46
                 leftPadding: 42
                 rightPadding: 14
-                placeholderText: "Search applications"
+                placeholderText: root.clipboardMode
+                    ? "Search clipboard history"
+                    : "Search applications"
                 text: root.searchText
                 color: root.theme.text
                 placeholderTextColor: root.theme.textMuted
@@ -279,8 +380,8 @@ PanelWindow {
                 }
 
                 onAccepted: {
-                    if (root.applicationResults.length > 0)
-                        root.launch(root.applicationResults[root.selectedIndex])
+                    if (root.results.length > 0)
+                        root.activate(root.results[root.selectedIndex])
                 }
 
                 Keys.onPressed: event => {
@@ -296,9 +397,16 @@ PanelWindow {
                         root.moveSelection(-1)
                         event.accepted = true
                     }
-                    else if (event.key === Qt.Key_Tab) {
-                        const direction = event.modifiers & Qt.ShiftModifier ? -1 : 1
-                        root.moveSelection(direction)
+                    // Qt delivers Shift+Tab as Key_Backtab, so both keys have
+                    // to be recognised for the reverse direction to work.
+                    else if (event.key === Qt.Key_Tab || event.key === Qt.Key_Backtab) {
+                        const reverse = event.key === Qt.Key_Backtab
+                            || (event.modifiers & Qt.ShiftModifier)
+                        const direction = reverse ? -1 : 1
+                        if (event.modifiers & Qt.ControlModifier)
+                            root.cycleMode(direction)
+                        else
+                            root.moveSelection(direction)
                         event.accepted = true
                     }
                 }
@@ -307,6 +415,7 @@ PanelWindow {
                     color: searchField.activeFocus
                         ? root.theme.accentSurface
                         : "transparent"
+                    radius: root.theme.widgetRadius
                     border.width: 1
                     border.color: searchField.activeFocus
                         ? root.theme.accentBright
@@ -327,9 +436,13 @@ PanelWindow {
 
             Text {
                 Layout.fillWidth: true
-                text: root.searchText.trim() === ""
-                    ? "ALL APPLICATIONS · FAVOURITES FIRST"
-                    : root.applicationResults.length + " RESULTS"
+                text: {
+                    if (root.searchText.trim() !== "")
+                        return root.results.length + " RESULTS"
+                    return root.clipboardMode
+                        ? "CLIPBOARD HISTORY · NEWEST FIRST"
+                        : "ALL APPLICATIONS · FAVOURITES FIRST"
+                }
                 color: root.theme.textMuted
                 font.family: root.theme.fontFamily
                 font.pixelSize: root.theme.microTextSize
@@ -339,12 +452,12 @@ PanelWindow {
             }
 
             ListView {
-                id: applicationList
+                id: resultList
 
-                visible: root.applicationResults.length > 0
+                visible: root.results.length > 0
                 Layout.fillWidth: true
                 Layout.fillHeight: true
-                model: root.applicationResults
+                model: root.results
                 currentIndex: root.selectedIndex
                 clip: true
                 spacing: 5
@@ -358,28 +471,30 @@ PanelWindow {
 
                     contentItem: Rectangle {
                         implicitWidth: 2
+                        radius: width / 2
                         color: root.theme.accentBright
                         opacity: 0.72
                     }
                 }
 
                 delegate: Item {
-                        id: applicationCard
+                        id: resultCard
 
                         required property int index
                         required property var modelData
                         readonly property bool selected: index === root.selectedIndex
 
-                        width: applicationList.width - 10
+                        width: resultList.width - 10
                         height: 50
 
                         Rectangle {
                             anchors.fill: parent
-                            color: applicationCard.selected
+                            radius: root.theme.widgetRadius
+                            color: resultCard.selected
                                 ? root.theme.accentSurface
-                                : (applicationMouse.containsMouse ? root.theme.surfaceHover : "transparent")
-                            border.width: applicationCard.selected || applicationMouse.containsMouse ? 1 : 0
-                            border.color: applicationCard.selected
+                                : (resultMouse.containsMouse ? root.theme.surfaceHover : "transparent")
+                            border.width: resultCard.selected || resultMouse.containsMouse ? 1 : 0
+                            border.color: resultCard.selected
                                 ? root.theme.accentBright
                                 : root.theme.outline
                         }
@@ -388,8 +503,9 @@ PanelWindow {
                             anchors.left: parent.left
                             anchors.verticalCenter: parent.verticalCenter
                             width: 2
-                            height: applicationCard.selected ? 30 : 14
-                            color: applicationCard.selected
+                            height: resultCard.selected ? 30 : 14
+                            radius: 1
+                            color: resultCard.selected
                                 ? root.theme.accentBright
                                 : root.theme.divider
 
@@ -403,13 +519,29 @@ PanelWindow {
                             spacing: 11
 
                             IconImage {
+                                visible: !root.clipboardMode
                                 Layout.preferredWidth: 30
                                 Layout.preferredHeight: 30
-                                source: Quickshell.iconPath(
-                                    String(applicationCard.modelData.icon || ""),
-                                    "application-x-executable"
-                                )
+                                source: root.clipboardMode
+                                    ? ""
+                                    : Quickshell.iconPath(
+                                        String(resultCard.modelData.icon || ""),
+                                        "application-x-executable"
+                                    )
                                 mipmap: true
+                            }
+
+                            Text {
+                                visible: root.clipboardMode
+                                Layout.preferredWidth: 30
+                                horizontalAlignment: Text.AlignHCenter
+                                text: resultCard.modelData.binary ? "󰋩" : "󰅌"
+                                color: resultCard.selected
+                                    ? root.theme.accentBright
+                                    : root.theme.textMuted
+                                font.family: root.theme.iconFontFamily
+                                font.pixelSize: root.theme.controlIconSize
+                                renderType: Text.NativeRendering
                             }
 
                             ColumnLayout {
@@ -418,22 +550,23 @@ PanelWindow {
 
                                 Text {
                                     Layout.fillWidth: true
-                                    text: String(applicationCard.modelData.name || "Application")
-                                    color: applicationCard.selected
+                                    text: root.rowTitle(resultCard.modelData)
+                                    color: resultCard.selected
                                         ? root.theme.accentBright
                                         : root.theme.text
                                     elide: Text.ElideRight
-                                    font.family: root.theme.fontFamily
+                                    font.family: root.clipboardMode
+                                        ? root.theme.monoFontFamily
+                                        : root.theme.fontFamily
                                     font.pixelSize: root.theme.smallTextSize
-                                    font.weight: Font.DemiBold
+                                    font.weight: root.clipboardMode ? Font.Normal : Font.DemiBold
                                     renderType: Text.NativeRendering
                                 }
 
                                 Text {
                                     visible: text !== ""
                                     Layout.fillWidth: true
-                                    text: String(applicationCard.modelData.genericName
-                                        || applicationCard.modelData.comment || "")
+                                    text: root.rowSubtitle(resultCard.modelData)
                                     color: root.theme.textMuted
                                     elide: Text.ElideRight
                                     font.family: root.theme.fontFamily
@@ -443,8 +576,8 @@ PanelWindow {
                             }
 
                             Text {
-                                visible: applicationCard.selected
-                                text: "ENTER"
+                                visible: resultCard.selected
+                                text: root.clipboardMode ? "COPY" : "ENTER"
                                 color: root.theme.accentBright
                                 font.family: root.theme.monoFontFamily
                                 font.pixelSize: root.theme.microTextSize
@@ -454,18 +587,18 @@ PanelWindow {
                         }
 
                         MouseArea {
-                            id: applicationMouse
+                            id: resultMouse
                             anchors.fill: parent
                             hoverEnabled: true
                             cursorShape: Qt.PointingHandCursor
-                            onEntered: root.selectedIndex = applicationCard.index
-                            onClicked: root.launch(applicationCard.modelData)
+                            onEntered: root.selectedIndex = resultCard.index
+                            onClicked: root.activate(resultCard.modelData)
                         }
                 }
             }
 
             ColumnLayout {
-                visible: root.applicationResults.length === 0
+                visible: root.results.length === 0
                 Layout.fillWidth: true
                 Layout.fillHeight: true
                 spacing: 6
@@ -474,7 +607,7 @@ PanelWindow {
 
                 Text {
                     Layout.fillWidth: true
-                    text: "󰍉"
+                    text: root.clipboardMode ? "󰅌" : "󰍉"
                     color: root.theme.textMuted
                     horizontalAlignment: Text.AlignHCenter
                     font.family: root.theme.iconFontFamily
@@ -484,7 +617,15 @@ PanelWindow {
 
                 Text {
                     Layout.fillWidth: true
-                    text: "No matching applications"
+                    text: {
+                        if (!root.clipboardMode)
+                            return "No matching applications"
+                        if (!root.clipboardAvailable)
+                            return "Clipboard history unavailable"
+                        return root.searchText.trim() === ""
+                            ? "Clipboard history is empty"
+                            : "No matching entries"
+                    }
                     color: root.theme.text
                     horizontalAlignment: Text.AlignHCenter
                     font.family: root.theme.fontFamily
@@ -495,7 +636,13 @@ PanelWindow {
 
                 Text {
                     Layout.fillWidth: true
-                    text: "Try another name, category, or keyword."
+                    text: {
+                        if (!root.clipboardMode)
+                            return "Try another name, category, or keyword."
+                        if (!root.clipboardAvailable)
+                            return "cliphist is not running or returned an error."
+                        return "Copy something and it will appear here."
+                    }
                     color: root.theme.textMuted
                     horizontalAlignment: Text.AlignHCenter
                     font.family: root.theme.fontFamily
@@ -504,35 +651,6 @@ PanelWindow {
                 }
 
                 Item { Layout.fillHeight: true }
-            }
-
-            Rectangle {
-                Layout.fillWidth: true
-                Layout.preferredHeight: 1
-                color: root.theme.outline
-            }
-
-            RowLayout {
-                Layout.fillWidth: true
-
-                Text {
-                    text: "↑ ↓  NAVIGATE     TAB  STEP     ENTER  OPEN"
-                    color: root.theme.textMuted
-                    font.family: root.theme.monoFontFamily
-                    font.pixelSize: root.theme.microTextSize
-                    renderType: Text.NativeRendering
-                }
-
-                Item { Layout.fillWidth: true }
-
-                Text {
-                    text: "HYPRARCH // NATIVE LAUNCHER"
-                    color: root.theme.divider
-                    font.family: root.theme.monoFontFamily
-                    font.pixelSize: root.theme.microTextSize
-                    font.letterSpacing: 0.5
-                    renderType: Text.NativeRendering
-                }
             }
         }
     }

@@ -55,7 +55,7 @@ Hyprland 0.55+ deprecated Hyprlang (`.conf`) in favour of Lua.
 - [ ] No keyboard window resizing (`resizeactive`).
 - [x] Media play/pause/next/previous keys are wired through `playerctl`.
 - [ ] `Super+M` = `exit` with no confirmation, one key from `Super+N`. Remove it or route
-      it through `power-menu.sh`.
+      it through the bar's power control, which already confirms logout.
 - [ ] Special workspace / scratchpad (`Super+grave`) for a floating terminal.
 - [ ] Notification history: `dunstctl history-pop` and `dunstctl close-all`.
 

@@ -8,7 +8,6 @@ xdg-desktop-portal-gtk
 quickshell
 dunst
 ghostty
-fuzzel
 thunar
 btop
 fastfetch

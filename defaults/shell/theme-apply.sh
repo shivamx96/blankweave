@@ -12,7 +12,7 @@
 # both the persisted selection and the resolved values of the active mode, and
 # of every config rendered from a *.tmpl next to it. Templates use
 # {{path}} placeholders resolved against the resolved theme, with an optional
-# {{path:format}} override for colours (css, rgb, fuzzel, hypr, plymouth).
+# {{path:format}} override for colours (css, rgb, hypr, plymouth).
 #
 # Two parts of a theme need root and are not applied here: the Papirus folder
 # colour and the Plymouth boot splash. This script stages the rendered splash
@@ -68,7 +68,6 @@ def render($format):
     if is_color then
         if $format == "css" then ascii_downcase
         elif $format == "rgb" then "#" + (body | .[0:6])
-        elif $format == "fuzzel" then body
         elif $format == "hypr" then "rgba(" + body + ")"
         elif $format == "plymouth" then [unit(0), unit(2), unit(4)] | join(", ")
         else error("unknown colour format: " + $format)
@@ -186,7 +185,6 @@ render_template() {
 
 render_all() {
     render_template css "$DOTS_DIR/dunst/dunstrc.tmpl" "$DOTS_DIR/dunst/dunstrc"
-    render_template fuzzel "$DOTS_DIR/fuzzel/fuzzel.ini.tmpl" "$DOTS_DIR/fuzzel/fuzzel.ini"
     render_template css "$DOTS_DIR/ghostty/config.tmpl" "$DOTS_DIR/ghostty/config"
     render_template hypr "$DOTS_DIR/hypr/hyprlock-theme.conf.tmpl" "$DOTS_DIR/hypr/hyprlock-theme.conf"
     render_template hypr "$DOTS_DIR/hypr/theme.lua.tmpl" "$BLANKWEAVE_CONFIG_DIR/theme.lua"
@@ -278,7 +276,7 @@ reload_services() {
     local link
 
     # Symlink mtimes wake inotify-based readers such as Ghostty.
-    for link in "$CONFIG_DIR/ghostty/config" "$CONFIG_DIR/dunst/dunstrc" "$CONFIG_DIR/fuzzel/fuzzel.ini"; do
+    for link in "$CONFIG_DIR/ghostty/config" "$CONFIG_DIR/dunst/dunstrc"; do
         if [[ -L $link ]]; then
             touch -h "$link" 2> /dev/null || true
         fi
