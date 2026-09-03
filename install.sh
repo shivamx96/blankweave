@@ -277,6 +277,8 @@ cp -rv "$REPO_DIR/defaults/dunst" "$DOTS_DIR/" || { echo "Failed to copy dunst";
 cp -rv "$REPO_DIR/defaults/ghostty" "$DOTS_DIR/" || { echo "Failed to copy ghostty"; exit 1; }
 cp -rv "$REPO_DIR/defaults/xdg-desktop-portal" "$DOTS_DIR/" || { echo "Failed to copy xdg-desktop-portal"; exit 1; }
 cp -rv "$REPO_DIR/defaults/fontconfig" "$DOTS_DIR/" || { echo "Failed to copy fontconfig"; exit 1; }
+# Mirror shell scripts exactly so removed helpers do not linger.
+rm -rf "$DOTS_DIR/shell"
 cp -rv "$REPO_DIR/defaults/shell" "$DOTS_DIR/" || { echo "Failed to copy shell"; exit 1; }
 cp -rv "$REPO_DIR/defaults/webapps" "$DOTS_DIR/" || { echo "Failed to copy webapps"; exit 1; }
 # The boot splash is rendered here by theme-apply.sh and installed by root below.
