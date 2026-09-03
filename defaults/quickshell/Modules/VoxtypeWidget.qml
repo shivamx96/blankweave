@@ -1,5 +1,6 @@
 import QtQuick
 import QtQuick.Layouts
+import Quickshell
 import "../Components"
 
 WidgetFrame {
@@ -9,13 +10,14 @@ WidgetFrame {
     readonly property bool featureEnabled: voice.featureEnabled
     readonly property bool recording: voice.daemonState === "recording"
     readonly property bool transcribing: voice.daemonState === "transcribing"
+    readonly property string recordCommand: Quickshell.env("HOME")
+        + "/.local/share/blankweave/shell/voxtype-record.sh"
     readonly property string stateLabel: recording
         ? "Recording"
         : (transcribing ? "Transcribing" : (voice.available ? "Ready" : "Unavailable"))
 
     function record(action) {
-        // Equivalent to `voxtype record <action>` without invoking a shell.
-        root.bar.run(["voxtype", "record", action])
+        root.bar.run([root.recordCommand, action])
     }
 
     visible: voice.featureEnabled
@@ -107,6 +109,14 @@ WidgetFrame {
             label: "Cancel and discard"
             attention: true
             onPressed: root.record("cancel")
+        }
+
+        ControlCopyRow {
+            visible: root.voice.hasLastTranscript
+            theme: root.theme
+            label: "LAST TEXT"
+            value: String(root.voice.lastTranscript || "").replace(/\s+/g, " ").trim()
+            copyText: String(root.voice.lastTranscript || "")
         }
 
         Text {

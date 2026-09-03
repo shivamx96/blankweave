@@ -138,6 +138,8 @@ installer_config_load "$config_file" "$laptop_capabilities"
 assert_profiles 'voice-dictation'
 resolve_package_manifests "$repository" "$laptop_capabilities" repository packages
 assert_contains wtype "${packages[@]}"
+assert_contains at-spi2-core "${packages[@]}"
+assert_contains python-gobject "${packages[@]}"
 resolve_package_manifests "$repository" "$laptop_capabilities" aur aur_packages
 assert_contains voxtype-bin "${aur_packages[@]}"
 

@@ -179,6 +179,41 @@ development, and communication; gaming is also enabled on a gaming-capable
 machine without a battery. Ordinary updates consume the saved package/Git/SSH
 choices but preserve any theme selected after setup.
 
+## Voice dictation
+
+Add `voice-dictation` to the space-separated `profiles=` line in
+`~/.config/blankweave/install.conf`, then run `blankweave update` (or select it
+during `blankweave setup`). The profile performs this exact local setup:
+
+1. Installs `voxtype-bin`, `wtype`, and the AT-SPI Python bindings used for
+   best-effort editable-focus detection.
+2. Downloads `ggml-small.en.bin` into
+   `~/.local/share/voxtype/models/` and rejects it unless it matches the pinned
+   SHA-256 digest.
+3. Installs VoxType's Quickshell frontend, renders the active Blankweave colours
+   into `~/.local/share/blankweave/voxtype/config.toml`, and links that file at
+   `~/.config/voxtype/config.toml` unless a user-owned config already exists.
+4. Enables `voxtype.service`, reloads Hyprland, and exposes the themed status
+   and recovery panel in the bar.
+5. Binds `Super+D` for toggle dictation and F12 press/release for push-to-talk.
+
+Audio and transcripts stay on the machine. A definite missing/non-editable
+target routes the result to the clipboard and shows a brief bottom preview.
+Apps that do not publish accessibility state continue through normal typing so
+Blankweave never overwrites the clipboard based on a guess; their preview says
+to copy only if insertion did not happen. Either way, only the latest transcript
+is retained at `~/.local/state/blankweave/voxtype-last-transcript.json`; it can
+be copied from the voice panel in the bar.
+
+Verify the installation with:
+
+```bash
+systemctl --user is-active voxtype.service
+voxtype status --format json --extended
+test -L ~/.config/voxtype/config.toml
+test -f ~/.local/share/voxtype/models/ggml-small.en.bin
+```
+
 ## Keybindings
 
 ### System
@@ -249,7 +284,7 @@ one is removed.
 
 A theme bundles the shell palette, the lock-screen treatment, a wallpaper,
 the cursor and icon themes for each of its two modes, dark and light, plus
-the Papirus folder colour and the boot splash. `Super + D` switches the mode;
+the Papirus folder colour and the boot splash. `Super + T` switches the mode;
 the theme itself is chosen from the display panel in the bar or on the
 command line:
 

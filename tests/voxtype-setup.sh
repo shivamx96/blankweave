@@ -16,8 +16,9 @@ fake_bin=$test_root/bin
 fake_home=$test_root/home
 fake_data=$test_root/data
 fake_config=$test_root/config
+fake_state=$test_root/state
 log=$test_root/calls.log
-mkdir -p "$fake_bin" "$fake_home" "$fake_data" "$fake_config"
+mkdir -p "$fake_bin" "$fake_home" "$fake_data" "$fake_config" "$fake_state"
 
 cat > "$fake_bin/voxtype" <<'EOF'
 #!/usr/bin/env bash
@@ -37,6 +38,7 @@ run_setup() {
     HOME=$fake_home \
     XDG_DATA_HOME=$fake_data \
     XDG_CONFIG_HOME=$fake_config \
+    XDG_STATE_HOME=$fake_state \
     PATH=$fake_bin:/usr/bin \
     VOXTYPE_TEST_LOG=$log \
     VOXTYPE_MODEL_URL=file://$model_source \
@@ -50,6 +52,10 @@ model=$fake_data/voxtype/models/ggml-small.en.bin
 [[ $(sha256sum "$model" | cut -d' ' -f1) == "$model_sha" ]]
 grep -Fxq $'voxtype\tsetup quickshell --force --skip-bridge' "$log"
 grep -Fxq $'systemctl\t--user enable --now voxtype.service' "$log"
+transcript_state=$fake_state/blankweave/voxtype-last-transcript.json
+[[ -f $transcript_state ]]
+[[ $(jq -c . "$transcript_state") == '{}' ]]
+[[ $(stat -c '%a' "$transcript_state") == 600 ]]
 
 # An already verified model makes setup replayable without another download.
 rm "$model_source"
@@ -64,13 +70,24 @@ grep -Fq 'model = "small.en"' "$repository/defaults/voxtype/config.toml.tmpl"
 grep -Fq 'enabled = false' "$repository/defaults/voxtype/config.toml.tmpl"
 grep -Fq 'frontend = "quickshell"' "$repository/defaults/voxtype/config.toml.tmpl"
 grep -Fq 'background = "{{colors.surfaceRaised:rgb}}"' "$repository/defaults/voxtype/config.toml.tmpl"
+grep -Fq 'plugin_path = "~/.local/share/blankweave/voxtype/osd/blankweave"' \
+    "$repository/defaults/voxtype/config.toml.tmpl"
+grep -Fq 'command = "~/.local/share/blankweave/shell/voxtype-post-process.sh"' \
+    "$repository/defaults/voxtype/config.toml.tmpl"
+grep -Fxq 'qml_entry = "MinimalOsd.qml"' \
+    "$repository/defaults/voxtype/osd/blankweave/voxtype-osd.toml"
+grep -Fq 'height: 28' \
+    "$repository/defaults/voxtype/osd/blankweave/MinimalOsd.qml"
 
 grep -Fq 'main_mod .. " + T"' "$repository/defaults/hypr/keybindings.lua"
 grep -Fq '"SUPER + D"' "$repository/defaults/hypr/voxtype.lua"
+grep -Fq 'voxtype-record.sh toggle' "$repository/defaults/hypr/voxtype.lua"
 grep -Fq 'property Voxtype voxtype: Voxtype' "$repository/defaults/quickshell/shell.qml"
+grep -Fq 'VoxtypeTranscriptToast' "$repository/defaults/quickshell/shell.qml"
 grep -Fq 'VoxtypeWidget' "$repository/defaults/quickshell/Modules/ApplicationIndicatorsWidget.qml"
 grep -Fq 'voxtype status --follow' "$repository/defaults/quickshell/Services/Voxtype.qml"
-grep -Fq '["voxtype", "record", action]' "$repository/defaults/quickshell/Modules/VoxtypeWidget.qml"
+grep -Fq 'voxtype-record.sh' "$repository/defaults/quickshell/Modules/VoxtypeWidget.qml"
+grep -Fq 'ControlCopyRow' "$repository/defaults/quickshell/Modules/VoxtypeWidget.qml"
 grep -Fq 'installer_profile_enabled voice-dictation' "$repository/install.sh"
 
 printf 'VoxType setup tests passed.\n'

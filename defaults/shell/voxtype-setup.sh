@@ -7,6 +7,7 @@ MODEL_URL=${VOXTYPE_MODEL_URL:-https://huggingface.co/ggerganov/whisper.cpp/reso
 MODEL_SHA256=${VOXTYPE_MODEL_SHA256:-c6138d6d58ecc8322097e0f987c32f1be8bb0a18532a3f88f734d1bbf9c41e5d}
 DATA_HOME=${XDG_DATA_HOME:-$HOME/.local/share}
 MODEL_DIR=$DATA_HOME/voxtype/models
+STATE_HOME=${XDG_STATE_HOME:-$HOME/.local/state}
 MODEL_PATH=$MODEL_DIR/$MODEL_NAME
 
 model_valid() {
@@ -42,6 +43,11 @@ enable_voxtype() {
     fi
 
     voxtype setup quickshell --force --skip-bridge
+    mkdir -p "$STATE_HOME/blankweave"
+    if [[ ! -e $STATE_HOME/blankweave/voxtype-last-transcript.json ]]; then
+        printf '{}\n' > "$STATE_HOME/blankweave/voxtype-last-transcript.json"
+        chmod 600 "$STATE_HOME/blankweave/voxtype-last-transcript.json"
+    fi
     systemctl --user enable --now voxtype.service
 }
 

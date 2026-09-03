@@ -7,6 +7,9 @@ Item {
 
     readonly property string configPath: (Quickshell.env("XDG_CONFIG_HOME")
         || (Quickshell.env("HOME") + "/.config")) + "/blankweave/install.conf"
+    readonly property string transcriptPath: (Quickshell.env("XDG_STATE_HOME")
+        || (Quickshell.env("HOME") + "/.local/state"))
+        + "/blankweave/voxtype-last-transcript.json"
     readonly property string statusCommand: "voxtype status --follow --format json --extended --icon-theme text"
     property bool featureEnabled: false
     property bool daemonRunning: false
@@ -17,8 +20,16 @@ Item {
     property string device: "—"
     property string backend: "—"
     property string error: ""
+    property string lastTranscript: ""
+    property string lastDelivery: ""
+    property double lastCreatedAt: 0
+    property bool transcriptStateLoaded: false
     readonly property bool available: featureEnabled && daemonRunning && statusSeen
     readonly property bool busy: daemonState === "recording" || daemonState === "transcribing"
+    readonly property bool hasLastTranscript: lastTranscript !== ""
+
+    signal transcriptCopied(string text)
+    signal transcriptAvailable(string text, bool copied)
 
     visible: false
     implicitWidth: 0
@@ -69,6 +80,32 @@ Item {
         }
     }
 
+    function updateTranscript(payload) {
+        let next
+        try {
+            next = JSON.parse(payload || "{}")
+        } catch (error) {
+            return
+        }
+        const text = String(next.text || "")
+        const delivery = String(next.delivery || "")
+        const createdAt = Number(next.createdAt || 0)
+        const shouldAnnounce = root.transcriptStateLoaded
+            && createdAt > 0
+            && createdAt !== root.lastCreatedAt
+            && (delivery === "clipboard" || delivery === "unverified")
+            && text !== ""
+        root.lastTranscript = text
+        root.lastDelivery = delivery
+        root.lastCreatedAt = createdAt
+        root.transcriptStateLoaded = true
+        if (shouldAnnounce) {
+            if (delivery === "clipboard")
+                root.transcriptCopied(text)
+            root.transcriptAvailable(text, delivery === "clipboard")
+        }
+    }
+
     FileView {
         path: root.configPath
         watchChanges: true
@@ -78,6 +115,15 @@ Item {
             root.featureEnabled = false
             root.resetStatus()
         }
+        onFileChanged: reload()
+    }
+
+    FileView {
+        path: root.transcriptPath
+        watchChanges: true
+        printErrors: false
+        onLoaded: root.updateTranscript(text())
+        onLoadFailed: root.transcriptStateLoaded = true
         onFileChanged: reload()
     }
 
