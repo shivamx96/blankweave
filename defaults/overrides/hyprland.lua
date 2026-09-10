@@ -1,0 +1,4 @@
+-- Your Hyprland settings run after Blankweave's defaults, including voice bindings.
+-- Updates and theme changes never overwrite this file.
+-- Example:
+-- hl.config({ general = { gaps_in = 4, gaps_out = 8 } })

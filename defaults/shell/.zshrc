@@ -74,6 +74,10 @@ alias update-blankweave='blankweave update'
 # Updating PATH with Zed
 export PATH=$HOME/.local/bin:$PATH
 
+if [[ -r "$HOME/.config/blankweave/overrides/zsh.zsh" ]]; then
+    source "$HOME/.config/blankweave/overrides/zsh.zsh"
+fi
+
 #############################################################################
 ### ANY CUSTOM CONFIGS GO BELOW THIS LINE
 #############################################################################

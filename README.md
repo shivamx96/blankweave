@@ -337,6 +337,55 @@ no extras, the key restores the theme wallpaper.
 
 ## Customize
 
-Edit `~/.config/` to customize application settings. The Quickshell source is
-deployed to `~/.local/share/blankweave/quickshell/`; Dunst and Ghostty remain
-symlinked from `~/.config/`.
+Put personal settings in `~/.config/blankweave/overrides/`. Setup creates
+commented starter files only when they are missing; updates and theme switches
+never replace them. You can also symlink these files to your own dotfiles repo.
+
+| File | Precedence | Apply edits |
+| --- | --- | --- |
+| `hyprland.lua` | After theme, hardware, monitor arrangement, and optional voice bindings | `hyprctl reload` |
+| `ghostty.conf` | After the themed terminal defaults | Ghostty's Reload Configuration action |
+| `dunst.conf` | A native `dunstrc.d/99-blankweave-user.conf` snippet, after the base config | `dunstctl reload` |
+| `zsh.zsh` | After shell defaults, before the legacy custom section in `.zshrc` | Open a new terminal |
+
+For example, in `overrides/hyprland.lua`:
+
+```lua
+hl.config({ general = { gaps_in = 4, gaps_out = 8 } })
+```
+
+Or in `overrides/ghostty.conf`:
+
+```ini
+font-size = 13
+```
+
+Hyprland override errors are reported by the compositor and by
+`blankweave doctor`; they are not silently ignored. Dunst snippets use its normal
+filename ordering, so another snippet sorted after `99-blankweave-user.conf`
+can override the same settings. Ghostty uses its native
+[additional config files](https://ghostty.org/docs/config); Dunst uses its native
+[config snippets](https://dunst-project.org/documentation/dunst/).
+
+For full control, replace an application's managed symlink with your own file
+or symlink. The installer preserves existing user configs for Hyprland,
+Hypridle, Hyprlock, Ghostty, Dunst, Fontconfig, portals, and VoxType. During
+upgrade, only byte-identical legacy generated Hyprland configs are adopted as
+managed symlinks. Edited files stay active. A fully custom `.zshrc` is also
+preserved; the old marked custom section continues to survive managed updates.
+
+Full replacements own their configuration loading. If you already customized
+`~/.config/hypr/hyprland.lua`, append this line to opt into the new override file:
+
+```lua
+require(os.getenv("HOME") .. "/.local/share/blankweave/hypr/user-overrides")
+```
+
+For a custom Ghostty config, add
+`config-file = ?~/.config/blankweave/overrides/ghostty.conf`; for a custom
+`.zshrc`, source `~/.config/blankweave/overrides/zsh.zsh` yourself.
+
+Files under `~/.local/share/blankweave/` remain managed and are replaced on
+update, including the Quickshell source. Keep personal themes and wallpapers
+in their documented `~/.config/blankweave/` directories. Theme state, display
+panel state, and GTK theme settings remain generated files, not override files.

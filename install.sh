@@ -113,6 +113,9 @@ CONFIG_DIR="$USER_HOME/.config"
 INSTALLER_CONFIG_FILE="$CONFIG_DIR/blankweave/install.conf"
 SETUP_CONFIG_FILE="$CONFIG_DIR/blankweave/setup.conf"
 
+# shellcheck source=scripts/user-config.sh
+source "$REPO_DIR/scripts/user-config.sh"
+
 # shellcheck source=scripts/installer-config.sh
 source "$REPO_DIR/scripts/installer-config.sh"
 # shellcheck source=scripts/setup-config.sh
@@ -315,48 +318,45 @@ mkdir -p "$CONFIG_DIR/hypr"
 mkdir -p "$CONFIG_DIR/dunst"
 mkdir -p "$CONFIG_DIR/ghostty"
 
-HYPRLAND_LUA_STAGED=$(mktemp "$CONFIG_DIR/hypr/.hyprland.lua.XXXXXX")
-cat > "$HYPRLAND_LUA_STAGED" << 'EOF'
-local home = os.getenv("HOME")
-
-require(home .. "/.local/share/blankweave/hypr/hyprland")
-require(home .. "/.config/hypr/env")
-require(home .. "/.config/hypr/monitors")
-
--- Monitor arrangement chosen in the bar's display panel. The file is written
--- only by monitor-layout.sh and is absent until a position has been picked;
--- a broken or missing file must never keep the compositor from starting.
-pcall(dofile, home .. "/.config/blankweave/monitors.lua")
-EOF
+# Seed only missing override files. A user's file or symlink always wins.
+for override in "$REPO_DIR/defaults/overrides/"*; do
+    user_config_seed "$override" "$CONFIG_DIR/blankweave/overrides/$(basename "$override")"
+done
+VOICE_ENABLED=false
 if installer_profile_enabled voice-dictation; then
-    cat >> "$HYPRLAND_LUA_STAGED" << 'EOF'
-
-require(home .. "/.local/share/blankweave/hypr/voxtype")
-EOF
+    VOICE_ENABLED=true
 fi
-chmod 0644 "$HYPRLAND_LUA_STAGED"
-mv -f "$HYPRLAND_LUA_STAGED" "$CONFIG_DIR/hypr/hyprland.lua"
+user_config_install_hyprland_entry "$DOTS_DIR" "$CONFIG_DIR" "$VOICE_ENABLED"
 
 HARDWARE_CONFIG_DIR="$REPO_DIR/defaults/hardware"
 if hardware_capability_has gpu-nvidia; then
-    copy_file_atomically "$HARDWARE_CONFIG_DIR/env-nvidia.lua" "$CONFIG_DIR/hypr/env.lua"
+    copy_file_atomically "$HARDWARE_CONFIG_DIR/env-nvidia.lua" "$DOTS_DIR/hypr/hardware-env.lua"
 elif hardware_capability_has gpu-intel; then
-    copy_file_atomically "$HARDWARE_CONFIG_DIR/env-intel.lua" "$CONFIG_DIR/hypr/env.lua"
+    copy_file_atomically "$HARDWARE_CONFIG_DIR/env-intel.lua" "$DOTS_DIR/hypr/hardware-env.lua"
 else
-    copy_file_atomically "$HARDWARE_CONFIG_DIR/env-generic.lua" "$CONFIG_DIR/hypr/env.lua"
+    copy_file_atomically "$HARDWARE_CONFIG_DIR/env-generic.lua" "$DOTS_DIR/hypr/hardware-env.lua"
 fi
 if hardware_capability_has internal-display; then
-    copy_file_atomically "$HARDWARE_CONFIG_DIR/monitors-internal.lua" "$CONFIG_DIR/hypr/monitors.lua"
+    copy_file_atomically "$HARDWARE_CONFIG_DIR/monitors-internal.lua" "$DOTS_DIR/hypr/hardware-monitors.lua"
 else
-    copy_file_atomically "$HARDWARE_CONFIG_DIR/monitors-external.lua" "$CONFIG_DIR/hypr/monitors.lua"
+    copy_file_atomically "$HARDWARE_CONFIG_DIR/monitors-external.lua" "$DOTS_DIR/hypr/hardware-monitors.lua"
 fi
 if hardware_capability_has battery; then
-    copy_file_atomically "$HARDWARE_CONFIG_DIR/hypridle-battery.conf" "$CONFIG_DIR/hypr/hypridle.conf"
+    copy_file_atomically "$HARDWARE_CONFIG_DIR/hypridle-battery.conf" "$DOTS_DIR/hypr/hypridle.conf"
 else
-    copy_file_atomically "$HARDWARE_CONFIG_DIR/hypridle-ac.conf" "$CONFIG_DIR/hypr/hypridle.conf"
+    copy_file_atomically "$HARDWARE_CONFIG_DIR/hypridle-ac.conf" "$DOTS_DIR/hypr/hypridle.conf"
 fi
 
-copy_file_atomically "$REPO_DIR/defaults/hypr/hyprlock.conf" "$CONFIG_DIR/hypr/hyprlock.conf"
+# Adopt only byte-identical legacy defaults; edited files and foreign links
+# remain complete user overrides. New installs use managed symlinks.
+user_config_link "$DOTS_DIR/hypr/hardware-env.lua" "$CONFIG_DIR/hypr/env.lua" \
+    "$HARDWARE_CONFIG_DIR"/env-*.lua
+user_config_link "$DOTS_DIR/hypr/hardware-monitors.lua" "$CONFIG_DIR/hypr/monitors.lua" \
+    "$HARDWARE_CONFIG_DIR"/monitors-*.lua
+user_config_link "$DOTS_DIR/hypr/hypridle.conf" "$CONFIG_DIR/hypr/hypridle.conf" \
+    "$HARDWARE_CONFIG_DIR"/hypridle-*.conf
+user_config_link "$DOTS_DIR/hypr/hyprlock.conf" "$CONFIG_DIR/hypr/hyprlock.conf" \
+    "$REPO_DIR/defaults/hypr/hyprlock.conf"
 
 echo "Validating Hyprland Lua config..."
 if [ ! -d "$USER_RUNTIME_DIR" ]; then
@@ -377,35 +377,30 @@ fi
 section "SYMLINKING CONFIGS"
 
 # Dunst
-rm -f "$CONFIG_DIR/dunst/dunstrc"
-ln -s "$DOTS_DIR/dunst/dunstrc" "$CONFIG_DIR/dunst/dunstrc"
+user_config_link "$DOTS_DIR/dunst/dunstrc" "$CONFIG_DIR/dunst/dunstrc"
+
+# A native Dunst snippet keeps user settings above the rendered theme.
+user_config_link "$CONFIG_DIR/blankweave/overrides/dunst.conf" \
+    "$CONFIG_DIR/dunst/dunstrc.d/99-blankweave-user.conf"
 
 # XDG Desktop Portal
 mkdir -p "$CONFIG_DIR/xdg-desktop-portal"
-rm -f "$CONFIG_DIR/xdg-desktop-portal/hyprland-portals.conf"
-ln -s "$DOTS_DIR/xdg-desktop-portal/hyprland-portals.conf" "$CONFIG_DIR/xdg-desktop-portal/hyprland-portals.conf"
+user_config_link "$DOTS_DIR/xdg-desktop-portal/hyprland-portals.conf" "$CONFIG_DIR/xdg-desktop-portal/hyprland-portals.conf"
 
 # Ghostty
 mkdir -p "$CONFIG_DIR/ghostty"
-rm -f "$CONFIG_DIR/ghostty/config"
-ln -s "$DOTS_DIR/ghostty/config" "$CONFIG_DIR/ghostty/config"
+user_config_link "$DOTS_DIR/ghostty/config" "$CONFIG_DIR/ghostty/config"
 
 # Fontconfig
 mkdir -p "$CONFIG_DIR/fontconfig/conf.d"
-rm -f "$CONFIG_DIR/fontconfig/conf.d/local.conf"
-ln -s "$DOTS_DIR/fontconfig/local.conf" "$CONFIG_DIR/fontconfig/conf.d/local.conf"
+user_config_link "$DOTS_DIR/fontconfig/local.conf" "$CONFIG_DIR/fontconfig/conf.d/local.conf"
 
 # Optional local voice dictation. A regular file is a deliberate user override;
 # only create or replace Blankweave's own symlink.
 VOXTYPE_CONFIG="$CONFIG_DIR/voxtype/config.toml"
 if installer_profile_enabled voice-dictation; then
     mkdir -p "$CONFIG_DIR/voxtype"
-    if [[ ! -e $VOXTYPE_CONFIG || -L $VOXTYPE_CONFIG ]]; then
-        rm -f "$VOXTYPE_CONFIG"
-        ln -s "$DOTS_DIR/voxtype/config.toml" "$VOXTYPE_CONFIG"
-    else
-        warn "Keeping the existing VoxType config override: $VOXTYPE_CONFIG"
-    fi
+    user_config_link "$DOTS_DIR/voxtype/config.toml" "$VOXTYPE_CONFIG"
 elif [[ -L $VOXTYPE_CONFIG && $(readlink "$VOXTYPE_CONFIG") == "$DOTS_DIR/voxtype/config.toml" ]]; then
     rm -f "$VOXTYPE_CONFIG"
 fi
@@ -414,21 +409,8 @@ section "SETTING UP ZSH"
 chsh -s /usr/bin/zsh "$SUDO_USER"
 
 ZSHRC="$USER_HOME/.zshrc"
-MARKER="### ANY CUSTOM CONFIGS GO BELOW THIS LINE"
-if [ ! -f "$ZSHRC" ]; then
-    cp "$DOTS_DIR/shell/.zshrc" "$ZSHRC"
-else
-    # Preserve everything below the marker, replace everything above with latest default
-    CUSTOM_CONFIGS=""
-    if grep -qF "$MARKER" "$ZSHRC"; then
-        CUSTOM_CONFIGS=$(sed "1,/$MARKER/d" "$ZSHRC")
-    fi
-    cp "$DOTS_DIR/shell/.zshrc" "$ZSHRC"
-    if [ -n "$CUSTOM_CONFIGS" ]; then
-        echo "$CUSTOM_CONFIGS" >> "$ZSHRC"
-    fi
-fi
-chown "$SUDO_USER:$SUDO_USER" "$ZSHRC"
+user_config_install_zsh "$DOTS_DIR/shell/.zshrc" "$ZSHRC"
+chown -h "$SUDO_USER:$SUDO_USER" "$ZSHRC"
 
 PROFILE_SOURCE="source $DOTS_DIR/shell/profile"
 SHELL_RC="$USER_HOME/.zprofile"

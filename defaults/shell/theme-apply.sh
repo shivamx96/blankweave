@@ -284,9 +284,10 @@ reload_services() {
             touch -h "$link" 2> /dev/null || true
         fi
     done
-    # Reload Dunst in place so the palette changes without discarding history.
+    # Reload its original config selection (including native snippets), keeping
+    # full user configs effective and notification history intact.
     if command -v dunstctl > /dev/null; then
-        dunstctl reload "$DOTS_DIR/dunst/dunstrc" 2> /dev/null || true
+        dunstctl reload 2> /dev/null || true
     fi
     # VoxType reads its OSD palette from the rendered config. Restart only an
     # idle running daemon: a theme switch must never discard active speech.
