@@ -8,6 +8,23 @@ WidgetFrame {
     id: root
 
     readonly property string shellDir: Quickshell.env("HOME") + "/.local/share/blankweave/shell"
+    readonly property var preferences: root.bar.shell.preferences
+    readonly property var barPositionChoices: [
+        { "id": "top", "label": "Top" },
+        { "id": "bottom", "label": "Bottom" }
+    ]
+    readonly property var barVisibilityChoices: [
+        { "id": "always", "label": "Always" },
+        { "id": "fullscreen", "label": "Fullscreen" },
+        { "id": "auto-hide", "label": "Auto-hide" }
+    ]
+    readonly property string visibilityDescription: {
+        if (root.preferences.bar.visibilityMode === "fullscreen")
+            return "Hides while this monitor has a fullscreen window"
+        if (root.preferences.bar.visibilityMode === "auto-hide")
+            return "Reveals at the screen edge without moving windows"
+        return "Stays visible and reserves space for the desktop"
+    }
     property var systemInfo: ({
         "available": false,
         "hostname": "",
@@ -111,6 +128,66 @@ WidgetFrame {
                 else if (actionId === "report")
                     root.openFastfetch()
             }
+        }
+
+        ControlDivider { theme: root.theme }
+
+        ControlSectionLabel {
+            theme: root.theme
+            text: "BAR POSITION"
+        }
+
+        RowLayout {
+            Layout.fillWidth: true
+            spacing: 6
+
+            Repeater {
+                model: root.barPositionChoices
+
+                delegate: ControlChoice {
+                    required property var modelData
+
+                    Layout.fillWidth: true
+                    theme: root.theme
+                    text: String(modelData.label)
+                    selected: root.preferences.bar.position === String(modelData.id)
+                    onPressed: root.preferences.bar.position = String(modelData.id)
+                }
+            }
+        }
+
+        ControlSectionLabel {
+            theme: root.theme
+            text: "BAR VISIBILITY"
+        }
+
+        RowLayout {
+            Layout.fillWidth: true
+            spacing: 6
+
+            Repeater {
+                model: root.barVisibilityChoices
+
+                delegate: ControlChoice {
+                    required property var modelData
+
+                    Layout.fillWidth: true
+                    theme: root.theme
+                    text: String(modelData.label)
+                    selected: root.preferences.bar.visibilityMode === String(modelData.id)
+                    onPressed: root.preferences.bar.visibilityMode = String(modelData.id)
+                }
+            }
+        }
+
+        Text {
+            Layout.fillWidth: true
+            text: root.visibilityDescription
+            color: root.theme.textMuted
+            wrapMode: Text.WordWrap
+            font.family: root.theme.fontFamily
+            font.pixelSize: root.theme.microTextSize
+            renderType: Text.NativeRendering
         }
 
         ControlDivider { theme: root.theme }

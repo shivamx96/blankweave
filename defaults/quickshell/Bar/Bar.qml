@@ -1,6 +1,7 @@
 import QtQuick
 import QtQuick.Layouts
 import Quickshell
+import Quickshell.Hyprland
 import Quickshell.Wayland
 import "../Components"
 import "../Modules"
@@ -16,57 +17,77 @@ PanelWindow {
     property Item pendingTooltipTarget: null
     property string tooltipText: ""
     property string pendingTooltipText: ""
+    property bool revealHeld: false
+    property var visibilityHolds: []
     readonly property bool compact: width < 1700
     readonly property bool veryCompact: width < 1250
+    readonly property var preferences: root.shell.preferences.bar
+    readonly property string position: String(preferences.position) === "bottom" ? "bottom" : "top"
+    readonly property bool atBottom: position === "bottom"
+    readonly property string visibilityMode: {
+        const requested = String(preferences.visibilityMode)
+        return requested === "auto-hide" || requested === "fullscreen"
+            ? requested
+            : "always"
+    }
+    readonly property var hyprlandMonitor: Hyprland.monitorFor(root.modelData)
+    readonly property bool fullscreenHere: Boolean(hyprlandMonitor
+        && hyprlandMonitor.activeWorkspace
+        && hyprlandMonitor.activeWorkspace.hasFullscreen)
+    readonly property bool concealable: visibilityMode === "auto-hide"
+        || (visibilityMode === "fullscreen" && fullscreenHere)
+    readonly property bool popupHeld: visibilityHolds.length > 0
+    readonly property bool barShown: !concealable || revealHeld || popupHeld || barHover.hovered
+    readonly property int revealThickness: 2
 
     screen: modelData
     color: "transparent"
     implicitHeight: theme.barHeight
-    exclusiveZone: theme.barHeight
+    exclusiveZone: visibilityMode === "auto-hide"
+        || (visibilityMode === "fullscreen" && fullscreenHere)
+        ? 0
+        : theme.barHeight
+    mask: Region { item: barContent }
     surfaceFormat.opaque: false
 
     anchors {
-        top: true
+        top: !root.atBottom
+        bottom: root.atBottom
         left: true
         right: true
     }
 
-    Rectangle {
-        anchors.fill: parent
-        color: root.theme.barSurface
+    WlrLayershell.namespace: "blankweave-bar"
+    // Hyprland suppresses Top layers behind fullscreen clients. Overlay keeps
+    // "always" honest and makes the concealed edge reachable in hide modes.
+    WlrLayershell.layer: root.fullscreenHere ? WlrLayer.Overlay : WlrLayer.Top
 
-        Rectangle {
-            anchors.top: parent.top
-            anchors.left: parent.left
-            anchors.right: parent.right
-            height: 1
-            color: root.theme.barHighlight
+    function setVisibilityHold(owner, held) {
+        const next = []
+        for (let index = 0; index < root.visibilityHolds.length; index++) {
+            if (root.visibilityHolds[index] !== owner)
+                next.push(root.visibilityHolds[index])
         }
+        if (held)
+            next.push(owner)
+        root.visibilityHolds = next
 
-        Rectangle {
-            anchors.bottom: parent.bottom
-            anchors.left: parent.left
-            anchors.right: parent.right
-            height: 1
-            color: root.theme.outline
-        }
-
-        Rectangle {
-            anchors.bottom: parent.bottom
-            anchors.horizontalCenter: parent.horizontalCenter
-            width: Math.min(parent.width * 0.28, 560)
-            height: 1
-            gradient: Gradient {
-                orientation: Gradient.Horizontal
-                GradientStop { position: 0; color: "transparent" }
-                GradientStop { position: 0.5; color: root.theme.accentBright }
-                GradientStop { position: 1; color: "transparent" }
-            }
-        }
+        if (held)
+            concealTimer.stop()
+        else
+            root.scheduleConceal()
     }
 
-    WlrLayershell.namespace: "blankweave-bar"
-    WlrLayershell.layer: WlrLayer.Top
+    function scheduleConceal() {
+        if (!root.concealable) {
+            root.revealHeld = false
+            concealTimer.stop()
+        }
+        else if (!barHover.hovered && !root.popupHeld)
+            concealTimer.restart()
+    }
+
+    onConcealableChanged: scheduleConceal()
 
     function run(command) {
         Quickshell.execDetached(command)
@@ -91,88 +112,162 @@ PanelWindow {
     }
 
     Timer {
-        id: tooltipTimer
-        interval: 420
+        id: concealTimer
+        interval: 650
         onTriggered: {
-            root.tooltipTarget = root.pendingTooltipTarget
-            root.tooltipText = root.pendingTooltipText
+            if (!barHover.hovered && !root.popupHeld)
+                root.revealHeld = false
         }
     }
 
-    BarSection {
-        id: leftIsland
-        theme: root.theme
-        anchors.left: parent.left
-        anchors.leftMargin: root.theme.sectionPadding
-        anchors.verticalCenter: parent.verticalCenter
+    Item {
+        id: barContent
 
-        SystemOverviewWidget { bar: root; theme: root.theme }
-        BarDivider { theme: root.theme }
-        WorkspacesWidget { bar: root; theme: root.theme }
-        BarDivider { theme: root.theme; visible: !root.veryCompact }
-        ActiveWindowWidget { bar: root; theme: root.theme; visible: !root.veryCompact }
-    }
+        x: 0
+        y: root.barShown
+            ? 0
+            : (root.atBottom
+                ? root.theme.barHeight - root.revealThickness
+                : -root.theme.barHeight + root.revealThickness)
+        width: parent.width
+        height: parent.height
 
-    BarSection {
-        id: centerIsland
-        theme: root.theme
-        anchors.horizontalCenter: parent.horizontalCenter
-        anchors.verticalCenter: parent.verticalCenter
-        z: 2
-
-        ClockWidget { bar: root; theme: root.theme }
-    }
-
-    BarSection {
-        theme: root.theme
-        anchors.right: centerIsland.left
-        anchors.verticalCenter: parent.verticalCenter
-        z: 2
-
-        WeatherWidget { bar: root; theme: root.theme }
-    }
-
-    BarSection {
-        id: rightIsland
-        theme: root.theme
-        anchors.right: parent.right
-        anchors.rightMargin: root.theme.sectionPadding
-        anchors.verticalCenter: parent.verticalCenter
-
-        ApplicationIndicatorsWidget {
-            id: applicationIndicators
-            bar: root
-            theme: root.theme
-        }
-        BarDivider { theme: root.theme; visible: applicationIndicators.hasIndicators }
-
-        BrightnessWidget { bar: root; theme: root.theme; iconOnly: true }
-        AudioWidget { bar: root; theme: root.theme; iconOnly: true }
-        BluetoothWidget { bar: root; theme: root.theme; iconOnly: true }
-        NetworkWidget { bar: root; theme: root.theme; iconOnly: true }
-        NotificationWidget { bar: root; theme: root.theme }
-        BatteryWidget { bar: root; theme: root.theme; iconOnly: true }
-        BarDivider { theme: root.theme }
-
-        MemoryWidget {
-            bar: root
-            theme: root.theme
-            iconOnly: root.compact
+        Behavior on y {
+            NumberAnimation { duration: 190; easing.type: Easing.OutCubic }
         }
 
-        CpuWidget {
-            bar: root
-            theme: root.theme
-            iconOnly: root.compact
+        HoverHandler {
+            id: barHover
+
+            onHoveredChanged: {
+                if (hovered) {
+                    root.revealHeld = true
+                    concealTimer.stop()
+                }
+                else {
+                    root.scheduleConceal()
+                }
+            }
         }
 
-        GpuWidget {
-            bar: root
-            theme: root.theme
-            iconOnly: root.compact
+        Rectangle {
+            anchors.fill: parent
+            color: root.theme.barSurface
+
+            Rectangle {
+                x: 0
+                y: root.atBottom ? parent.height - height : 0
+                width: parent.width
+                height: 1
+                color: root.theme.barHighlight
+            }
+
+            Rectangle {
+                x: 0
+                y: root.atBottom ? 0 : parent.height - height
+                width: parent.width
+                height: 1
+                color: root.theme.outline
+            }
+
+            Rectangle {
+                x: Math.round((parent.width - width) / 2)
+                y: root.atBottom ? 0 : parent.height - height
+                width: Math.min(parent.width * 0.28, 560)
+                height: 1
+                gradient: Gradient {
+                    orientation: Gradient.Horizontal
+                    GradientStop { position: 0; color: "transparent" }
+                    GradientStop { position: 0.5; color: root.theme.accentBright }
+                    GradientStop { position: 1; color: "transparent" }
+                }
+            }
         }
 
-        PowerWidget { bar: root; theme: root.theme }
+        Timer {
+            id: tooltipTimer
+            interval: 420
+            onTriggered: {
+                root.tooltipTarget = root.pendingTooltipTarget
+                root.tooltipText = root.pendingTooltipText
+            }
+        }
+
+        BarSection {
+            id: leftIsland
+            theme: root.theme
+            anchors.left: parent.left
+            anchors.leftMargin: root.theme.sectionPadding
+            anchors.verticalCenter: parent.verticalCenter
+
+            SystemOverviewWidget { bar: root; theme: root.theme }
+            BarDivider { theme: root.theme }
+            WorkspacesWidget { bar: root; theme: root.theme }
+            BarDivider { theme: root.theme; visible: !root.veryCompact }
+            ActiveWindowWidget { bar: root; theme: root.theme; visible: !root.veryCompact }
+        }
+
+        BarSection {
+            id: centerIsland
+            theme: root.theme
+            anchors.horizontalCenter: parent.horizontalCenter
+            anchors.verticalCenter: parent.verticalCenter
+            z: 2
+
+            ClockWidget { bar: root; theme: root.theme }
+        }
+
+        BarSection {
+            theme: root.theme
+            anchors.right: centerIsland.left
+            anchors.verticalCenter: parent.verticalCenter
+            z: 2
+
+            WeatherWidget { bar: root; theme: root.theme }
+        }
+
+        BarSection {
+            id: rightIsland
+            theme: root.theme
+            anchors.right: parent.right
+            anchors.rightMargin: root.theme.sectionPadding
+            anchors.verticalCenter: parent.verticalCenter
+
+            ApplicationIndicatorsWidget {
+                id: applicationIndicators
+                bar: root
+                theme: root.theme
+            }
+            BarDivider { theme: root.theme; visible: applicationIndicators.hasIndicators }
+
+            BrightnessWidget { bar: root; theme: root.theme; iconOnly: true }
+            AudioWidget { bar: root; theme: root.theme; iconOnly: true }
+            BluetoothWidget { bar: root; theme: root.theme; iconOnly: true }
+            NetworkWidget { bar: root; theme: root.theme; iconOnly: true }
+            NotificationWidget { bar: root; theme: root.theme }
+            BatteryWidget { bar: root; theme: root.theme; iconOnly: true }
+            BarDivider { theme: root.theme }
+
+            MemoryWidget {
+                bar: root
+                theme: root.theme
+                iconOnly: root.compact
+            }
+
+            CpuWidget {
+                bar: root
+                theme: root.theme
+                iconOnly: root.compact
+            }
+
+            GpuWidget {
+                bar: root
+                theme: root.theme
+                iconOnly: root.compact
+            }
+
+            PowerWidget { bar: root; theme: root.theme }
+        }
     }
 
     PopupWindow {
@@ -187,8 +282,12 @@ PanelWindow {
             id: tooltipAnchor
             window: root
             adjustment: PopupAdjustment.Slide
-            edges: Edges.Top | Edges.Left
-            gravity: Edges.Bottom | Edges.Right
+            edges: root.atBottom
+                ? (Edges.Bottom | Edges.Left)
+                : (Edges.Top | Edges.Left)
+            gravity: root.atBottom
+                ? (Edges.Top | Edges.Right)
+                : (Edges.Bottom | Edges.Right)
             rect.width: 1
             rect.height: 1
 
@@ -197,10 +296,11 @@ PanelWindow {
                 if (!target)
                     return
 
+                const targetY = root.atBottom ? 0 : target.height + 7
                 const point = root.contentItem.mapFromItem(
                     target,
                     target.width / 2 - tooltipWindow.implicitWidth / 2,
-                    target.height + 7
+                    targetY
                 )
                 tooltipAnchor.rect.x = Math.round(Math.max(4, Math.min(point.x, root.width - tooltipWindow.implicitWidth - 4)))
                 tooltipAnchor.rect.y = Math.round(point.y)

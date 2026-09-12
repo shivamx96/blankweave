@@ -266,6 +266,18 @@ Each feature is an internal QML module under `defaults/quickshell/Modules/`.
 Reusable presentation lives under `Components/`, and process-backed data goes
 through `Services/ScriptPoller.qml`.
 
+Bar position and visibility are shared shell preferences exposed in the system
+overview panel. The bar can anchor to either vertical screen edge. Every
+`ControlPopup` and tooltip must flip its anchor and gravity with that edge, and
+bar-edge indicators must face the desktop. The fullscreen policy follows
+`Hyprland.monitorFor(screen).activeWorkspace.hasFullscreen`, so each monitor
+reacts to its own workspace. Auto-hide always uses a zero exclusive zone to
+avoid moving tiled windows during reveal; fullscreen hide releases its zone only
+while fullscreen is active. Both leave a two-pixel input strip at the selected
+edge, and an open control popup holds the bar visible until it closes. A bar on
+a fullscreen workspace uses the overlay layer so the always-visible policy and
+both reveal strips remain above the fullscreen client.
+
 Bar icons share one optical size, `theme.barIconSize` — every glyph and mark
 carries about 15.8px of ink on its long axis. A Nerd Font glyph fills roughly
 7/8 of its em box and a vector mark 5/6 of its keyline, which is why the frame

@@ -47,8 +47,16 @@ QtObject {
                 // 0 time, 1 date, 2 date and time.
                 property int displayMode: 0
             }
+
+            property JsonObject bar: JsonObject {
+                // Shared by every screen so the shell keeps one consistent
+                // edge and visibility policy across the desktop.
+                property string position: "top"
+                property string visibilityMode: "always"
+            }
         }
     }
 
     readonly property alias clock: preferences.clock
+    readonly property alias bar: preferences.bar
 }

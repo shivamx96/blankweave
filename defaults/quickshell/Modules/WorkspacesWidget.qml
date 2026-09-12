@@ -108,8 +108,7 @@ Item {
                         && !workspaceButton.activeWorkspace
                         && !workspaceMouse.containsMouse
                     anchors.horizontalCenter: parent.horizontalCenter
-                    anchors.bottom: parent.bottom
-                    anchors.bottomMargin: 3
+                    y: root.bar.atBottom ? 3 : parent.height - height - 3
                     width: 3
                     height: 3
                     radius: 2
@@ -120,8 +119,7 @@ Item {
                     id: workspaceTrace
 
                     anchors.horizontalCenter: parent.horizontalCenter
-                    anchors.bottom: parent.bottom
-                    anchors.bottomMargin: 1
+                    y: root.bar.atBottom ? 1 : parent.height - height - 1
                     width: workspaceButton.activeWorkspace ? 17 : (workspaceMouse.containsMouse ? 11 : 0)
                     height: 2
 
@@ -132,7 +130,7 @@ Item {
                     Rectangle {
                         anchors.left: parent.left
                         anchors.right: parent.right
-                        anchors.bottom: parent.bottom
+                        y: root.bar.atBottom ? 0 : parent.height - height
                         height: workspaceButton.activeWorkspace ? 2 : 1
                         color: workspaceButton.activeWorkspace ? theme.accentBright : theme.outlineStrong
                         opacity: workspaceButton.activeWorkspace ? 0.82 : 0.65
