@@ -14,6 +14,11 @@ PopupWindow {
     property int panelWidth: 340
     property string anchorAlignment: "right"
 
+    function syncVisibilityHold() {
+        if (root.bar && root.bar.setVisibilityHold)
+            root.bar.setVisibilityHold(root, root.open)
+    }
+
     visible: open
     grabFocus: true
     color: "transparent"
@@ -29,6 +34,13 @@ PopupWindow {
             open = false
         }
     }
+    onOpenChanged: syncVisibilityHold()
+
+    Component.onCompleted: syncVisibilityHold()
+    Component.onDestruction: {
+        if (root.bar && root.bar.setVisibilityHold)
+            root.bar.setVisibilityHold(root, false)
+    }
 
     Timer {
         id: reopenTimer
@@ -40,8 +52,12 @@ PopupWindow {
         id: popupAnchor
         window: root.bar
         adjustment: PopupAdjustment.Slide
-        edges: Edges.Top | Edges.Left
-        gravity: Edges.Bottom | Edges.Right
+        edges: root.bar.atBottom
+            ? (Edges.Bottom | Edges.Left)
+            : (Edges.Top | Edges.Left)
+        gravity: root.bar.atBottom
+            ? (Edges.Top | Edges.Right)
+            : (Edges.Bottom | Edges.Right)
         rect.width: 1
         rect.height: 1
 
@@ -53,7 +69,10 @@ PopupWindow {
             const targetX = root.anchorAlignment === "center"
                 ? target.width / 2 - root.implicitWidth / 2
                 : target.width - root.implicitWidth
-            const point = root.bar.contentItem.mapFromItem(target, targetX, target.height + 8)
+            // A bottom-anchored surface cannot offer a negative anchor rect;
+            // use the target's top edge and let upward gravity place the panel.
+            const targetY = root.bar.atBottom ? 0 : target.height + 8
+            const point = root.bar.contentItem.mapFromItem(target, targetX, targetY)
             popupAnchor.rect.x = Math.round(Math.max(6, Math.min(point.x, root.bar.width - root.implicitWidth - 6)))
             popupAnchor.rect.y = Math.round(point.y)
         }

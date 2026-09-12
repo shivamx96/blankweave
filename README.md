@@ -267,7 +267,9 @@ test -f ~/.local/share/voxtype/models/ggml-small.en.bin
 - **Power management** via Hypridle (auto-lock, brightness control, suspend)
 - **Clean notifications** via Dunst
 - **Native Quickshell bar** with multi-monitor workspaces, audio, brightness,
-  network throughput, Bluetooth, hardware metrics, battery, and power controls
+  network throughput, Bluetooth, hardware metrics, battery, and power controls;
+  place it at the top or bottom and keep it visible, hide it for fullscreen
+  windows, or reveal it from the screen edge
 - **Themes** — each theme provides the shell palette, lock-screen treatment, and
   wallpapers for both dark and light modes; `blankweave theme` switches them and
   personal themes live under `~/.config/blankweave/themes/`

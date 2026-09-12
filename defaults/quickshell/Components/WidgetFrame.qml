@@ -85,7 +85,7 @@ Item {
 
     Rectangle {
         anchors.horizontalCenter: parent.horizontalCenter
-        anchors.bottom: parent.bottom
+        y: root.bar.atBottom ? 0 : parent.height - height
         width: mouse.containsMouse ? Math.max(8, root.width - root.horizontalPadding * 2) : 0
         height: 1
         color: root.attention ? root.theme.critical : root.theme.accentBright
