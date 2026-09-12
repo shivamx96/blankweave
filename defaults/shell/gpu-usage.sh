@@ -3,6 +3,7 @@
 set -uo pipefail
 
 detail_mode=${1:-summary}
+gpu_sysfs_root=${BLANKWEAVE_GPU_SYSFS_ROOT:-/sys}
 
 trim() {
     local value="$1"
@@ -120,7 +121,7 @@ emit_nvidia() {
 
 intel_card() {
     local vendor_file
-    for vendor_file in /sys/class/drm/card*/device/vendor; do
+    for vendor_file in "$gpu_sysfs_root"/class/drm/card*/device/vendor; do
         [[ -r "$vendor_file" ]] || continue
         if [[ "$(<"$vendor_file")" == "0x8086" ]]; then
             dirname "$(dirname "$vendor_file")"
@@ -136,10 +137,12 @@ intel_frequency_file() {
 
     if [[ "$kind" == current ]]; then
         candidates=(
+            "$card/gt/gt0/rps_act_freq_mhz"
             "$card/gt/gt0/rps_cur_freq_mhz"
+            "$card/device/gt/gt0/rps_act_freq_mhz"
             "$card/device/gt/gt0/rps_cur_freq_mhz"
-            "$card/device/tile0/gt0/freq0/cur_freq"
             "$card/device/tile0/gt0/freq0/act_freq"
+            "$card/device/tile0/gt0/freq0/cur_freq"
         )
     else
         candidates=(
@@ -171,6 +174,7 @@ intel_temperature() {
 
 emit_intel() {
     local card card_name pci_address pci_line name driver raw sample engines_json clients_json
+    local client_data_json
     local usage frequency_mhz max_frequency_mhz temperature power_draw idle_percent accuracy
     local memory_used_bytes tooltip current_frequency_file max_frequency_file
 
@@ -188,12 +192,18 @@ emit_intel() {
         raw=$(timeout -s INT -k 1s 4s intel_gpu_top \
             -J -s 450 -n 2 -o - -d "drm:/dev/dri/${card_name}" 2>/dev/null || true)
     fi
-    sample=$(printf '%s' "$raw" | jq -c '
-        if type == "array" then
-            (map(select(type == "object")) | last // {})
-        elif type == "object" then .
-        else {} end
+    # Slurp accepts both the JSON array emitted by current intel_gpu_top and
+    # the stream of objects emitted by older releases. It also turns empty or
+    # malformed output (including permission failures) into a real object so
+    # detail mode never feeds empty strings to jq --argjson.
+    sample=$(printf '%s' "$raw" | jq -cs '
+        [.[]
+            | if type == "array" then .[] else . end
+            | select(type == "object")
+        ]
+        | last // {}
     ' 2>/dev/null || printf '{}')
+    [[ -n "$sample" ]] || sample='{}'
 
     engines_json=$(printf '%s' "$sample" | jq -c '
         [(.engines // {}) | to_entries[]
@@ -219,7 +229,7 @@ emit_intel() {
 
     accuracy="live"
     if [[ -z "$usage" ]]; then
-        accuracy="frequency-estimate"
+        accuracy="unavailable"
         current_frequency_file=$(intel_frequency_file "$card" current 2>/dev/null || true)
         max_frequency_file=$(intel_frequency_file "$card" max 2>/dev/null || true)
         frequency_mhz=0
@@ -229,18 +239,8 @@ emit_intel() {
         if [[ -r "$card/device/gpu_busy_percent" ]]; then
             usage=$(<"$card/device/gpu_busy_percent")
             accuracy="live"
-        elif (( max_frequency_mhz > 0 )); then
-            usage=$(awk -v current="$frequency_mhz" -v maximum="$max_frequency_mhz" '
-                BEGIN {
-                    value = 100 * current / maximum
-                    if (value < 0) value = 0
-                    if (value > 100) value = 100
-                    printf "%.0f", value
-                }
-            ')
         else
-            usage=0
-            accuracy="unavailable"
+            usage=""
         fi
         engines_json='[]'
     else
@@ -253,34 +253,43 @@ emit_intel() {
     clients_json='[]'
     memory_used_bytes=0
     if [[ "$detail_mode" == detail && "$sample" != '{}' ]]; then
-        clients_json=$(printf '%s' "$sample" | jq -c '
+        client_data_json=$(printf '%s' "$sample" | jq -c '
             [(.clients // {}) | to_entries[] | .value
                 | {
-                    pid: ((.pid // "0") | tonumber),
+                    pid: ((.pid // "0") | tonumber? // 0),
                     name: (.name // "GPU client"),
                     memoryBytes: (
-                        ((.memory.system.resident // "0") | tonumber)
-                        + ((.memory.local.resident // "0") | tonumber)
+                        ((.memory.system.resident // "0") | tonumber? // 0)
+                        + ((.memory.local.resident // "0") | tonumber? // 0)
                     ),
                     usage: (
-                        [(."engine-classes" // {})[]?.busy | tonumber]
+                        [(."engine-classes" // {})[]?.busy | tonumber? // 0]
                         | max // 0
                         | if . > 100 then 100 else . end
                     )
                 }
-            ]
-            | sort_by([-.usage, -.memoryBytes])
-            | .[:5]
-        ' 2>/dev/null || printf '[]')
-        memory_used_bytes=$(printf '%s' "$clients_json" | jq -r '[.[].memoryBytes] | add // 0')
+            ] as $clients
+            | {
+                memoryUsedBytes: ([$clients[].memoryBytes] | add // 0),
+                processes: ($clients | sort_by([-.usage, -.memoryBytes]) | .[:5])
+            }
+        ' 2>/dev/null || printf '{"memoryUsedBytes":0,"processes":[]}')
+        memory_used_bytes=$(printf '%s' "$client_data_json" \
+            | jq -r '.memoryUsedBytes // 0' 2>/dev/null || printf '0')
+        clients_json=$(printf '%s' "$client_data_json" \
+            | jq -c '.processes // []' 2>/dev/null || printf '[]')
     fi
 
-    tooltip=$(printf '%s: %s%%\nClock: %s MHz\nTelemetry: %s' \
-        "$name" "$usage" "${frequency_mhz:-0}" \
-        "$([[ "$accuracy" == live ]] && printf 'engine busy' || printf 'frequency estimate')")
+    if [[ "$accuracy" == live ]]; then
+        tooltip=$(printf '%s: %.0f%%\nClock: %s MHz\nTelemetry: engine busy' \
+            "$name" "$usage" "${frequency_mhz:-0}")
+    else
+        tooltip=$(printf '%s\nClock: %s MHz\nTelemetry: utilization unavailable' \
+            "$name" "${frequency_mhz:-0}")
+    fi
 
     jq -cn \
-        --arg text "$(awk -v value="$usage" 'BEGIN { printf "%.0f", value }')" \
+        --arg text "$([[ -n "$usage" ]] && awk -v value="$usage" 'BEGIN { printf "%.0f", value }' || printf '—')" \
         --arg tooltip "$tooltip" \
         --arg backend "intel" \
         --arg vendor "Intel" \
@@ -307,7 +316,7 @@ emit_intel() {
             name: $name,
             driver: $driver,
             accuracy: $accuracy,
-            usage: ($usage | tonumber),
+            usage: ($usage | if length > 0 then tonumber else null end),
             memoryUsage: null,
             temperature: ($temperature | if length > 0 then tonumber else null end),
             memoryUsedBytes: $memoryUsedBytes,
@@ -326,7 +335,7 @@ emit_intel() {
 
 amd_card() {
     local vendor_file
-    for vendor_file in /sys/class/drm/card*/device/vendor; do
+    for vendor_file in "$gpu_sysfs_root"/class/drm/card*/device/vendor; do
         [[ -r $vendor_file ]] || continue
         if [[ $(<"$vendor_file") == 0x1002 ]]; then
             dirname "$(dirname "$vendor_file")"

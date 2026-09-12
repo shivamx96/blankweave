@@ -9,6 +9,9 @@ WidgetFrame {
 
     readonly property string shellDir: Quickshell.env("HOME") + "/.local/share/blankweave/shell"
     readonly property string gpuMark: "gpu"
+    readonly property bool usageAvailable: status.usage !== null
+        && status.usage !== undefined
+        && Number.isFinite(Number(status.usage))
     property bool detailLoading: false
     property var status: ({
         "available": false,
@@ -94,7 +97,7 @@ WidgetFrame {
     iconMark: root.gpuMark
     horizontalPadding: 7
     labelWidth: theme.metricLabelWidth
-    label: String(status.text ?? "—") + "%"
+    label: String(status.text ?? "—") + (root.usageAvailable ? "%" : "")
     active: gpuPanel.open
     attention: Number(status.temperature || 0) >= 85
     tooltip: String(status.tooltip || "GPU telemetry unavailable") + "\nClick for live details"
@@ -176,12 +179,12 @@ WidgetFrame {
         TelemetryGauge {
             theme: root.theme
             icon: "󰓅"
-            label: root.status.accuracy === "frequency-estimate"
-                ? "ACTIVITY ESTIMATE"
-                : "GPU UTILIZATION"
+            label: "GPU UTILIZATION"
             value: Number(root.status.usage || 0)
-            valueText: Math.round(Number(root.status.usage || 0)) + "%"
-            attention: Number(root.status.usage || 0) >= 95
+            valueText: root.usageAvailable
+                ? Math.round(Number(root.status.usage)) + "%"
+                : "—"
+            attention: root.usageAvailable && Number(root.status.usage) >= 95
         }
 
         TelemetryGauge {
@@ -251,7 +254,7 @@ WidgetFrame {
                 {
                     "label": root.status.backend === "intel" ? "TELEMETRY" : "POWER STATE",
                     "value": root.status.backend === "intel"
-                        ? (root.status.accuracy === "live" ? "ENGINE BUSY" : "ESTIMATE")
+                        ? (root.status.accuracy === "live" ? "ENGINE BUSY" : "UNAVAILABLE")
                         : String(root.status.performanceState || "—")
                 },
                 {

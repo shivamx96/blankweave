@@ -76,9 +76,17 @@ printf '%s\n' \
 printf 'NAME=Arch Linux\nPRETTY_NAME="Arch Linux"\n' > "$system_root/etc/os-release"
 git -C "$repository" rev-parse HEAD > "$state/blankweave/installed-revision"
 
-for executable in blankweave-doctor-fixture hyprland; do
+for executable in blankweave-doctor-fixture hyprland intel_gpu_top; do
     ln -s /usr/bin/true "$fake_bin/$executable"
 done
+
+cat > "$fake_bin/getcap" <<'EOF'
+#!/usr/bin/env bash
+if [[ ${BLANKWEAVE_TEST_GETCAP_MODE:-configured} == configured ]]; then
+    printf '%s cap_perfmon=ep\n' "$1"
+fi
+EOF
+chmod +x "$fake_bin/getcap"
 
 cat > "$fake_bin/systemctl" <<'EOF'
 #!/usr/bin/env bash
@@ -126,7 +134,7 @@ run_doctor() {
         BLANKWEAVE_SYSTEM_ROOT="$system_root" \
         BLANKWEAVE_SYSFS_ROOT="$system_root/sys" \
         BLANKWEAVE_TEST_CPU_VENDOR=GenuineIntel \
-        BLANKWEAVE_TEST_LSPCI_OUTPUT='' \
+        BLANKWEAVE_TEST_LSPCI_OUTPUT="${BLANKWEAVE_TEST_LSPCI_OUTPUT:-}" \
         BLANKWEAVE_TEST_LSUSB_OUTPUT='' \
         BLANKWEAVE_TEST_DDC_DISPLAY=false \
         BLANKWEAVE_TEST_BOOT_ACCESSIBLE="${BLANKWEAVE_TEST_BOOT_ACCESSIBLE:-true}" \
@@ -149,6 +157,17 @@ grep -Fq 'PASS  UEFI boot order' <<< "$output"
 grep -Fq 'PASS  bootloader recovery' <<< "$output"
 grep -Fq 'PASS  CPU microcode package' <<< "$output"
 grep -Fq '0 failures' <<< "$output"
+
+intel_gpu='00:02.0 VGA compatible controller: Intel Corporation Meteor Lake-P [Intel Arc Graphics]'
+gpu_output=$(BLANKWEAVE_TEST_LSPCI_OUTPUT="$intel_gpu" run_doctor)
+grep -Fq 'PASS  Intel GPU telemetry      CAP_PERFMON is configured' <<< "$gpu_output"
+gpu_warning=$(
+    BLANKWEAVE_TEST_LSPCI_OUTPUT="$intel_gpu" \
+        BLANKWEAVE_TEST_GETCAP_MODE=missing \
+        run_doctor
+)
+grep -Fq 'WARN  Intel GPU telemetry      CAP_PERFMON is missing; run blankweave update' \
+    <<< "$gpu_warning"
 
 restricted_boot_output=$(BLANKWEAVE_TEST_BOOT_ACCESSIBLE=false run_doctor)
 grep -Fq 'SKIP  kernel command line      /boot is not accessible to the current user' \
