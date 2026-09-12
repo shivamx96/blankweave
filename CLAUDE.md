@@ -403,17 +403,22 @@ Hyprlang dispatcher names are rejected; the Lua option table is not validated,
 so confirm a new option behaviourally (a headless output plus
 `hyprctl workspaces -j`) rather than trusting an "ok".
 
-Monitor arrangement is a display-panel choice, persisted by
+Monitor arrangement and scaling are display-panel choices, persisted by
 `defaults/shell/monitor-layout.sh`, the sole writer of
 `~/.config/blankweave/monitors.json` (source of truth) and of the
 `~/.config/blankweave/monitors.lua` rules generated from it. Entries are keyed by
 EDID description and emitted as `desc:` rules — connector names such as
-`DP-3` change with the port or dock — and freeze the monitor's current scale so
-choosing a position never resizes anything. Positions are Hyprland's relative
+`DP-3` change with the port or dock. Position-only entries freeze the monitor's
+current scale so moving it never resizes anything; `scaleExplicit` distinguishes
+that snapshot from a scale the user selected. The panel offers Hyprland's
+PPI-derived `auto` setting and a curated set of fractional values filtered to
+those that divide the active physical resolution into whole logical pixels.
+Scaling is available for every display and remains independent of position.
+Positions are Hyprland's relative
 `auto-left|right|up|down`, applied live with `hyprctl eval` and again on every
 start because the generated `hyprland.lua` loads the file after the host's
-`monitors.lua`. Only external displays get the control; the internal panel is
-what they are placed against, so `DisplayBrightness` names it "Built-in
+`monitors.lua`. Only external displays get the position control; the internal
+panel is what they are placed against, so `DisplayBrightness` names it "Built-in
 display" and the panel's section label says what the position is relative to.
 
 The right section is grouped into process-aware application indicators,

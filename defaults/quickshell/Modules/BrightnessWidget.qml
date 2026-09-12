@@ -33,6 +33,8 @@ WidgetFrame {
     property var placements: ({})
     property string pendingPlacementConnector: ""
     property string pendingPlacementPosition: ""
+    property string pendingScaleConnector: ""
+    property string pendingScaleValue: ""
     readonly property var positionChoices: [
         { "id": "left", "label": "Left" },
         { "id": "right", "label": "Right" },
@@ -93,6 +95,16 @@ WidgetFrame {
         placementProcess.running = true
     }
 
+    function setScale(connector, scale) {
+        if (placementProcess.running)
+            return
+
+        root.pendingScaleConnector = connector
+        root.pendingScaleValue = String(scale)
+        placementProcess.command = [root.shellDir + "/monitor-layout.sh", "set-scale", connector, String(scale)]
+        placementProcess.running = true
+    }
+
     function syncDisplays() {
         const list = [ownDisplay]
         for (let index = 0; index < otherDisplays.count; index++)
@@ -148,6 +160,8 @@ WidgetFrame {
         onExited: {
             root.pendingPlacementConnector = ""
             root.pendingPlacementPosition = ""
+            root.pendingScaleConnector = ""
+            root.pendingScaleValue = ""
             placementPoller.refresh()
         }
     }
@@ -263,17 +277,25 @@ WidgetFrame {
                 readonly property string currentPosition: placing
                     ? root.pendingPlacementPosition
                     : String((placement && placement.position) || "auto")
+                readonly property bool scaling: root.pendingScaleConnector === displayRow.modelData.connector
+                readonly property string currentScale: scaling
+                    ? root.pendingScaleValue
+                    : String((placement && placement.scale) || "")
+                readonly property real effectiveScale: Number((placement && placement.effectiveScale) || 1)
+                readonly property var scaleOptions: placement && Array.isArray(placement.scaleOptions)
+                    ? placement.scaleOptions
+                    : []
 
                 Layout.fillWidth: true
                 spacing: 10
-                visible: modelData.available || placeable
+                visible: modelData.available || placement !== null
 
                 ControlSectionLabel {
                     theme: root.theme
                     text: root.displays.length > 1
                         ? displayRow.modelData.displayName.toUpperCase()
                             + (displayRow.modelData.available ? " · " + displayRow.modelData.backendName.toUpperCase() : "")
-                        : "BRIGHTNESS"
+                        : "BUILT-IN DISPLAY"
                 }
 
                 ControlValueRow {
@@ -293,6 +315,60 @@ WidgetFrame {
                     target: displayRow.modelData
                     property: "held"
                     value: brightnessControl.pressed
+                }
+
+                ControlSectionLabel {
+                    visible: displayRow.placement !== null
+                    theme: root.theme
+                    text: "SCALING · ACTIVE " + displayRow.effectiveScale + "×"
+                }
+
+                Flow {
+                    visible: displayRow.placement !== null
+                    Layout.fillWidth: true
+                    spacing: 5
+
+                    ControlChoice {
+                        theme: root.theme
+                        text: "Auto · Recommended"
+                        selected: displayRow.currentScale === "auto"
+                        busy: displayRow.scaling && displayRow.currentScale === "auto"
+                        enabled: !placementProcess.running
+                        onPressed: root.setScale(displayRow.modelData.connector, "auto")
+                    }
+
+                    Repeater {
+                        model: displayRow.scaleOptions
+
+                        delegate: ControlChoice {
+                            required property var modelData
+
+                            theme: root.theme
+                            text: Number(modelData) + "×"
+                            selected: displayRow.currentScale !== "auto"
+                                && Number(displayRow.currentScale) === Number(modelData)
+                            busy: displayRow.scaling
+                                && Number(displayRow.currentScale) === Number(modelData)
+                            enabled: !placementProcess.running
+                            onPressed: root.setScale(displayRow.modelData.connector, Number(modelData))
+                        }
+                    }
+                }
+
+                Text {
+                    visible: displayRow.placement !== null
+                    Layout.fillWidth: true
+                    text: displayRow.currentScale === "auto"
+                        ? "Hyprland chooses from display density · currently " + displayRow.effectiveScale + "×"
+                        : "Logical desktop · "
+                            + Math.round(Number((displayRow.placement && displayRow.placement.width) || 0) / displayRow.effectiveScale)
+                            + " × "
+                            + Math.round(Number((displayRow.placement && displayRow.placement.height) || 0) / displayRow.effectiveScale)
+                    color: root.theme.textMuted
+                    wrapMode: Text.WordWrap
+                    font.family: root.theme.fontFamily
+                    font.pixelSize: root.theme.microTextSize
+                    renderType: Text.NativeRendering
                 }
 
                 ControlSectionLabel {
