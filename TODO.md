@@ -14,6 +14,8 @@
 
 ## Installer UX
 
+- [x] Add persistent user overrides for Hyprland, Ghostty, Dunst, and Zsh;
+      preserve full custom config files and foreign symlinks during apply.
 - [x] Establish SemVer releases with matching annotated Git tags and an explicit
       `0.1.0` minimum rollback boundary.
 - [x] Add `blankweave doctor` with read-only health checks and a sanitized,

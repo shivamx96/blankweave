@@ -59,6 +59,13 @@ hypr_theme=$XDG_CONFIG_HOME/blankweave/theme.lua
 plymouth=$data/plymouth/blankweave/blankweave.script
 voxtype=$data/voxtype/config.toml
 
+# Theme changes must preserve both layered overrides and full user configs.
+mkdir -p "$XDG_CONFIG_HOME/blankweave/overrides" "$XDG_CONFIG_HOME/dunst" "$XDG_CONFIG_HOME/ghostty"
+printf 'font-size = 17\n' > "$XDG_CONFIG_HOME/blankweave/overrides/ghostty.conf"
+printf '[global]\nwidth = 400\n' > "$XDG_CONFIG_HOME/blankweave/overrides/dunst.conf"
+printf '# custom notification config\n' > "$XDG_CONFIG_HOME/dunst/dunstrc"
+printf '# custom terminal config\n' > "$XDG_CONFIG_HOME/ghostty/config"
+
 assert_rendered() {
     local file
     for file in "$dunstrc" "$ghostty" "$hyprlock" "$hypr_theme" "$plymouth" "$voxtype"; do
@@ -84,6 +91,7 @@ grep -Fxq 'background = "#0b111c"' "$dunstrc"
 grep -Fxq 'frame_color = "#4f75ad"' "$dunstrc"
 grep -Fq "foreground='#8798ae'" "$dunstrc"
 grep -Fxq 'theme = light:Catppuccin Latte,dark:Catppuccin Mocha' "$ghostty"
+grep -Fxq 'config-file = ?~/.config/blankweave/overrides/ghostty.conf' "$ghostty"
 grep -Fxq "\$accent = rgba(3b82f6ff)" "$hyprlock"
 grep -Fxq "\$input_border = rgba(33476aff) rgba(3b82f6ff) rgba(67a6ffff) 90deg" "$hyprlock"
 grep -Fxq "\$placeholder = <span foreground=\"##8798ae\">Password</span>" "$hyprlock"
@@ -113,7 +121,7 @@ grep -Fxq 'gtk-application-prefer-dark-theme=1' "$XDG_CONFIG_HOME/gtk-4.0/settin
 grep -Fxq 'gsettings set org.gnome.desktop.interface color-scheme prefer-dark' "$FAKE_LOG"
 grep -Fq "awww img $data/themes/obsidian/obsidian-dark.png" "$FAKE_LOG"
 grep -Fxq 'hyprctl reload' "$FAKE_LOG"
-grep -Fxq "dunstctl reload $dunstrc" "$FAKE_LOG"
+grep -Fxq 'dunstctl reload' "$FAKE_LOG"
 grep -Fq 'gdbus call --session --dest com.mitchellh.ghostty --object-path /com/mitchellh/ghostty --method org.gtk.Actions.Activate reload-config [] {}' "$FAKE_LOG"
 grep -Fxq 'systemctl --user restart voxtype.service' "$FAKE_LOG"
 [[ $(< "$home/.cache/blankweave-wallpaper") == "$data/themes/obsidian/obsidian-dark.png" ]]
@@ -151,6 +159,11 @@ grep -Fxq 'gtk-cursor-theme-name=Bibata-Modern-Classic' "$XDG_CONFIG_HOME/gtk-3.
 grep -Fxq 'hyprctl setcursor Bibata-Modern-Classic 24' "$FAKE_LOG"
 grep -Fxq 'gsettings set org.gnome.desktop.interface color-scheme prefer-light' "$FAKE_LOG"
 grep -Fq "awww img $data/themes/obsidian/porcelain-light.png" "$FAKE_LOG"
+[[ $(< "$XDG_CONFIG_HOME/blankweave/overrides/ghostty.conf") == 'font-size = 17' ]]
+grep -Fxq 'width = 400' "$XDG_CONFIG_HOME/blankweave/overrides/dunst.conf"
+[[ $(< "$XDG_CONFIG_HOME/dunst/dunstrc") == '# custom notification config' ]]
+[[ $(< "$XDG_CONFIG_HOME/ghostty/config") == '# custom terminal config' ]]
+grep -Fxq 'config-file = ?~/.config/blankweave/overrides/ghostty.conf' "$ghostty"
 
 # Ghostty is D-Bus activatable, so when it is not running the reload must not
 # be sent or it would launch a terminal.
