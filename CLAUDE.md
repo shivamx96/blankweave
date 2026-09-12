@@ -586,7 +586,11 @@ backlight, DDC display, Bluetooth, and gaming support. The installer persists
 the result as `~/.local/share/blankweave/hardware-capabilities.json`.
 
 GPU monitoring remains runtime-adaptive: NVIDIA uses `nvidia-smi`, AMD uses
-amdgpu sysfs telemetry, and Intel uses `intel_gpu_top` with sysfs fallback.
+amdgpu sysfs telemetry, and Intel uses `intel_gpu_top` with `CAP_PERFMON`.
+The installer applies that capability and installs a pacman hook to restore it
+after `intel-gpu-tools` upgrades. If live Intel telemetry is inaccessible, the
+widget keeps the GPU visible with its sysfs clock data and marks utilization
+unavailable; it must never derive utilization from the requested clock ratio.
 
 ## Common tasks
 

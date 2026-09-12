@@ -197,6 +197,12 @@ fi
 
 echo "Package installation complete."
 
+if hardware_capability_has gpu-intel; then
+    if ! "$REPO_DIR/scripts/configure-intel-gpu-monitoring.sh"; then
+        warn "Could not grant Intel GPU performance-counter access; the GPU widget will show available clock data without a utilization percentage."
+    fi
+fi
+
 section "ENABLING SERVICES"
 
 if hardware_capability_has bluetooth; then

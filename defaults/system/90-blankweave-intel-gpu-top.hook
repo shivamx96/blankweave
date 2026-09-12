@@ -1,0 +1,10 @@
+[Trigger]
+Operation = Install
+Operation = Upgrade
+Type = Package
+Target = intel-gpu-tools
+
+[Action]
+Description = Restoring Intel GPU telemetry permission
+When = PostTransaction
+Exec = /usr/bin/setcap cap_perfmon=ep /usr/bin/intel_gpu_top

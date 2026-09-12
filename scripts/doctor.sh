@@ -523,6 +523,40 @@ check_cpu_microcode() {
     fi
 }
 
+check_intel_gpu_monitoring() {
+    local repository=$1 intel_gpu_top getcap_command capabilities
+
+    # shellcheck source=scripts/hardware-capabilities.sh
+    source "$repository/scripts/hardware-capabilities.sh"
+    hardware_capabilities_detect
+    if ! hardware_capability_has gpu-intel; then
+        skip 'Intel GPU telemetry' 'no Intel GPU detected'
+        return
+    fi
+
+    intel_gpu_top=${BLANKWEAVE_INTEL_GPU_TOP:-}
+    if [[ -z $intel_gpu_top ]]; then
+        intel_gpu_top=$(command -v intel_gpu_top 2>/dev/null || true)
+    fi
+    if [[ -z $intel_gpu_top || ! -x $intel_gpu_top ]]; then
+        warn 'Intel GPU telemetry' 'intel_gpu_top is unavailable'
+        return
+    fi
+
+    getcap_command=${BLANKWEAVE_GETCAP:-getcap}
+    if ! command -v "$getcap_command" > /dev/null 2>&1; then
+        warn 'Intel GPU telemetry' 'getcap is unavailable; CAP_PERFMON could not be verified'
+        return
+    fi
+
+    capabilities=$("$getcap_command" "$intel_gpu_top" 2>/dev/null || true)
+    if [[ $capabilities =~ cap_perfmon[=+][a-z]*e[a-z]* ]]; then
+        pass 'Intel GPU telemetry' 'CAP_PERFMON is configured'
+    else
+        warn 'Intel GPU telemetry' 'CAP_PERFMON is missing; run blankweave update'
+    fi
+}
+
 check_services() {
     local repository=$1 unit
     local -a system_units=(NetworkManager.service)
@@ -661,6 +695,7 @@ main() {
     check_plymouth
     run_boot_checks
     check_cpu_microcode "$repository"
+    check_intel_gpu_monitoring "$repository"
     check_services "$repository"
 
     printf '\nSummary: %d passed, %d warnings, %d failures, %d skipped\n' \
