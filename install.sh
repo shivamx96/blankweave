@@ -115,6 +115,8 @@ SETUP_CONFIG_FILE="$CONFIG_DIR/blankweave/setup.conf"
 
 # shellcheck source=scripts/user-config.sh
 source "$REPO_DIR/scripts/user-config.sh"
+# shellcheck source=scripts/deploy-tree.sh
+source "$REPO_DIR/scripts/deploy-tree.sh"
 
 # shellcheck source=scripts/installer-config.sh
 source "$REPO_DIR/scripts/installer-config.sh"
@@ -280,9 +282,10 @@ for hypr_config in "$REPO_DIR/defaults/hypr/"*; do
     echo "Deploying $hypr_config"
     copy_file_atomically "$hypr_config" "$DOTS_DIR/hypr/$(basename "$hypr_config")"
 done
-# Quickshell is a code tree, so mirror it exactly and do not retain removed modules.
-rm -rf "$DOTS_DIR/quickshell"
-cp -rv "$REPO_DIR/defaults/quickshell" "$DOTS_DIR/" || { echo "Failed to copy quickshell"; exit 1; }
+# Quickshell watches its live code tree. Exchange a fully staged directory so
+# shell.qml is never absent during an update, while still dropping old modules.
+blankweave_deploy_tree "$REPO_DIR/defaults/quickshell" "$DOTS_DIR/quickshell" \
+    || { echo "Failed to deploy quickshell"; exit 1; }
 rm -rf "$DOTS_DIR/voxtype"
 if installer_profile_enabled voice-dictation; then
     cp -rv "$REPO_DIR/defaults/voxtype" "$DOTS_DIR/" || { echo "Failed to copy VoxType config"; exit 1; }
@@ -291,9 +294,9 @@ cp -rv "$REPO_DIR/defaults/dunst" "$DOTS_DIR/" || { echo "Failed to copy dunst";
 cp -rv "$REPO_DIR/defaults/ghostty" "$DOTS_DIR/" || { echo "Failed to copy ghostty"; exit 1; }
 cp -rv "$REPO_DIR/defaults/xdg-desktop-portal" "$DOTS_DIR/" || { echo "Failed to copy xdg-desktop-portal"; exit 1; }
 cp -rv "$REPO_DIR/defaults/fontconfig" "$DOTS_DIR/" || { echo "Failed to copy fontconfig"; exit 1; }
-# Mirror shell scripts exactly so removed helpers do not linger.
-rm -rf "$DOTS_DIR/shell"
-cp -rv "$REPO_DIR/defaults/shell" "$DOTS_DIR/" || { echo "Failed to copy shell"; exit 1; }
+# Shell helpers are another managed code tree and use the same exact mirror.
+blankweave_deploy_tree "$REPO_DIR/defaults/shell" "$DOTS_DIR/shell" \
+    || { echo "Failed to deploy shell helpers"; exit 1; }
 cp -rv "$REPO_DIR/defaults/webapps" "$DOTS_DIR/" || { echo "Failed to copy webapps"; exit 1; }
 # The boot splash is rendered here by theme-apply.sh and installed by root below.
 cp -rv "$REPO_DIR/defaults/plymouth" "$DOTS_DIR/" || { echo "Failed to copy plymouth"; exit 1; }
@@ -604,6 +607,16 @@ sudo -H -u "$SUDO_USER" env \
     HOME="$USER_HOME" \
     XDG_STATE_HOME="$USER_STATE_HOME" \
     "$REPO_DIR/scripts/run-migrations.sh" "$REPO_DIR"
+
+# An atomic directory exchange keeps the current shell valid but moves its
+# file watches with the old tree. Ask a running Blankweave instance to reload
+# from the new path after the complete install; a fresh/non-graphical install
+# simply has no instance to contact.
+sudo -H -u "$SUDO_USER" env \
+    HOME="$USER_HOME" \
+    XDG_RUNTIME_DIR="$USER_RUNTIME_DIR" \
+    /usr/bin/qs ipc --any-display -p "$DOTS_DIR/quickshell" \
+    call blankweave reload >/dev/null 2>&1 || true
 
 section "DONE"
 
