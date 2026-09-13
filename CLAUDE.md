@@ -63,6 +63,9 @@ finds nothing at them.
 3. `install.sh` runs `scripts/run-migrations.sh` as the normal user only after a
    successful apply. Applied migration filenames are recorded under
    `${XDG_STATE_HOME:-~/.local/state}/blankweave/`.
+   Managed Quickshell and shell-helper trees are staged beside their destination
+   and atomically exchanged by `scripts/deploy-tree.sh`; never delete the live
+   Quickshell tree before replacement because its watcher reloads immediately.
 4. `blankweave update` validates the origin, branch, clean worktree, target
    ancestry, matching annotated `v<VERSION>` release tag, installer config, and
    package manifests before applying a fast-forward-only update. The target
