@@ -7,7 +7,7 @@ Item {
     required property var bar
     required property var theme
 
-    readonly property bool hasIndicators: voxtype.featureEnabled || tailscale.running || docker.running || git.available
+    readonly property bool hasIndicators: voxtype.featureEnabled || tailscale.running || docker.running || git.available || agents.available
 
     implicitWidth: indicators.implicitWidth
     implicitHeight: theme.widgetHeight
@@ -39,6 +39,12 @@ Item {
 
         GitWidget {
             id: git
+            bar: root.bar
+            theme: root.theme
+        }
+
+        AgentUsageWidget {
+            id: agents
             bar: root.bar
             theme: root.theme
         }

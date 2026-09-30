@@ -276,6 +276,37 @@ test -f ~/.local/share/voxtype/models/ggml-small.en.bin
   personal themes live under `~/.config/blankweave/themes/`
 - **Web apps** — sites as standalone windows through Helium's app mode, with
   launcher entries managed by `blankweave webapp`
+- **Coding agent usage** — a bar popup shows Codex and Claude Code subscription
+  allowance, reset countdowns, and stale readings for installed agents with a
+  local login
+
+## Coding agent usage
+
+The robot icon appears when Codex or Claude Code is installed and signed in.
+Click it for each provider's remaining allowance and reset times. The icon
+highlights when a fresh allowance falls to 20% or less. An expired window shows
+“Awaiting update” until the provider reports new data; it never assumes a reset
+means a full allowance.
+
+Sign in through the agents' own CLIs (`codex login` or `claude auth login`);
+there is no separate widget connection or status-line setup. Both providers
+refresh every five minutes. The refresh button can request an earlier check,
+with a 15-second minimum interval. Readings older than ten minutes are marked
+stale. API-key logins display an unsupported subscription-allowance state.
+
+Codex uses its local app-server account interface. Claude Code uses its
+experimental `get_usage` control request (verified with 2.1.270), in safe mode
+with tools, MCP servers, and session persistence disabled. It sends no user
+prompt or inference request. Older or incompatible CLIs show an unavailable
+state rather than estimated values. Claude's session, weekly **All models**,
+and model-specific weekly limits such as **Fable only** are separate meters.
+Server-provided model labels are preserved. **Max 5×** or **Max 20×** is shown
+when Claude's non-secret profile metadata matches the signed-in account and
+identifies the tier; otherwise the label remains **Max**.
+
+The helper stores only allowance values, timestamps, and hashed account
+identifiers under `${XDG_CACHE_HOME:-~/.cache}/blankweave/agent-usage/`.
+It does not read credential files or store prompts, transcripts, or project paths.
 
 ## Renamed from hyprarch
 

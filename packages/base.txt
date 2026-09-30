@@ -20,6 +20,7 @@ networkmanager
 tailscale
 curl
 jq
+python
 diffutils
 awww
 ttf-roboto
