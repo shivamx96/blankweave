@@ -47,7 +47,7 @@ PanelWindow {
         || (visibilityMode === "fullscreen" && fullscreenHere)
         ? 0
         : theme.barHeight
-    mask: Region { item: barContent }
+    mask: Region { item: barInput }
     surfaceFormat.opaque: false
 
     anchors {
@@ -120,21 +120,15 @@ PanelWindow {
         }
     }
 
+    // Keep edge input separate from the painted bar so concealment leaves
+    // no visible border over fullscreen content. Follow the slide animation.
     Item {
-        id: barContent
+        id: barInput
 
         x: 0
-        y: root.barShown
-            ? 0
-            : (root.atBottom
-                ? root.theme.barHeight - root.revealThickness
-                : -root.theme.barHeight + root.revealThickness)
+        y: root.atBottom ? parent.height - height : 0
         width: parent.width
-        height: parent.height
-
-        Behavior on y {
-            NumberAnimation { duration: 190; easing.type: Easing.OutCubic }
-        }
+        height: Math.max(root.revealThickness, barContent.height - Math.abs(barContent.y))
 
         HoverHandler {
             id: barHover
@@ -147,6 +141,28 @@ PanelWindow {
                 else {
                     root.scheduleConceal()
                 }
+            }
+        }
+    }
+
+    Item {
+        id: barContent
+
+        x: 0
+        y: root.barShown
+            ? 0
+            : (root.atBottom ? root.theme.barHeight : -root.theme.barHeight)
+        width: parent.width
+        height: parent.height
+
+        // Fade with the visible portion so the accent border cannot linger
+        // on its own in the final frames. Input remains on barInput.
+        opacity: Math.max(0, Math.min(1, (height - Math.abs(y)) / Math.max(1, height)))
+
+        Behavior on y {
+            NumberAnimation {
+                duration: 190
+                easing.type: root.barShown ? Easing.OutCubic : Easing.InCubic
             }
         }
 

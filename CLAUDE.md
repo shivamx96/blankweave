@@ -276,10 +276,13 @@ bar-edge indicators must face the desktop. The fullscreen policy follows
 `Hyprland.monitorFor(screen).activeWorkspace.hasFullscreen`, so each monitor
 reacts to its own workspace. Auto-hide always uses a zero exclusive zone to
 avoid moving tiled windows during reveal; fullscreen hide releases its zone only
-while fullscreen is active. Both leave a two-pixel input strip at the selected
-edge, and an open control popup holds the bar visible until it closes. A bar on
-a fullscreen workspace uses the overlay layer so the always-visible policy and
-both reveal strips remain above the fullscreen client.
+while fullscreen is active. Both leave an invisible two-pixel input strip at the
+selected edge, separate from the painted bar. The input region follows the slide
+animation while the painted bar moves completely offscreen and fades with its
+visible height, preventing its accent border from lingering at the edge. Reveal
+eases out and concealment eases in. An open control popup holds the bar visible
+until it closes. A bar on a fullscreen workspace uses the overlay layer so the
+always-visible policy and both reveal strips remain above the fullscreen client.
 
 Bar icons share one optical size, `theme.barIconSize` — every glyph and mark
 carries about 15.8px of ink on its long axis. A Nerd Font glyph fills roughly
