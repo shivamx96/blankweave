@@ -389,6 +389,25 @@ host and login so switching `gh` accounts cannot reuse another account's data.
 Only offer the IntelliJ project action when `git-repos.sh` reports that `idea`
 is available; otherwise use the required `xdg-open` fallback.
 
+`Services/AgentUsage.qml` owns one collector for all screens. The Python helper
+`agent-usage.py` reads Codex's app-server account/rate-limit RPCs without starting
+a conversation or reading tokens. Provider checks have a five-minute cache and
+a nonblocking lock; manual refresh has a 15-second floor. Keep window durations
+provider-driven, missing values unknown, and expired windows awaiting an update.
+Stale values must never trigger the low-allowance indicator. Old Codex usage may
+survive a network error only after verifying the same account is still active.
+Claude uses the experimental stream-JSON `get_usage` control request with
+`skip_behaviors`, safe mode, no tools/MCP servers, and no session persistence.
+Never send a user message or touch status-line settings. Prefer named server
+`limits` rows, with legacy windows and `model_scoped` as fallbacks; retain both
+All models and Fable-only weekly limits without duplicating them. Max 5×/20×
+comes from non-secret `.claude.json` profile metadata only when its email and
+organization match the CLI's current login. Unknown tiers remain Max. Cache
+only quota fields and hashed account identity, never session content or credentials.
+The helper uses standard-library Python from the mandatory base manifest; neither
+agent is a required dependency. Tests live in `tests/agent_usage_test.py` and run
+through `tests/agent-usage.sh` in the existing validation workflow.
+
 Workspaces follow focus rather than belonging to a monitor. `Super+N` and a
 click in the bar dispatch `hl.dsp.focus({ workspace = N, on_current_monitor = true })`,
 which brings workspace N to the focused monitor and swaps out whatever it was
