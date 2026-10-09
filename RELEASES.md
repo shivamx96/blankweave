@@ -48,3 +48,13 @@ The initial release sequence is:
 
 Config-file schema numbers belong to their individual formats and are not
 Blankweave release versions.
+
+## 0.8.0
+
+- Add a coding agent allowance widget for Codex and Claude Code, with remaining
+  allowance, reset countdowns, stale readings, manual refresh, and low-allowance
+  warnings.
+- Fully hide the bar in fullscreen without leaving a visible edge, while
+  preserving hover-to-reveal.
+- Deploy the managed Quickshell and shell-helper trees atomically so live
+  reloads never see a missing or partially copied tree.
