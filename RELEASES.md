@@ -48,3 +48,31 @@ The initial release sequence is:
 
 Config-file schema numbers belong to their individual formats and are not
 Blankweave release versions.
+
+## 0.6.0
+
+- Add the optional `voice-dictation` profile for fully local VoxType dictation,
+  including a verified `small.en` model, themed status and recovery controls,
+  `Super+D` toggle dictation, and F12 push-to-talk.
+- Recover transcripts through clipboard fallback and a clickable preview when
+  text cannot be inserted, with the latest transcript available in the bar's
+  voice panel.
+
+## 0.7.0
+
+- Add display scaling and placement controls to the bar's display panel.
+- Make bar placement and visibility configurable: top or bottom, always
+  visible, hidden for fullscreen windows, or revealed from the screen edge.
+- Preserve user-owned configuration and add persistent overrides for Hyprland,
+  Ghostty, Dunst, and Zsh that survive updates and theme changes.
+- Fix Intel GPU telemetry and add diagnostics for its monitoring setup.
+
+## 0.8.0
+
+- Add a coding agent allowance widget for Codex and Claude Code, with remaining
+  allowance, reset countdowns, stale readings, manual refresh, and low-allowance
+  warnings.
+- Fully hide the bar in fullscreen without leaving a visible edge, while
+  preserving hover-to-reveal.
+- Deploy the managed Quickshell and shell-helper trees atomically so live
+  reloads never see a missing or partially copied tree.
