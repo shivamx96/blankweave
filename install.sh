@@ -478,6 +478,13 @@ fi
 
 section "SYNCING WEB APPS"
 
+# A normal desktop entry makes settings discoverable in application launchers.
+mkdir -p "$USER_HOME/.local/share/applications"
+copy_file_atomically "$REPO_DIR/defaults/applications/blankweave-settings.desktop" \
+    "$USER_HOME/.local/share/applications/blankweave-settings.desktop"
+chown "$SUDO_USER:$SUDO_USER" "$USER_HOME/.local/share/applications" \
+    "$USER_HOME/.local/share/applications/blankweave-settings.desktop"
+
 # Bundled web apps are desktop entries that open a site in Helium's app mode.
 # Helium ships with the optional desktop profile, so the script skips itself
 # when the browser is absent; a failed icon download is not worth aborting an

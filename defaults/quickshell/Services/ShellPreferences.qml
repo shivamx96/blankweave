@@ -23,6 +23,7 @@ QtObject {
     // Writes wait for the first read to finish, so a preference changed while
     // the file is still loading cannot overwrite what is on disk with defaults.
     property bool ready: false
+    property string writeError: ""
 
     property FileView file: FileView {
         id: file
@@ -34,6 +35,8 @@ QtObject {
 
         onLoaded: root.ready = true
         onLoadFailed: root.ready = true
+        onSaved: root.writeError = ""
+        onSaveFailed: root.writeError = "Bar preferences changed for this session but could not be saved. Check access to ~/.config/blankweave/shell.json."
         onFileChanged: reload()
         onAdapterUpdated: {
             if (root.ready)

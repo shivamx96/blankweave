@@ -1,6 +1,7 @@
 local main_mod = "SUPER"
 
 -- Applications
+hl.bind(main_mod .. " + comma", hl.dsp.exec_cmd("~/.local/bin/blankweave settings"))
 hl.bind(main_mod .. " + Return", hl.dsp.exec_cmd("ghostty"))
 hl.bind(main_mod .. " + B", hl.dsp.exec_cmd("zen-browser"))
 hl.bind(main_mod .. " + SHIFT + B", hl.dsp.exec_cmd("blueman-manager"))

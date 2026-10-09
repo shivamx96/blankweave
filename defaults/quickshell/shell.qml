@@ -6,6 +6,7 @@ import "Bar"
 import "Launcher"
 import "Modules"
 import "Services"
+import "Settings"
 
 ShellRoot {
     id: root
@@ -16,6 +17,17 @@ ShellRoot {
     property AgentUsage agentUsage: AgentUsage { }
     property bool launcherOpen: false
     property string launcherMode: "applications"
+
+    function openSettings() {
+        root.closeLauncher()
+        settingsWindow.openSettings()
+    }
+
+    SettingsWindow {
+        id: settingsWindow
+        theme: root.theme
+        preferences: root.preferences
+    }
 
     // The mode lives here rather than in the surface because Variants gives
     // every screen its own launcher; a keybinding for the other view should
@@ -80,6 +92,10 @@ ShellRoot {
 
         function clipboard() {
             root.toggleLauncher("clipboard")
+        }
+
+        function settings() {
+            root.openSettings()
         }
     }
 }
