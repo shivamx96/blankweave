@@ -23,6 +23,7 @@ ShellRoot {
         theme: test.desktopTheme
         preferences: test.preferences
         helper: test.fixture
+        systemHelper: test.fixture
     }
     function check(condition, message) {
         if (!condition) throw new Error(message)
@@ -71,6 +72,33 @@ ShellRoot {
                     break
                 case 4:
                     test.check(!backend.error && backend.themes.length === 2, "Refresh did not recover")
+                    test.check(backend.syncAvailable, "Installed helper was not detected")
+                    backend.syncCommand = ["bash", test.fixture, "sync-cancel"]
+                    backend.syncSystem()
+                    test.check(backend.syncing && backend.busy, "Sync did not lock other actions")
+                    break
+                case 5:
+                    test.check(backend.syncState === "cancelled" && backend.systemPending, "Cancellation lost pending state")
+                    backend.syncCommand = ["bash", test.fixture, "sync-denied"]
+                    backend.syncSystem()
+                    break
+                case 6:
+                    test.check(backend.syncState === "error" && backend.systemPending, "Authorization failure not reported")
+                    backend.syncCommand = ["bash", test.fixture, "sync-fail"]
+                    backend.syncSystem()
+                    break
+                case 7:
+                    test.check(backend.syncState === "error" && backend.syncStarted, "Apply failure not reported")
+                    backend.syncCommand = ["bash", test.fixture, "sync-incomplete"]
+                    backend.syncSystem()
+                    break
+                case 8:
+                    test.check(backend.syncState === "error" && backend.systemPending, "Unverified completion reported as success")
+                    backend.syncCommand = ["bash", test.fixture, "sync-success"]
+                    backend.syncSystem()
+                    break
+                case 9:
+                    test.check(backend.syncState === "success" && !backend.systemPending, "Successful apply not verified")
                     console.log("SETTINGS_BACKEND_PASSED")
                     Qt.quit()
                     break

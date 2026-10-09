@@ -13,6 +13,7 @@ exit "${SETTINGS_TEST_EXIT:-0}"
 EOF
 chmod +x "$test_root/bin/qs"
 export SETTINGS_TEST_LOG="$test_root/command"
+export SETTINGS_SYNC_STATE="$test_root/synced"
 HOME="$test_root/home" PATH="$test_root/bin:$PATH" "$repository/bin/blankweave" settings
 printf 'ipc\n-n\n-p\n%s\ncall\nblankweave\nsettings\n' \
     "$test_root/home/.local/share/blankweave/quickshell" > "$test_root/expected"

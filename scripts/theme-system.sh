@@ -10,7 +10,7 @@
 # and never rebuilds the initramfs.
 #
 # Usage:
-#   theme-system.sh <user-home> [<config-dir>]
+#   theme-system.sh [--progress] <user-home> [<config-dir>]
 
 set -euo pipefail
 
@@ -25,7 +25,18 @@ die() {
     exit 1
 }
 
-[[ $# -eq 1 || $# -eq 2 ]] || die "usage: theme-system.sh <user-home> [<config-dir>]"
+progress_enabled=false
+if [[ ${1:-} == --progress ]]; then
+    progress_enabled=true
+    shift
+fi
+progress() {
+    if [[ $progress_enabled == true ]]; then
+        printf 'blankweave-theme-sync:%s\n' "$1"
+    fi
+}
+
+[[ $# -eq 1 || $# -eq 2 ]] || die "usage: theme-system.sh [--progress] <user-home> [<config-dir>]"
 user_home=$1
 config_dir=${2:-$user_home/.config}
 state=$config_dir/blankweave/theme.json
@@ -81,6 +92,9 @@ sync_boot_splash() {
     for file in "${PLYMOUTH_FILES[@]}"; do
         cmp -s "$stage/$file" "$PLYMOUTH_DIR/$file" || changed=true
     done
+    # A previous rebuild may have failed after copying the new files. Keep
+    # retrying until the boot image, not just the on-disk artwork, is updated.
+    [[ ! -e $PLYMOUTH_DIR/.sync-pending ]] || changed=true
     # The splash was installed under its old name before the rename; the
     # initramfs still carries it until the theme is set again.
     if [[ -d $(dirname "$PLYMOUTH_DIR")/hyprarch ]]; then
@@ -94,10 +108,12 @@ sync_boot_splash() {
 
     printf 'Installing the boot splash and rebuilding the initramfs...\n'
     mkdir -p "$PLYMOUTH_DIR"
+    touch "$PLYMOUTH_DIR/.sync-pending"
     for file in "${PLYMOUTH_FILES[@]}"; do
         install -m 0644 "$stage/$file" "$PLYMOUTH_DIR/$file"
     done
     plymouth-set-default-theme -R blankweave
+    rm -f "$PLYMOUTH_DIR/.sync-pending"
 }
 
 # The console behind the splash is painted with the kernel's vt.default_*
@@ -122,6 +138,10 @@ sync_console_colors() {
     done
 }
 
+progress folders
 sync_folders
+progress boot-splash
 sync_boot_splash
+progress console
 sync_console_colors
+progress complete

@@ -25,6 +25,12 @@ TestCase {
         property bool busy: false
         property string error: ""
         property bool systemPending: false
+        property bool syncAvailable: true
+        property bool syncing: false
+        property string syncState: "idle"
+        property string syncMessage: ""
+        property string pendingDescription: "Folder colors need updating."
+        property int syncRequests: 0
         property int writes: 0
         property int selected: 0
         property bool rejectChanges: false
@@ -32,6 +38,7 @@ TestCase {
         function selection(id) { return selected }
         function apply(id, index) { writes++; if (!rejectChanges) selected = index }
         function refresh() { }
+        function syncSystem() { syncRequests++ }
     }
     SettingsContent {
         id: content
@@ -48,6 +55,12 @@ TestCase {
         fakeBackend.selected = 0
         fakeBackend.rejectChanges = false
         fakeBackend.error = ""
+        fakeBackend.systemPending = false
+        fakeBackend.syncAvailable = true
+        fakeBackend.syncing = false
+        fakeBackend.syncState = "idle"
+        fakeBackend.syncMessage = ""
+        fakeBackend.syncRequests = 0
         content.selectedPage = "appearance"
         findChild(content, "settingsSearch").text = ""
         closeSpy.clear()
@@ -191,5 +204,24 @@ TestCase {
         keyClick(Qt.Key_Return)
         compare(combo.currentIndex, 1)
         tryCompare(combo.popup, "opened", false)
+    }
+
+    function test_system_appearance_requires_explicit_action() {
+        fakeBackend.systemPending = true
+        var button = findChild(content, "applySystemAppearance")
+        verify(button.visible)
+        verify(button.enabled)
+        compare(fakeBackend.syncRequests, 0)
+        mouseClick(button)
+        compare(fakeBackend.syncRequests, 1)
+        fakeBackend.busy = true
+        verify(!button.enabled)
+        fakeBackend.busy = false
+        fakeBackend.syncAvailable = false
+        verify(!button.enabled)
+        fakeBackend.systemPending = false
+        fakeBackend.syncMessage = "System appearance is up to date."
+        verify(!button.visible)
+        compare(findChild(content, "systemAppearanceProgress").text, fakeBackend.syncMessage)
     }
 }

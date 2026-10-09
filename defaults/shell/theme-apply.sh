@@ -345,6 +345,7 @@ system_status() {
             cmp -s "$PLYMOUTH_STAGE/$file" "$PLYMOUTH_DIR/$file" || splash=true
         done
     fi
+    [[ ! -e $PLYMOUTH_DIR/.sync-pending ]] || splash=true
 
     jq -n --argjson folders "$folders" --argjson splash "$splash" \
         '{folders: $folders, bootSplash: $splash, pending: ($folders or $splash)}'

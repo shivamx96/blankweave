@@ -329,8 +329,12 @@ The searchable settings window covers Appearance, Displays, Sound, Network &
 Bluetooth, Power, Input & Accessibility, Apps, Storage & Backup, and System.
 Appearance's theme, dark/light mode, bar position, and bar visibility controls
 are connected to the existing desktop configuration and apply immediately.
-Changes made from the bar remain reflected in Settings. Folder colors and the
-boot splash may still require `blankweave theme sync` in a terminal.
+Changes made from the bar remain reflected in Settings. When folder colors or
+boot appearance are pending, choose **Apply system appearance…** to authenticate
+through the desktop and follow progress in the window. Cancelling leaves the
+changes pending; failures can be retried. Settings checks the installed state
+before confirming completion. This action becomes available after the installer
+deploys its system helper; `blankweave theme sync` remains available in a terminal.
 
 All other controls are visibly marked **Preview** and disabled. Their example
 values are not device readings, and they never apply changes. Those pages will
@@ -356,8 +360,9 @@ blankweave theme sync          # folder colours and boot splash (needs sudo)
 ```
 
 Folder colours and the boot splash live outside your home, so `set` on the
-command line finishes with a sudo prompt and a switch from the bar leaves a
-hint until you run `blankweave theme sync`.
+command line finishes with a sudo prompt. After a switch from the bar, open
+Settings → Appearance and choose **Apply system appearance…**, or run
+`blankweave theme sync` in a terminal.
 
 Two themes are bundled: `obsidian` (Obsidian dark / Porcelain light, blue) and
 `moss` (Moss dark / Sage light, green). To make your own, copy
