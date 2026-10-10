@@ -18,6 +18,9 @@ pipewire-alsa
 pipewire-pulse
 wireplumber
 pavucontrol
+libcanberra
+gsettings-desktop-schemas
+sound-theme-freedesktop
 networkmanager
 tailscale
 curl

@@ -13,6 +13,7 @@ exit "${SETTINGS_TEST_EXIT:-0}"
 EOF
 chmod +x "$test_root/bin/qs"
 export SETTINGS_TEST_LOG="$test_root/command"
+export SETTINGS_SYSTEM_SOUNDS_STATE="$test_root/system-sounds-state"
 export SETTINGS_VOICE_LOG="$test_root/voice-commands"
 export SETTINGS_SYNC_STATE="$test_root/synced"
 export SETTINGS_DISPLAYS_STATE="$test_root/displays-state"
@@ -77,6 +78,23 @@ fi
 printf 'start-clipboard\nstop\ncancel\nrestart\nstart-clipboard\n' > "$test_root/expected-voice"
 diff -u "$test_root/expected-voice" "$SETTINGS_VOICE_LOG"
 
+# Sound preferences and playback are isolated from the session's settings bus.
+mkdir -p "$test_root/sounds/Services"
+cp "$repository/defaults/quickshell/Services/SettingsSystemSounds.qml" "$test_root/sounds/Services/"
+cp "$repository/tests/quickshell/settings-system-sounds.qml" "$test_root/sounds/shell.qml"
+cp "$repository/tests/fixtures/settings-system-sounds.py" "$test_root/sounds/sounds.py"
+if ! HOME="$test_root/home" XDG_CONFIG_HOME="$test_root/home/.config" \
+    XDG_RUNTIME_DIR="$test_root/runtime" QT_QPA_PLATFORM=offscreen \
+    QT_QUICK_BACKEND=software timeout 15 qs -p "$test_root/sounds" > "$test_root/sounds.log" 2>&1; then
+    cat "$test_root/sounds.log"
+    exit 1
+fi
+if ! grep -q SETTINGS_SYSTEM_SOUNDS_PASSED "$test_root/sounds.log" \
+    || grep -Eq '(TypeError|ReferenceError|Binding loop|Unable to assign|Failed to load)' "$test_root/sounds.log"; then
+    cat "$test_root/sounds.log"
+    exit 1
+fi
+
 # Exercise monitor discovery and mutations with a fixture, never the real compositor.
 mkdir -p "$test_root/displays/Services"
 cp "$repository/defaults/quickshell/Services/SettingsDisplays.qml" "$test_root/displays/Services/"
@@ -124,6 +142,7 @@ cp -R "$repository/defaults/quickshell/"{Settings,Services,Components,Assets} "$
 cp "$repository/defaults/quickshell/Theme.qml" "$test_root/window/"
 cp "$repository/tests/quickshell/settings-window.qml" "$test_root/window/shell.qml"
 cp "$repository/tests/fixtures/settings-theme.sh" "$test_root/home/.local/share/blankweave/shell/theme-apply.sh"
+cp "$repository/tests/fixtures/settings-system-sounds.py" "$test_root/home/.local/share/blankweave/shell/system-sounds.py"
 cp "$repository/tests/fixtures/settings-displays.sh" "$test_root/home/.local/share/blankweave/shell/monitor-layout.sh"
 cp "$repository/tests/fixtures/settings-brightness.sh" "$test_root/home/.local/share/blankweave/shell/brightness.sh"
 cp "$repository/defaults/themes/obsidian/theme.json" "$test_root/home/.local/share/blankweave/themes/obsidian/"

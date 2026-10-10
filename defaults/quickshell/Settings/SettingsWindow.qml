@@ -32,6 +32,10 @@ FloatingWindow {
     }
 
     SettingsNightLight { id: nightLightBackend }
+    SettingsSystemSounds {
+        id: systemSoundsBackend
+        active: root.visible && !root.minimized && content.page !== null && content.page.id === "sound"
+    }
 
     SettingsDisplays {
         id: displaysBackend
@@ -61,6 +65,7 @@ FloatingWindow {
         displays: displaysBackend
         sound: root.sound
         voice: root.voice
+        systemSounds: systemSoundsBackend
         onCloseRequested: root.visible = false
     }
 }

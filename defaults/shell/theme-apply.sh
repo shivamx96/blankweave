@@ -225,7 +225,7 @@ write_state() {
 }
 
 apply_desktop_preferences() {
-    local scheme gtk_theme prefer_dark dir icon_theme cursor_theme
+    local scheme gtk_theme prefer_dark icon_theme cursor_theme
 
     icon_theme=$(jq -r '.iconTheme' <<< "$RESOLVED")
     cursor_theme=$(jq -r '.cursorTheme' <<< "$RESOLVED")
@@ -257,12 +257,12 @@ apply_desktop_preferences() {
         gsettings set org.gnome.desktop.interface cursor-size "$CURSOR_SIZE" 2> /dev/null || true
     fi
 
-    # GTK3 apps on Hyprland have no settings daemon and read these files.
-    for dir in gtk-3.0 gtk-4.0; do
-        mkdir -p "$CONFIG_DIR/$dir"
-        printf '[Settings]\ngtk-application-prefer-dark-theme=%s\ngtk-theme-name=Adwaita\ngtk-icon-theme-name=%s\ngtk-cursor-theme-name=%s\ngtk-cursor-theme-size=%s\n' \
-            "$prefer_dark" "$icon_theme" "$cursor_theme" "$CURSOR_SIZE" > "$CONFIG_DIR/$dir/settings.ini"
-    done
+    # Merge through the same locked writer as sound preferences, preserving
+    # their keys and unrelated user settings across appearance changes.
+    python3 "$DOTS_DIR/shell/gtk_settings.py" \
+        "gtk-application-prefer-dark-theme=$prefer_dark" "gtk-theme-name=Adwaita" \
+        "gtk-icon-theme-name=$icon_theme" "gtk-cursor-theme-name=$cursor_theme" \
+        "gtk-cursor-theme-size=$CURSOR_SIZE"
 }
 
 apply_wallpaper() {
