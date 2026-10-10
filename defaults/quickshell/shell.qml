@@ -14,6 +14,7 @@ ShellRoot {
     property Theme theme: Theme { }
     property ShellPreferences preferences: ShellPreferences { }
     property Voxtype voxtype: Voxtype { }
+    property AudioService audio: AudioService { }
     property AgentUsage agentUsage: AgentUsage { }
     property bool launcherOpen: false
     property string launcherMode: "applications"
@@ -27,6 +28,7 @@ ShellRoot {
         id: settingsWindow
         theme: root.theme
         preferences: root.preferences
+        sound: root.audio
     }
 
     // The mode lives here rather than in the surface because Variants gives

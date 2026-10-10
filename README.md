@@ -345,7 +345,7 @@ With multiple displays connected, select an external display and choose its
 saved position: left, right, above, below, or Automatic around the existing
 desktop layout. Position changes preserve its scaling preference and follow
 the display across reconnects. The position menu shows the saved choice;
-current desktop coordinates are shown separately. Mirroring remains a preview.
+current desktop coordinates are shown separately.
 Brightness adjusts the selected display from 5–100% using the built-in backlight
 or DDC/CI on supported external monitors. The slider follows hardware readings,
 including changes from the bar, and rechecks the level after applying a change.
@@ -353,8 +353,15 @@ Unavailable controls explain how to retry; external monitors may need DDC/CI
 enabled in their own menu. Brightness changes use the existing hardware controls
 and do not add a saved login-time override.
 
-All other controls are visibly marked **Preview** and disabled. Their example
-values are not device readings, and they never apply changes. Those pages will
+Sound provides live output selection, volume (0–150%), and mute. It shares
+PipeWire state with the bar and follows changes from media keys or other mixers.
+The selector shows the output actually in use; a preferred device that has not
+become active is reported separately. Device removal cancels an in-progress
+volume drag so it cannot change a different output. Microphone and per-app
+controls are still previews.
+
+Controls awaiting implementation are marked **Preview** and disabled. Their
+example values are not device readings, and they never apply changes. Those pages will
 gain working controls incrementally. Existing bar controls remain available.
 Use `Ctrl+F` to search, Tab to move between controls, and arrow keys plus Enter
 to navigate the category list. Escape clears a search or closes the window;

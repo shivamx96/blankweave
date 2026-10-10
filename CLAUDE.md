@@ -320,9 +320,19 @@ individual widgets. `ControlTabs.qml` provides the panel-level tab strip with
 optional per-tab badge counts; use it when a widget owns two peer views with
 independent refresh semantics, not to separate sections of one view. Widget-wide controls belong in `ControlPanelHeader.actions`;
 reserve `ControlAction` footer rows for secondary navigation. The audio widget
-uses PipeWire's logical default sink and
-discovers available output nodes at runtime; never encode host card IDs or
-device names in the shell.
+shares the shell's `AudioService` with Settings. `AudioOutput` derives live
+output state from PipeWire's logical default sink and discovers audio outputs
+at runtime; never encode host card IDs or device names. Bind nodes through
+`PwObjectTracker` before using volume/mute, and disable writes until channel
+volumes arrive. Device preference is a request: show the actual default and
+explain when it differs from the preferred one. Delegates keep primitive rows
+and resolve the live node for each action. Freeze menu rows through activation
+so hotplug cannot retarget an open choice. `AudioVolumeControl` captures the
+output generation during a drag, preventing a disconnect or default-device
+change from applying that gesture to another device. PipeWire/WirePlumber own
+volume, mute, and preference persistence; do not add a competing config file.
+`tests/qml/tst_sound.qml` covers selection, hotplug, external changes, connection
+loss, and gesture cancellation without touching the developer's audio server.
 
 A choice the user makes inside a widget's own bar entry, such as the clock's
 right-click representation, is a preference and must survive a restart.
