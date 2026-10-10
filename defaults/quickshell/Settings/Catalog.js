@@ -33,14 +33,14 @@ var pages = [
             { id: "color-profile", title: "Color profiles", description: "Assign an RGB display ICC profile to the selected display. Profiles use SDR color output.", kind: "color-profile", live: true }
         ] }
     ] },
-    { id: "sound", title: "Sound", icon: "󰕾", description: "Your speakers, microphone, and applications.", groups: [
+    { id: "sound", title: "Sound", icon: "󰕾", description: "Your speakers, microphone, dictation, and event sounds.", groups: [
         { title: "Playback & recording", rows: [
             { id: "output", title: "Output device & volume", description: "Choose the default playback device and adjust its volume.", kind: "sound-output", live: true },
             { id: "input", title: "Microphone & input level", description: "Choose a microphone, adjust gain or mute it, and check its signal.", kind: "sound-input", live: true }
         ] },
-        { title: "Voice", rows: [
+        { title: "Voice & feedback", rows: [
             { id: "dictation", title: "Local voice dictation", description: "Check dictation status, record speech, and recover your latest transcript.", kind: "dictation", live: true },
-            { id: "sound-alerts", title: "System sounds", description: "Choose sounds for desktop events.", kind: "toggle" }
+            { id: "sound-alerts", title: "System sounds", description: "Choose a sound theme and enable event or input feedback in supported apps.", kind: "system-sounds", live: true }
         ] }
     ] },
     { id: "network", title: "Network & Bluetooth", icon: "󰖩", description: "Connect to networks and nearby devices.", groups: [

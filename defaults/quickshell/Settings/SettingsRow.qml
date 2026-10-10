@@ -18,7 +18,7 @@ Item {
         ? backend.description(setting.id) || setting.description : setting.description
     readonly property var choices: live && typeof backend.choices === "function" ? backend.choices(setting.id) : (setting.options || [])
     readonly property int selection: live && typeof backend.selection === "function" ? backend.selection(setting.id) : 0
-    readonly property bool expandedControl: ["presets", "night-light", "color-profile", "sound-output", "sound-input", "dictation"].includes(setting.kind)
+    readonly property bool expandedControl: ["presets", "night-light", "color-profile", "sound-output", "sound-input", "dictation", "system-sounds"].includes(setting.kind)
     readonly property bool compact: width < 510
     implicitHeight: content.implicitHeight + 28
 
@@ -62,12 +62,17 @@ Item {
                 : root.setting.kind === "sound-output" ? soundControl
                 : root.setting.kind === "sound-input" ? microphoneControl
                 : root.setting.kind === "dictation" ? dictationControl
+                : root.setting.kind === "system-sounds" ? systemSoundsControl
                 : root.setting.kind === "choice" ? choiceControl
                 : root.setting.kind === "slider" ? sliderControl
                 : root.setting.kind === "toggle" ? toggleControl : actionControl
         }
     }
 
+    Component {
+        id: systemSoundsControl
+        SettingsSystemSoundsControls { theme: root.theme; backend: root.backend }
+    }
     Component {
         id: dictationControl
         SettingsDictation { theme: root.theme; backend: root.backend }

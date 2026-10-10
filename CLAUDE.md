@@ -775,6 +775,15 @@ after refreshing theme status. A failed boot-image rebuild leaves `.sync-pending
 in the installed Plymouth directory so status remains pending and retries really
 rebuild the boot image. Keep that marker until a successful rebuild.
 
+`SettingsSystemSounds` reads desktop sound preferences only while Sound is open.
+`system-sounds.py` uses the desktop GSettings store as the source of truth,
+revalidates installed themes and writable keys before changing them, reads back
+writes, and reports preview failures. Status is read-only. `gtk_settings.py`
+merges GTK 3/4 fallback settings atomically under a shared lock; both appearance
+and sound updates use it so they preserve each other's keys and user settings.
+Do not imply these preferences control Dunst notifications or VoxType cues.
+Tests mock GSettings and playback and isolate the native Settings backend.
+
 ### Adding a new Quickshell module
 
 1. Create `defaults/quickshell/Modules/<Name>Widget.qml`

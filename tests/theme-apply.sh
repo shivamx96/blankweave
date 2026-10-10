@@ -66,8 +66,18 @@ printf '[global]\nwidth = 400\n' > "$XDG_CONFIG_HOME/blankweave/overrides/dunst.
 printf '# custom notification config\n' > "$XDG_CONFIG_HOME/dunst/dunstrc"
 printf '# custom terminal config\n' > "$XDG_CONFIG_HOME/ghostty/config"
 
+mkdir -p "$XDG_CONFIG_HOME/gtk-3.0" "$XDG_CONFIG_HOME/gtk-4.0"
+for version in gtk-3.0 gtk-4.0; do
+    printf '[Settings]\ngtk-enable-event-sounds=false\ngtk-sound-theme-name=custom\ngtk-font-name=Custom 12\n' > "$XDG_CONFIG_HOME/$version/settings.ini"
+done
+
 assert_rendered() {
     local file
+    for version in gtk-3.0 gtk-4.0; do
+        grep -Fxq 'gtk-enable-event-sounds=false' "$XDG_CONFIG_HOME/$version/settings.ini"
+        grep -Fxq 'gtk-sound-theme-name=custom' "$XDG_CONFIG_HOME/$version/settings.ini"
+        grep -Fxq 'gtk-font-name=Custom 12' "$XDG_CONFIG_HOME/$version/settings.ini"
+    done
     for file in "$dunstrc" "$ghostty" "$hyprlock" "$hypr_theme" "$plymouth" "$voxtype"; do
         [[ -f $file ]]
         if grep -q '{{' "$file"; then

@@ -375,7 +375,11 @@ Model, device, and shortcut configuration continues through the existing
 VoxType and Hyprland configuration; this panel does not rewrite those files.
 
 Per-app mixing is available through Pavucontrol from the bar. System sounds
-remain a preview for a later slice.
+controls event sounds, input feedback, and installed sound themes for supporting
+apps, with a quiet preview button. Preferences use the desktop settings store;
+**Apply to apps** synchronizes the GTK fallback files when needed. Reopen apps
+that do not pick up changes. Visual theme switches preserve sound preferences
+and unrelated GTK settings. Notification and dictation sounds remain separate.
 
 Controls awaiting implementation are marked **Preview** and disabled. Their
 example values are not device readings, and they never apply changes. Those pages will

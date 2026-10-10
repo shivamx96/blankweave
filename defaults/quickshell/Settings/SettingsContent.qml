@@ -12,6 +12,7 @@ Rectangle {
     property var displays: null
     property var sound: null
     property var voice: null
+    property var systemSounds: null
     property string selectedPage: "appearance"
     readonly property var results: Catalog.search(search.text)
     readonly property var page: results.find(entry => entry.id === selectedPage) || results[0] || null
@@ -170,6 +171,11 @@ Rectangle {
                                 spacing: 12
                                 Text {
                                     Layout.leftMargin: 8
+                                    Layout.preferredWidth: 20
+                                    Layout.minimumWidth: 20
+                                    Layout.maximumWidth: 20
+                                    Layout.alignment: Qt.AlignVCenter
+                                    horizontalAlignment: Text.AlignHCenter
                                     text: category.modelData.icon
                                     color: category.selected ? root.theme.accentBright : root.theme.textMuted
                                     font.family: root.theme.iconFontFamily
@@ -177,6 +183,7 @@ Rectangle {
                                 }
                                 Text {
                                     Layout.fillWidth: true
+                                    Layout.alignment: Qt.AlignVCenter
                                     text: category.text
                                     color: category.selected ? root.theme.accentBright : root.theme.text
                                     font.family: root.theme.fontFamily
@@ -252,7 +259,7 @@ Rectangle {
                                     : root.page && root.page.id === "displays" && root.displays
                                     ? "Mode, mirror, and setup changes have a 20-second preview. Other display changes apply immediately; night light applies to all displays."
                                     : root.page && root.page.id === "sound" && root.sound
-                                    ? "Output, microphone, and dictation controls are available. System sounds are a preview."
+                                    ? "Sound controls are available. Changes apply to the selected device or supported apps."
                                     : "Preview — changes aren’t applied. These controls show what’s planned; values are examples, not your device’s status."
                                 color: root.theme.text
                                 font.family: root.theme.fontFamily
@@ -393,7 +400,8 @@ Rectangle {
                                                     Layout.fillWidth: true
                                                     theme: root.theme
                                                     setting: settingGroup.modelData
-                                                    backend: settingGroup.modelData.kind === "dictation" ? root.voice
+                                                    backend: settingGroup.modelData.kind === "system-sounds" ? root.systemSounds
+                                                        : settingGroup.modelData.kind === "dictation" ? root.voice
                                                         : root.page && root.page.id === "appearance" ? root.appearance
                                                         : root.page && root.page.id === "displays" ? root.displays
                                                         : root.page && root.page.id === "sound" ? root.sound : null
