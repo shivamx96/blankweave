@@ -18,13 +18,14 @@ Item {
         ? backend.description(setting.id) || setting.description : setting.description
     readonly property var choices: live ? backend.choices(setting.id) : (setting.options || [])
     readonly property int selection: live ? backend.selection(setting.id) : 0
+    readonly property bool expandedControl: ["presets", "night-light", "color-profile"].includes(setting.kind)
     readonly property bool compact: width < 510
     implicitHeight: content.implicitHeight + 28
 
     GridLayout {
         id: content
         anchors { left: parent.left; right: parent.right; verticalCenter: parent.verticalCenter; margins: 18 }
-        columns: root.compact || root.setting.kind === "presets" ? 1 : 2
+        columns: root.compact || root.expandedControl ? 1 : 2
         rowSpacing: 12
         columnSpacing: 20
 
@@ -52,16 +53,29 @@ Item {
         }
 
         Loader {
-            Layout.fillWidth: root.setting.kind === "presets"
-            Layout.preferredWidth: root.setting.kind === "presets" ? content.width : root.compact ? Math.min(240, content.width) : 190
-            Layout.preferredHeight: root.setting.kind === "presets" && item ? (item as Item).implicitHeight : 36
+            Layout.fillWidth: root.expandedControl
+            Layout.preferredWidth: root.expandedControl ? content.width : root.compact ? Math.min(240, content.width) : 190
+            Layout.preferredHeight: root.expandedControl && item ? (item as Item).implicitHeight : 36
             sourceComponent: root.setting.kind === "presets" ? presetsControl
+                : root.setting.kind === "night-light" ? nightControl
+                : root.setting.kind === "color-profile" ? colorControl
                 : root.setting.kind === "choice" ? choiceControl
                 : root.setting.kind === "slider" ? sliderControl
                 : root.setting.kind === "toggle" ? toggleControl : actionControl
         }
     }
 
+    Component {
+        id: nightControl
+        SettingsNightLightControls {
+            theme: root.theme
+            backend: root.backend && root.backend.nightLight ? root.backend.nightLight : null
+        }
+    }
+    Component {
+        id: colorControl
+        SettingsColorProfiles { theme: root.theme; backend: root.backend }
+    }
     Component {
         id: presetsControl
         SettingsDisplayPresets {

@@ -3,6 +3,8 @@ uwsm
 hyprcursor
 hyprlock
 hypridle
+hyprsunset
+lcms2
 xdg-desktop-portal-hyprland
 xdg-desktop-portal-gtk
 quickshell

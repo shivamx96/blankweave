@@ -21,6 +21,9 @@
 #   monitor-layout.sh preset-save <name>            save the current layout
 #   monitor-layout.sh preset-preview <id>           try a saved layout
 #   monitor-layout.sh preset-delete <id>            remove a saved layout
+#   monitor-layout.sh profile-import <path>         validate and copy an ICC file
+#   monitor-layout.sh profile-set <connector> <id|none>
+#   monitor-layout.sh profile-delete <id>           remove an unassigned profile
 #   monitor-layout.sh mode-confirm <token>          save a preview
 #   monitor-layout.sh mode-revert <token>           restore the previous mode
 #   monitor-layout.sh apply                         regenerate and apply the rules
@@ -147,12 +150,14 @@ cmd_status() {
                 | unique);
         {
             preview: $preview,
-            presets: $setups,
+            presets: $setups.presets,
+            colorProfiles: $setups.colorProfiles,
             monitors: [
                 .[] | . as $monitor
                 | ($persisted | map(select(.description == $monitor.description)) | first) as $entry
                 | {
                     name: .name,
+                    colorProfile: ($entry.icc // ""),
                     mirrorConnector: (.mirrorConnector // ""),
                     description: .description,
                     internal: (.name | test("^(eDP|LVDS|DSI)-")),
@@ -448,6 +453,16 @@ case "${1:-}" in
         require_no_preview
         [ $# -eq 3 ] || fail 'Usage: monitor-layout.sh set-scale <connector> <auto|scale>'
         cmd_set_scale "$2" "$3"
+        ;;
+    profile-import|profile-delete)
+        require_no_preview
+        [ $# -eq 2 ] || fail 'A profile file or ID is required'
+        setups "$@"
+        ;;
+    profile-set)
+        require_no_preview
+        [ $# -eq 3 ] || fail 'A display connector and profile ID are required'
+        setups "$@"
         ;;
     mirror-preview)
         require_no_preview
