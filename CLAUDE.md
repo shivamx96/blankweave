@@ -470,7 +470,15 @@ icon-only system controls, and hardware metrics plus power. Optional features
 remain present in the universal Quickshell tree but derive visibility from the
 strict installer config. Voice dictation is the reference: `Services/Voxtype.qml`
 owns its single status watcher and `VoxtypeWidget.qml` consumes that shared
-state on every screen.
+state on every screen. Settings also consumes that same instance: do not start a
+second status follower. `Voxtype.record` and `restart` serialize bar/Settings
+actions, gate restart on a stopped or confirmed-idle daemon, and require state
+confirmation after command success. Treat streaming as busy. Settings recording
+uses `voxtype-record.sh start-clipboard` so it cannot type into its own search
+field; retain the helper's delivery metadata and disable auto-submit for that
+recording. Model/device/shortcut readouts must not imply editable controls or
+create another configuration writer. Test actions against the isolated voice
+fixture in `tests/settings.sh`, never the developer's daemon.
 
 Process-backed modules (CPU, GPU, memory, network) use scripts that output JSON:
 

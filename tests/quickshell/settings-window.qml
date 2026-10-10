@@ -9,7 +9,8 @@ ShellRoot {
     Theme { id: desktopTheme }
     ShellPreferences { id: preferences }
     AudioService { id: audio }
-    SettingsWindow { id: settings; theme: desktopTheme; preferences: preferences; sound: audio }
+    Voxtype { id: voice }
+    SettingsWindow { id: settings; theme: desktopTheme; preferences: preferences; sound: audio; voice: voice }
     Timer {
         interval: 200
         running: true

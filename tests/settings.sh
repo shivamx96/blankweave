@@ -13,6 +13,7 @@ exit "${SETTINGS_TEST_EXIT:-0}"
 EOF
 chmod +x "$test_root/bin/qs"
 export SETTINGS_TEST_LOG="$test_root/command"
+export SETTINGS_VOICE_LOG="$test_root/voice-commands"
 export SETTINGS_SYNC_STATE="$test_root/synced"
 export SETTINGS_DISPLAYS_STATE="$test_root/displays-state"
 export SETTINGS_BRIGHTNESS_DIR="$test_root/brightness-state"
@@ -54,6 +55,27 @@ if ! grep -q SETTINGS_BACKEND_PASSED "$test_root/backend.log"; then
     cat "$test_root/backend.log"
     exit 1
 fi
+
+# Dictation actions use a fake service and never record or restart host audio.
+mkdir -p "$test_root/voice/Services"
+cp "$repository/defaults/quickshell/Services/"{Voxtype,ScriptPoller}.qml "$test_root/voice/Services/"
+cp "$repository/tests/quickshell/settings-voice.qml" "$test_root/voice/shell.qml"
+cp "$repository/tests/fixtures/settings-voice.sh" "$test_root/voice/voice.sh"
+printf 'profiles=voice-dictation\n' > "$test_root/voice/install.conf"
+printf '{}\n' > "$test_root/voice/transcript.json"
+if ! HOME="$test_root/home" XDG_CONFIG_HOME="$test_root/home/.config" \
+    XDG_RUNTIME_DIR="$test_root/runtime" QT_QPA_PLATFORM=offscreen \
+    QT_QUICK_BACKEND=software timeout 15 qs -p "$test_root/voice" > "$test_root/voice.log" 2>&1; then
+    cat "$test_root/voice.log"
+    exit 1
+fi
+if ! grep -q SETTINGS_VOICE_PASSED "$test_root/voice.log" \
+    || grep -Eq '(TypeError|ReferenceError|Binding loop|Unable to assign|Failed to load)' "$test_root/voice.log"; then
+    cat "$test_root/voice.log"
+    exit 1
+fi
+printf 'start-clipboard\nstop\ncancel\nrestart\nstart-clipboard\n' > "$test_root/expected-voice"
+diff -u "$test_root/expected-voice" "$SETTINGS_VOICE_LOG"
 
 # Exercise monitor discovery and mutations with a fixture, never the real compositor.
 mkdir -p "$test_root/displays/Services"

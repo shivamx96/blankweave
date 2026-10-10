@@ -36,11 +36,10 @@ var pages = [
     { id: "sound", title: "Sound", icon: "󰕾", description: "Your speakers, microphone, and applications.", groups: [
         { title: "Playback & recording", rows: [
             { id: "output", title: "Output device & volume", description: "Choose the default playback device and adjust its volume.", kind: "sound-output", live: true },
-            { id: "input", title: "Microphone & input level", description: "Choose a microphone, adjust gain or mute it, and check its signal.", kind: "sound-input", live: true },
-            { id: "app-volume", title: "Application volume", description: "Control playback volume for individual apps.", kind: "action", action: "Open mixer" }
+            { id: "input", title: "Microphone & input level", description: "Choose a microphone, adjust gain or mute it, and check its signal.", kind: "sound-input", live: true }
         ] },
         { title: "Voice", rows: [
-            { id: "dictation", title: "Local voice dictation", description: "Manage the model, input device, and dictation shortcuts.", kind: "action", action: "Configure" },
+            { id: "dictation", title: "Local voice dictation", description: "Check dictation status, record speech, and recover your latest transcript.", kind: "dictation", live: true },
             { id: "sound-alerts", title: "System sounds", description: "Choose sounds for desktop events.", kind: "toggle" }
         ] }
     ] },

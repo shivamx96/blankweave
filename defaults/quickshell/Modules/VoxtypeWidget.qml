@@ -1,6 +1,5 @@
 import QtQuick
 import QtQuick.Layouts
-import Quickshell
 import "../Components"
 
 WidgetFrame {
@@ -9,15 +8,11 @@ WidgetFrame {
     readonly property var voice: root.bar.shell.voxtype
     readonly property bool featureEnabled: voice.featureEnabled
     readonly property bool recording: voice.daemonState === "recording"
-    readonly property bool transcribing: voice.daemonState === "transcribing"
-    readonly property string recordCommand: Quickshell.env("HOME")
-        + "/.local/share/blankweave/shell/voxtype-record.sh"
-    readonly property string stateLabel: recording
-        ? "Recording"
-        : (transcribing ? "Transcribing" : (voice.available ? "Ready" : "Unavailable"))
+    readonly property bool transcribing: ["transcribing", "streaming"].includes(voice.daemonState)
+    readonly property string stateLabel: voice.stateLabel
 
     function record(action) {
-        root.bar.run([root.recordCommand, action])
+        root.voice.record(action)
     }
 
     visible: voice.featureEnabled
@@ -59,20 +54,14 @@ WidgetFrame {
             subtitle: root.recording
                 ? "Listening on " + String(root.voice.device || "default")
                 : (root.transcribing ? "Processing entirely on this device" : root.stateLabel)
-            actions: root.voice.busy
-                ? [
-                    { "id": "cancel", "icon": "󰜺", "attention": true },
-                    { "id": "restart", "icon": "󰑐" }
-                ]
-                : [
-                    { "id": "restart", "icon": "󰑐", "attention": !root.voice.available }
-                ]
+            actions: root.voice.canCancel
+                ? [{ "id": "cancel", "icon": "󰜺", "attention": true }]
+                : root.voice.canRestart ? [{ "id": "restart", "icon": "󰑐", "attention": !root.voice.available }] : []
             onActionPressed: actionId => {
                 if (actionId === "cancel")
                     root.record("cancel")
                 else if (actionId === "restart") {
-                    root.bar.run(["systemctl", "--user", "restart", "voxtype.service"])
-                    root.voice.statusSeen = false
+                    root.voice.restart()
                 }
             }
         }
@@ -98,12 +87,13 @@ WidgetFrame {
             icon: root.recording ? "󰓛" : "󰍬"
             label: root.recording ? "Stop and transcribe" : "Start dictating"
             active: root.recording
-            enabled: root.voice.available && !root.transcribing
+            enabled: root.voice.canStart || root.voice.canStop
             onPressed: root.record(root.recording ? "stop" : "start")
         }
 
         ControlAction {
             visible: root.voice.busy
+            enabled: root.voice.canCancel
             theme: root.theme
             icon: "󰜺"
             label: "Cancel and discard"
@@ -127,6 +117,17 @@ WidgetFrame {
             font.family: root.theme.fontFamily
             font.pixelSize: root.theme.microTextSize
             renderType: Text.NativeRendering
+        }
+
+        Text {
+            Layout.fillWidth: true
+            visible: root.voice.actionError !== ""
+            text: root.voice.actionError
+            textFormat: Text.PlainText
+            color: root.theme.critical
+            wrapMode: Text.WordWrap
+            font.family: root.theme.fontFamily
+            font.pixelSize: root.theme.microTextSize
         }
 
         Text {

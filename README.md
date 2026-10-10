@@ -364,7 +364,18 @@ unmute it. The live signal meter runs only while the microphone controls are
 shown in Settings, and stops when muted, minimized, closed, or on another page.
 It measures the signal before software gain; it does not save audio. Input
 selection and gain follow the same hotplug safeguards as output controls.
-Per-app controls are still previews.
+Local voice dictation shows VoxType's current status, model, microphone, and
+backend. Record from Settings to copy the result to the clipboard, stop and
+transcribe, cancel, or recover the latest transcript. Start/restart is available
+only while stopped or confirmed idle. The bar shares these command guards, and
+Settings waits for observed status before accepting a change. The existing
+shortcuts still dictate into the focused application. Enable the optional
+Voice dictation profile through Blankweave setup if it is not installed.
+Model, device, and shortcut configuration continues through the existing
+VoxType and Hyprland configuration; this panel does not rewrite those files.
+
+Per-app mixing is available through Pavucontrol from the bar. System sounds
+remain a preview for a later slice.
 
 Controls awaiting implementation are marked **Preview** and disabled. Their
 example values are not device readings, and they never apply changes. Those pages will

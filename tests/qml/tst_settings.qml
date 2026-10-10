@@ -16,7 +16,7 @@ TestCase {
         surfaceRaised: "#1c2940", surfaceHover: "#263955", surfacePressed: "#304563",
         text: "#e7edf7", textMuted: "#a1aec4", accentBright: "#67a6ff",
         accentSurface: "#1e3556", outline: "#33476a", divider: "#23314a",
-        warning: "#eab875", accent: "#67a6ff", fontFamily: "sans-serif", iconFontFamily: "sans-serif",
+        warning: "#eab875", critical: "#ff7777", accent: "#67a6ff", fontFamily: "sans-serif", iconFontFamily: "sans-serif",
         textSize: 13, smallTextSize: 12, microTextSize: 11, widgetRadius: 4, panelRadius: 14
     })
     QtObject {
