@@ -15,6 +15,7 @@ chmod +x "$test_root/bin/qs"
 export SETTINGS_TEST_LOG="$test_root/command"
 export SETTINGS_SYNC_STATE="$test_root/synced"
 export SETTINGS_DISPLAYS_STATE="$test_root/displays-state"
+export SETTINGS_BRIGHTNESS_DIR="$test_root/brightness-state"
 HOME="$test_root/home" PATH="$test_root/bin:$PATH" "$repository/bin/blankweave" settings
 printf 'ipc\n-n\n-p\n%s\ncall\nblankweave\nsettings\n' \
     "$test_root/home/.local/share/blankweave/quickshell" > "$test_root/expected"
@@ -33,7 +34,11 @@ fi
 HOME="$test_root/home" XDG_CONFIG_HOME="$test_root/home/.config" \
     XDG_RUNTIME_DIR="$test_root/runtime" QT_QPA_PLATFORM=offscreen \
     QT_QUICK_BACKEND=software /usr/lib/qt6/bin/qmltestrunner \
-    -input "$repository/tests/qml" -o -,txt
+    -input "$repository/tests/qml" -o -,txt > "$test_root/qml.log" 2>&1 || { cat "$test_root/qml.log"; exit 1; }
+cat "$test_root/qml.log"
+if grep -Eq '(TypeError|ReferenceError|Binding loop|Unable to assign|Failed to load)' "$test_root/qml.log"; then
+    exit 1
+fi
 mkdir -p "$test_root/backend/Services"
 cp "$repository/defaults/quickshell/Services/SettingsAppearance.qml" "$test_root/backend/Services/"
 cp "$repository/tests/quickshell/settings-backend.qml" "$test_root/backend/shell.qml"
@@ -70,6 +75,25 @@ fi
 printf 'DP-3 auto\nDP-3 1.25\nset DP-3 left\nset DP-3 below\nset DP-3 auto\n' > "$test_root/expected-displays"
 diff -u "$test_root/expected-displays" "$SETTINGS_DISPLAYS_STATE.commands"
 
+# Backlight/DDC state and slow hardware races use a separate fake device store.
+mkdir -p "$test_root/brightness/Services"
+cp "$repository/defaults/quickshell/Services/DisplayBrightness.qml" "$test_root/brightness/Services/"
+cp "$repository/tests/quickshell/settings-brightness.qml" "$test_root/brightness/shell.qml"
+cp "$repository/tests/fixtures/settings-brightness.sh" "$test_root/brightness/brightness.sh"
+if ! HOME="$test_root/home" XDG_CONFIG_HOME="$test_root/home/.config" \
+    XDG_RUNTIME_DIR="$test_root/runtime" QT_QPA_PLATFORM=offscreen \
+    QT_QUICK_BACKEND=software timeout 25 qs -p "$test_root/brightness" > "$test_root/brightness.log" 2>&1; then
+    cat "$test_root/brightness.log"
+    exit 1
+fi
+if ! grep -q SETTINGS_BRIGHTNESS_PASSED "$test_root/brightness.log" \
+    || grep -Eq '(TypeError|ReferenceError|Binding loop|Unable to assign|Failed to load)' "$test_root/brightness.log"; then
+    cat "$test_root/brightness.log"
+    exit 1
+fi
+printf 'eDP-1 63\neDP-1 64\neDP-1 5\neDP-1 100\neDP-1 55\neDP-1 65\nDP-3 45\neDP-1 70\n' > "$test_root/expected-brightness"
+diff -u "$test_root/expected-brightness" "$SETTINGS_BRIGHTNESS_DIR/commands"
+
 # Load the real native window in a separate shell with an isolated home. This
 # catches shell-only types and lifecycle errors that qmltestrunner cannot load.
 mkdir -p "$test_root/window" "$test_root/home/.local/share/blankweave/shell" \
@@ -79,6 +103,7 @@ cp "$repository/defaults/quickshell/Theme.qml" "$test_root/window/"
 cp "$repository/tests/quickshell/settings-window.qml" "$test_root/window/shell.qml"
 cp "$repository/tests/fixtures/settings-theme.sh" "$test_root/home/.local/share/blankweave/shell/theme-apply.sh"
 cp "$repository/tests/fixtures/settings-displays.sh" "$test_root/home/.local/share/blankweave/shell/monitor-layout.sh"
+cp "$repository/tests/fixtures/settings-brightness.sh" "$test_root/home/.local/share/blankweave/shell/brightness.sh"
 cp "$repository/defaults/themes/obsidian/theme.json" "$test_root/home/.local/share/blankweave/themes/obsidian/"
 if ! HOME="$test_root/home" XDG_CONFIG_HOME="$test_root/home/.config" \
     XDG_RUNTIME_DIR="$test_root/runtime" QT_QPA_PLATFORM=offscreen \

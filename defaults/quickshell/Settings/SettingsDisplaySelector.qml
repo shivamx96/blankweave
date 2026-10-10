@@ -33,7 +33,7 @@ ColumnLayout {
         theme: root.theme
         model: root.backend.monitors.map(row => root.backend.label(row))
         currentIndex: root.backend.monitors.findIndex(row => row.name === root.backend.selectedConnector)
-        enabled: root.backend.ready && !root.backend.busy
+        enabled: root.backend.ready && root.backend.canSelect
         Accessible.name: "Display"
         onActivated: index => {
             root.backend.selectDisplay(index)

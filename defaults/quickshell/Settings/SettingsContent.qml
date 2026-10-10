@@ -241,7 +241,7 @@ Rectangle {
                                 text: root.page && root.page.id === "appearance"
                                     ? "Theme, color mode, and bar changes apply immediately. Other controls are previews."
                                     : root.page && root.page.id === "displays" && root.displays
-                                    ? "Scaling and position apply immediately to the selected display and are saved for future sessions. Other controls are previews."
+                                    ? "Display changes apply immediately. Scaling and position are saved for future sessions. Other controls are previews."
                                     : "Preview — changes aren’t applied. These controls show what’s planned; values are examples, not your device’s status."
                                 color: root.theme.text
                                 font.family: root.theme.fontFamily

@@ -28,108 +28,165 @@ Item {
             ? "LG UltraFine 27UL850"
             : (reportedModel || connector || "Display"))
     readonly property string backendName: backend === "ddc" ? "DDC/CI" : "Hardware backlight"
-    readonly property bool available: percentage >= 0
+    readonly property bool available: confirmedPercentage >= 0
 
+    property string helper: shellDir + "/brightness.sh"
     property int percentage: -1
+    property int confirmedPercentage: -1
     property string backend: ""
+    property bool loaded: false
+    property bool reading: false
+    property bool applying: false
     property int pendingPercentage: -1
-    property int applyingPercentage: -1
-    property bool immediatePending: false
+    property int generation: 0
+    property int readGeneration: -1
+    property int applyGeneration: -1
+    property int verificationTarget: -1
+    property bool initialized: false
+    property string readError: ""
+    property string operationError: ""
+    readonly property string error: operationError || readError
+    readonly property bool busy: applying || pendingPercentage >= 0 || settleTimer.running || verificationTarget >= 0
 
     visible: false
     implicitWidth: 0
     implicitHeight: 0
 
+    function resetDisplay() {
+        generation++
+        applyTimer.stop()
+        settleTimer.stop()
+        pendingPercentage = -1
+        verificationTarget = -1
+        percentage = -1
+        confirmedPercentage = -1
+        backend = ""
+        loaded = false
+        readError = ""
+        operationError = ""
+        refresh()
+    }
+
     function queuePercentage(value) {
-        const next = Math.max(5, Math.min(100, Math.round(value)))
-        root.percentage = next
-        root.pendingPercentage = next
-        root.immediatePending = false
+        if (!active || !connector || !available || !Number.isFinite(value)) return
+        percentage = Math.max(5, Math.min(100, Math.round(value)))
+        pendingPercentage = percentage
+        operationError = ""
+        settleTimer.stop()
         applyTimer.restart()
     }
 
     function commitPercentage(value) {
-        const next = Math.max(5, Math.min(100, Math.round(value)))
-        root.percentage = next
-        root.pendingPercentage = next
-        root.immediatePending = true
+        queuePercentage(value)
         applyTimer.stop()
-        root.applyPending()
+        applyPending()
     }
 
     function applyPending() {
-        if (root.pendingPercentage < 0 || applyProcess.running)
-            return
-
-        root.applyingPercentage = root.pendingPercentage
-        root.immediatePending = false
-        applyProcess.command = [
-            root.shellDir + "/brightness.sh",
-            "set",
-            String(root.applyingPercentage),
-            root.connector
-        ]
+        if (reading || applying || pendingPercentage < 0 || !active || !connector) return
+        applyTimer.stop()
+        settleTimer.stop()
+        const wanted = pendingPercentage
+        pendingPercentage = -1
+        verificationTarget = wanted
+        applyGeneration = generation
+        applying = true
+        applyProcess.command = ["bash", helper, "set", String(wanted), connector]
         applyProcess.running = true
     }
 
     function refresh() {
-        poller.refresh()
+        if (!initialized || !active || !connector || reading || applying
+            || pendingPercentage >= 0 || settleTimer.running || held) return
+        readGeneration = generation
+        reading = true
+        readProcess.command = ["bash", helper, "status", connector]
+        readProcess.running = true
     }
 
+    Component.onCompleted: { initialized = true; resetDisplay() }
+    onConnectorChanged: if (initialized) resetDisplay()
     onActiveChanged: {
-        if (active)
-            poller.refresh()
-    }
-
-    ScriptPoller {
-        id: poller
-        // An empty command makes refresh() a no-op, so an inactive display is
-        // never read, not even by the poller's initial refresh.
-        command: root.active ? root.shellDir + "/brightness.sh status " + root.connector : ""
-        interval: root.active ? root.interval : 0
-        onUpdated: payload => {
-            if (!payload)
-                return
-
-            try {
-                const status = JSON.parse(payload)
-                const next = Number(status.percentage)
-                if (Number.isFinite(next) && !root.held && !applyTimer.running && !applyProcess.running)
-                    root.percentage = Math.round(next)
-                root.backend = String(status.backend || "")
-            } catch (error) {
-                root.percentage = -1
-                root.backend = ""
-            }
+        if (!initialized) return
+        if (active) refresh()
+        else {
+            // Leave an already running command tied to its captured connector,
+            // but discard a drag that has not yet reached the hardware.
+            applyTimer.stop()
+            settleTimer.stop()
+            pendingPercentage = -1
+            percentage = confirmedPercentage
         }
     }
+    onHeldChanged: if (!held) refresh()
 
     Timer {
+        interval: root.interval
+        running: root.active && root.connector !== ""
+        repeat: true
+        onTriggered: root.refresh()
+    }
+    Timer {
         id: applyTimer
-        interval: root.backend === "ddc" ? 100 : 30
+        interval: root.backend === "ddc" ? 150 : 50
         onTriggered: root.applyPending()
     }
-
     Process {
-        id: applyProcess
-
-        onExited: {
-            if (root.pendingPercentage !== root.applyingPercentage) {
-                if (root.immediatePending)
-                    Qt.callLater(root.applyPending)
-                else
-                    applyTimer.restart()
+        id: readProcess
+        stdout: StdioCollector { id: readOutput }
+        onExited: (exitCode, exitStatus) => {
+            root.reading = false
+            if (root.readGeneration === root.generation) {
+                root.loaded = true
+                try {
+                    if (exitCode !== 0 || exitStatus !== 0) throw new Error("Brightness read failed")
+                    const status = JSON.parse(readOutput.text)
+                    if (!Number.isFinite(status.percentage) || status.percentage < 0 || status.percentage > 100
+                        || !["backlight", "ddc"].includes(status.backend) || status.connector !== root.connector)
+                        throw new Error("Invalid brightness status")
+                    root.confirmedPercentage = Math.round(status.percentage)
+                    root.backend = status.backend
+                    root.readError = ""
+                    if (!root.held && root.pendingPercentage < 0) root.percentage = root.confirmedPercentage
+                    if (root.verificationTarget >= 0 && root.pendingPercentage < 0) {
+                        if (Math.abs(root.confirmedPercentage - root.verificationTarget) > 1)
+                            root.operationError = "The display reports " + root.confirmedPercentage
+                                + "% after requesting " + root.verificationTarget + "%. Try again."
+                        root.verificationTarget = -1
+                    }
+                } catch (error) {
+                    root.pendingPercentage = -1
+                    root.verificationTarget = -1
+                    applyTimer.stop()
+                    root.percentage = -1
+                    root.confirmedPercentage = -1
+                    root.backend = ""
+                    root.readError = root.internal
+                        ? "Brightness is unavailable for this display. Refresh to retry."
+                        : "Brightness is unavailable. Check the connection and enable DDC/CI in the monitor’s menu, then refresh."
+                }
             }
-            else {
-                root.immediatePending = false
-                settleTimer.restart()
-            }
+            if (root.pendingPercentage >= 0) Qt.callLater(root.applyPending)
+            else if (root.readGeneration !== root.generation) Qt.callLater(root.refresh)
         }
     }
-
+    Process {
+        id: applyProcess
+        onExited: (exitCode, exitStatus) => {
+            root.applying = false
+            if (root.applyGeneration === root.generation) {
+                if (exitCode !== 0 || exitStatus !== 0) {
+                    root.operationError = "Could not change brightness. Check the display connection and try again."
+                    root.verificationTarget = -1
+                }
+                if (root.pendingPercentage >= 0) Qt.callLater(root.applyPending)
+                else if (root.active) settleTimer.restart()
+            } else Qt.callLater(root.refresh)
+        }
+    }
     Timer {
         id: settleTimer
         interval: root.backend === "ddc" ? 900 : 300
-        onTriggered: poller.refresh()
+        onTriggered: { stop(); root.refresh() }
     }
 }

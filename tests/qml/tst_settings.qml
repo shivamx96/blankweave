@@ -16,7 +16,7 @@ TestCase {
         surfaceRaised: "#1c2940", surfaceHover: "#263955", surfacePressed: "#304563",
         text: "#e7edf7", textMuted: "#a1aec4", accentBright: "#67a6ff",
         accentSurface: "#1e3556", outline: "#33476a", divider: "#23314a",
-        warning: "#eab875", fontFamily: "sans-serif", iconFontFamily: "sans-serif",
+        warning: "#eab875", accent: "#67a6ff", fontFamily: "sans-serif", iconFontFamily: "sans-serif",
         textSize: 13, smallTextSize: 12, microTextSize: 11, widgetRadius: 4, panelRadius: 14
     })
     QtObject {
@@ -61,13 +61,28 @@ TestCase {
         property int selected: 2
         property int selectedPosition: 0
         property string lastSetting: ""
+        property bool canSelect: !busy
+        property bool brightnessAvailable: true
+        property bool brightnessHeld: false
+        property real brightnessValue: 60
         function label(row) { return row.name }
         function selectDisplay(index) { selectedConnector = monitors[index].name }
-        function canApply(id) { return id !== "arrangement" || (selectedConnector === "DP-3" && monitors.length > 1) }
+        function canApply(id) {
+            if (id === "brightness") return brightnessAvailable
+            return id !== "arrangement" || (selectedConnector === "DP-3" && monitors.length > 1)
+        }
         function description(id) { return id === "arrangement" && !canApply(id) ? "Select an external display." : "" }
         function choices(id) { return id === "arrangement" ? ["Automatic", "Left", "Right", "Above", "Below"] : ["Automatic", "100%", "150%"] }
         function selection(id) { return id === "arrangement" ? selectedPosition : selected }
-        function apply(id, index) { writes++; lastSetting = id; if (id === "arrangement") selectedPosition = index; else selected = index }
+        function value(id) { return brightnessAvailable ? brightnessValue : -1 }
+        function adjust(id, value) { writes++; lastSetting = id; brightnessValue = value }
+        function hold(id, pressed) { brightnessHeld = pressed }
+        function apply(id, index) {
+            writes++; lastSetting = id
+            if (id === "arrangement") selectedPosition = index
+            else if (id === "brightness") brightnessValue = index
+            else selected = index
+        }
         function refresh() { }
     }
     SignalSpy { id: closeSpy; target: content; signalName: "closeRequested" }
@@ -96,6 +111,9 @@ TestCase {
         fakeDisplays.writes = 0
         fakeDisplays.selectedPosition = 0
         fakeDisplays.lastSetting = ""
+        fakeDisplays.brightnessAvailable = true
+        fakeDisplays.brightnessHeld = false
+        fakeDisplays.brightnessValue = 60
     }
 
     function test_search_and_empty_state() {
@@ -156,6 +174,38 @@ TestCase {
         verify(!position.enabled)
         verify(scale.enabled)
         compare(fakeDisplays.writes, 1)
+    }
+
+    function test_brightness_slider_keyboard_and_availability() {
+        content.selectedPage = "displays"
+        wait(20)
+        var slider = findChild(content, "settingsSlider_brightness")
+        verify(slider !== null && slider.enabled)
+        compare(slider.value, 60)
+        slider.forceActiveFocus()
+        keyClick(Qt.Key_Right)
+        compare(fakeDisplays.lastSetting, "brightness")
+        compare(fakeDisplays.brightnessValue, 61)
+        fakeDisplays.brightnessValue = 35
+        compare(slider.value, 35)
+        fakeDisplays.brightnessAvailable = false
+        verify(!slider.enabled)
+        var writes = fakeDisplays.writes
+        keyClick(Qt.Key_Right)
+        compare(fakeDisplays.writes, writes)
+    }
+
+    function test_brightness_drag_releases_backend_on_page_change() {
+        content.selectedPage = "displays"
+        wait(20)
+        var slider = findChild(content, "settingsSlider_brightness")
+        mousePress(slider, slider.width / 2, slider.height / 2)
+        verify(fakeDisplays.brightnessHeld)
+        content.selectedPage = "appearance"
+        wait(20)
+        verify(!fakeDisplays.brightnessHeld)
+        mouseRelease(content, 10, 10)
+        compare(fakeBackend.writes, 0)
     }
 
     function test_pages_at_narrow_width() {
