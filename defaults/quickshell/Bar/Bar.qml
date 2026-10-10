@@ -258,7 +258,7 @@ PanelWindow {
 
             BrightnessWidget { bar: root; theme: root.theme; iconOnly: true }
             AudioWidget { bar: root; theme: root.theme; iconOnly: true }
-            BluetoothWidget { bar: root; theme: root.theme; iconOnly: true }
+            BluetoothWidget { bar: root; theme: root.theme; bluetooth: root.shell.bluetooth; iconOnly: true }
             NetworkWidget { bar: root; theme: root.theme; wifi: root.shell.wifi; iconOnly: true }
             NotificationWidget { bar: root; theme: root.theme }
             BatteryWidget { bar: root; theme: root.theme; iconOnly: true }

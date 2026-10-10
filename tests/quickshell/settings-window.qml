@@ -19,7 +19,13 @@ ShellRoot {
         property QtObject devices: QtObject { property var values: [] }
     }
     NetworkWifi { id: wifi; provider: networkProvider }
-    SettingsWindow { id: settings; theme: desktopTheme; preferences: preferences; sound: audio; voice: voice; wifi: wifi }
+    QtObject {
+        id: bluetoothProvider
+        property var defaultAdapter: null
+        property QtObject devices: QtObject { property var values: [] }
+    }
+    BluetoothService { id: bluetooth; provider: bluetoothProvider }
+    SettingsWindow { id: settings; theme: desktopTheme; preferences: preferences; sound: audio; voice: voice; wifi: wifi; bluetooth: bluetooth }
     Timer {
         interval: 200
         running: true
@@ -48,16 +54,16 @@ ShellRoot {
             } else if (root.step === 6) {
                 settings.selectedPage = "network"; settings.openSettings()
             } else if (root.step === 7) {
-                if (wifi.scanOwners.length !== 1 || !wifi.profilesActive) { console.error("Wi-Fi not active on Network page"); Qt.quit(); return }
+                if (wifi.scanOwners.length !== 1 || !wifi.profilesActive || !bluetooth.settingsActive) { console.error("Wi-Fi not active on Network page"); Qt.quit(); return }
                 settings.selectedPage = "appearance"
             } else if (root.step === 8) {
-                if (wifi.scanOwners.length || wifi.profilesActive) { console.error("Wi-Fi active outside Network page"); Qt.quit(); return }
+                if (wifi.scanOwners.length || wifi.profilesActive || bluetooth.settingsActive || bluetooth.scanOwners.length) { console.error("Wi-Fi active outside Network page"); Qt.quit(); return }
                 settings.selectedPage = "network"; settings.minimized = true
             } else if (root.step === 9) {
-                if (wifi.scanOwners.length || wifi.profilesActive) { console.error("Wi-Fi active while minimized"); Qt.quit(); return }
+                if (wifi.scanOwners.length || wifi.profilesActive || bluetooth.settingsActive || bluetooth.scanOwners.length) { console.error("Wi-Fi active while minimized"); Qt.quit(); return }
                 settings.minimized = false; settings.visible = false
             } else {
-                if (wifi.scanOwners.length || wifi.profilesActive) { console.error("Wi-Fi active while hidden"); Qt.quit(); return }
+                if (wifi.scanOwners.length || wifi.profilesActive || bluetooth.settingsActive || bluetooth.scanOwners.length) { console.error("Wi-Fi active while hidden"); Qt.quit(); return }
                 if (audio.microphone.active) { console.error("Microphone meter requested while hidden"); Qt.quit(); return }
                 console.log("SETTINGS_WINDOW_PASSED")
                 Qt.quit()

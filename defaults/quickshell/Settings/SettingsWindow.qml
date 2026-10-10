@@ -9,6 +9,8 @@ FloatingWindow {
     property var sound: null
     property var voice: null
     property var wifi: null
+    property var bluetooth: null
+    Binding { target: root.bluetooth; property: "settingsActive"; value: root.wifiActive; when: root.bluetooth !== null }
     readonly property bool wifiActive: visible && !minimized && content.page !== null && content.page.id === "network"
     onWifiActiveChanged: if (wifi) wifi.setScanRequest(root, wifiActive)
     Component.onDestruction: if (wifi) wifi.setScanRequest(root, false)
@@ -71,6 +73,7 @@ FloatingWindow {
         sound: root.sound
         voice: root.voice
         wifi: root.wifi
+        bluetooth: root.bluetooth
         systemSounds: systemSoundsBackend
         onCloseRequested: root.visible = false
     }

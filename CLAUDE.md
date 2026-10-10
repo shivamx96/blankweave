@@ -374,13 +374,22 @@ hotplug and a bar's `screen` is cleared before the bar is destroyed, so guard
 against a null screen in anything derived from it. The display panel also owns
 the global dark/light toggle as an inline header action.
 
-Bluetooth uses Quickshell's native BlueZ model for live state, but device rows
+Bluetooth uses one shell-owned `BluetoothService` and Quickshell's native BlueZ
+model for live state, but device rows
 must contain primitive snapshots rather than `BluetoothDevice` objects because
 discovery can invalidate those objects while delegates are incubating. Resolve
-actions back to a live device by address. A panel-owned discovery session must
-also be stopped after close so scanning cannot degrade Bluetooth audio. Power
+actions back to a live device by its BlueZ path and adapter. Discovery is shared
+by requesting views and must stop after the last closes, including delayed
+start replies, so scanning cannot degrade Bluetooth audio. Power
 changes go through `bluetooth-power.sh` for rfkill persistence, and successful
 audio-device connections become the preferred PipeWire output.
+`bluetooth-action.py` performs device-scoped D-Bus actions and reports results
+instead of swallowing failures. Its temporary pairing agent serves only the
+requested device and BlueZ sender; it never becomes the system default agent.
+Pairing prompts and replies use JSON over stdout/stdin, with request identities
+to reject stale replies. Closing the originating view cancels pairing. Keep
+tests on a private D-Bus with fake BlueZ, or inject native fixture providers;
+never pair, remove, power off, or disconnect a real device during validation.
 
 Network controls share one `NetworkWifi` service owned by `shell.qml`, backed
 by Quickshell's native NetworkManager model. As with
