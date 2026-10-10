@@ -120,6 +120,24 @@ if ! grep -q SETTINGS_WIFI_PASSED "$test_root/wifi.log" \
     exit 1
 fi
 
+# Bluetooth uses fake BlueZ objects and a JSON helper, never host pairing or rfkill.
+mkdir -p "$test_root/bluetooth"
+cp -R "$repository/defaults/quickshell/"{Services,Settings,Components,Assets,Modules} "$test_root/bluetooth/"
+cp "$repository/defaults/quickshell/Theme.qml" "$test_root/bluetooth/"
+cp "$repository/tests/quickshell/settings-bluetooth.qml" "$test_root/bluetooth/shell.qml"
+cp "$repository/tests/fixtures/settings-bluetooth.py" "$test_root/bluetooth/action.py"
+if ! HOME="$test_root/home" XDG_CONFIG_HOME="$test_root/home/.config" \
+    XDG_RUNTIME_DIR="$test_root/runtime" QT_QPA_PLATFORM=offscreen \
+    QT_QUICK_BACKEND=software timeout 15 qs -p "$test_root/bluetooth" > "$test_root/bluetooth.log" 2>&1; then
+    cat "$test_root/bluetooth.log"
+    exit 1
+fi
+if ! grep -q SETTINGS_BLUETOOTH_PASSED "$test_root/bluetooth.log" \
+    || grep -Eq '(TypeError|ReferenceError|Binding loop|Unable to assign|Failed to load|Error:)' "$test_root/bluetooth.log"; then
+    cat "$test_root/bluetooth.log"
+    exit 1
+fi
+
 # Exercise monitor discovery and mutations with a fixture, never the real compositor.
 mkdir -p "$test_root/displays/Services"
 cp "$repository/defaults/quickshell/Services/SettingsDisplays.qml" "$test_root/displays/Services/"

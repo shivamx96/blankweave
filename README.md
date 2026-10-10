@@ -387,8 +387,15 @@ connections, or disconnect. Saved profiles include networks that are out of
 range; forgetting one requires confirmation and is disabled while it is active.
 New enterprise/certificate and hidden-network setup remains in a NetworkManager
 connection editor. The bar and Settings share Wi-Fi state and scan ownership;
-scanning stops when the last requesting view closes. Bluetooth and the other
-network rows remain previews for subsequent slices.
+scanning stops when the last requesting view closes.
+
+**Bluetooth devices** discovers nearby accessories, pairs and connects them,
+shows connection and battery state, and disconnects or forgets saved devices.
+Pairing supports confirmation codes, PIN entry, and codes to type on a keyboard;
+closing the initiating view cancels an unfinished pairing request. The bar and
+Settings share discovery and actions, and report command failures. Bluetooth
+audio connections select the matching sound output. Ethernet/DNS, airplane mode,
+and hotspot remain previews for subsequent slices.
 
 Controls awaiting implementation are marked **Preview** and disabled. Their
 example values are not device readings, and they never apply changes. Those pages will

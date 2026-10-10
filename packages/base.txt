@@ -27,6 +27,7 @@ curl
 jq
 util-linux
 python
+python-gobject
 diffutils
 awww
 ttf-roboto
