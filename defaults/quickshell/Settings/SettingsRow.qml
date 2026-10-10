@@ -112,14 +112,6 @@ Item {
                     }
                 }
                 Component.onDestruction: if (dragBackend) dragBackend.hold(root.setting.id, false)
-                Rectangle {
-                    anchors.fill: parent
-                    anchors.margins: -3
-                    color: "transparent"
-                    radius: root.theme.widgetRadius
-                    border.width: slider.activeFocus ? 1 : 0
-                    border.color: root.theme.accentBright
-                }
             }
             Text {
                 Layout.preferredWidth: 38
