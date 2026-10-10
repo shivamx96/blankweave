@@ -693,6 +693,22 @@ scale and position changes. The confirmation controls stay visible by scrolling
 to the top of the page; leaving Displays requests an early revert. Test this
 lifecycle with `tests/monitor-modes.sh` against a fake compositor.
 
+`monitor-setups.py` is the monitor helper’s internal layout module; invoke it
+through `monitor-layout.sh`, which owns the shared writer lock and watchdog.
+It normalizes compositor mirror IDs to connectors using `monitors all`, renders
+validated Lua rules, and stores named snapshots in `monitor-setups.json`.
+Snapshots include active modes, numeric scales, coordinates, rotation, and
+mirror sources by display description. Restoring requires the same connected
+displays and supported modes. Missing hardware is explained in the saved-setup
+list. Mirroring and setup restore share the mode preview token/countdown and
+confirm/revert commands, but restore the whole previous layout on cancellation.
+Read back geometry and mirror relationships before confirmation. Mirroring
+only persists the selected output; a setup restore persists the entire snapshot.
+Mirrored outputs remain selectable for brightness and extending, while their
+independent mode/scale/position controls are disabled. Never permit mirror chains
+or a source to mirror one of its own outputs. `tests/monitor-setups.sh` exercises
+these paths with an isolated, stateful compositor fixture.
+
 Settings reuses `DisplayBrightness` for the selected monitor, active only on the
 visible Displays page. Its captured connector/generation isolates slow reads
 and writes from later selections. It coalesces slider requests, cancels queued
