@@ -7,12 +7,16 @@ ShellRoot {
     id: test
     property int step: 0
     property bool queuePlacement: false
+    property bool activateAfterScenario: false
     readonly property string fixture: Qt.resolvedUrl("displays.sh").toString().replace("file://", "")
     SettingsDisplays { id: backend; helper: test.fixture }
     Process {
         id: scenario
         onExited: {
-            backend.refresh()
+            if (test.activateAfterScenario) {
+                test.activateAfterScenario = false
+                backend.active = true
+            } else backend.refresh()
             if (test.queuePlacement) {
                 test.queuePlacement = false
                 backend.apply("arrangement", 1)
@@ -137,7 +141,8 @@ ShellRoot {
                 case 16:
                     test.check(!backend.ready && backend.readError.length > 0, "Missing helper accepted")
                     backend.helper = test.fixture
-                    backend.active = true
+                    // Restore the fixture before activation starts its first read.
+                    test.activateAfterScenario = true
                     test.setScenario("initial")
                     break
                 case 17:

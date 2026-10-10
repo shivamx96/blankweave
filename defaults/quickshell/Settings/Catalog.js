@@ -45,7 +45,7 @@ var pages = [
     ] },
     { id: "network", title: "Network & Bluetooth", icon: "󰖩", description: "Connect to networks and nearby devices.", groups: [
         { title: "Connections", rows: [
-            { id: "wifi", title: "Wi-Fi", description: "Discover networks and manage saved connections.", kind: "action", action: "Manage" },
+            { id: "wifi", title: "Wi-Fi", description: "Connect to nearby networks and manage saved connections.", kind: "wifi", live: true },
             { id: "ethernet", title: "Ethernet, DNS & proxy", description: "Configure wired connections and network settings.", kind: "action", action: "Configure" },
             { id: "bluetooth", title: "Bluetooth devices", description: "Pair, connect, and forget accessories.", kind: "action", action: "Manage devices" },
             { id: "airplane", title: "Airplane mode", description: "Turn off wireless radios.", kind: "toggle" }

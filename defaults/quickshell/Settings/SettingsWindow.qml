@@ -8,6 +8,11 @@ FloatingWindow {
     required property var preferences
     property var sound: null
     property var voice: null
+    property var wifi: null
+    readonly property bool wifiActive: visible && !minimized && content.page !== null && content.page.id === "network"
+    onWifiActiveChanged: if (wifi) wifi.setScanRequest(root, wifiActive)
+    Component.onDestruction: if (wifi) wifi.setScanRequest(root, false)
+    Binding { target: root.wifi; property: "profilesActive"; value: root.wifiActive; when: root.wifi !== null }
     property alias selectedPage: content.selectedPage
     visible: false
     title: "Blankweave Settings"
@@ -65,6 +70,7 @@ FloatingWindow {
         displays: displaysBackend
         sound: root.sound
         voice: root.voice
+        wifi: root.wifi
         systemSounds: systemSoundsBackend
         onCloseRequested: root.visible = false
     }
