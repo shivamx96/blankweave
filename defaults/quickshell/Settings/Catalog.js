@@ -36,8 +36,7 @@ var pages = [
     { id: "sound", title: "Sound", icon: "󰕾", description: "Your speakers, microphone, and applications.", groups: [
         { title: "Playback & recording", rows: [
             { id: "output", title: "Output device & volume", description: "Choose the default playback device and adjust its volume.", kind: "sound-output", live: true },
-            { id: "input", title: "Microphone & input level", description: "Select a microphone and check its recording level.", kind: "action", action: "Choose input" },
-            { id: "mic-mute", title: "Mute microphone", description: "Stop audio input from the selected microphone.", kind: "toggle" },
+            { id: "input", title: "Microphone & input level", description: "Choose a microphone, adjust gain or mute it, and check its signal.", kind: "sound-input", live: true },
             { id: "app-volume", title: "Application volume", description: "Control playback volume for individual apps.", kind: "action", action: "Open mixer" }
         ] },
         { title: "Voice", rows: [

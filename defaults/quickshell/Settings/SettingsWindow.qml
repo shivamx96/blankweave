@@ -45,6 +45,13 @@ FloatingWindow {
         active: displaysBackend.active && displaysBackend.monitor !== null
     }
 
+    Binding {
+        target: root.sound ? root.sound.microphone : null
+        property: "active"
+        value: root.visible && !root.minimized && content.page !== null && content.page.id === "sound"
+        when: root.sound !== null && Boolean(root.sound.microphone)
+    }
+
     SettingsContent {
         id: content
         anchors.fill: parent

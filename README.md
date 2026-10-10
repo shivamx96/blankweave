@@ -357,8 +357,14 @@ Sound provides live output selection, volume (0–150%), and mute. It shares
 PipeWire state with the bar and follows changes from media keys or other mixers.
 The selector shows the output actually in use; a preferred device that has not
 become active is reported separately. Device removal cancels an in-progress
-volume drag so it cannot change a different output. Microphone and per-app
-controls are still previews.
+volume drag so it cannot change a different output.
+
+Microphone controls select the default input, adjust gain (0–150%), and mute or
+unmute it. The live signal meter runs only while the microphone controls are
+shown in Settings, and stops when muted, minimized, closed, or on another page.
+It measures the signal before software gain; it does not save audio. Input
+selection and gain follow the same hotplug safeguards as output controls.
+Per-app controls are still previews.
 
 Controls awaiting implementation are marked **Preview** and disabled. Their
 example values are not device readings, and they never apply changes. Those pages will
