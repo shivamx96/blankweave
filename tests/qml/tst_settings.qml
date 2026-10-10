@@ -53,6 +53,11 @@ TestCase {
         property bool busy: false
         property bool loaded: true
         property string error: ""
+        property var presets: []
+        property string lastPreset: ""
+        function savePreset(name) { lastPreset = "save:" + name }
+        function restorePreset(id) { lastPreset = "restore:" + id }
+        function deletePreset(id) { lastPreset = "delete:" + id }
         property var monitors: [{ name: "eDP-1" }, { name: "DP-3" }]
         property string selectedConnector: "eDP-1"
         property string details: "2880 × 1800 · Active scale 150%"
@@ -122,6 +127,8 @@ TestCase {
         fakeDisplays.brightnessValue = 60
         fakeDisplays.previewPending = false
         fakeDisplays.previewDecision = -1
+        fakeDisplays.presets = []
+        fakeDisplays.lastPreset = ""
     }
 
     function test_search_and_empty_state() {
@@ -297,6 +304,36 @@ TestCase {
             theme: test.palette
             model: ["Dark", "Light"]
         }
+    }
+
+    function test_saved_setup_controls() {
+        content.selectedPage = "displays"
+        wait(0)
+        var field = findChild(content, "displaySetupName")
+        var save = findChild(content, "saveDisplaySetup")
+        verify(!save.enabled)
+        field.text = "Desk"
+        verify(save.enabled)
+        save.clicked()
+        compare(fakeDisplays.lastPreset, "save:Desk")
+        fakeDisplays.presets = [{id:"desk",name:"Desk",available:false,reason:"Connect both displays",summary:"2 displays"}]
+        wait(0)
+        var restore = findChild(content, "restoreDisplaySetup_desk")
+        var remove = findChild(content, "deleteDisplaySetup_desk")
+        verify(!restore.enabled && remove.enabled)
+        remove.clicked()
+        compare(fakeDisplays.lastPreset, "save:Desk")
+        compare(remove.text, "Confirm delete")
+        remove.clicked()
+        compare(fakeDisplays.lastPreset, "delete:desk")
+        fakeDisplays.presets = [{id:"desk",name:"Desk",available:true,reason:"",summary:"2 displays"}]
+        wait(0)
+        restore = findChild(content, "restoreDisplaySetup_desk")
+        verify(restore.enabled)
+        restore.clicked()
+        compare(fakeDisplays.lastPreset, "restore:desk")
+        fakeDisplays.busy = true
+        verify(!save.enabled && !restore.enabled)
     }
 
     function test_display_mode_confirmation() {

@@ -12,12 +12,13 @@ case "$1" in
             offline) exit 1 ;;
             empty) printf '{"monitors":[]}' ;;
             *)
-                jq -cn --argjson preview "$(cat "$state.preview" 2>/dev/null || printf null)" --arg scenario "$scenario" '
-                {name:"eDP-1",description:"Laptop",internal:true,width:2880,height:1800,x:0,y:0,position:"auto",
+                jq -cn --argjson presets "$(cat "$state.presets" 2>/dev/null || printf '[]')" --argjson preview "$(cat "$state.preview" 2>/dev/null || printf null)" --arg scenario "$scenario" '
+                {name:"eDP-1",description:"Laptop",mirrorConnector:"",internal:true,width:2880,height:1800,x:0,y:0,position:"auto",
                     refreshRate:90,modeOptions:["2880x1800@60.00","2880x1800@90.00"],scale:1.5,effectiveScale:1.5,scaleOptions:[1,1.25,1.5,2]} as $internal |
-                {name:"DP-3",description:"External",internal:false,width:3840,height:2160,x:1920,y:0,position:"auto",
+                {name:"DP-3",description:"External",mirrorConnector:"",internal:false,width:3840,height:2160,x:1920,y:0,position:"auto",
                     scale:1.5,effectiveScale:1.5,scaleOptions:[1,1.25,1.5,2]} as $external |
-                {preview:$preview,monitors: (if $scenario == "reordered" then [$external,$internal]
+                {presets:$presets,preview:$preview,monitors: (if $scenario == "reordered" then [$external,$internal]
+                    elif $scenario == "mirrored" then [$internal,($external + {mirrorConnector:"eDP-1",x:0})]
                     elif $scenario == "mode60" then [($internal + {refreshRate:60}),$external]
                     elif $scenario == "unplugged" then [$internal]
                     elif $scenario == "auto" then [$internal,($external + {scale:"auto",effectiveScale:2})]
@@ -31,6 +32,20 @@ case "$1" in
                     else [$internal,$external] end)}'
                 ;;
         esac
+        ;;
+    preset-save)
+        printf 'preset-save %s\n' "$2" >> "$state.commands"
+        jq -cn --arg name "$2" '[{id:"desk",name:$name,available:true,reason:"",summary:"2 displays"}]' > "$state.presets"
+        ;;
+    preset-delete)
+        printf 'preset-delete %s\n' "$2" >> "$state.commands"
+        rm -f "$state.presets"
+        ;;
+    mirror-preview|preset-preview)
+        printf '%s %s%s\n' "$1" "$2" "${3:+ $3}" >> "$state.commands"
+        jq -n --argjson deadline "$(( $(date +%s) + 20 ))" \
+            '{token:"test-token",kind:"layout",label:"Mirror or restore setup",connector:"",mode:"",deadline:$deadline}' > "$state.preview"
+        printf mirrored > "$state"
         ;;
     mode-preview)
         printf 'mode-preview %s %s\n' "$2" "$3" >> "$state.commands"

@@ -24,7 +24,7 @@ Item {
     GridLayout {
         id: content
         anchors { left: parent.left; right: parent.right; verticalCenter: parent.verticalCenter; margins: 18 }
-        columns: root.compact ? 1 : 2
+        columns: root.compact || root.setting.kind === "presets" ? 1 : 2
         rowSpacing: 12
         columnSpacing: 20
 
@@ -52,14 +52,23 @@ Item {
         }
 
         Loader {
-            Layout.preferredWidth: root.compact ? Math.min(240, content.width) : 190
-            Layout.preferredHeight: 36
-            sourceComponent: root.setting.kind === "choice" ? choiceControl
+            Layout.fillWidth: root.setting.kind === "presets"
+            Layout.preferredWidth: root.setting.kind === "presets" ? content.width : root.compact ? Math.min(240, content.width) : 190
+            Layout.preferredHeight: root.setting.kind === "presets" && item ? (item as Item).implicitHeight : 36
+            sourceComponent: root.setting.kind === "presets" ? presetsControl
+                : root.setting.kind === "choice" ? choiceControl
                 : root.setting.kind === "slider" ? sliderControl
                 : root.setting.kind === "toggle" ? toggleControl : actionControl
         }
     }
 
+    Component {
+        id: presetsControl
+        SettingsDisplayPresets {
+            theme: root.theme
+            backend: root.backend
+        }
+    }
     Component {
         id: choiceControl
         SettingsComboBox {

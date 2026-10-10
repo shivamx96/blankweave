@@ -24,12 +24,12 @@ var pages = [
             { id: "scale", title: "Scaling", description: "Change the size of text and applications on the selected display.", kind: "choice", options: [], live: true },
             { id: "brightness", title: "Brightness", description: "Adjust the selected display’s brightness.", kind: "slider", minimum: 5, maximum: 100, live: true },
             { id: "arrangement", title: "Saved display position", description: "Place an external display left, right, above, or below the existing desktop layout.", kind: "choice", options: [], live: true },
-            { id: "mirroring", title: "Mirror displays", description: "Show the same content on multiple displays.", kind: "action", action: "Configure" },
+            { id: "mirroring", title: "Mirror displays", description: "Show the same content on multiple displays.", kind: "choice", live: true },
             { id: "resolution", title: "Resolution & refresh rate", description: "Choose a supported mode for each display.", kind: "choice", live: true }
         ] },
         { title: "Comfort & presets", rows: [
             { id: "night-light", title: "Night light", description: "Use warmer colors on a schedule.", kind: "toggle" },
-            { id: "display-presets", title: "Saved monitor setups", description: "Restore desk, laptop, and presentation layouts.", kind: "action", action: "Manage presets" },
+            { id: "display-presets", title: "Saved monitor setups", description: "Save modes, scaling, positions, and mirroring. Restore with the same displays connected.", kind: "presets", live: true },
             { id: "color-profile", title: "Color profiles", description: "Manage display color calibration.", kind: "action", action: "Manage" }
         ] }
     ] },

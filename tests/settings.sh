@@ -72,7 +72,7 @@ if ! grep -q SETTINGS_DISPLAYS_PASSED "$test_root/displays.log" \
     cat "$test_root/displays.log"
     exit 1
 fi
-printf 'DP-3 auto\nDP-3 1.25\nset DP-3 left\nset DP-3 below\nset DP-3 auto\nmode-preview eDP-1 2880x1800@60.00\nmode-confirm test-token\nmode-preview eDP-1 2880x1800@90.00\nmode-revert test-token\n' > "$test_root/expected-displays"
+printf 'DP-3 auto\nDP-3 1.25\nset DP-3 left\nset DP-3 below\nset DP-3 auto\nmode-preview eDP-1 2880x1800@60.00\nmode-confirm test-token\nmode-preview eDP-1 2880x1800@90.00\nmode-revert test-token\nmirror-preview DP-3 eDP-1\nmode-confirm test-token\npreset-save Presentation\npreset-preview desk\nmode-revert test-token\npreset-delete desk\n' > "$test_root/expected-displays"
 diff -u "$test_root/expected-displays" "$SETTINGS_DISPLAYS_STATE.commands"
 
 # Backlight/DDC state and slow hardware races use a separate fake device store.

@@ -164,6 +164,39 @@ ShellRoot {
                     break
                 case 21:
                     test.check(!backend.previewPending && !backend.error, "Hiding Settings did not revert the preview")
+                    backend.active = true
+                    test.setScenario("initial")
+                    break
+                case 22:
+                    backend.selectDisplay(1)
+                    test.check(backend.choices("mirroring").join() === "Extend desktop,Mirror eDP-1", "Wrong mirror choices")
+                    backend.apply("mirroring", 1)
+                    break
+                case 23:
+                    test.check(backend.previewPending && backend.previewMessage.includes("Mirror or restore"), "Mirror confirmation missing")
+                    backend.finishPreview(true)
+                    break
+                case 24:
+                    test.check(backend.mirrored && backend.selection("mirroring") === 1, "Mirrored monitor disappeared")
+                    test.check(!backend.canApply("scale") && !backend.canApply("resolution") && !backend.canApply("arrangement"), "Mirrored geometry controls enabled")
+                    backend.savePreset("Presentation")
+                    break
+                case 25:
+                    test.check(backend.presets.length === 1 && backend.presets[0].name === "Presentation", "Setup was not saved")
+                    backend.restorePreset("missing")
+                    test.check(!backend.applying, "Missing preset restored")
+                    backend.restorePreset("desk")
+                    break
+                case 26:
+                    test.check(backend.previewPending, "Setup was not previewed")
+                    backend.finishPreview(false)
+                    break
+                case 27:
+                    test.check(!backend.previewPending, "Setup revert did not finish")
+                    backend.deletePreset("desk")
+                    break
+                case 28:
+                    test.check(backend.presets.length === 0, "Deleted setup remains")
                     console.log("SETTINGS_DISPLAYS_PASSED")
                     Qt.quit()
                     break
