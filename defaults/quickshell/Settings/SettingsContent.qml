@@ -171,6 +171,11 @@ Rectangle {
                                 spacing: 12
                                 Text {
                                     Layout.leftMargin: 8
+                                    Layout.preferredWidth: 20
+                                    Layout.minimumWidth: 20
+                                    Layout.maximumWidth: 20
+                                    Layout.alignment: Qt.AlignVCenter
+                                    horizontalAlignment: Text.AlignHCenter
                                     text: category.modelData.icon
                                     color: category.selected ? root.theme.accentBright : root.theme.textMuted
                                     font.family: root.theme.iconFontFamily
@@ -178,6 +183,7 @@ Rectangle {
                                 }
                                 Text {
                                     Layout.fillWidth: true
+                                    Layout.alignment: Qt.AlignVCenter
                                     text: category.text
                                     color: category.selected ? root.theme.accentBright : root.theme.text
                                     font.family: root.theme.fontFamily
