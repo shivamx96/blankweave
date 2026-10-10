@@ -668,6 +668,15 @@ row control types when their functionality becomes available. Settings tests
 run through `tests/settings.sh`, using offscreen Qt tests and isolated Quickshell
 processes so validation cannot modify the developer's desktop.
 
+`Services/SettingsDisplays.qml` reads connected monitors through
+`monitor-layout.sh status` while the Displays page is visible and refreshes
+after every scale command. That helper remains the sole monitor-config writer.
+Selection follows connector identity across refreshed lists; the helper persists
+choices by display description. Numeric scale controls show the compositor's
+effective scale, with a separate notice when a saved preference differs. Empty,
+unreachable, and malformed status disable writes. Keep backend tests isolated
+from the real compositor using `tests/fixtures/settings-displays.sh`.
+
 System appearance is an explicit Settings action. It uses `pkexec` with the
 root-owned `/usr/lib/blankweave/theme-system` installed by `install.sh`, never a
 user-writable script. Its polkit action requires administrator authentication

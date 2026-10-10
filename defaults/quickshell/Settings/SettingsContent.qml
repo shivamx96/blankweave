@@ -9,6 +9,7 @@ Rectangle {
     id: root
     required property var theme
     required property var appearance
+    property var displays: null
     property string selectedPage: "appearance"
     readonly property var results: Catalog.search(search.text)
     readonly property var page: results.find(entry => entry.id === selectedPage) || results[0] || null
@@ -239,6 +240,8 @@ Rectangle {
                                 anchors { fill: parent; margins: 14 }
                                 text: root.page && root.page.id === "appearance"
                                     ? "Theme, color mode, and bar changes apply immediately. Other controls are previews."
+                                    : root.page && root.page.id === "displays" && root.displays
+                                    ? "Scaling applies immediately to the selected display and is saved for future sessions. Other controls are previews."
                                     : "Preview — changes aren’t applied. These controls show what’s planned; values are examples, not your device’s status."
                                 color: root.theme.text
                                 font.family: root.theme.fontFamily
@@ -325,6 +328,18 @@ Rectangle {
                             }
                         }
 
+                        Loader {
+                            Layout.fillWidth: true
+                            active: root.page !== null && root.page.id === "displays" && root.displays !== null
+                            visible: active
+                            sourceComponent: Component {
+                                SettingsDisplaySelector {
+                                    theme: root.theme
+                                    backend: root.displays
+                                }
+                            }
+                        }
+
                         Repeater {
                             model: root.page ? root.page.groups : []
                             delegate: ColumnLayout {
@@ -367,7 +382,8 @@ Rectangle {
                                                     Layout.fillWidth: true
                                                     theme: root.theme
                                                     setting: settingGroup.modelData
-                                                    backend: root.page && root.page.id === "appearance" ? root.appearance : null
+                                                    backend: root.page && root.page.id === "appearance" ? root.appearance
+                                                        : root.page && root.page.id === "displays" ? root.displays : null
                                                 }
                                             }
                                         }

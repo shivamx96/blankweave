@@ -336,6 +336,12 @@ changes pending; failures can be retried. Settings checks the installed state
 before confirming completion. This action becomes available after the installer
 deploys its system helper; `blankweave theme sync` remains available in a terminal.
 
+Displays lists connected monitors and lets you choose a supported scale or
+Automatic for each one. It shows the active scale and display resolution,
+keeps changes made from the bar in sync, and saves choices through the existing
+monitor configuration. A saved choice that differs from the active scale is
+reported separately, including after a failed apply.
+
 All other controls are visibly marked **Preview** and disabled. Their example
 values are not device readings, and they never apply changes. Those pages will
 gain working controls incrementally. Existing bar controls remain available.

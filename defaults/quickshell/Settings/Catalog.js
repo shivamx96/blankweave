@@ -21,8 +21,8 @@ var pages = [
     ] },
     { id: "displays", title: "Displays", icon: "󰍹", description: "Arrange your workspace, wherever you connect.", groups: [
         { title: "Connected displays", rows: [
+            { id: "scale", title: "Scaling", description: "Change the size of text and applications on the selected display.", kind: "choice", options: [], live: true },
             { id: "arrangement", title: "Display arrangement", description: "Position, mirror, or extend your monitors.", kind: "action", action: "Arrange" },
-            { id: "scale", title: "Scaling", description: "Change the size of text and applications.", kind: "choice", options: ["Automatic", "100%", "125%", "150%", "200%"] },
             { id: "resolution", title: "Resolution & refresh rate", description: "Choose a supported mode for each display.", kind: "action", action: "Configure" },
             { id: "brightness", title: "Brightness", description: "Adjust built-in and supported external displays.", kind: "action", action: "Adjust" }
         ] },

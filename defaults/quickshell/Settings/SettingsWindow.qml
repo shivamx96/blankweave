@@ -6,6 +6,7 @@ FloatingWindow {
     id: root
     required property var theme
     required property var preferences
+    property alias selectedPage: content.selectedPage
     visible: false
     title: "Blankweave Settings"
     implicitWidth: 1040
@@ -28,11 +29,17 @@ FloatingWindow {
         preferences: root.preferences
     }
 
+    SettingsDisplays {
+        id: displaysBackend
+        active: root.visible && content.page !== null && content.page.id === "displays"
+    }
+
     SettingsContent {
         id: content
         anchors.fill: parent
         theme: root.theme
         appearance: appearanceBackend
+        displays: displaysBackend
         onCloseRequested: root.visible = false
     }
 }
