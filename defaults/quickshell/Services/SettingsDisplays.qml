@@ -15,17 +15,25 @@ QtObject {
     property bool reading: false
     property bool applying: false
     property bool actionQueued: false
+    property bool revertWhenHidden: false
+    property var preview: null
+    property double now: Date.now() / 1000
+    readonly property int previewSeconds: preview ? Math.max(0, Math.ceil(preview.deadline - now)) : 0
+    readonly property bool previewPending: preview !== null
+    readonly property string previewMessage: preview ? "Keep " + preview.mode.replace("x", " × ").replace("@", " · ")
+        + " Hz on " + preview.connector + "? Reverting in " + previewSeconds + " seconds." : ""
     readonly property string error: operationError || readError
     // Background reads must not disable an open menu every polling interval.
-    readonly property bool busy: applying || (!loaded && reading)
+    readonly property bool busy: applying || previewPending || (!loaded && reading)
     readonly property bool ready: loaded && readError === "" && monitor !== null
     readonly property bool canSelect: !busy && (!brightness || (!brightness.held && !brightness.busy))
     readonly property var monitor: monitors.find(row => row.name === selectedConnector) || null
     readonly property var scaleValues: monitor ? ["auto"].concat(monitor.scaleOptions) : []
+    readonly property var modeValues: monitor ? (monitor.modeOptions || []) : []
     readonly property var positionValues: ["auto", "left", "right", "above", "below"]
     readonly property bool placeable: monitor !== null && !monitor.internal && monitors.length > 1
     readonly property string details: monitor
-        ? monitor.width + " × " + monitor.height + " · Active scale " + percent(monitor.effectiveScale)
+        ? monitor.width + " × " + monitor.height + (monitor.refreshRate ? " · " + Number(monitor.refreshRate.toFixed(2)) + " Hz" : "") + " · Active scale " + percent(monitor.effectiveScale)
         : ""
     readonly property string savedScaleNotice: monitor && monitor.scale !== "auto"
         && Math.abs(Number(monitor.scale) - monitor.effectiveScale) > 0.000001
@@ -35,16 +43,20 @@ QtObject {
     function percent(value) { return Math.round(Number(value) * 10000) / 100 + "%" }
     function label(row) { return (row.internal ? "Built-in display" : row.description) + " · " + row.name }
     function choices(id) {
+        if (id === "resolution") return modeValues.map(mode => mode.replace("x", " × ").replace("@", " · ") + " Hz")
         if (id === "scale") return scaleValues.map(value => value === "auto" ? "Automatic" : percent(value))
         if (id === "arrangement") return ["Automatic", "Left", "Right", "Above", "Below"]
         return []
     }
     function canApply(id) {
         if (id === "brightness") return brightness !== null && brightness.available && brightness.active
-        return (id === "scale" || (id === "arrangement" && placeable))
+        return (id === "scale" || (id === "resolution" && modeValues.length > 0) || (id === "arrangement" && placeable))
             && (!brightness || (!brightness.held && !brightness.busy))
     }
     function description(id) {
+        if (id === "resolution") return modeValues.length
+            ? "Try a supported mode, then keep it within 20 seconds. Scaling adjusts if needed."
+            : "This display does not report supported modes."
         if (id === "brightness") {
             if (!monitor) return "Select a connected display to adjust its brightness."
             if (!brightness || !brightness.loaded) return "Checking brightness support…"
@@ -61,6 +73,11 @@ QtObject {
     }
     function selection(id) {
         if (!monitor) return -1
+        if (id === "resolution") return modeValues.findIndex(mode => {
+            const parts = mode.split(/[x@]/)
+            return Number(parts[0]) === monitor.width && Number(parts[1]) === monitor.height
+                && Math.abs(Number(parts[2]) - monitor.refreshRate) < 0.006
+        })
         if (id === "arrangement") return positionValues.indexOf(monitor.position)
         if (id !== "scale") return -1
         // A saved numeric preference can differ from compositor state after a
@@ -93,11 +110,16 @@ QtObject {
         applying = true
         action.command = id === "arrangement"
             ? ["bash", helper, "set", selectedConnector, positionValues[index]]
+            : id === "resolution" ? ["bash", helper, "mode-preview", selectedConnector, modeValues[index]]
             : ["bash", helper, "set-scale", selectedConnector, String(scaleValues[index])]
         actionQueued = reading
         if (!reading) startAction()
     }
     function startAction() {
+        if (action.command[2] === "mode-confirm" || action.command[2] === "mode-revert") {
+            action.running = true
+            return
+        }
         const target = monitors.find(row => row.name === action.command[3])
         if (readError || !target || (action.command[2] === "set" && (target.internal || monitors.length < 2))) {
             applying = false
@@ -107,11 +129,31 @@ QtObject {
         action.running = true
     }
 
-    onActiveChanged: if (active) refresh()
+    function finishPreview(keep) {
+        if (!preview || applying || (keep && previewSeconds <= 0)) return
+        revertWhenHidden = false
+        operationError = ""
+        applying = true
+        action.command = ["bash", helper, keep ? "mode-confirm" : "mode-revert", preview.token]
+        actionQueued = reading
+        if (!reading) startAction()
+    }
+
+    onActiveChanged: {
+        if (active) { revertWhenHidden = false; refresh() }
+        else { revertWhenHidden = true; finishPreview(false) }
+    }
+
+    property Timer countdown: Timer {
+        interval: 250
+        running: root.previewPending
+        repeat: true
+        onTriggered: root.now = Date.now() / 1000
+    }
 
     property Timer poll: Timer {
         interval: 2000
-        running: root.active
+        running: root.active || root.previewPending
         repeat: true
         onTriggered: root.refresh(false)
     }
@@ -125,6 +167,11 @@ QtObject {
                 if (exitCode !== 0 || exitStatus !== 0) throw new Error("Status failed")
                 const value = JSON.parse(statusOutput.text)
                 if (!Array.isArray(value.monitors)) throw new Error("Invalid monitor list")
+                if (value.preview != null && (typeof value.preview.token !== "string"
+                    || typeof value.preview.connector !== "string" || typeof value.preview.mode !== "string"
+                    || !Number.isFinite(value.preview.deadline))) throw new Error("Invalid preview")
+                root.preview = value.preview || null
+                root.now = Date.now() / 1000
                 const names = []
                 for (const row of value.monitors) {
                     if (!row || typeof row.name !== "string" || !row.name || names.includes(row.name)
@@ -135,6 +182,9 @@ QtObject {
                         || !root.positionValues.includes(row.position)
                         || !Number.isFinite(row.effectiveScale) || row.effectiveScale <= 0
                         || !(row.scale === "auto" || (Number.isFinite(row.scale) && row.scale > 0))
+                        || (row.modeOptions !== undefined && (!Array.isArray(row.modeOptions)
+                            || !row.modeOptions.every(mode => typeof mode === "string" && /^[0-9]+x[0-9]+@[0-9]+(\.[0-9]+)?$/.test(mode))
+                            || !Number.isFinite(row.refreshRate) || row.refreshRate < 0))
                         || !Array.isArray(row.scaleOptions) || !row.scaleOptions.includes(row.effectiveScale)
                         || !row.scaleOptions.every(scale => Number.isFinite(scale) && scale > 0))
                         throw new Error("Invalid monitor")
@@ -154,14 +204,18 @@ QtObject {
                 // The helper revalidates the captured connector and scale
                 // against live state before writing, including after hotplug.
                 root.startAction()
+            } else if (root.revertWhenHidden && root.previewPending) {
+                root.finishPreview(false)
             }
         }
     }
     property Process action: Process {
+        stderr: StdioCollector { id: actionError }
         onExited: (exitCode, exitStatus) => {
             root.applying = false
             if (exitCode !== 0 || exitStatus !== 0)
-                root.operationError = "Could not apply " + (action.command[2] === "set" ? "display position" : "scaling")
+                root.operationError = actionError.text.trim() || "Could not apply " + (action.command[2] === "set" ? "display position"
+                        : action.command[2] === "set-scale" ? "scaling" : "the display mode")
                     + ". The display may have disconnected or the setting may be unavailable. Refresh and try again."
             // Re-read even after failure: the helper may have saved the choice
             // before the compositor rejected it. Never claim it is active.
