@@ -48,7 +48,7 @@ QtObject {
         const node = outputNodes.find(candidate => root.key(candidate) === key)
         if (node) provider.preferredDefaultAudioSink = node
     }
-    function setOutputVolume(value, expectedGeneration = generation) {
+    function setVolume(value, expectedGeneration = generation) {
         if (!available || expectedGeneration !== generation || !Number.isFinite(value)) return
         output.audio.volume = Math.max(0, Math.min(1.5, value))
     }

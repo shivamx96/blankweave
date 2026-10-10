@@ -251,7 +251,7 @@ Rectangle {
                                     : root.page && root.page.id === "displays" && root.displays
                                     ? "Mode, mirror, and setup changes have a 20-second preview. Other display changes apply immediately; night light applies to all displays."
                                     : root.page && root.page.id === "sound" && root.sound
-                                    ? "Output device, volume, and mute are live. Other sound controls are previews."
+                                    ? "Output and microphone controls are live. Other sound controls are previews."
                                     : "Preview — changes aren’t applied. These controls show what’s planned; values are examples, not your device’s status."
                                 color: root.theme.text
                                 font.family: root.theme.fontFamily

@@ -27,7 +27,7 @@ WidgetFrame {
             audio.setOutputMuted(!audio.muted)
     }
 
-    onScrolled: delta => audio.setOutputVolume(audio.volume + (delta > 0 ? 0.02 : -0.02))
+    onScrolled: delta => audio.setVolume(audio.volume + (delta > 0 ? 0.02 : -0.02))
 
     ControlPopup {
         id: audioPanel

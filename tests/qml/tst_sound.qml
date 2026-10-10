@@ -67,11 +67,11 @@ TestCase {
         compare(volume.value, 63)
         speakerAudio.muted = true
         compare(findChild(controls, "soundOutputMute").text, "Unmute")
-        backend.setOutputVolume(4)
+        backend.setVolume(4)
         compare(speakerAudio.volume, 1.5)
-        backend.setOutputVolume(-1)
+        backend.setVolume(-1)
         compare(speakerAudio.volume, 0)
-        backend.setOutputVolume(NaN)
+        backend.setVolume(NaN)
         compare(speakerAudio.volume, 0)
         backend.setOutputMuted("true")
         verify(speakerAudio.muted)
@@ -79,7 +79,7 @@ TestCase {
     function test_disconnected_and_unbound_outputs() {
         speakerAudio.volumes = []
         verify(!backend.available)
-        backend.setOutputVolume(.2)
+        backend.setVolume(.2)
         compare(speakerAudio.volume, .8)
         provider.nodes.values = []
         verify(!backend.available)
@@ -96,20 +96,20 @@ TestCase {
         provider.ready = false
         verify(!backend.available)
         backend.selectOutput("12:headphones")
-        backend.setOutputVolume(.1)
+        backend.setVolume(.1)
         backend.setOutputMuted(true)
         compare(provider.preferredDefaultAudioSink, null)
         compare(speakerAudio.volume, .8)
         verify(!speakerAudio.muted)
         provider.ready = true
-        backend.setOutputVolume(.1, generation)
+        backend.setVolume(.1, generation)
         compare(speakerAudio.volume, .8)
     }
     function test_default_change_cancels_old_drag() {
         const generation = backend.generation
         provider.defaultAudioSink = null
         provider.defaultAudioSink = headphones
-        backend.setOutputVolume(.9, generation)
+        backend.setVolume(.9, generation)
         backend.setOutputMuted(true, generation)
         compare(headphoneAudio.volume, .4)
         verify(!headphoneAudio.muted)

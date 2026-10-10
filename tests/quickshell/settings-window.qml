@@ -24,8 +24,20 @@ ShellRoot {
                 if (!settings.visible) { console.error("Settings did not open"); Qt.quit(); return }
                 settings.visible = false
             } else if (root.step === 2) { settings.selectedPage = "sound"; settings.openSettings() }
-            else {
-                if (settings.visible) console.log("SETTINGS_WINDOW_PASSED")
+            else if (root.step === 3) {
+                if (!audio.microphone.active) { console.error("Microphone meter not requested on Sound"); Qt.quit(); return }
+                settings.selectedPage = "appearance"
+            } else if (root.step === 4) {
+                if (audio.microphone.active) { console.error("Microphone meter requested outside Sound"); Qt.quit(); return }
+                settings.selectedPage = "sound"
+                settings.minimized = true
+            } else if (root.step === 5) {
+                if (audio.microphone.active) { console.error("Microphone meter requested while minimized"); Qt.quit(); return }
+                settings.minimized = false
+                settings.visible = false
+            } else {
+                if (audio.microphone.active) { console.error("Microphone meter requested while hidden"); Qt.quit(); return }
+                console.log("SETTINGS_WINDOW_PASSED")
                 Qt.quit()
             }
             root.step++

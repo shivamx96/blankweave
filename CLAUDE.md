@@ -333,6 +333,15 @@ change from applying that gesture to another device. PipeWire/WirePlumber own
 volume, mute, and preference persistence; do not add a competing config file.
 `tests/qml/tst_sound.qml` covers selection, hotplug, external changes, connection
 loss, and gesture cancellation without touching the developer's audio server.
+`AudioInput`, owned by the same `AudioService`, applies those safeguards to the
+logical default source. Both input and output implement `setVolume` for the
+shared slider. `SettingsWindow` activates the native `PwNodePeakMonitor` only
+while the input controls are shown, excluding minimized windows and searches
+that show another page. Muting, losing, or switching the input releases the
+old monitor; never save microphone samples. Native peak values are measured
+before software gain, so do not multiply them by the volume setting or present
+them as a recording test. `tests/qml/tst_sound_input.qml` covers microphone
+writes and meter state, and the native-window fixture checks visibility scope.
 
 A choice the user makes inside a widget's own bar entry, such as the clock's
 right-click representation, is a preference and must survive a restart.
