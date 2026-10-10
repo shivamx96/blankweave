@@ -45,6 +45,26 @@ TestCase {
         anchors.fill: parent
         theme: test.palette
         appearance: fakeBackend
+        displays: fakeDisplays
+    }
+    QtObject {
+        id: fakeDisplays
+        property bool ready: true
+        property bool busy: false
+        property bool loaded: true
+        property string error: ""
+        property var monitors: [{ name: "eDP-1" }, { name: "DP-3" }]
+        property string selectedConnector: "eDP-1"
+        property string details: "2880 × 1800 · Active scale 150%"
+        property string savedScaleNotice: ""
+        property int writes: 0
+        property int selected: 2
+        function label(row) { return row.name }
+        function selectDisplay(index) { selectedConnector = monitors[index].name }
+        function choices(id) { return ["Automatic", "100%", "150%"] }
+        function selection(id) { return selected }
+        function apply(id, index) { writes++; selected = index }
+        function refresh() { }
     }
     SignalSpy { id: closeSpy; target: content; signalName: "closeRequested" }
 
@@ -64,6 +84,12 @@ TestCase {
         content.selectedPage = "appearance"
         findChild(content, "settingsSearch").text = ""
         closeSpy.clear()
+        fakeDisplays.ready = true
+        fakeDisplays.busy = false
+        fakeDisplays.monitors = [{ name: "eDP-1" }, { name: "DP-3" }]
+        fakeDisplays.selectedConnector = "eDP-1"
+        fakeDisplays.selected = 2
+        fakeDisplays.writes = 0
     }
 
     function test_search_and_empty_state() {
@@ -77,6 +103,30 @@ TestCase {
         compare(content.results.length, 0)
         search.text = ""
         compare(content.results.length, 9)
+    }
+
+    function test_display_controls_route_to_selected_backend() {
+        content.selectedPage = "displays"
+        wait(20)
+        var display = findChild(content, "settingsDisplaySelector")
+        var scale = findChild(content, "settingsChoice_scale")
+        verify(display !== null && scale !== null)
+        verify(display.enabled && scale.enabled)
+        compare(scale.currentIndex, 2)
+        display.activated(1)
+        compare(fakeDisplays.selectedConnector, "DP-3")
+        compare(display.currentIndex, 1)
+        scale.activated(0)
+        compare(fakeDisplays.writes, 1)
+        compare(fakeBackend.writes, 0)
+        compare(scale.currentIndex, 0)
+        fakeDisplays.busy = true
+        verify(!display.enabled && !scale.enabled)
+        fakeDisplays.busy = false
+        fakeDisplays.ready = false
+        fakeDisplays.monitors = []
+        verify(!display.enabled && !scale.enabled)
+        compare(findChild(content, "displayStatus").text, "No connected displays.")
     }
 
     function test_pages_at_narrow_width() {

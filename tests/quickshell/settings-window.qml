@@ -15,7 +15,10 @@ ShellRoot {
         repeat: true
         onTriggered: {
             if (!preferences.ready) return
-            if (root.step === 0) settings.openSettings()
+            if (root.step === 0) {
+                settings.selectedPage = "displays"
+                settings.openSettings()
+            }
             else if (root.step === 1) {
                 if (!settings.visible) { console.error("Settings did not open"); Qt.quit(); return }
                 settings.visible = false

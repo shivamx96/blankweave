@@ -14,6 +14,7 @@ EOF
 chmod +x "$test_root/bin/qs"
 export SETTINGS_TEST_LOG="$test_root/command"
 export SETTINGS_SYNC_STATE="$test_root/synced"
+export SETTINGS_DISPLAYS_STATE="$test_root/displays-state"
 HOME="$test_root/home" PATH="$test_root/bin:$PATH" "$repository/bin/blankweave" settings
 printf 'ipc\n-n\n-p\n%s\ncall\nblankweave\nsettings\n' \
     "$test_root/home/.local/share/blankweave/quickshell" > "$test_root/expected"
@@ -49,6 +50,26 @@ if ! grep -q SETTINGS_BACKEND_PASSED "$test_root/backend.log"; then
     exit 1
 fi
 
+# Exercise monitor discovery and mutations with a fixture, never the real compositor.
+mkdir -p "$test_root/displays/Services"
+cp "$repository/defaults/quickshell/Services/SettingsDisplays.qml" "$test_root/displays/Services/"
+cp "$repository/tests/quickshell/settings-displays.qml" "$test_root/displays/shell.qml"
+cp "$repository/tests/fixtures/settings-displays.sh" "$test_root/displays/displays.sh"
+if ! HOME="$test_root/home" XDG_CONFIG_HOME="$test_root/home/.config" \
+    XDG_RUNTIME_DIR="$test_root/runtime" QT_QPA_PLATFORM=offscreen \
+    QT_QUICK_BACKEND=software timeout 15 qs \
+    -p "$test_root/displays" > "$test_root/displays.log" 2>&1; then
+    cat "$test_root/displays.log"
+    exit 1
+fi
+if ! grep -q SETTINGS_DISPLAYS_PASSED "$test_root/displays.log" \
+    || grep -Eq '(TypeError|ReferenceError|Binding loop|Unable to assign|Failed to load)' "$test_root/displays.log"; then
+    cat "$test_root/displays.log"
+    exit 1
+fi
+printf 'DP-3 auto\nDP-3 1.25\n' > "$test_root/expected-displays"
+diff -u "$test_root/expected-displays" "$SETTINGS_DISPLAYS_STATE.commands"
+
 # Load the real native window in a separate shell with an isolated home. This
 # catches shell-only types and lifecycle errors that qmltestrunner cannot load.
 mkdir -p "$test_root/window" "$test_root/home/.local/share/blankweave/shell" \
@@ -57,6 +78,7 @@ cp -R "$repository/defaults/quickshell/"{Settings,Services,Components,Assets} "$
 cp "$repository/defaults/quickshell/Theme.qml" "$test_root/window/"
 cp "$repository/tests/quickshell/settings-window.qml" "$test_root/window/shell.qml"
 cp "$repository/tests/fixtures/settings-theme.sh" "$test_root/home/.local/share/blankweave/shell/theme-apply.sh"
+cp "$repository/tests/fixtures/settings-displays.sh" "$test_root/home/.local/share/blankweave/shell/monitor-layout.sh"
 cp "$repository/defaults/themes/obsidian/theme.json" "$test_root/home/.local/share/blankweave/themes/obsidian/"
 if ! HOME="$test_root/home" XDG_CONFIG_HOME="$test_root/home/.config" \
     XDG_RUNTIME_DIR="$test_root/runtime" QT_QPA_PLATFORM=offscreen \
