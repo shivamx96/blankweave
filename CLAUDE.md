@@ -670,7 +670,7 @@ processes so validation cannot modify the developer's desktop.
 
 `Services/SettingsDisplays.qml` reads connected monitors through
 `monitor-layout.sh status` while the Displays page is visible and refreshes
-after every scale or position command. That helper remains the sole monitor-config writer.
+after every scale, position, or mode command. That helper remains the sole monitor-config writer.
 Selection follows connector identity across refreshed lists; the helper persists
 choices by display description. Numeric scale controls show the compositor's
 effective scale, with a separate notice when a saved preference differs. Empty,
@@ -682,6 +682,16 @@ geometry; show current coordinates separately. Revalidate queued commands
 after discovery completes, so a disconnected target or lone display is not
 positioned. `SettingsRow` supports optional backend `canApply(id)` and
 `description(id)` methods for per-control availability and explanations.
+
+Resolution and refresh choices come from each monitor's reported modes. A mode
+preview changes only live state; `mode-confirm` saves it by description, while
+`mode-revert` restores the previous mode, scale, and coordinates. A detached
+20-second watchdog performs rollback even if Settings exits. The helper locks
+all monitor mutations while a preview is pending; token checks keep delayed
+watchdogs from affecting newer previews. Mode fields must survive subsequent
+scale and position changes. The confirmation controls stay visible by scrolling
+to the top of the page; leaving Displays requests an early revert. Test this
+lifecycle with `tests/monitor-modes.sh` against a fake compositor.
 
 Settings reuses `DisplayBrightness` for the selected monitor, active only on the
 visible Displays page. Its captured connector/generation isolates slow reads

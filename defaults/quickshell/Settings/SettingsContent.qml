@@ -21,6 +21,13 @@ Rectangle {
     function focusSearch() { search.forceActiveFocus(); search.selectAll() }
 
     onPageChanged: pageScroll.contentItem.contentY = 0
+    Connections {
+        target: root.displays
+        function onPreviewPendingChanged() {
+            if (root.displays.previewPending && root.page && root.page.id === "displays")
+                pageScroll.contentItem.contentY = 0
+        }
+    }
 
     Shortcut { sequence: "Ctrl+F"; onActivated: root.focusSearch() }
     Shortcut { sequence: "Ctrl+W"; onActivated: root.closeRequested() }
@@ -241,7 +248,7 @@ Rectangle {
                                 text: root.page && root.page.id === "appearance"
                                     ? "Theme, color mode, and bar changes apply immediately. Other controls are previews."
                                     : root.page && root.page.id === "displays" && root.displays
-                                    ? "Display changes apply immediately. Scaling and position are saved for future sessions. Other controls are previews."
+                                    ? "Scaling and position are saved immediately. Resolution changes have a 20-second preview before saving. Other controls are previews."
                                     : "Preview — changes aren’t applied. These controls show what’s planned; values are examples, not your device’s status."
                                 color: root.theme.text
                                 font.family: root.theme.fontFamily

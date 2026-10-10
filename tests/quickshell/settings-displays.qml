@@ -30,7 +30,7 @@ ShellRoot {
         running: true
         repeat: true
         onTriggered: {
-            if (backend.busy || backend.reading || scenario.running) return
+            if (backend.applying || backend.reading || scenario.running) return
             try {
                 switch (test.step++) {
                 case 0:
@@ -136,6 +136,34 @@ ShellRoot {
                     break
                 case 16:
                     test.check(!backend.ready && backend.readError.length > 0, "Missing helper accepted")
+                    backend.helper = test.fixture
+                    backend.active = true
+                    test.setScenario("initial")
+                    break
+                case 17:
+                    backend.selectDisplay(0)
+                    test.check(backend.choices("resolution").length === 2 && backend.selection("resolution") === 1, "Mode discovery failed")
+                    backend.apply("resolution", 99)
+                    test.check(!backend.busy, "Invalid mode index accepted")
+                    backend.apply("resolution", 0)
+                    break
+                case 18:
+                    test.check(backend.previewPending && !backend.canSelect && backend.previewSeconds > 0, "Preview did not lock controls")
+                    test.check(backend.selection("resolution") === 0 && backend.previewMessage.includes("60.00"), "Preview did not reflect the live mode")
+                    backend.apply("scale", 0)
+                    backend.refresh()
+                    backend.finishPreview(true)
+                    break
+                case 19:
+                    test.check(!backend.previewPending && backend.selection("resolution") === 0, "Mode confirmation failed")
+                    backend.apply("resolution", 1)
+                    break
+                case 20:
+                    test.check(backend.previewPending, "Second preview missing")
+                    backend.active = false
+                    break
+                case 21:
+                    test.check(!backend.previewPending && !backend.error, "Hiding Settings did not revert the preview")
                     console.log("SETTINGS_DISPLAYS_PASSED")
                     Qt.quit()
                     break

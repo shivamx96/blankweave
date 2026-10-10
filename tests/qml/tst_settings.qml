@@ -57,6 +57,12 @@ TestCase {
         property string selectedConnector: "eDP-1"
         property string details: "2880 × 1800 · Active scale 150%"
         property string savedScaleNotice: ""
+        property bool previewPending: false
+        property bool applying: false
+        property int previewSeconds: 20
+        property string previewMessage: "Keep this display mode?"
+        property int previewDecision: -1
+        function finishPreview(keep) { previewDecision = keep ? 1 : 0; previewPending = false }
         property int writes: 0
         property int selected: 2
         property int selectedPosition: 0
@@ -114,6 +120,8 @@ TestCase {
         fakeDisplays.brightnessAvailable = true
         fakeDisplays.brightnessHeld = false
         fakeDisplays.brightnessValue = 60
+        fakeDisplays.previewPending = false
+        fakeDisplays.previewDecision = -1
     }
 
     function test_search_and_empty_state() {
@@ -289,6 +297,26 @@ TestCase {
             theme: test.palette
             model: ["Dark", "Light"]
         }
+    }
+
+    function test_display_mode_confirmation() {
+        content.selectedPage = "displays"
+        wait(0)
+        var scroll = findChild(content, "settingsPageScroll")
+        scroll.contentItem.contentY = 250
+        fakeDisplays.previewPending = true
+        compare(scroll.contentItem.contentY, 0)
+        var keep = findChild(content, "keepDisplayMode")
+        var revert = findChild(content, "revertDisplayMode")
+        verify(keep.visible && keep.enabled)
+        mouseClick(keep)
+        compare(fakeDisplays.previewDecision, 1)
+        fakeDisplays.previewPending = true
+        fakeDisplays.previewSeconds = 0
+        verify(!keep.enabled && revert.enabled)
+        mouseClick(revert)
+        compare(fakeDisplays.previewDecision, 0)
+        fakeDisplays.previewSeconds = 20
     }
 
     function test_dropdown_tracks_theme_while_open() {

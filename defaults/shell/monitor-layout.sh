@@ -16,6 +16,9 @@
 #   monitor-layout.sh status                        JSON for the display panel
 #   monitor-layout.sh set <connector> <position>    position: left|right|above|below|auto
 #   monitor-layout.sh set-scale <connector> <scale> scale: auto or a supported numeric option
+#   monitor-layout.sh mode-preview <connector> <WIDTHxHEIGHT@HZ>
+#   monitor-layout.sh mode-confirm <token>          save a preview
+#   monitor-layout.sh mode-revert <token>           restore the previous mode
 #   monitor-layout.sh apply                         regenerate and apply the rules
 
 set -euo pipefail
@@ -24,6 +27,7 @@ config_home=${XDG_CONFIG_HOME:-"$HOME/.config"}
 config_dir="$config_home/blankweave"
 config_file="$config_dir/monitors.json"
 rules_file="$config_dir/monitors.lua"
+pending_file="$config_dir/.monitor-mode-preview.json"
 
 fail() {
     printf '%s\n' "$1" >&2
@@ -32,6 +36,7 @@ fail() {
 
 command -v jq >/dev/null 2>&1 || fail 'monitor-layout.sh requires jq'
 command -v hyprctl >/dev/null 2>&1 || fail 'monitor-layout.sh requires hyprctl'
+command -v flock >/dev/null 2>&1 || fail 'monitor-layout.sh requires util-linux'
 
 # Persisted entries as a JSON array; an unreadable file counts as empty.
 persisted() {
@@ -106,7 +111,7 @@ write_rules() {
         jq -r '
             def lua_scale:
                 if . == "auto" then "\"auto\"" else tostring end;
-            .[] | "hl.monitor({ output = \"desc:\(.description)\", mode = \"preferred\", position = \"\(.position)\", scale = \(.scale | lua_scale) })"
+            .[] | "hl.monitor({ output = \"desc:\(.description)\", mode = \"\(.mode // "preferred")\", position = \"\(.position)\", scale = \(.scale | lua_scale) })"
         ' <<< "$entries"
     } > "$staged"
     chmod 0644 "$staged"
@@ -119,11 +124,14 @@ apply_rules() {
 }
 
 cmd_status() {
-    local live entries
+    local live entries preview=null
 
     live=$(live_monitors)
     entries=$(persisted)
-    jq -c --argjson persisted "$entries" '
+    if [ -r "$pending_file" ]; then
+        preview=$(jq '{token, connector, mode, deadline}' "$pending_file")
+    fi
+    jq -c --argjson preview "$preview" --argjson persisted "$entries" '
         def integral: ((. - round) | fabs) < 0.000001;
         def supported_scales($monitor):
             (([1, 1.1, 1.2, 1.25, 1.3, 1.4, 1.5, 1.6, 1.75, 1.8, 2, 2.25, 2.5, 3]
@@ -134,6 +142,7 @@ cmd_status() {
                 | map(select(type == "number" and . > 0))
                 | unique);
         {
+            preview: $preview,
             monitors: [
                 .[] | . as $monitor
                 | ($persisted | map(select(.description == $monitor.description)) | first) as $entry
@@ -152,6 +161,10 @@ cmd_status() {
                         end
                     ),
                     effectiveScale: .scale,
+                    refreshRate: (.refreshRate // 0),
+                    modeOptions: ((.availableModes // [])
+                        | map(select(test("^[0-9]+x[0-9]+@[0-9]+([.][0-9]+)?Hz$")) | sub("Hz$"; ""))
+                        | reduce .[] as $mode ([]; if index($mode) == null then . + [$mode] else . end)),
                     scaleOptions: supported_scales($monitor),
                     position: (
                         if $entry == null then "auto"
@@ -170,7 +183,7 @@ cmd_status() {
 
 cmd_set() {
     local connector=$1 choice=$2
-    local live monitor description scale position entries entry scale_explicit lua_scale
+    local live monitor description scale position entries entry scale_explicit lua_scale mode
 
     position=$(hyprland_position "$choice") || fail "Unknown position: $choice"
 
@@ -186,13 +199,15 @@ cmd_set() {
     entries=$(persisted)
     entry=$(jq -c --arg description "$description" \
         'map(select(.description == $description)) | first // empty' <<< "$entries")
+    entry=${entry:-'{}'}
+    mode=$(jq -r '.mode // "preferred"' <<< "$entry")
     scale_explicit=false
-    if [ -n "$entry" ]; then
+    if [ "$entry" != '{}' ]; then
         scale=$(jq -r '.scale' <<< "$entry")
         scale_explicit=$(jq -r '.scaleExplicit // false' <<< "$entry")
     fi
 
-    if [ "$choice" = auto ] && [ "$scale_explicit" != true ]; then
+    if [ "$choice" = auto ] && [ "$scale_explicit" != true ] && [ "$mode" = preferred ]; then
         entries=$(jq -c --arg description "$description" \
             'map(select(.description != $description))' <<< "$entries")
     else
@@ -200,7 +215,8 @@ cmd_set() {
         # chosen in the panel survives later position changes, including Auto.
         entries=$(jq -c --arg description "$description" --arg position "$position" \
             --arg scale "$scale" --argjson scaleExplicit "$scale_explicit" \
-            'map(select(.description != $description)) + [{
+            '(map(select(.description == $description)) | first // {}) as $old
+            | map(select(.description != $description)) + [$old + {
                 description: $description,
                 position: $position,
                 scale: (if $scale == "auto" then "auto" else ($scale | tonumber) end),
@@ -218,7 +234,7 @@ cmd_set() {
         # way Hyprland would have without one, for this session only.
         lua_scale=$scale
         [ "$scale" != auto ] || lua_scale='"auto"'
-        hyprctl eval "hl.monitor({ output = \"desc:$description\", mode = \"preferred\", position = \"auto\", scale = $lua_scale })" \
+        hyprctl eval "hl.monitor({ output = \"desc:$description\", mode = \"$mode\", position = \"auto\", scale = $lua_scale })" \
             >/dev/null 2>&1 || fail 'Hyprland rejected automatic monitor placement'
     fi
 }
@@ -250,7 +266,8 @@ cmd_set_scale() {
     ' <<< "$entries")
     entries=$(jq -c --arg description "$description" --arg position "$position" \
         --arg scale "$normalized" '
-        map(select(.description != $description)) + [{
+        (map(select(.description == $description)) | first // {}) as $old
+        | map(select(.description != $description)) + [$old + {
             description: $description,
             position: $position,
             scale: (if $scale == "auto" then "auto" else ($scale | tonumber) end),
@@ -263,19 +280,168 @@ cmd_set_scale() {
     apply_rules
 }
 
+# All writers, including the rollback watchdog, share one lock. Preview mode
+# changes remain live-only until confirmation, so logout/reboot also discards them.
+lock_layout() {
+    mkdir -p "$config_dir"
+    exec 9>"$config_dir/.monitor-layout.lock"
+    flock -x 9
+}
+
+require_no_preview() {
+    [ ! -e "$pending_file" ] || fail 'Keep or revert the pending display mode first'
+}
+
+mode_matches() {
+    local monitor=$1 mode=$2
+    jq -e --arg mode "$mode" '
+        ($mode | capture("^(?<w>[0-9]+)x(?<h>[0-9]+)@(?<hz>[0-9.]+)$")) as $wanted
+        | .width == ($wanted.w | tonumber) and .height == ($wanted.h | tonumber)
+          and ((.refreshRate - ($wanted.hz | tonumber)) | fabs) < 0.006
+    ' <<< "$monitor" >/dev/null
+}
+
+apply_mode() {
+    local description=$1 mode=$2 scale=$3 position=$4
+    hyprctl eval "hl.monitor({ output = \"desc:$description\", mode = \"$mode\", scale = $scale, position = \"$position\" })" \
+        >/dev/null 2>&1
+}
+
+cmd_mode_revert() {
+    local token=$1 pending description monitor live
+    [ -r "$pending_file" ] || return 0
+    pending=$(cat "$pending_file")
+    [ "$(jq -r '.token' <<< "$pending")" = "$token" ] || return 0
+    description=$(jq -r '.description' <<< "$pending")
+    live=$(live_monitors)
+    monitor=$(jq -c --arg description "$description" '.[] | select(.description == $description)' <<< "$live")
+    # The old saved rules were never touched. An unplugged display will pick
+    # them up on reconnect, without retaining a rule for the unconfirmed mode.
+    apply_mode "$description" "$(jq -r '.previousMode' <<< "$pending")" \
+        "$(jq -r '.previousScale' <<< "$pending")" "$(jq -r '.previousPosition' <<< "$pending")" \
+        || fail 'Could not restore the previous display mode; choose Revert to retry'
+    if [ -n "$monitor" ]; then
+        verify_mode "$description" "$(jq -r '.previousMode' <<< "$pending")" \
+            || fail 'The display has not restored its previous mode; choose Revert to retry'
+    fi
+    rm -f "$pending_file"
+}
+
+verify_mode() {
+    local description=$1 mode=$2 live monitor attempt
+    for attempt in {1..15}; do
+        live=$(live_monitors)
+        monitor=$(jq -c --arg description "$description" '.[] | select(.description == $description)' <<< "$live")
+        if [ -n "$monitor" ] && mode_matches "$monitor" "$mode"; then return 0; fi
+        sleep 0.1
+    done
+    return 1
+}
+
+cmd_mode_preview() {
+    local connector=$1 choice=$2 live monitor description entries entry scale position previous_mode token deadline staged
+    require_no_preview
+    command -v setsid >/dev/null 2>&1 || fail 'Display previews require util-linux'
+    command -v nohup >/dev/null 2>&1 || fail 'Display previews require coreutils'
+    [[ $choice =~ ^[0-9]+x[0-9]+@[0-9]+(\.[0-9]+)?$ ]] || fail 'Invalid display mode'
+    live=$(live_monitors)
+    monitor=$(jq -c --arg name "$connector" '.[] | select(.name == $name)' <<< "$live")
+    [ -n "$monitor" ] || fail "No connected monitor named $connector"
+    jq -e --arg mode "${choice}Hz" '.availableModes | index($mode) != null' <<< "$monitor" >/dev/null \
+        || fail 'This display does not report support for that mode'
+    description=$(jq -r '.description' <<< "$monitor")
+    valid_description "$description" || fail "Cannot persist a rule for this monitor's description"
+    previous_mode=$(jq -r '"\(.width)x\(.height)@\(.refreshRate)"' <<< "$monitor")
+    [[ $previous_mode =~ ^[0-9]+x[0-9]+@[0-9]+(\.[0-9]+)?$ ]] || fail 'Cannot read the current display mode'
+    scale=$(jq -r '.scale' <<< "$monitor")
+    position=$(jq -r '"\(.x)x\(.y)"' <<< "$monitor")
+    [[ $scale =~ ^[0-9]+(\.[0-9]+)?$ && $position =~ ^-?[0-9]+x-?[0-9]+$ ]] || fail 'Invalid display geometry'
+    entries=$(persisted)
+    entry=$(jq -c --arg description "$description" --arg mode "$choice" --argjson scale "$scale" '
+        (map(select(.description == $description)) | first // {description:$description,position:"auto",scale:$scale,scaleExplicit:false})
+        | .mode = $mode
+        | ($mode | capture("^(?<w>[0-9]+)x(?<h>[0-9]+)@")) as $size
+        | def integral: ((. - round) | fabs) < 0.000001;
+        if .scale != "auto" and (((($size.w | tonumber) / .scale) | integral) and ((($size.h | tonumber) / .scale) | integral) | not)
+        then .scale = 1 | .scaleExplicit = true else . end
+    ' <<< "$entries")
+    token=$(cat /proc/sys/kernel/random/uuid)
+    deadline=$(( $(date +%s) + 20 ))
+    staged=$(mktemp "$config_dir/.mode-preview.XXXXXX")
+    jq -n --arg token "$token" --arg connector "$connector" --arg description "$description" \
+        --arg mode "$choice" --arg previousMode "$previous_mode" --argjson previousScale "$scale" \
+        --arg previousPosition "$position" --argjson entry "$entry" --argjson deadline "$deadline" \
+        '{token:$token,connector:$connector,description:$description,mode:$mode,previousMode:$previousMode,
+          previousScale:$previousScale,previousPosition:$previousPosition,entry:$entry,deadline:$deadline}' > "$staged"
+    mv -f "$staged" "$pending_file"
+    # Detach before touching the screen. Closing/crashing Settings cannot kill
+    # the watchdog, and its inherited lock fd must not keep our lock held.
+    nohup setsid bash "$0" mode-watch "$token" </dev/null >"$config_dir/.mode-preview.log" 2>&1 9>&- &
+    scale=$(jq -r '.scale | if . == "auto" then "\"auto\"" else tostring end' <<< "$entry")
+    if ! apply_mode "$description" "$choice" "$scale" "$position" || ! verify_mode "$description" "$choice"; then
+        cmd_mode_revert "$token"
+        fail 'The display did not accept this mode; the previous mode was restored'
+    fi
+}
+
+cmd_mode_confirm() {
+    local token=$1 pending entries description
+    [ -r "$pending_file" ] || fail 'The display preview has already ended'
+    pending=$(cat "$pending_file")
+    [ "$(jq -r '.token' <<< "$pending")" = "$token" ] || fail 'This display preview has already ended'
+    if [ "$(date +%s)" -ge "$(jq -r '.deadline' <<< "$pending")" ]; then
+        cmd_mode_revert "$token"
+        fail 'The display preview expired and was reverted'
+    fi
+    description=$(jq -r '.description' <<< "$pending")
+    verify_mode "$description" "$(jq -r '.mode' <<< "$pending")" || fail 'The preview mode is no longer active'
+    entries=$(persisted)
+    entries=$(jq -c --arg description "$description" --argjson entry "$(jq '.entry' <<< "$pending")" \
+        'map(select(.description != $description)) + [$entry]' <<< "$entries")
+    write_entries "$entries"
+    write_rules
+    rm -f "$pending_file"
+}
+
+# The sleeper holds no lock. Token comparison prevents an old watchdog from
+# reverting a newer preview. Retry briefly if the compositor is restarting.
+if [ "${1:-}" = mode-watch ]; then
+    [ $# -eq 2 ] || fail 'Missing preview token'
+    sleep 20
+    for ((attempt = 0; attempt < 5; attempt++)); do
+        [ -r "$pending_file" ] || exit 0
+        [ "$(jq -r '.token' "$pending_file")" = "$2" ] || exit 0
+        bash "$0" mode-revert "$2" && exit 0
+        sleep 2
+    done
+    exit 1
+fi
+lock_layout
+
 case "${1:-}" in
     status)
         cmd_status
         ;;
     set)
+        require_no_preview
         [ $# -eq 3 ] || fail 'Usage: monitor-layout.sh set <connector> <left|right|above|below|auto>'
         cmd_set "$2" "$3"
         ;;
     set-scale)
+        require_no_preview
         [ $# -eq 3 ] || fail 'Usage: monitor-layout.sh set-scale <connector> <auto|scale>'
         cmd_set_scale "$2" "$3"
         ;;
+    mode-preview)
+        [ $# -eq 3 ] || fail 'Usage: monitor-layout.sh mode-preview <connector> <mode>'
+        cmd_mode_preview "$2" "$3"
+        ;;
+    mode-confirm|mode-revert)
+        [ $# -eq 2 ] || fail 'A preview token is required'
+        if [ "$1" = mode-confirm ]; then cmd_mode_confirm "$2"; else cmd_mode_revert "$2"; fi
+        ;;
     apply)
+        require_no_preview
         write_rules
         apply_rules
         ;;

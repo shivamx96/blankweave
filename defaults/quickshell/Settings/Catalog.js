@@ -25,7 +25,7 @@ var pages = [
             { id: "brightness", title: "Brightness", description: "Adjust the selected display’s brightness.", kind: "slider", minimum: 5, maximum: 100, live: true },
             { id: "arrangement", title: "Saved display position", description: "Place an external display left, right, above, or below the existing desktop layout.", kind: "choice", options: [], live: true },
             { id: "mirroring", title: "Mirror displays", description: "Show the same content on multiple displays.", kind: "action", action: "Configure" },
-            { id: "resolution", title: "Resolution & refresh rate", description: "Choose a supported mode for each display.", kind: "action", action: "Configure" }
+            { id: "resolution", title: "Resolution & refresh rate", description: "Choose a supported mode for each display.", kind: "choice", live: true }
         ] },
         { title: "Comfort & presets", rows: [
             { id: "night-light", title: "Night light", description: "Use warmer colors on a schedule.", kind: "toggle" },
