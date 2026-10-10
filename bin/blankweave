@@ -594,6 +594,7 @@ Usage: blankweave <command>
 Commands:
   version   Show the CLI version and installed/repository revisions
   setup     Guide first-install choices; use --non-interactive with saved configs
+  settings  Open the desktop settings application
   update    Check, preview, or safely apply a fast-forward update
   rollback  Restore the previous Blankweave revision and managed configuration
   doctor    Run read-only health checks; add --report for shareable diagnostics
@@ -617,6 +618,12 @@ main() {
             ;;
         setup)
             command_setup "$@"
+            ;;
+        settings)
+            [[ $# -eq 0 ]] || die "settings does not accept arguments"
+            command -v qs >/dev/null 2>&1 || die "Quickshell is not installed"
+            qs ipc -n -p "$BLANKWEAVE_DATA_DIR/quickshell" call blankweave settings \
+                || die "could not open settings; make sure the Blankweave desktop is running and up to date"
             ;;
         rollback)
             command_rollback "$@"

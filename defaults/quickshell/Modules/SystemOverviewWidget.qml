@@ -119,11 +119,16 @@ WidgetFrame {
                 ? String(root.systemInfo.hostname || "System") + " · " + String(root.systemInfo.os || "Linux")
                 : "Blankweave machine snapshot"
             actions: [
+                { "id": "settings", "icon": "󰒓" },
                 { "id": "refresh", "icon": "󰑐" },
                 { "id": "report", "icon": "󰋊" }
             ]
             onActionPressed: actionId => {
-                if (actionId === "refresh")
+                if (actionId === "settings") {
+                    systemPanel.open = false
+                    root.bar.shell.openSettings()
+                }
+                else if (actionId === "refresh")
                     systemPoller.refresh()
                 else if (actionId === "report")
                     root.openFastfetch()

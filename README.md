@@ -316,6 +316,29 @@ state and cache directories to their blankweave names (keeping your theme,
 preferences, and wallpapers), and installs the `blankweave` command; the old
 one is removed.
 
+## Settings application
+
+Open **Blankweave Settings** from the application launcher, press `Super + ,`,
+click the settings icon in the system overview panel, or run:
+
+```bash
+blankweave settings
+```
+
+The searchable settings window covers Appearance, Displays, Sound, Network &
+Bluetooth, Power, Input & Accessibility, Apps, Storage & Backup, and System.
+Appearance's theme, dark/light mode, bar position, and bar visibility controls
+are connected to the existing desktop configuration and apply immediately.
+Changes made from the bar remain reflected in Settings. Folder colors and the
+boot splash may still require `blankweave theme sync` in a terminal.
+
+All other controls are visibly marked **Preview** and disabled. Their example
+values are not device readings, and they never apply changes. Those pages will
+gain working controls incrementally. Existing bar controls remain available.
+Use `Ctrl+F` to search, Tab to move between controls, and arrow keys plus Enter
+to navigate the category list. Escape clears a search or closes the window;
+`Ctrl+W` closes it directly.
+
 ## Themes
 
 A theme bundles the shell palette, the lock-screen treatment, a wallpaper,

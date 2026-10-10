@@ -652,6 +652,22 @@ unavailable; it must never derive utilization from the requested clock ratio.
 3. Branch on the capability only where configuration cannot adapt at runtime;
    never introduce a machine name or combined laptop/desktop profile.
 
+### Extending Settings
+
+The native Settings window lives in `defaults/quickshell/Settings/` and is
+instantiated once in `shell.qml`. Open it through `blankweave settings`, the
+`settings` shell IPC method, or the system overview action. `Catalog.js` owns
+category and setting IDs, descriptions, and preview controls; it must never
+execute commands or write configuration. `SettingsContent.qml` is the view,
+and `Services/SettingsAppearance.qml` adapts the existing theme helper and the
+single shared `ShellPreferences` instance. Do not introduce another writer for
+`shell.json` or theme selection. Only controls backed by implemented services
+may be enabled; preview values must remain clearly labeled and never imply
+observed hardware state. Add later page backends independently, and extend the
+row control types when their functionality becomes available. Settings tests
+run through `tests/settings.sh`, using offscreen Qt tests and isolated Quickshell
+processes so validation cannot modify the developer's desktop.
+
 ### Adding a new Quickshell module
 
 1. Create `defaults/quickshell/Modules/<Name>Widget.qml`
