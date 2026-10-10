@@ -10,6 +10,9 @@ Item {
     property var backend: null
     readonly property bool live: Boolean(setting.live && backend)
     readonly property bool writable: live && backend.ready && !backend.busy
+        && (typeof backend.canApply !== "function" || backend.canApply(setting.id))
+    readonly property string description: live && typeof backend.description === "function"
+        ? backend.description(setting.id) || setting.description : setting.description
     readonly property var choices: live ? backend.choices(setting.id) : (setting.options || [])
     readonly property int selection: live ? backend.selection(setting.id) : 0
     readonly property bool compact: width < 510
@@ -36,7 +39,8 @@ Item {
             }
             Text {
                 Layout.fillWidth: true
-                text: root.setting.description + (root.live ? "" : "  ·  Preview")
+                objectName: "settingsDescription_" + root.setting.id
+                text: root.description + (root.live ? "" : "  ·  Preview")
                 color: root.theme.textMuted
                 font.family: root.theme.fontFamily
                 font.pixelSize: root.theme.smallTextSize
@@ -62,7 +66,7 @@ Item {
             currentIndex: root.selection
             enabled: root.writable && root.choices.length > 0
             Accessible.name: root.setting.title
-            Accessible.description: root.setting.description
+            Accessible.description: root.description
             onActivated: index => {
                 root.backend.apply(root.setting.id, index)
                 // Keep the displayed choice tied to confirmed configuration,

@@ -341,6 +341,11 @@ Automatic for each one. It shows the active scale and display resolution,
 keeps changes made from the bar in sync, and saves choices through the existing
 monitor configuration. A saved choice that differs from the active scale is
 reported separately, including after a failed apply.
+With multiple displays connected, select an external display and choose its
+saved position: left, right, above, below, or Automatic around the existing
+desktop layout. Position changes preserve its scaling preference and follow
+the display across reconnects. The position menu shows the saved choice;
+current desktop coordinates are shown separately. Mirroring remains a preview.
 
 All other controls are visibly marked **Preview** and disabled. Their example
 values are not device readings, and they never apply changes. Those pages will

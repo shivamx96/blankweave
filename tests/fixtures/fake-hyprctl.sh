@@ -11,6 +11,9 @@ case "${1:-}" in
         ;;
     eval)
         printf '%s\n' "${2:-}" >> "$FAKE_HYPRCTL_LOG"
+        if [[ -n ${FAKE_HYPRCTL_FAIL_MATCH:-} && ${2:-} == *"$FAKE_HYPRCTL_FAIL_MATCH"* ]]; then
+            exit 1
+        fi
         printf 'ok\n'
         ;;
     *)

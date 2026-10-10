@@ -219,7 +219,7 @@ cmd_set() {
         lua_scale=$scale
         [ "$scale" != auto ] || lua_scale='"auto"'
         hyprctl eval "hl.monitor({ output = \"desc:$description\", mode = \"preferred\", position = \"auto\", scale = $lua_scale })" \
-            >/dev/null 2>&1 || true
+            >/dev/null 2>&1 || fail 'Hyprland rejected automatic monitor placement'
     fi
 }
 
