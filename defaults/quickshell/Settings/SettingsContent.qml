@@ -13,6 +13,7 @@ Rectangle {
     property var sound: null
     property var voice: null
     property var systemSounds: null
+    property var wifi: null
     property string selectedPage: "appearance"
     readonly property var results: Catalog.search(search.text)
     readonly property var page: results.find(entry => entry.id === selectedPage) || results[0] || null
@@ -260,6 +261,8 @@ Rectangle {
                                     ? "Mode, mirror, and setup changes have a 20-second preview. Other display changes apply immediately; night light applies to all displays."
                                     : root.page && root.page.id === "sound" && root.sound
                                     ? "Sound controls are available. Changes apply to the selected device or supported apps."
+                                    : root.page && root.page.id === "network" && root.wifi
+                                    ? "Wi-Fi controls are available. Other network controls are previews."
                                     : "Preview — changes aren’t applied. These controls show what’s planned; values are examples, not your device’s status."
                                 color: root.theme.text
                                 font.family: root.theme.fontFamily
@@ -400,7 +403,8 @@ Rectangle {
                                                     Layout.fillWidth: true
                                                     theme: root.theme
                                                     setting: settingGroup.modelData
-                                                    backend: settingGroup.modelData.kind === "system-sounds" ? root.systemSounds
+                                                    backend: settingGroup.modelData.kind === "wifi" ? root.wifi
+                                                        : settingGroup.modelData.kind === "system-sounds" ? root.systemSounds
                                                         : settingGroup.modelData.kind === "dictation" ? root.voice
                                                         : root.page && root.page.id === "appearance" ? root.appearance
                                                         : root.page && root.page.id === "displays" ? root.displays

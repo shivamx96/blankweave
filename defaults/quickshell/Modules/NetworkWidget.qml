@@ -1,9 +1,7 @@
 import QtQuick
-import QtQuick.Controls
 import QtQuick.Layouts
 import Quickshell
 import Quickshell.Io
-import Quickshell.Networking
 import "../Components"
 import "../Services"
 
@@ -12,17 +10,14 @@ WidgetFrame {
 
     readonly property string shellDir: Quickshell.env("HOME") + "/.local/share/blankweave/shell"
     readonly property string statusScript: shellDir + "/network-status.sh"
-    readonly property var networkDevices: Networking.devices ? Networking.devices.values : []
-    readonly property var wifiDevice: findDevice(DeviceType.Wifi)
-    readonly property var wiredDevice: findDevice(DeviceType.Wired)
-    readonly property var wifiNetworkObjects: wifiDevice && wifiDevice.networks ? wifiDevice.networks.values : []
-    readonly property var connectedWifiNetwork: findConnectedWifiNetwork()
-    readonly property string kind: wiredDevice && wiredDevice.connected
-        ? "ethernet"
-        : (connectedWifiNetwork ? "wifi" : "disconnected")
-    readonly property int signalStrength: connectedWifiNetwork
-        ? Math.round(Number(connectedWifiNetwork.signalStrength || 0) * 100)
-        : -1
+    required property var wifi
+    readonly property var networkDevices: wifi.networkDevices
+    readonly property var wifiDevice: wifi.wifiDevice
+    readonly property var wiredDevice: wifi.wiredDevice
+    readonly property var wifiNetworkObjects: wifi.wifiNetworkObjects
+    readonly property var connectedWifiNetwork: wifi.connectedWifiNetwork
+    readonly property string kind: wiredDevice && wiredDevice.connected ? "ethernet" : connectedWifiNetwork ? "wifi" : "disconnected"
+    readonly property int signalStrength: connectedWifiNetwork ? Math.round(Number(connectedWifiNetwork.signalStrength || 0) * 100) : -1
 
     property var info: ({
         "text": "Offline",
@@ -34,12 +29,11 @@ WidgetFrame {
         "download": "0 B/s",
         "upload": "0 B/s"
     })
-    property var scannerDevice: null
     property bool scanPaused: false
-    property string actionSsid: ""
-    property string actionKind: ""
-    property string failureSsid: ""
-    property string failureReason: ""
+    readonly property string actionSsid: wifi.actionSsid
+    readonly property string actionKind: wifi.actionKind
+    readonly property string failureSsid: wifi.failureSsid
+    readonly property string failureReason: wifi.failureReason
     property string passwordSsid: ""
     property string passwordText: ""
     property string identityText: ""
@@ -61,29 +55,7 @@ WidgetFrame {
         "Quad9",
         "OpenDNS"
     ]
-    readonly property bool busy: actionKind !== ""
-
-    function findDevice(type) {
-        let fallback = null
-        for (let index = 0; index < networkDevices.length; index++) {
-            const device = networkDevices[index]
-            if (!device || device.type !== type)
-                continue
-            if (device.connected)
-                return device
-            if (!fallback)
-                fallback = device
-        }
-        return fallback
-    }
-
-    function findConnectedWifiNetwork() {
-        for (let index = 0; index < wifiNetworkObjects.length; index++) {
-            if (wifiNetworkObjects[index] && wifiNetworkObjects[index].connected)
-                return wifiNetworkObjects[index]
-        }
-        return null
-    }
+    readonly property bool busy: wifi.busy
 
     function wifiIcon(strength) {
         if (strength < 20) return "󰤯"
@@ -93,33 +65,7 @@ WidgetFrame {
         return "󰤨"
     }
 
-    function networkSnapshot(network) {
-        return {
-            "ssid": String(network.name || ""),
-            "connected": Boolean(network.connected),
-            "known": Boolean(network.known),
-            "stateChanging": Boolean(network.stateChanging),
-            "signal": Math.round(Number(network.signalStrength || 0) * 100),
-            "security": Number(network.security)
-        }
-    }
-
-    readonly property var wifiRows: {
-        const rows = []
-        for (let index = 0; index < wifiNetworkObjects.length; index++) {
-            const network = wifiNetworkObjects[index]
-            if (!network || !String(network.name || ""))
-                continue
-            rows.push(root.networkSnapshot(network))
-        }
-        rows.sort((left, right) => {
-            if (left.connected !== right.connected) return left.connected ? -1 : 1
-            if (left.known !== right.known) return left.known ? -1 : 1
-            if (left.signal !== right.signal) return right.signal - left.signal
-            return left.ssid.localeCompare(right.ssid)
-        })
-        return rows
-    }
+    readonly property var wifiRows: wifi.wifiRows
 
     function flattenedWifiRow(row) {
         return {
@@ -170,31 +116,10 @@ WidgetFrame {
         return Boolean(wifiListModel.get(index - 1).known) !== known ? "OTHER NETWORKS" : ""
     }
 
-    function networkForSsid(ssid) {
-        for (let index = 0; index < wifiNetworkObjects.length; index++) {
-            const network = wifiNetworkObjects[index]
-            if (network && String(network.name || "") === ssid)
-                return network
-        }
-        return null
-    }
-
-    function requiresCredentials(security) {
-        return security !== WifiSecurityType.Open && security !== WifiSecurityType.Owe
-    }
-
-    function isEnterprise(security) {
-        return security === WifiSecurityType.Wpa2Eap || security === WifiSecurityType.WpaEap
-    }
-
-    function setScannerEnabled(value) {
-        const nextDevice = networkPanel.open ? wifiDevice : null
-        if (scannerDevice && scannerDevice !== nextDevice)
-            scannerDevice.scannerEnabled = false
-        scannerDevice = nextDevice
-        if (scannerDevice)
-            scannerDevice.scannerEnabled = value
-    }
+    function networkForSsid(ssid) { return wifi.networkForSsid(ssid) }
+    function requiresCredentials(security) { return wifi.requiresCredentials(security) }
+    function isEnterprise(security) { return wifi.isEnterprise(security) }
+    function setScannerEnabled(value) { wifi.setScanRequest(root, networkPanel.open && value) }
 
     function openPasswordPrompt(ssid) {
         if (passwordSsid !== ssid) {
@@ -202,8 +127,6 @@ WidgetFrame {
             identityText = ""
         }
         passwordSsid = ssid
-        failureSsid = ""
-        failureReason = ""
         Qt.callLater(() => {
             const index = root.modelIndexForSsid(ssid)
             if (index >= 0)
@@ -225,96 +148,16 @@ WidgetFrame {
         return -1
     }
 
-    function startAction(kind, ssid) {
-        if (busy || !ssid)
-            return false
-        actionKind = kind
-        actionSsid = ssid
-        failureSsid = ""
-        failureReason = ""
-        actionTimeout.restart()
-        return true
-    }
-
-    function clearAction() {
-        actionTimeout.stop()
-        actionKind = ""
-        actionSsid = ""
-        root.cancelPasswordPrompt()
-    }
-
-    function failAction(ssid, message) {
-        actionTimeout.stop()
-        failureSsid = ssid
-        failureReason = message
-        actionKind = ""
-        actionSsid = ""
-        failureTimer.restart()
-    }
-
-    function connectDirectly(ssid) {
-        const network = root.networkForSsid(ssid)
-        if (!network || !root.startAction("connect", ssid))
-            return
-        network.connect()
-    }
-
-    function connectWithPassword(ssid, password, identity) {
-        const network = root.networkForSsid(ssid)
-        if (!network || !password || !root.startAction("connect", ssid))
-            return
-
-        if (root.isEnterprise(Number(network.security))) {
-            if (!identity) {
-                root.failAction(ssid, "Identity required")
-                root.openPasswordPrompt(ssid)
-                return
-            }
-            enterpriseConnect.secret = password
-            enterpriseConnect.command = [
-                root.shellDir + "/wifi-enterprise-connect.sh",
-                ssid,
-                identity
-            ]
-            enterpriseConnect.running = true
+    function connectDirectly(ssid) { wifi.connectNetwork(wifi.keyForSsid(ssid)) }
+    function connectWithPassword(ssid, password, identity) { wifi.connectNetwork(wifi.keyForSsid(ssid), password, identity) }
+    function disconnectNetwork(ssid) { wifi.disconnectNetwork(wifi.keyForSsid(ssid)) }
+    function forgetNetwork(ssid) { wifi.forgetNetwork(wifi.keyForSsid(ssid)) }
+    Connections {
+        target: root.wifi
+        function onCredentialsRequired(key) {
+            if (networkPanel.open) root.openPasswordPrompt(root.wifi.ssidForKey(key))
         }
-        else {
-            network.connectWithPsk(password)
-        }
-    }
-
-    function disconnectNetwork(ssid) {
-        const network = root.networkForSsid(ssid)
-        if (!network || !root.startAction("disconnect", ssid))
-            return
-        network.disconnect()
-    }
-
-    function forgetNetwork(ssid) {
-        const network = root.networkForSsid(ssid)
-        if (!network || !root.startAction("forget", ssid))
-            return
-        network.forget()
-    }
-
-    function checkActionCompletion() {
-        if (!actionKind || !actionSsid)
-            return
-        const network = root.networkForSsid(actionSsid)
-        if (actionKind === "connect" && network && network.connected)
-            root.clearAction()
-        else if (actionKind === "disconnect" && network && !network.connected && !network.stateChanging)
-            root.clearAction()
-        else if (actionKind === "forget" && (!network || (!network.known && !network.stateChanging)))
-            root.clearAction()
-    }
-
-    function failureMessage(reason) {
-        if (reason === ConnectionFailReason.NoSecrets) return "Passphrase required"
-        if (reason === ConnectionFailReason.WifiAuthTimeout) return "Wrong password"
-        if (reason === ConnectionFailReason.WifiNetworkLost) return "Network lost"
-        if (reason === ConnectionFailReason.WifiClientDisconnected) return "Disconnected"
-        return "Connection failed"
+        function onActionSucceeded() { root.cancelPasswordPrompt() }
     }
 
     function rowStatus(ssid, connected, known, signal) {
@@ -399,7 +242,7 @@ WidgetFrame {
             + (wiredDevice && wiredDevice.linkSpeed ? " · " + wiredDevice.linkSpeed + " Mbit/s" : ""))
         : (kind === "wifi"
             ? signalStrength + "% signal"
-            : (wifiDevice && Networking.wifiEnabled ? "Scanning for networks" : "Disconnected"))
+            : (wifiDevice && root.wifi.enabled ? "Scanning for networks" : "Disconnected"))
 
     icon: root.networkIcon
     iconPixelSize: theme.barIconSize - 2
@@ -435,19 +278,18 @@ WidgetFrame {
 
     onWifiRowsChanged: {
         root.syncWifiModel()
-        root.checkActionCompletion()
     }
 
     onWifiDeviceChanged: {
-        root.setScannerEnabled(networkPanel.open && !root.scanPaused && Networking.wifiEnabled)
+        root.setScannerEnabled(networkPanel.open && !root.scanPaused && root.wifi.enabled)
         root.syncWifiModel()
     }
 
     Connections {
-        target: Networking
+        target: root.wifi
 
-        function onWifiEnabledChanged() {
-            root.setScannerEnabled(networkPanel.open && !root.scanPaused && Networking.wifiEnabled)
+        function onEnabledChanged() {
+            root.setScannerEnabled(networkPanel.open && !root.scanPaused && root.wifi.enabled)
         }
     }
 
@@ -455,35 +297,6 @@ WidgetFrame {
         if (button === Qt.LeftButton) {
             root.bar.hideTooltip(root)
             networkPanel.open = !networkPanel.open
-        }
-    }
-
-    Timer {
-        id: actionTimeout
-        interval: 25000
-        onTriggered: root.failAction(root.actionSsid, "Timed out")
-    }
-
-    Timer {
-        id: failureTimer
-        interval: 3000
-        onTriggered: {
-            root.failureSsid = ""
-            root.failureReason = ""
-        }
-    }
-
-    Process {
-        id: enterpriseConnect
-        property string secret: ""
-        stdinEnabled: true
-        onStarted: {
-            write(secret + "\n")
-            secret = ""
-        }
-        onExited: (exitCode, exitStatus) => {
-            if (exitCode !== 0)
-                root.failAction(root.actionSsid, "Enterprise login failed")
         }
     }
 
@@ -528,7 +341,7 @@ WidgetFrame {
         onOpenChanged: {
             root.scanPaused = false
             root.cancelPasswordPrompt()
-            root.setScannerEnabled(open && Networking.wifiEnabled)
+            root.setScannerEnabled(open && root.wifi.enabled)
             if (open) {
                 root.refreshDns()
                 if (!root.publicLookupDone || root.publicInterface !== String(root.info.interface || ""))
@@ -543,21 +356,21 @@ WidgetFrame {
             subtitle: root.headerSubtitle
             actions: root.wifiDevice
                 ? [
-                    { "id": "scan", "icon": "󰑓", "active": Boolean(root.wifiDevice.scannerEnabled) },
+                    { "id": "scan", "icon": "󰑓", "active": !root.scanPaused && root.wifi.usable },
                     {
                         "id": "power",
-                        "icon": Networking.wifiEnabled ? "󰤨" : "󰤭",
-                        "attention": !Networking.wifiEnabled
+                        "icon": root.wifi.enabled ? "󰤨" : "󰤭",
+                        "attention": !root.wifi.enabled
                     }
                 ]
                 : []
             onActionPressed: actionId => {
                 if (actionId === "power") {
-                    Networking.wifiEnabled = !Networking.wifiEnabled
-                    Qt.callLater(() => root.setScannerEnabled(Networking.wifiEnabled))
+                    root.wifi.setEnabled(!root.wifi.enabled)
+                    Qt.callLater(() => root.setScannerEnabled(root.wifi.enabled))
                 }
                 else if (actionId === "scan" && root.wifiDevice) {
-                    root.scanPaused = root.wifiDevice.scannerEnabled
+                    root.scanPaused = !root.scanPaused
                     root.setScannerEnabled(!root.scanPaused)
                 }
             }
@@ -684,7 +497,7 @@ WidgetFrame {
 
         ListView {
             id: networkList
-            visible: Boolean(root.wifiDevice) && Networking.wifiEnabled && wifiListModel.count > 0
+            visible: Boolean(root.wifiDevice) && root.wifi.enabled && wifiListModel.count > 0
             Layout.fillWidth: true
             Layout.preferredHeight: visible
                 ? ((networkPanel.open && !root.scanPaused) ? 280 : Math.min(contentHeight, 280))
@@ -715,25 +528,6 @@ WidgetFrame {
 
                 width: networkList.width
                 height: 46 + (section ? 25 : 0) + (passwordOpen ? (enterprise ? 76 : 40) : 0)
-
-                Connections {
-                    target: root.networkForSsid(networkDelegate.ssid)
-
-                    function onConnectionFailed(reason) {
-                        if (root.actionSsid !== networkDelegate.ssid || root.actionKind !== "connect")
-                            return
-                        const message = root.failureMessage(reason)
-                        root.failAction(networkDelegate.ssid, message)
-                        if (networkDelegate.secured
-                                && (reason === ConnectionFailReason.NoSecrets
-                                    || reason === ConnectionFailReason.WifiAuthTimeout))
-                            root.openPasswordPrompt(networkDelegate.ssid)
-                    }
-
-                    function onConnectedChanged() { root.checkActionCompletion() }
-                    function onKnownChanged() { root.checkActionCompletion() }
-                    function onStateChangingChanged() { root.checkActionCompletion() }
-                }
 
                 ControlSectionLabel {
                     visible: networkDelegate.section !== ""
@@ -990,12 +784,12 @@ WidgetFrame {
 
         Text {
             visible: Boolean(root.wifiDevice)
-                && (!Networking.wifiEnabled || wifiListModel.count === 0)
+                && (!root.wifi.enabled || wifiListModel.count === 0)
             Layout.fillWidth: true
-            Layout.preferredHeight: Networking.wifiEnabled && networkPanel.open && !root.scanPaused ? 280 : 42
+            Layout.preferredHeight: root.wifi.enabled && networkPanel.open && !root.scanPaused ? 280 : 42
             verticalAlignment: Text.AlignVCenter
             horizontalAlignment: Text.AlignHCenter
-            text: !Networking.wifiEnabled ? "Wi-Fi is turned off" : "Scanning for networks…"
+            text: !root.wifi.enabled ? "Wi-Fi is turned off" : "Scanning for networks…"
             color: root.theme.textMuted
             font.family: root.theme.fontFamily
             font.pixelSize: root.theme.smallTextSize
@@ -1023,8 +817,5 @@ WidgetFrame {
 
     Component.onCompleted: root.syncWifiModel()
 
-    Component.onDestruction: {
-        if (root.scannerDevice)
-            root.scannerDevice.scannerEnabled = false
-    }
+    Component.onDestruction: wifi.setScanRequest(root, false)
 }

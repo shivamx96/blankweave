@@ -381,6 +381,15 @@ apps, with a quiet preview button. Preferences use the desktop settings store;
 that do not pick up changes. Visual theme switches preserve sound preferences
 and unrelated GTK settings. Notification and dictation sounds remain separate.
 
+**Network & Bluetooth → Wi-Fi** shows live nearby networks, radio state, and
+connection progress. Connect to open or personal-password networks, reuse saved
+connections, or disconnect. Saved profiles include networks that are out of
+range; forgetting one requires confirmation and is disabled while it is active.
+New enterprise/certificate and hidden-network setup remains in a NetworkManager
+connection editor. The bar and Settings share Wi-Fi state and scan ownership;
+scanning stops when the last requesting view closes. Bluetooth and the other
+network rows remain previews for subsequent slices.
+
 Controls awaiting implementation are marked **Preview** and disabled. Their
 example values are not device readings, and they never apply changes. Those pages will
 gain working controls incrementally. Existing bar controls remain available.

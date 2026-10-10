@@ -1,5 +1,6 @@
 import QtQuick
 import Quickshell
+import Quickshell.Networking
 import "Services"
 import "Settings"
 
@@ -10,7 +11,15 @@ ShellRoot {
     ShellPreferences { id: preferences }
     AudioService { id: audio }
     Voxtype { id: voice }
-    SettingsWindow { id: settings; theme: desktopTheme; preferences: preferences; sound: audio; voice: voice }
+    QtObject {
+        id: networkProvider
+        property int backend: NetworkBackendType.NetworkManager
+        property bool wifiEnabled: true
+        property bool wifiHardwareEnabled: true
+        property QtObject devices: QtObject { property var values: [] }
+    }
+    NetworkWifi { id: wifi; provider: networkProvider }
+    SettingsWindow { id: settings; theme: desktopTheme; preferences: preferences; sound: audio; voice: voice; wifi: wifi }
     Timer {
         interval: 200
         running: true
@@ -36,7 +45,19 @@ ShellRoot {
                 if (audio.microphone.active) { console.error("Microphone meter requested while minimized"); Qt.quit(); return }
                 settings.minimized = false
                 settings.visible = false
+            } else if (root.step === 6) {
+                settings.selectedPage = "network"; settings.openSettings()
+            } else if (root.step === 7) {
+                if (wifi.scanOwners.length !== 1 || !wifi.profilesActive) { console.error("Wi-Fi not active on Network page"); Qt.quit(); return }
+                settings.selectedPage = "appearance"
+            } else if (root.step === 8) {
+                if (wifi.scanOwners.length || wifi.profilesActive) { console.error("Wi-Fi active outside Network page"); Qt.quit(); return }
+                settings.selectedPage = "network"; settings.minimized = true
+            } else if (root.step === 9) {
+                if (wifi.scanOwners.length || wifi.profilesActive) { console.error("Wi-Fi active while minimized"); Qt.quit(); return }
+                settings.minimized = false; settings.visible = false
             } else {
+                if (wifi.scanOwners.length || wifi.profilesActive) { console.error("Wi-Fi active while hidden"); Qt.quit(); return }
                 if (audio.microphone.active) { console.error("Microphone meter requested while hidden"); Qt.quit(); return }
                 console.log("SETTINGS_WINDOW_PASSED")
                 Qt.quit()

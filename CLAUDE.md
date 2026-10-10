@@ -382,17 +382,28 @@ also be stopped after close so scanning cannot degrade Bluetooth audio. Power
 changes go through `bluetooth-power.sh` for rfkill persistence, and successful
 audio-device connections become the preferred PipeWire output.
 
-Network controls use Quickshell's native NetworkManager model. As with
+Network controls share one `NetworkWifi` service owned by `shell.qml`, backed
+by Quickshell's native NetworkManager model. As with
 Bluetooth discovery, Wi-Fi scan results must be copied into primitive rows and
 actions resolved back to live network objects by SSID, because scan churn can
-invalidate wrapper objects during delegate creation. Scanning belongs to the
-open panel and must be released on close. Keep passphrases out of process
+invalidate wrapper objects during delegate creation. Settings actions capture
+adapter, SSID, and security together and re-resolve that identity before use.
+Scanning is requested by each open bar panel and the visible, non-minimized
+Network Settings page; release only that view's request on close, and stop
+scanning when the final owner leaves. Keep passphrases out of process
 arguments; the enterprise helper accepts secrets only through stdin. The same
 widget must gracefully collapse to wired connection details on machines with no
 Wi-Fi hardware. Public-address lookups run only when the panel is opened and
 are cached until the active interface changes. DNS choices modify only the
 active NetworkManager connection and must never replace ISP/DHCP DNS unless the
 user explicitly selects a provider.
+
+`wifi-profiles.py` lists saved Wi-Fi profiles through NetworkManager's D-Bus
+settings API using `busctl` JSON, including profiles without a nearby access
+point. Never request secrets for this list. Forget by UUID after rechecking the
+connection type and active state, with explicit confirmation in Settings.
+Native Wi-Fi tests inject fake providers and profile helpers; never toggle the
+host radio, disconnect a real network, or delete a real profile during tests.
 
 The Git widget lists repositories under `~/IdeaProjects` and the pull requests
 attached to the signed-in GitHub account. The two concerns stay in separate

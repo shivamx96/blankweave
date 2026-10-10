@@ -15,6 +15,7 @@ ShellRoot {
     property ShellPreferences preferences: ShellPreferences { }
     property Voxtype voxtype: Voxtype { }
     property AudioService audio: AudioService { }
+    property NetworkWifi wifi: NetworkWifi { }
     property AgentUsage agentUsage: AgentUsage { }
     property bool launcherOpen: false
     property string launcherMode: "applications"
@@ -30,6 +31,7 @@ ShellRoot {
         preferences: root.preferences
         sound: root.audio
         voice: root.voxtype
+        wifi: root.wifi
     }
 
     // The mode lives here rather than in the surface because Variants gives
