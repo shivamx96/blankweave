@@ -422,6 +422,23 @@ reconnection; never silently reconnect it. Disabled IP families stay untouched.
 Network UI tests use an injected helper, and helper tests mock the bus and
 nmcli. Never change host DNS or real connections for validation.
 
+`WirelessControls` owns airplane and hotspot operations. It serializes them with
+Wi-Fi, Bluetooth, and connection actions; native Wi-Fi scanning stops in AP mode.
+`wireless-controls.py` snapshots rfkill blocks and Bluetooth power before blocking
+radios, keeps restoration data after partial failure, and restores by radio
+name/type and Bluetooth address rather than a reused rfkill index. Hardware
+blocks remain visible. A radio enabled elsewhere is shown as an override, never
+silently presented as blocked. Status is read-only.
+Hotspots use `AddAndActivateConnection2` with volatile persistence, autoconnect
+disabled, WPA2/CCMP, and IPv4 sharing. Require AP/RSN/CCMP support and the mandatory
+dnsmasq/nftables dependencies. Capture and recheck adapter and activation identity;
+require explicit confirmation before replacing an active Wi-Fi connection. Pass
+passwords only on stdin and D-Bus, clear fields on submit/close/device change, and
+never request or display saved secrets. Stop only the captured Blankweave-owned
+hotspot; failed-start cleanup touches only the profile created by that request.
+All radio/hotspot mutation tests use mocks or an injected helper. Never run a
+real rfkill mutation or start a real access point while validating this slice.
+
 `wifi-profiles.py` lists saved Wi-Fi profiles through NetworkManager's D-Bus
 settings API using `busctl` JSON, including profiles without a nearby access
 point. Never request secrets for this list. Forget by UUID after rechecking the

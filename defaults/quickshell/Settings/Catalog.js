@@ -48,11 +48,11 @@ var pages = [
             { id: "wifi", title: "Wi-Fi", description: "Connect to nearby networks and manage saved connections.", kind: "wifi", live: true },
             { id: "ethernet", title: "Ethernet & DNS", description: "Manage wired connections, view addresses, and choose DNS for Ethernet or Wi-Fi.", kind: "network", live: true },
             { id: "bluetooth", title: "Bluetooth devices", description: "Discover, pair, connect, and forget accessories.", kind: "bluetooth", live: true },
-            { id: "airplane", title: "Airplane mode", description: "Turn off wireless radios.", kind: "toggle" }
+            { id: "airplane", title: "Airplane mode", description: "Turn off wireless radios and restore their previous state.", kind: "airplane", live: true }
         ] },
         { title: "Sharing & remote access", rows: [
             { id: "vpn", title: "VPN & Tailscale", description: "Manage private networks and imported VPN profiles.", kind: "action", action: "Configure" },
-            { id: "hotspot", title: "Wi-Fi hotspot", description: "Share your connection with other devices.", kind: "toggle" },
+            { id: "hotspot", title: "Wi-Fi hotspot", description: "Share a connection through a temporary, password-protected Wi-Fi network.", kind: "hotspot", live: true },
             { id: "sharing", title: "File sharing", description: "Configure nearby sharing and network folders.", kind: "action", action: "Configure" }
         ] }
     ] },

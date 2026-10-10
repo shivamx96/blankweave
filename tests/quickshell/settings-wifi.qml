@@ -30,6 +30,7 @@ ShellRoot {
     QtObject {
         id: device
         property string name: "wlan-test"
+        property int mode: WifiDeviceMode.Station
         property int type: DeviceType.Wifi
         property bool connected: false
         property bool nmManaged: true
@@ -133,6 +134,10 @@ ShellRoot {
         wifi.setScanRequest("settings", true)
         verify(device.scannerEnabled)
         wifi.setScanRequest("bar", true)
+        device.mode = WifiDeviceMode.AccessPoint
+        verify(wifi.hosting && !device.scannerEnabled)
+        device.mode = WifiDeviceMode.Station
+        verify(!wifi.hosting && device.scannerEnabled)
         wifi.setScanRequest("settings", false)
         verify(device.scannerEnabled)
         provider.wifiHardwareEnabled = false

@@ -15,6 +15,7 @@ ShellRoot {
     property ShellPreferences preferences: ShellPreferences { }
     property Voxtype voxtype: Voxtype { }
     property AudioService audio: AudioService { }
+    property WirelessControls wireless: WirelessControls { wifi: root.wifi; bluetooth: root.bluetooth; connections: root.connections }
     property NetworkConnections connections: NetworkConnections { }
     property NetworkWifi wifi: NetworkWifi { }
     property BluetoothService bluetooth: BluetoothService { }
@@ -33,6 +34,7 @@ ShellRoot {
         preferences: root.preferences
         sound: root.audio
         voice: root.voxtype
+        wireless: root.wireless
         connections: root.connections
         wifi: root.wifi
         bluetooth: root.bluetooth

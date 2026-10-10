@@ -402,8 +402,19 @@ when no profile exists, or disconnect. Select an active Ethernet or Wi-Fi
 connection to inspect IPv4/IPv6 addresses, gateways, and DNS servers. DNS supports
 automatic network settings, provider presets, and custom addresses. Changes are
 saved to that profile and applied live without reconnecting; a failed live update
-is reported explicitly. The bar shares the same DNS backend. Airplane mode and
-hotspot remain previews for the next slice.
+is reported explicitly. The bar shares the same DNS backend.
+
+**Airplane mode** blocks wireless radios while keeping Ethernet available. Turning
+it off restores the previous radio blocks and Bluetooth power state. Hardware
+blocks and radios re-enabled elsewhere are shown explicitly.
+
+**Wi-Fi hotspot** creates a temporary WPA2 network on an AP-capable adapter.
+Choose the adapter, name, and password; replacing an active Wi-Fi connection
+requires confirmation. Internet sharing needs Ethernet or another upstream
+adapter, plus the required `dnsmasq` and `nftables` packages. Hotspots do not
+autoconnect, disappear after disconnect/reboot, and keep their password out of
+process arguments and disk. Stop the hotspot from Settings and reconnect a saved
+Wi-Fi network when finished. VPN and file sharing remain previews.
 
 Controls awaiting implementation are marked **Preview** and disabled. Their
 example values are not device readings, and they never apply changes. Those pages will

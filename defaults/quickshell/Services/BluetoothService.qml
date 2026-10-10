@@ -13,7 +13,9 @@ QtObject {
     readonly property var adapter: provider.defaultAdapter
     readonly property var rawDevices: provider.devices ? provider.devices.values : []
     readonly property bool enabled: adapter !== null && adapter.enabled
-    readonly property bool busy: action.running || power.running || actionKey !== ""
+    property bool externalBusy: false
+    readonly property bool busy: externalBusy || localBusy
+    readonly property bool localBusy: action.running || power.running || actionKey !== ""
     property string actionKey: ""
     property string actionKind: ""
     property var actionOwner: null
@@ -210,7 +212,7 @@ QtObject {
         updateDiscovery()
     }
     function updateDiscovery() {
-        const next = enabled && scanOwners.length ? adapter : null
+        const next = enabled && !externalBusy && scanOwners.length ? adapter : null
         if (next === discoveryAdapter) return
         if (discoveryAdapter) {
             discoveryAdapter.discovering = false
@@ -223,6 +225,7 @@ QtObject {
             next.discovering = true
         }
     }
+    onExternalBusyChanged: updateDiscovery()
     onAdapterChanged: { updateDiscovery(); if (actionKind === "pair" && !liveDevice(actionKey)) cancelPairing() }
     onEnabledChanged: { updateDiscovery(); if (!enabled) cancelPairing() }
     property Timer discoveryTimer: Timer {

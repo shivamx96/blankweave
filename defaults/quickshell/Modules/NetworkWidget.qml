@@ -725,7 +725,7 @@ WidgetFrame {
             Layout.preferredHeight: root.wifi.enabled && networkPanel.open && !root.scanPaused ? 280 : 42
             verticalAlignment: Text.AlignVCenter
             horizontalAlignment: Text.AlignHCenter
-            text: !root.wifi.enabled ? "Wi-Fi is turned off" : "Scanning for networks…"
+            text: root.wifi.hosting ? "Wi-Fi hotspot is active" : !root.wifi.enabled ? "Wi-Fi is turned off" : "Scanning for networks…"
             color: root.theme.textMuted
             font.family: root.theme.fontFamily
             font.pixelSize: root.theme.smallTextSize

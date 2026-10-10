@@ -22,6 +22,8 @@ libcanberra
 gsettings-desktop-schemas
 sound-theme-freedesktop
 networkmanager
+dnsmasq
+nftables
 tailscale
 curl
 jq

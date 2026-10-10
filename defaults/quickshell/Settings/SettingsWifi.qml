@@ -68,6 +68,7 @@ ColumnLayout {
             : !root.backend.wifiDevice ? "No Wi-Fi adapter detected."
             : !root.backend.hardwareEnabled ? "Wi-Fi is blocked by a hardware switch."
             : !root.backend.managed ? "This Wi-Fi adapter is not managed by NetworkManager."
+            : root.backend.hosting ? "This adapter is hosting a Wi-Fi hotspot."
             : !root.backend.enabled ? "Wi-Fi is turned off."
             : root.backend.connectedWifiNetwork ? "Connected to " + root.backend.connectedWifiNetwork.name
             : root.backend.busy ? "Wi-Fi request in progress…" : "Looking for nearby networks…"
