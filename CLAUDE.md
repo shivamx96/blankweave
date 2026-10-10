@@ -668,6 +668,15 @@ row control types when their functionality becomes available. Settings tests
 run through `tests/settings.sh`, using offscreen Qt tests and isolated Quickshell
 processes so validation cannot modify the developer's desktop.
 
+System appearance is an explicit Settings action. It uses `pkexec` with the
+root-owned `/usr/lib/blankweave/theme-system` installed by `install.sh`, never a
+user-writable script. Its polkit action requires administrator authentication
+for an active local session. `--progress` emits stable stage markers; Settings
+distinguishes cancellation, failure, and verification, and only confirms success
+after refreshing theme status. A failed boot-image rebuild leaves `.sync-pending`
+in the installed Plymouth directory so status remains pending and retries really
+rebuild the boot image. Keep that marker until a successful rebuild.
+
 ### Adding a new Quickshell module
 
 1. Create `defaults/quickshell/Modules/<Name>Widget.qml`

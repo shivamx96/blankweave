@@ -78,7 +78,10 @@ status=$("$apply" status)
 
 # The sync colours every installed Papirus variant, installs the splash once,
 # and repaints the console colours in entries that carry them.
-"$sync" "$home" > "$test_root/sync.out"
+"$sync" --progress "$home" > "$test_root/sync.out"
+grep '^blankweave-theme-sync:' "$test_root/sync.out" > "$test_root/progress"
+printf 'blankweave-theme-sync:folders\nblankweave-theme-sync:boot-splash\nblankweave-theme-sync:console\nblankweave-theme-sync:complete\n' > "$test_root/expected-progress"
+diff -u "$test_root/expected-progress" "$test_root/progress"
 for theme in Papirus Papirus-Dark Papirus-Light; do
     [[ $(readlink "$system/share/icons/$theme/48x48/places/folder.svg") == folder-green.svg ]]
     grep -Fxq "papirus-folders -C green -t $theme" "$FAKE_LOG"
@@ -124,5 +127,40 @@ jq 'del(.plymouth) | del(.folderColor) | .name = "Plain"' "$data/themes/obsidian
 grep -Fq 'incomplete' "$test_root/sync.out"
 [[ ! -s $FAKE_LOG ]]
 cmp -s "$data/themes/obsidian/plymouth/logo.png" "$installed/logo.png"
+
+# A failed initramfs rebuild must remain pending even after artwork was copied,
+# and a retry must rebuild rather than treating matching files as success.
+"$apply" set moss
+rm "$fake_bin/plymouth-set-default-theme"
+printf '#!/usr/bin/env bash\nexit 9\n' > "$fake_bin/plymouth-set-default-theme"
+chmod +x "$fake_bin/plymouth-set-default-theme"
+if "$sync" --progress "$home" > "$test_root/failed-sync.out" 2>&1; then
+    printf 'Expected boot-image rebuild failure\n' >&2
+    exit 1
+fi
+[[ -f $installed/.sync-pending ]]
+[[ $(jq -r '.system.bootSplash' <<< "$("$apply" status)") == true ]]
+expect_failure grep -q '^blankweave-theme-sync:complete$' "$test_root/failed-sync.out"
+rm "$fake_bin/plymouth-set-default-theme"
+ln -s "$repository/tests/fixtures/fake-log.sh" "$fake_bin/plymouth-set-default-theme"
+: > "$FAKE_LOG"
+"$sync" --progress "$home" > "$test_root/retried-sync.out"
+grep -Fxq 'plymouth-set-default-theme -R blankweave' "$FAKE_LOG"
+[[ ! -e $installed/.sync-pending ]]
+[[ $(jq -r '.system.pending' <<< "$("$apply" status)") == false ]]
+
+# The GUI action authenticates only active local sessions, against the fixed
+# root-owned helper path; it must never become a passwordless action.
+python3 - "$repository/defaults/polkit/org.blankweave.theme-sync.policy" <<'PY'
+import sys
+import xml.etree.ElementTree as ET
+action = ET.parse(sys.argv[1]).getroot().find('action')
+assert action.attrib['id'] == 'org.blankweave.theme-sync'
+assert action.findtext('defaults/allow_active') == 'auth_admin'
+assert action.findtext('defaults/allow_inactive') == 'no'
+assert action.findtext('defaults/allow_any') == 'no'
+assert action.find("annotate[@key='org.freedesktop.policykit.exec.path']").text == '/usr/lib/blankweave/theme-system'
+assert action.find("annotate[@key='org.freedesktop.policykit.exec.allow_gui']") is None
+PY
 
 printf 'Theme system tests passed.\n'

@@ -271,14 +271,57 @@ Rectangle {
                                     onClicked: root.appearance.refresh()
                                 }
                             }
-                            Text {
+                            Rectangle {
                                 Layout.fillWidth: true
-                                visible: root.appearance.systemPending
-                                text: "Folder colors and the boot splash still need administrator access. Run blankweave theme sync in a terminal to finish."
-                                color: root.theme.textMuted
-                                font.family: root.theme.fontFamily
-                                font.pixelSize: root.theme.smallTextSize
-                                wrapMode: Text.WordWrap
+                                visible: root.appearance.systemPending || root.appearance.syncMessage !== ""
+                                implicitHeight: systemAppearance.implicitHeight + 28
+                                color: root.theme.panelSurface
+                                radius: root.theme.widgetRadius
+                                border.color: root.theme.outline
+
+                                ColumnLayout {
+                                    id: systemAppearance
+                                    anchors { left: parent.left; right: parent.right; top: parent.top; margins: 14 }
+                                    spacing: 10
+                                    Text {
+                                        text: "System appearance"
+                                        color: root.theme.text
+                                        font.family: root.theme.fontFamily
+                                        font.pixelSize: root.theme.textSize
+                                        font.weight: Font.Medium
+                                    }
+                                    Text {
+                                        Layout.fillWidth: true
+                                        visible: root.appearance.systemPending
+                                        text: root.appearance.pendingDescription
+                                            + (root.appearance.syncAvailable
+                                                ? " Apply these changes with administrator approval."
+                                                : " Update Blankweave to enable system appearance controls.")
+                                        color: root.theme.textMuted
+                                        font.family: root.theme.fontFamily
+                                        font.pixelSize: root.theme.smallTextSize
+                                        wrapMode: Text.WordWrap
+                                    }
+                                    Text {
+                                        objectName: "systemAppearanceProgress"
+                                        Layout.fillWidth: true
+                                        visible: root.appearance.syncMessage !== ""
+                                        text: root.appearance.syncMessage
+                                        color: root.appearance.syncState === "error" ? root.theme.warning : root.theme.text
+                                        font.family: root.theme.fontFamily
+                                        font.pixelSize: root.theme.smallTextSize
+                                        wrapMode: Text.WordWrap
+                                    }
+                                    SettingsButton {
+                                        objectName: "applySystemAppearance"
+                                        theme: root.theme
+                                        visible: root.appearance.systemPending
+                                        enabled: root.appearance.ready && root.appearance.syncAvailable && !root.appearance.busy
+                                        text: root.appearance.syncing ? "Applying…"
+                                            : root.appearance.syncState === "error" ? "Try again…" : "Apply system appearance…"
+                                        onClicked: root.appearance.syncSystem()
+                                    }
+                                }
                             }
                         }
 
