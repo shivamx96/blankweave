@@ -20,6 +20,8 @@ QtObject {
     readonly property bool ready: loaded && readError === "" && monitor !== null
     readonly property var monitor: monitors.find(row => row.name === selectedConnector) || null
     readonly property var scaleValues: monitor ? ["auto"].concat(monitor.scaleOptions) : []
+    readonly property var positionValues: ["auto", "left", "right", "above", "below"]
+    readonly property bool placeable: monitor !== null && !monitor.internal && monitors.length > 1
     readonly property string details: monitor
         ? monitor.width + " × " + monitor.height + " · Active scale " + percent(monitor.effectiveScale)
         : ""
@@ -30,9 +32,24 @@ QtObject {
 
     function percent(value) { return Math.round(Number(value) * 10000) / 100 + "%" }
     function label(row) { return (row.internal ? "Built-in display" : row.description) + " · " + row.name }
-    function choices(id) { return id === "scale" ? scaleValues.map(value => value === "auto" ? "Automatic" : percent(value)) : [] }
+    function choices(id) {
+        if (id === "scale") return scaleValues.map(value => value === "auto" ? "Automatic" : percent(value))
+        if (id === "arrangement") return ["Automatic", "Left", "Right", "Above", "Below"]
+        return []
+    }
+    function canApply(id) { return id === "scale" || (id === "arrangement" && placeable) }
+    function description(id) {
+        if (id !== "arrangement") return ""
+        if (!monitor) return "Select a connected display to choose its position."
+        if (monitors.length < 2) return "Connect another display to change its position."
+        if (monitor.internal) return "Select an external display to place it around the built-in display."
+        return "Place this display around the existing desktop layout. Current origin: "
+            + monitor.x + ", " + monitor.y + "."
+    }
     function selection(id) {
-        if (id !== "scale" || !monitor) return -1
+        if (!monitor) return -1
+        if (id === "arrangement") return positionValues.indexOf(monitor.position)
+        if (id !== "scale") return -1
         // A saved numeric preference can differ from compositor state after a
         // failed apply or an external change. Show the actual scale in that case.
         return scaleValues.indexOf(monitor.scale === "auto" ? "auto" : monitor.effectiveScale)
@@ -47,12 +64,24 @@ QtObject {
         status.running = true
     }
     function apply(id, index) {
-        if (id !== "scale" || !ready || busy || index < 0 || index >= scaleValues.length) return
+        if (!ready || busy || !canApply(id) || !Number.isInteger(index)
+            || index < 0 || index >= choices(id).length) return
         operationError = ""
         applying = true
-        action.command = ["bash", helper, "set-scale", selectedConnector, String(scaleValues[index])]
+        action.command = id === "arrangement"
+            ? ["bash", helper, "set", selectedConnector, positionValues[index]]
+            : ["bash", helper, "set-scale", selectedConnector, String(scaleValues[index])]
         actionQueued = reading
-        if (!reading) action.running = true
+        if (!reading) startAction()
+    }
+    function startAction() {
+        const target = monitors.find(row => row.name === action.command[3])
+        if (readError || !target || (action.command[2] === "set" && (target.internal || monitors.length < 2))) {
+            applying = false
+            operationError = "The connected displays changed. Select a display and try again."
+            return
+        }
+        action.running = true
     }
 
     onActiveChanged: if (active) refresh()
@@ -79,6 +108,8 @@ QtObject {
                         || typeof row.description !== "string" || typeof row.internal !== "boolean"
                         || !Number.isFinite(row.width) || row.width <= 0
                         || !Number.isFinite(row.height) || row.height <= 0
+                        || !Number.isFinite(row.x) || !Number.isFinite(row.y)
+                        || !root.positionValues.includes(row.position)
                         || !Number.isFinite(row.effectiveScale) || row.effectiveScale <= 0
                         || !(row.scale === "auto" || (Number.isFinite(row.scale) && row.scale > 0))
                         || !Array.isArray(row.scaleOptions) || !row.scaleOptions.includes(row.effectiveScale)
@@ -99,7 +130,7 @@ QtObject {
                 root.actionQueued = false
                 // The helper revalidates the captured connector and scale
                 // against live state before writing, including after hotplug.
-                root.action.running = true
+                root.startAction()
             }
         }
     }
@@ -107,7 +138,8 @@ QtObject {
         onExited: (exitCode, exitStatus) => {
             root.applying = false
             if (exitCode !== 0 || exitStatus !== 0)
-                root.operationError = "Could not apply scaling. The display may have disconnected or the setting may be unavailable. Refresh and try again."
+                root.operationError = "Could not apply " + (action.command[2] === "set" ? "display position" : "scaling")
+                    + ". The display may have disconnected or the setting may be unavailable. Refresh and try again."
             // Re-read even after failure: the helper may have saved the choice
             // before the compositor rejected it. Never claim it is active.
             root.refresh()

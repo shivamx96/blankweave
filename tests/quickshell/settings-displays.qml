@@ -6,9 +6,19 @@ import "Services"
 ShellRoot {
     id: test
     property int step: 0
+    property bool queuePlacement: false
     readonly property string fixture: Qt.resolvedUrl("displays.sh").toString().replace("file://", "")
     SettingsDisplays { id: backend; helper: test.fixture }
-    Process { id: scenario; onExited: backend.refresh() }
+    Process {
+        id: scenario
+        onExited: {
+            backend.refresh()
+            if (test.queuePlacement) {
+                test.queuePlacement = false
+                backend.apply("arrangement", 1)
+            }
+        }
+    }
     function setScenario(name) {
         scenario.command = ["bash", fixture, "scenario", name]
         scenario.running = true
@@ -79,10 +89,52 @@ ShellRoot {
                     break
                 case 9:
                     test.check(backend.ready && !backend.readError, "Refresh did not recover")
+                    test.check(!backend.canApply("arrangement"), "Internal monitor can be moved")
+                    backend.apply("arrangement", 1)
+                    test.check(!backend.busy, "Internal monitor mutation accepted")
+                    backend.selectDisplay(1)
+                    test.check(backend.canApply("arrangement"), "External monitor cannot be moved")
+                    test.check(backend.choices("arrangement").join() === "Automatic,Left,Right,Above,Below", "Wrong position choices")
+                    backend.apply("arrangement", 99)
+                    test.check(!backend.busy, "Invalid position accepted")
+                    backend.apply("arrangement", 1)
+                    break
+                case 10:
+                    test.check(!backend.error && backend.selection("arrangement") === 1, "Position was not refreshed")
+                    test.check(backend.monitor.x === -2560 && backend.description("arrangement").includes("-2560"), "Live coordinates missing")
+                    test.check(backend.selection("scale") === 3, "Moving changed scale")
+                    backend.apply("arrangement", 4)
+                    break
+                case 11:
+                    test.check(backend.error.includes("display position"), "Position failure was not reported")
+                    test.check(backend.selection("arrangement") === 4 && backend.monitor.y === 0, "Saved position and live coordinates conflated")
+                    backend.apply("arrangement", 0)
+                    break
+                case 12:
+                    test.check(!backend.error && backend.selection("arrangement") === 0, "Automatic placement retry failed")
+                    test.check(backend.selection("scale") === 3, "Automatic placement reset scale")
+                    test.setScenario("reconnected")
+                    break
+                case 13:
+                    backend.selectDisplay(1)
+                    test.check(backend.selectedConnector === "DP-7" && backend.selection("arrangement") === 1, "Reconnected display state missing")
+                    test.setScenario("desktop")
+                    break
+                case 14:
+                    test.check(backend.canApply("arrangement"), "Desktop without built-in display cannot be positioned")
+                    backend.selectDisplay(1)
+                    test.queuePlacement = true
+                    test.setScenario("external-only")
+                    break
+                case 15:
+                    test.check(!backend.canApply("arrangement") && backend.error.includes("connected displays changed"), "Queued placement ran after the second display disappeared")
+                    test.check(backend.description("arrangement").includes("Connect another"), "Missing single-display explanation")
+                    backend.apply("arrangement", 1)
+                    test.check(!backend.busy, "Lone external monitor mutation accepted")
                     backend.helper = "/missing/settings-displays.sh"
                     backend.refresh()
                     break
-                case 10:
+                case 16:
                     test.check(!backend.ready && backend.readError.length > 0, "Missing helper accepted")
                     console.log("SETTINGS_DISPLAYS_PASSED")
                     Qt.quit()

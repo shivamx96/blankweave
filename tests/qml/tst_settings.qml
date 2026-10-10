@@ -59,11 +59,15 @@ TestCase {
         property string savedScaleNotice: ""
         property int writes: 0
         property int selected: 2
+        property int selectedPosition: 0
+        property string lastSetting: ""
         function label(row) { return row.name }
         function selectDisplay(index) { selectedConnector = monitors[index].name }
-        function choices(id) { return ["Automatic", "100%", "150%"] }
-        function selection(id) { return selected }
-        function apply(id, index) { writes++; selected = index }
+        function canApply(id) { return id !== "arrangement" || (selectedConnector === "DP-3" && monitors.length > 1) }
+        function description(id) { return id === "arrangement" && !canApply(id) ? "Select an external display." : "" }
+        function choices(id) { return id === "arrangement" ? ["Automatic", "Left", "Right", "Above", "Below"] : ["Automatic", "100%", "150%"] }
+        function selection(id) { return id === "arrangement" ? selectedPosition : selected }
+        function apply(id, index) { writes++; lastSetting = id; if (id === "arrangement") selectedPosition = index; else selected = index }
         function refresh() { }
     }
     SignalSpy { id: closeSpy; target: content; signalName: "closeRequested" }
@@ -90,6 +94,8 @@ TestCase {
         fakeDisplays.selectedConnector = "eDP-1"
         fakeDisplays.selected = 2
         fakeDisplays.writes = 0
+        fakeDisplays.selectedPosition = 0
+        fakeDisplays.lastSetting = ""
     }
 
     function test_search_and_empty_state() {
@@ -127,6 +133,29 @@ TestCase {
         fakeDisplays.monitors = []
         verify(!display.enabled && !scale.enabled)
         compare(findChild(content, "displayStatus").text, "No connected displays.")
+    }
+
+    function test_position_availability_and_routing() {
+        content.selectedPage = "displays"
+        wait(20)
+        var position = findChild(content, "settingsChoice_arrangement")
+        var scale = findChild(content, "settingsChoice_scale")
+        verify(position !== null && !position.enabled)
+        verify(scale.enabled)
+        compare(findChild(content, "settingsDescription_arrangement").text, "Select an external display.")
+        findChild(content, "settingsDisplaySelector").activated(1)
+        verify(position.enabled)
+        position.activated(3)
+        compare(fakeDisplays.lastSetting, "arrangement")
+        compare(position.currentIndex, 3)
+        compare(scale.currentIndex, 2)
+        fakeDisplays.busy = true
+        verify(!position.enabled)
+        fakeDisplays.busy = false
+        fakeDisplays.monitors = [{ name: "DP-3" }]
+        verify(!position.enabled)
+        verify(scale.enabled)
+        compare(fakeDisplays.writes, 1)
     }
 
     function test_pages_at_narrow_width() {

@@ -67,7 +67,7 @@ if ! grep -q SETTINGS_DISPLAYS_PASSED "$test_root/displays.log" \
     cat "$test_root/displays.log"
     exit 1
 fi
-printf 'DP-3 auto\nDP-3 1.25\n' > "$test_root/expected-displays"
+printf 'DP-3 auto\nDP-3 1.25\nset DP-3 left\nset DP-3 below\nset DP-3 auto\n' > "$test_root/expected-displays"
 diff -u "$test_root/expected-displays" "$SETTINGS_DISPLAYS_STATE.commands"
 
 # Load the real native window in a separate shell with an isolated home. This

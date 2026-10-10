@@ -112,6 +112,31 @@ grep -Fxq 'hl.monitor({ output = "desc:LG Electronics LG HDR 4K 0x000596ED", mod
 "$script" set DP-3 above
 grep -Fxq 'hl.monitor({ output = "desc:LG Electronics LG HDR 4K 0x000596ED", mode = "preferred", position = "auto-up", scale = "auto" })' "$rules"
 
+# Reconnecting through another port preserves saved placement and scaling by
+# description; subsequent moves target the new connector without duplication.
+jq '.[1].name = "DP-7"' "$monitors" > "$test_root/reconnected.json"
+mv "$test_root/reconnected.json" "$monitors"
+status=$("$script" status)
+[[ $(jq -r '.monitors[1].name' <<< "$status") == DP-7 ]]
+[[ $(jq -r '.monitors[1].position' <<< "$status") == above ]]
+[[ $(jq -r '.monitors[1].scale' <<< "$status") == auto ]]
+"$script" set DP-7 below
+[[ $(jq -r '.monitors | length' "$config") == 2 ]]
+[[ $(jq -r '.monitors[1].position' <<< "$("$script" status)") == below ]]
+[[ $(jq -r '.monitors[1].scale' <<< "$("$script" status)") == auto ]]
+jq '.[1].name = "DP-3"' "$monitors" > "$test_root/reconnected.json"
+mv "$test_root/reconnected.json" "$monitors"
+
+# Automatic placement has a final live command after writing the rules. Its
+# failure must reach the UI even though the saved preference already changed.
+if FAKE_HYPRCTL_FAIL_MATCH='hl.monitor(' "$script" set DP-3 auto > "$test_root/error" 2>&1; then
+    printf 'Rejected automatic placement must fail.\n' >&2
+    exit 1
+fi
+grep -q 'rejected automatic monitor placement' "$test_root/error"
+[[ $(jq -r '.monitors[1].position' <<< "$("$script" status)") == auto ]]
+"$script" set DP-3 auto
+
 # Invalid input is rejected before anything is written or applied.
 : > "$FAKE_HYPRCTL_LOG"
 before=$(cat "$config")
