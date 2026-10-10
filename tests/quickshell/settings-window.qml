@@ -8,7 +8,8 @@ ShellRoot {
     property int step: 0
     Theme { id: desktopTheme }
     ShellPreferences { id: preferences }
-    SettingsWindow { id: settings; theme: desktopTheme; preferences: preferences }
+    AudioService { id: audio }
+    SettingsWindow { id: settings; theme: desktopTheme; preferences: preferences; sound: audio }
     Timer {
         interval: 200
         running: true
@@ -22,7 +23,7 @@ ShellRoot {
             else if (root.step === 1) {
                 if (!settings.visible) { console.error("Settings did not open"); Qt.quit(); return }
                 settings.visible = false
-            } else if (root.step === 2) settings.openSettings()
+            } else if (root.step === 2) { settings.selectedPage = "sound"; settings.openSettings() }
             else {
                 if (settings.visible) console.log("SETTINGS_WINDOW_PASSED")
                 Qt.quit()

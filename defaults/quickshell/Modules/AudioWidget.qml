@@ -1,77 +1,33 @@
+pragma ComponentBehavior: Bound
 import QtQuick
 import QtQuick.Layouts
-import Quickshell.Services.Pipewire
 import "../Components"
 
 WidgetFrame {
     id: root
 
-    readonly property var sink: Pipewire.defaultAudioSink
-    readonly property bool muted: !sink || !sink.audio || sink.audio.muted
-    readonly property real volume: sink && sink.audio ? sink.audio.volume : 0
-    readonly property int percentage: Math.round(volume * 100)
-    readonly property var sinks: {
-        const values = Pipewire.nodes ? Pipewire.nodes.values : []
-        const available = []
-        for (let index = 0; index < values.length; index++) {
-            const node = values[index]
-            if (node && node.isSink && !node.isStream)
-                available.push(node)
-        }
-        return available.sort((left, right) => root.nodeLabel(left).localeCompare(root.nodeLabel(right)))
-    }
+    readonly property var audio: bar.shell.audio
+    readonly property bool muted: !audio.available || audio.muted
+    readonly property int percentage: Math.round(audio.volume * 100)
 
-    function nodeLabel(node) {
-        if (!node)
-            return "Unknown output"
-        return String(node.description || node.nickname || node.name || "Audio output")
-    }
-
-    function nodeIcon(node) {
-        const description = root.nodeLabel(node).toLowerCase()
-        if (description.includes("headset"))
-            return "󰋎"
-        if (description.includes("headphone"))
-            return "󰋋"
-        if (description.includes("bluetooth"))
-            return "󰂯"
-        if (description.includes("hdmi") || description.includes("displayport") || description.includes("display port"))
-            return "󰍹"
-        return "󰓃"
-    }
-
-    function setPreferredSink(node) {
-        if (node)
-            Pipewire.preferredDefaultAudioSink = node
-    }
-
-    visible: sink !== null
+    visible: audio.outputKey !== ""
     icon: muted ? "󰝟" : (percentage < 35 ? "󰕿" : (percentage < 70 ? "󰖀" : "󰕾"))
     iconPixelSize: theme.barIconSize + 3
     label: muted ? "Muted" : percentage + "%"
-    tooltip: (sink ? root.nodeLabel(sink) : "No audio output")
+    tooltip: audio.outputLabel
         + "\nClick for controls · Scroll to adjust · Right-click to mute"
     attention: muted
-
-    PwObjectTracker {
-        objects: root.sinks
-    }
 
     onPressed: button => {
         if (button === Qt.LeftButton) {
             bar.hideTooltip(root)
             audioPanel.open = !audioPanel.open
         }
-        else if (button === Qt.RightButton && sink && sink.audio)
-            sink.audio.muted = !sink.audio.muted
+        else if (button === Qt.RightButton)
+            audio.setOutputMuted(!audio.muted)
     }
 
-    onScrolled: delta => {
-        if (!sink || !sink.audio)
-            return
-
-        sink.audio.volume = Math.max(0, Math.min(1.5, volume + (delta > 0 ? 0.02 : -0.02)))
-    }
+    onScrolled: delta => audio.setOutputVolume(audio.volume + (delta > 0 ? 0.02 : -0.02))
 
     ControlPopup {
         id: audioPanel
@@ -84,7 +40,7 @@ WidgetFrame {
             theme: root.theme
             icon: "󰎆"
             title: "SOUND"
-            subtitle: root.nodeLabel(root.sink)
+            subtitle: root.audio.outputLabel
             actions: [
                 { "id": "mixer", "icon": "󰒓" },
                 { "id": "mute", "icon": root.muted ? "󰝟" : "󰕾", "attention": root.muted }
@@ -94,8 +50,8 @@ WidgetFrame {
                     audioPanel.open = false
                     root.bar.run(["pavucontrol"])
                 }
-                else if (actionId === "mute" && root.sink && root.sink.audio)
-                    root.sink.audio.muted = !root.sink.audio.muted
+                else if (actionId === "mute")
+                    root.audio.setOutputMuted(!root.audio.muted)
             }
         }
 
@@ -104,17 +60,9 @@ WidgetFrame {
             text: "OUTPUT LEVEL"
         }
 
-        ControlValueRow {
+        AudioVolumeControl {
             theme: root.theme
-            from: 0
-            to: 1.5
-            value: root.volume
-            stepSize: 0.01
-            valueText: root.percentage + "%"
-            onValueMoved: value => {
-                if (root.sink && root.sink.audio)
-                    root.sink.audio.volume = value
-            }
+            backend: root.audio
         }
 
         ControlDivider { theme: root.theme }
@@ -128,7 +76,7 @@ WidgetFrame {
             id: sinkList
             Layout.fillWidth: true
             Layout.preferredHeight: Math.min(contentHeight, 200)
-            model: root.sinks
+            model: root.audio.outputs
             spacing: 0
             clip: true
             interactive: contentHeight > height
@@ -137,7 +85,7 @@ WidgetFrame {
                 id: sinkRow
 
                 required property var modelData
-                readonly property bool selected: root.sink === modelData
+                readonly property bool selected: root.audio.outputKey === modelData.key
 
                 width: sinkList.width
                 height: 36
@@ -159,7 +107,7 @@ WidgetFrame {
                     anchors.left: parent.left
                     anchors.leftMargin: 12
                     anchors.verticalCenter: parent.verticalCenter
-                    text: root.nodeIcon(sinkRow.modelData)
+                    text: root.audio.icon(sinkRow.modelData.label)
                     color: sinkRow.selected ? root.theme.accentBright : root.theme.textMuted
                     font.family: root.theme.iconFontFamily
                     font.pixelSize: root.theme.iconSize
@@ -172,7 +120,8 @@ WidgetFrame {
                     anchors.right: selectedMark.left
                     anchors.rightMargin: 8
                     anchors.verticalCenter: parent.verticalCenter
-                    text: root.nodeLabel(sinkRow.modelData)
+                    text: sinkRow.modelData.label
+                    textFormat: Text.PlainText
                     color: sinkRow.selected ? root.theme.accentBright : root.theme.text
                     elide: Text.ElideRight
                     font.family: root.theme.fontFamily
@@ -196,7 +145,7 @@ WidgetFrame {
                     anchors.fill: parent
                     hoverEnabled: true
                     cursorShape: Qt.PointingHandCursor
-                    onClicked: root.setPreferredSink(sinkRow.modelData)
+                    onClicked: root.audio.selectOutput(sinkRow.modelData.key)
                 }
             }
         }

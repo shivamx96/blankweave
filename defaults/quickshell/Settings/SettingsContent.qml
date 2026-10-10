@@ -10,6 +10,7 @@ Rectangle {
     required property var theme
     required property var appearance
     property var displays: null
+    property var sound: null
     property string selectedPage: "appearance"
     readonly property var results: Catalog.search(search.text)
     readonly property var page: results.find(entry => entry.id === selectedPage) || results[0] || null
@@ -249,6 +250,8 @@ Rectangle {
                                     ? "Theme, color mode, and bar changes apply immediately. Other controls are previews."
                                     : root.page && root.page.id === "displays" && root.displays
                                     ? "Mode, mirror, and setup changes have a 20-second preview. Other display changes apply immediately; night light applies to all displays."
+                                    : root.page && root.page.id === "sound" && root.sound
+                                    ? "Output device, volume, and mute are live. Other sound controls are previews."
                                     : "Preview — changes aren’t applied. These controls show what’s planned; values are examples, not your device’s status."
                                 color: root.theme.text
                                 font.family: root.theme.fontFamily
@@ -390,7 +393,8 @@ Rectangle {
                                                     theme: root.theme
                                                     setting: settingGroup.modelData
                                                     backend: root.page && root.page.id === "appearance" ? root.appearance
-                                                        : root.page && root.page.id === "displays" ? root.displays : null
+                                                        : root.page && root.page.id === "displays" ? root.displays
+                                                        : root.page && root.page.id === "sound" ? root.sound : null
                                                 }
                                             }
                                         }
