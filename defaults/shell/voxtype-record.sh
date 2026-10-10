@@ -13,10 +13,10 @@ case $action in
     stop|cancel)
         exec voxtype record "$action"
         ;;
-    start|toggle)
+    start|start-clipboard|toggle)
         ;;
     *)
-        printf 'Usage: %s [start|stop|toggle|cancel]\n' "${0##*/}" >&2
+        printf 'Usage: %s [start|start-clipboard|stop|toggle|cancel]\n' "${0##*/}" >&2
         exit 2
         ;;
 esac
@@ -31,6 +31,13 @@ fi
 
 mkdir -p "$blankweave_runtime"
 rm -f -- "$mode_file"
+
+# Settings has no editable destination. Use an explicit clipboard route and
+# retain the same delivery metadata as the focus-based keyboard shortcut.
+if [[ $action == start-clipboard ]]; then
+    printf 'clipboard\n' > "$mode_file"
+    exec voxtype record start --clipboard --no-auto-submit
+fi
 
 focus_result=2
 if [[ -n ${BLANKWEAVE_VOXTYPE_FOCUS:-} ]]; then

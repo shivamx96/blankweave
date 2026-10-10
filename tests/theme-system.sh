@@ -23,7 +23,7 @@ expect_failure() {
 # into the sandbox, so the test never needs root and never touches /usr.
 fake_bin=$test_root/fake-bin
 mkdir -p "$fake_bin"
-for command in gsettings dunstctl hyprctl awww plymouth-set-default-theme; do
+for command in gsettings dunstctl hyprctl awww systemctl plymouth-set-default-theme; do
     ln -s "$repository/tests/fixtures/fake-log.sh" "$fake_bin/$command"
 done
 ln -s "$repository/tests/fixtures/fake-gdbus.sh" "$fake_bin/gdbus"
@@ -48,6 +48,8 @@ printf 'title Fallback\noptions root=/dev/sda2 rw\n' > "$system/boot/entries/pla
 
 export HOME=$home
 export XDG_CONFIG_HOME=$home/.config
+export XDG_RUNTIME_DIR=$test_root/runtime
+mkdir -m 700 "$XDG_RUNTIME_DIR"
 export FAKE_LOG=$test_root/side-effects.log
 export PATH=$fake_bin:$PATH
 export BLANKWEAVE_ICONS_DIR=$system/share/icons

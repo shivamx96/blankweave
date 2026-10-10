@@ -29,6 +29,7 @@ ShellRoot {
         theme: root.theme
         preferences: root.preferences
         sound: root.audio
+        voice: root.voxtype
     }
 
     // The mode lives here rather than in the surface because Variants gives

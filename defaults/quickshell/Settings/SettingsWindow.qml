@@ -7,6 +7,7 @@ FloatingWindow {
     required property var theme
     required property var preferences
     property var sound: null
+    property var voice: null
     property alias selectedPage: content.selectedPage
     visible: false
     title: "Blankweave Settings"
@@ -59,6 +60,7 @@ FloatingWindow {
         appearance: appearanceBackend
         displays: displaysBackend
         sound: root.sound
+        voice: root.voice
         onCloseRequested: root.visible = false
     }
 }

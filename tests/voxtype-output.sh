@@ -37,6 +37,11 @@ run_record none start
 grep -Fxq 'record start --clipboard' "$log"
 [[ $(< "$runtime/blankweave/voxtype-output-mode") == clipboard ]]
 
+# Settings recording must use the clipboard even when an editable widget has focus.
+run_record editable start-clipboard
+tail -n 1 "$log" | grep -Fxq 'record start --clipboard --no-auto-submit'
+[[ $(< "$runtime/blankweave/voxtype-output-mode") == clipboard ]]
+
 transcript=$'Unicode stays intact: café, हिन्दी, 日本語.\nSecond line.'
 processed=$(
     printf '%s' "$transcript" \
