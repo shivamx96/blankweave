@@ -346,6 +346,12 @@ saved position: left, right, above, below, or Automatic around the existing
 desktop layout. Position changes preserve its scaling preference and follow
 the display across reconnects. The position menu shows the saved choice;
 current desktop coordinates are shown separately. Mirroring remains a preview.
+Brightness adjusts the selected display from 5–100% using the built-in backlight
+or DDC/CI on supported external monitors. The slider follows hardware readings,
+including changes from the bar, and rechecks the level after applying a change.
+Unavailable controls explain how to retry; external monitors may need DDC/CI
+enabled in their own menu. Brightness changes use the existing hardware controls
+and do not add a saved login-time override.
 
 All other controls are visibly marked **Preview** and disabled. Their example
 values are not device readings, and they never apply changes. Those pages will

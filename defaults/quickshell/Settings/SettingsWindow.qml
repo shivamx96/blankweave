@@ -32,6 +32,13 @@ FloatingWindow {
     SettingsDisplays {
         id: displaysBackend
         active: root.visible && content.page !== null && content.page.id === "displays"
+        brightness: displayBrightness
+    }
+
+    DisplayBrightness {
+        id: displayBrightness
+        screen: displaysBackend.monitor
+        active: displaysBackend.active && displaysBackend.monitor !== null
     }
 
     SettingsContent {

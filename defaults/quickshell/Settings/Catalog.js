@@ -22,10 +22,10 @@ var pages = [
     { id: "displays", title: "Displays", icon: "󰍹", description: "Arrange your workspace, wherever you connect.", groups: [
         { title: "Connected displays", rows: [
             { id: "scale", title: "Scaling", description: "Change the size of text and applications on the selected display.", kind: "choice", options: [], live: true },
+            { id: "brightness", title: "Brightness", description: "Adjust the selected display’s brightness.", kind: "slider", minimum: 5, maximum: 100, live: true },
             { id: "arrangement", title: "Saved display position", description: "Place an external display left, right, above, or below the existing desktop layout.", kind: "choice", options: [], live: true },
             { id: "mirroring", title: "Mirror displays", description: "Show the same content on multiple displays.", kind: "action", action: "Configure" },
-            { id: "resolution", title: "Resolution & refresh rate", description: "Choose a supported mode for each display.", kind: "action", action: "Configure" },
-            { id: "brightness", title: "Brightness", description: "Adjust built-in and supported external displays.", kind: "action", action: "Adjust" }
+            { id: "resolution", title: "Resolution & refresh rate", description: "Choose a supported mode for each display.", kind: "action", action: "Configure" }
         ] },
         { title: "Comfort & presets", rows: [
             { id: "night-light", title: "Night light", description: "Use warmer colors on a schedule.", kind: "toggle" },

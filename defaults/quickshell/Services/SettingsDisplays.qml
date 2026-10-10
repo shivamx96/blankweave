@@ -6,6 +6,7 @@ QtObject {
     id: root
     property string helper: Quickshell.env("HOME") + "/.local/share/blankweave/shell/monitor-layout.sh"
     property bool active: false
+    property var brightness: null
     property var monitors: []
     property string selectedConnector: ""
     property bool loaded: false
@@ -18,6 +19,7 @@ QtObject {
     // Background reads must not disable an open menu every polling interval.
     readonly property bool busy: applying || (!loaded && reading)
     readonly property bool ready: loaded && readError === "" && monitor !== null
+    readonly property bool canSelect: !busy && (!brightness || (!brightness.held && !brightness.busy))
     readonly property var monitor: monitors.find(row => row.name === selectedConnector) || null
     readonly property var scaleValues: monitor ? ["auto"].concat(monitor.scaleOptions) : []
     readonly property var positionValues: ["auto", "left", "right", "above", "below"]
@@ -37,8 +39,19 @@ QtObject {
         if (id === "arrangement") return ["Automatic", "Left", "Right", "Above", "Below"]
         return []
     }
-    function canApply(id) { return id === "scale" || (id === "arrangement" && placeable) }
+    function canApply(id) {
+        if (id === "brightness") return brightness !== null && brightness.available && brightness.active
+        return (id === "scale" || (id === "arrangement" && placeable))
+            && (!brightness || (!brightness.held && !brightness.busy))
+    }
     function description(id) {
+        if (id === "brightness") {
+            if (!monitor) return "Select a connected display to adjust its brightness."
+            if (!brightness || !brightness.loaded) return "Checking brightness support…"
+            return brightness.error || (brightness.busy ? "Applying brightness…"
+                : brightness.backend === "ddc" ? "Adjust this monitor using DDC/CI."
+                : "Adjust the built-in backlight.")
+        }
         if (id !== "arrangement") return ""
         if (!monitor) return "Select a connected display to choose its position."
         if (monitors.length < 2) return "Connect another display to change its position."
@@ -55,15 +68,25 @@ QtObject {
         return scaleValues.indexOf(monitor.scale === "auto" ? "auto" : monitor.effectiveScale)
     }
     function selectDisplay(index) {
-        if (index >= 0 && index < monitors.length && !applying)
+        if (index >= 0 && index < monitors.length && canSelect)
             selectedConnector = monitors[index].name
     }
-    function refresh() {
+    function value(id) { return id === "brightness" && brightness ? brightness.percentage : -1 }
+    function adjust(id, value) {
+        if (id === "brightness" && ready && !busy && canApply(id)) brightness.queuePercentage(value)
+    }
+    function hold(id, pressed) { if (id === "brightness" && brightness) brightness.held = pressed }
+    function refresh(includeBrightness = true) {
         if (applying || reading) return
+        if (brightness && includeBrightness) brightness.refresh()
         reading = true
         status.running = true
     }
     function apply(id, index) {
+        if (id === "brightness") {
+            if (ready && !busy && canApply(id)) brightness.commitPercentage(index)
+            return
+        }
         if (!ready || busy || !canApply(id) || !Number.isInteger(index)
             || index < 0 || index >= choices(id).length) return
         operationError = ""
@@ -90,7 +113,7 @@ QtObject {
         interval: 2000
         running: root.active
         repeat: true
-        onTriggered: root.refresh()
+        onTriggered: root.refresh(false)
     }
     property Process status: Process {
         command: ["bash", root.helper, "status"]

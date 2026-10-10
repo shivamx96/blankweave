@@ -683,6 +683,16 @@ after discovery completes, so a disconnected target or lone display is not
 positioned. `SettingsRow` supports optional backend `canApply(id)` and
 `description(id)` methods for per-control availability and explanations.
 
+Settings reuses `DisplayBrightness` for the selected monitor, active only on the
+visible Displays page. Its captured connector/generation isolates slow reads
+and writes from later selections. It coalesces slider requests, cancels queued
+work when hidden or disconnected, and reads back after writes before accepting
+the level as confirmed. The same failure recovery applies to bar controls.
+Only the selected monitor gets additional polling (10 seconds); do not attach
+brightness reads to the layout service's faster poll. Test helper failures,
+readback mismatches, and display-switch races with the isolated brightness
+fixture. Slider rows use `value`, `adjust`, `apply`, and `hold` backend methods.
+
 System appearance is an explicit Settings action. It uses `pkexec` with the
 root-owned `/usr/lib/blankweave/theme-system` installed by `install.sh`, never a
 user-writable script. Its polkit action requires administrator authentication
