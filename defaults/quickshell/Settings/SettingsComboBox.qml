@@ -18,6 +18,7 @@ Controls.ComboBox {
 
     contentItem: Text {
         text: root.displayText
+        textFormat: Text.PlainText
         font: root.font
         color: root.enabled ? root.theme.text : root.theme.textMuted
         verticalAlignment: Text.AlignVCenter
@@ -56,6 +57,7 @@ Controls.ComboBox {
 
         contentItem: Text {
             text: option.text
+            textFormat: Text.PlainText
             font: option.font
             color: option.highlighted || option.index === root.currentIndex
                 ? root.theme.accentBright : root.theme.text

@@ -11,7 +11,20 @@ rows = json.loads(state.read_text())
 if sys.argv[1] == "monitors":
     print(json.dumps(rows if "all" in sys.argv else [row for row in rows if row.get("mirrorOf", "none") == "none"]))
     sys.exit(0)
-command = sys.argv[2]
+if sys.argv[1] == "configerrors":
+    print("")
+    sys.exit(0)
+if sys.argv[1] == "reload":
+    for row in rows:
+        row.pop("icc", None)
+    rules = Path(os.environ["XDG_CONFIG_HOME"]) / "blankweave/monitors.lua"
+    command = rules.read_text() if rules.exists() else ""
+else:
+    command = sys.argv[2]
+if 'icc = ""' in command:
+    sys.exit(1)  # Native Hyprland rejects empty ICC paths.
+if os.environ.get("LAYOUT_REJECT_ICC") and 'icc = "' in command and 'icc = ""' not in command:
+    sys.exit(1)
 with open(os.environ["LAYOUT_TEST_LOG"], "a") as log:
     log.write(command + "\n")
 if command.startswith("dofile"):
@@ -29,6 +42,9 @@ for rule in re.findall(r'hl.monitor\(\{ (.*?) \}\)', command):
         row["scale"] = fields["scale"] if fields["scale"] != "auto" else 1
     if "position" in fields and not fields["position"].startswith("auto"):
         row["x"], row["y"] = map(int, fields["position"].split("x"))
+    for key in ("icc", "cm"):
+        if key in fields:
+            row[key] = fields[key]
     if "transform" in fields:
         row["transform"] = fields["transform"]
     if "mirror" in fields and not (fields["mirror"] and os.environ.get("LAYOUT_IGNORE_MIRROR")):

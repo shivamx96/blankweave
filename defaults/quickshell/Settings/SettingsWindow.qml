@@ -29,10 +29,13 @@ FloatingWindow {
         preferences: root.preferences
     }
 
+    SettingsNightLight { id: nightLightBackend }
+
     SettingsDisplays {
         id: displaysBackend
         active: root.visible && content.page !== null && content.page.id === "displays"
         brightness: displayBrightness
+        nightLight: nightLightBackend
     }
 
     DisplayBrightness {

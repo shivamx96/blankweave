@@ -54,6 +54,12 @@ TestCase {
         property bool loaded: true
         property string error: ""
         property var presets: []
+        property var nightLight: fakeNightLight
+        property var colorProfiles: [{id:"rgb",name:"Studio RGB",path:"/test/rgb.icc",available:true}]
+        property var monitor: ({ colorProfile: "" })
+        property string colorAction: ""
+        function assignColorProfile(id) { colorAction = id; monitor = {colorProfile:id === "none" ? "" : "/test/rgb.icc"} }
+        function deleteColorProfile(id) { colorAction = "delete:" + id }
         property string lastPreset: ""
         function savePreset(name) { lastPreset = "save:" + name }
         function restorePreset(id) { lastPreset = "restore:" + id }
@@ -95,6 +101,19 @@ TestCase {
             else selected = index
         }
         function refresh() { }
+    }
+    QtObject {
+        id: fakeNightLight
+        property bool ready: true
+        property bool available: true
+        property bool busy: false
+        property string revision: "initial"
+        property string error: ""
+        property string description: "Off"
+        property var preferences: ({mode:"off",temperature:4500,start:"21:00",end:"07:00"})
+        property var saved: null
+        function apply(mode, temperature, start, end) { saved = {mode:mode,temperature:temperature,start:start,end:end} }
+        function retry() { }
     }
     SignalSpy { id: closeSpy; target: content; signalName: "closeRequested" }
 
@@ -304,6 +323,48 @@ TestCase {
             theme: test.palette
             model: ["Dark", "Light"]
         }
+    }
+
+    function test_night_light_controls() {
+        content.selectedPage = "displays"
+        wait(0)
+        var mode = findChild(content, "nightLightMode")
+        var temperature = findChild(content, "nightLightTemperature")
+        var apply = findChild(content, "applyNightLight")
+        compare(mode.currentIndex, 0)
+        verify(!temperature.enabled)
+        mode.currentIndex = 2
+        temperature.currentIndex = 2
+        findChild(content, "nightLightStart").text = "22:15"
+        findChild(content, "nightLightEnd").text = "06:45"
+        apply.clicked()
+        compare(fakeNightLight.saved.mode, "schedule")
+        compare(fakeNightLight.saved.temperature, 3500)
+        compare(fakeNightLight.saved.start, "22:15")
+        fakeNightLight.busy = true
+        verify(!apply.enabled)
+        fakeNightLight.busy = false
+        fakeNightLight.available = false
+        verify(!apply.enabled)
+        mode.currentIndex = 0
+        verify(apply.enabled)
+        fakeNightLight.available = true
+    }
+
+    function test_color_profile_controls() {
+        content.selectedPage = "displays"
+        wait(0)
+        var choice = findChild(content, "displayColorProfile")
+        compare(choice.currentIndex, 0)
+        choice.activated(1)
+        compare(fakeDisplays.colorAction, "rgb")
+        compare(choice.currentIndex, 1)
+        fakeDisplays.busy = true
+        verify(!choice.enabled && !findChild(content, "importColorProfile").enabled)
+        fakeDisplays.busy = false
+        choice.activated(0)
+        compare(fakeDisplays.colorAction, "none")
+        compare(choice.currentIndex, 0)
     }
 
     function test_saved_setup_controls() {

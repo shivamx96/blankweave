@@ -709,6 +709,26 @@ independent mode/scale/position controls are disabled. Never permit mirror chain
 or a source to mirror one of its own outputs. `tests/monitor-setups.sh` exercises
 these paths with an isolated, stateful compositor fixture.
 
+`SettingsNightLight` owns a hyprsunset process for the lifetime of the shell,
+including while Settings is hidden. `night-light.py` validates and atomically
+saves `night-light.json`, generates native schedule profiles, and refuses to
+replace a foreign daemon. Only read-only IPC queries belong in status; bare
+`hyprctl hyprsunset identity` is a mutation. Restart on preference changes and
+allow explicit retry after failure. `tests/night-light.sh` checks ownership and
+Off → On → Off → On lifecycle against an isolated daemon fixture.
+
+ICC imports go through `monitor-layout.sh profile-import/profile-set/profile-delete`
+and its existing lock. `display_color.py` validates RGB display profiles using
+Little CMS and copies them into a content-addressed user library. Assignments
+are per display description and use SDR sRGB output. Hyprland does not expose
+the active ICC path, so show saved assignments, never verified active profiles.
+Clearing an ICC assignment reloads compositor configuration because Hyprland
+rejects empty ICC paths; reapply the live layout afterward. Preserve assignments
+through layout previews, rollback, and setup restore;
+saved setups capture geometry, not color assignments. Prevent removal while
+assigned, including to a disconnected display. `tests/display-color.sh` checks
+validation, failure handling, import/removal, and layout preservation.
+
 Settings reuses `DisplayBrightness` for the selected monitor, active only on the
 visible Displays page. Its captured connector/generation isolates slow reads
 and writes from later selections. It coalesces slider requests, cancels queued

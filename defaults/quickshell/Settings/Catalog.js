@@ -28,9 +28,9 @@ var pages = [
             { id: "resolution", title: "Resolution & refresh rate", description: "Choose a supported mode for each display.", kind: "choice", live: true }
         ] },
         { title: "Comfort & presets", rows: [
-            { id: "night-light", title: "Night light", description: "Use warmer colors on a schedule.", kind: "toggle" },
+            { id: "night-light", title: "Night light", description: "Use warmer colors on all displays, even when Settings is closed.", kind: "night-light", live: true },
             { id: "display-presets", title: "Saved monitor setups", description: "Save modes, scaling, positions, and mirroring. Restore with the same displays connected.", kind: "presets", live: true },
-            { id: "color-profile", title: "Color profiles", description: "Manage display color calibration.", kind: "action", action: "Manage" }
+            { id: "color-profile", title: "Color profiles", description: "Assign an RGB display ICC profile to the selected display. Profiles use SDR color output.", kind: "color-profile", live: true }
         ] }
     ] },
     { id: "sound", title: "Sound", icon: "󰕾", description: "Your speakers, microphone, and applications.", groups: [

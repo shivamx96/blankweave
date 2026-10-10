@@ -9,6 +9,8 @@ QtObject {
     property var brightness: null
     property var monitors: []
     property var presets: []
+    property var colorProfiles: []
+    property var nightLight: null
     property string selectedConnector: ""
     property bool loaded: false
     property string readError: ""
@@ -58,7 +60,7 @@ QtObject {
     }
     function canApply(id) {
         if (id === "brightness") return brightness !== null && brightness.available && brightness.active
-        return (id === "display-presets" || (id === "mirroring" && (mirrored || mirrorSources.length > 0))
+        return (id === "display-presets" || id === "color-profile" || (id === "mirroring" && (mirrored || mirrorSources.length > 0))
             || (!mirrored && (id === "scale" || (id === "resolution" && modeValues.length > 0) || (id === "arrangement" && placeable))))
             && (!brightness || (!brightness.held && !brightness.busy))
     }
@@ -136,6 +138,16 @@ QtObject {
         actionQueued = reading
         if (!reading) startAction()
     }
+    function importColorProfile(path) { presetAction("profile-import", path) }
+    function deleteColorProfile(id) { presetAction("profile-delete", id) }
+    function assignColorProfile(id) {
+        if (!ready || busy || !canApply("color-profile")) return
+        operationError = ""
+        applying = true
+        action.command = ["bash", helper, "profile-set", selectedConnector, id]
+        actionQueued = reading
+        if (!reading) startAction()
+    }
     function savePreset(name) { presetAction("preset-save", name.trim()) }
     function restorePreset(id) {
         if (presets.some(row => row.id === id && row.available)) presetAction("preset-preview", id)
@@ -153,7 +165,8 @@ QtObject {
     }
     function startAction() {
         if (action.command[2] === "mode-confirm" || action.command[2] === "mode-revert"
-            || action.command[2].startsWith("preset-")) {
+            || action.command[2].startsWith("preset-")
+            || ["profile-import", "profile-delete"].includes(action.command[2])) {
             action.running = true
             return
         }
@@ -214,6 +227,11 @@ QtObject {
                     throw new Error("Invalid saved setups")
                 if (JSON.stringify(root.presets) !== JSON.stringify(value.presets || []))
                     root.presets = value.presets || []
+                if (value.colorProfiles !== undefined && (!Array.isArray(value.colorProfiles)
+                    || !value.colorProfiles.every(row => row && typeof row.id === "string" && typeof row.name === "string"
+                        && typeof row.path === "string" && typeof row.available === "boolean"))) throw new Error("Invalid color profiles")
+                if (JSON.stringify(root.colorProfiles) !== JSON.stringify(value.colorProfiles || []))
+                    root.colorProfiles = value.colorProfiles || []
                 root.preview = value.preview || null
                 root.now = Date.now() / 1000
                 const names = []
