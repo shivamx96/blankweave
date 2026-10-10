@@ -13,7 +13,9 @@ QtObject {
     property string error: ""
     property string notice: ""
     property string pending: ""
-    readonly property bool busy: status.running || action.running || pending !== ""
+    property bool externalBusy: false
+    readonly property bool busy: externalBusy || localBusy
+    readonly property bool localBusy: status.running || action.running || pending !== ""
     readonly property var ethernet: devices.filter(row => row.kind === "ethernet")
     readonly property var connected: devices.filter(row => row.connected && row.managed)
     readonly property var providers: ["Automatic", "Cloudflare", "Google", "Quad9", "OpenDNS", "Custom"]

@@ -15,8 +15,11 @@ QtObject {
     readonly property bool enabled: available && provider.wifiEnabled
     readonly property bool hardwareEnabled: available && provider.wifiHardwareEnabled
     readonly property bool managed: wifiDevice !== null && wifiDevice.nmManaged
-    readonly property bool usable: available && enabled && hardwareEnabled && managed
-    readonly property bool busy: actionKind !== "" || enterpriseConnect.running || profileAction.running
+    readonly property bool hosting: wifiDevice !== null && wifiDevice.mode === WifiDeviceMode.AccessPoint
+    readonly property bool usable: available && enabled && hardwareEnabled && managed && !hosting && !externalBusy
+    property bool externalBusy: false
+    readonly property bool busy: externalBusy || localBusy
+    readonly property bool localBusy: actionKind !== "" || enterpriseConnect.running || profileAction.running
     property bool profilesActive: false
     property string profilesHelper: Quickshell.env("HOME") + "/.local/share/blankweave/shell/wifi-profiles.py"
     property var profiles: []

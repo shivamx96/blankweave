@@ -13,6 +13,7 @@ Rectangle {
     property var sound: null
     property var voice: null
     property var systemSounds: null
+    property var wireless: null
     property var connections: null
     property var wifi: null
     property var bluetooth: null
@@ -264,7 +265,7 @@ Rectangle {
                                     : root.page && root.page.id === "sound" && root.sound
                                     ? "Sound controls are available. Changes apply to the selected device or supported apps."
                                     : root.page && root.page.id === "network" && root.wifi
-                                    ? "Wi-Fi, Ethernet, DNS, and Bluetooth controls are available. Airplane mode and hotspot are previews."
+                                    ? "Connection, radio, and hotspot controls are available. VPN and file sharing are previews."
                                     : "Preview — changes aren’t applied. These controls show what’s planned; values are examples, not your device’s status."
                                 color: root.theme.text
                                 font.family: root.theme.fontFamily
@@ -405,7 +406,8 @@ Rectangle {
                                                     Layout.fillWidth: true
                                                     theme: root.theme
                                                     setting: settingGroup.modelData
-                                                    backend: settingGroup.modelData.kind === "network" ? root.connections
+                                                    backend: ["airplane", "hotspot"].includes(settingGroup.modelData.kind) ? root.wireless
+                                                        : settingGroup.modelData.kind === "network" ? root.connections
                                                         : settingGroup.modelData.kind === "bluetooth" ? root.bluetooth
                                                         : settingGroup.modelData.kind === "wifi" ? root.wifi
                                                         : settingGroup.modelData.kind === "system-sounds" ? root.systemSounds

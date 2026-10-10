@@ -18,7 +18,7 @@ Item {
         ? backend.description(setting.id) || setting.description : setting.description
     readonly property var choices: live && typeof backend.choices === "function" ? backend.choices(setting.id) : (setting.options || [])
     readonly property int selection: live && typeof backend.selection === "function" ? backend.selection(setting.id) : 0
-    readonly property bool expandedControl: ["presets", "night-light", "color-profile", "sound-output", "sound-input", "dictation", "system-sounds", "wifi", "bluetooth", "network"].includes(setting.kind)
+    readonly property bool expandedControl: ["presets", "night-light", "color-profile", "sound-output", "sound-input", "dictation", "system-sounds", "wifi", "bluetooth", "network", "airplane", "hotspot"].includes(setting.kind)
     readonly property bool compact: width < 510
     implicitHeight: content.implicitHeight + 28
 
@@ -56,7 +56,8 @@ Item {
             Layout.fillWidth: root.expandedControl
             Layout.preferredWidth: root.expandedControl ? content.width : root.compact ? Math.min(240, content.width) : 190
             Layout.preferredHeight: root.expandedControl && item ? (item as Item).implicitHeight : 36
-            sourceComponent: root.setting.kind === "network" ? networkControl
+            sourceComponent: ["airplane", "hotspot"].includes(root.setting.kind) ? wirelessControl
+                : root.setting.kind === "network" ? networkControl
                 : root.setting.kind === "presets" ? presetsControl
                 : root.setting.kind === "night-light" ? nightControl
                 : root.setting.kind === "color-profile" ? colorControl
@@ -72,6 +73,10 @@ Item {
         }
     }
 
+    Component {
+        id: wirelessControl
+        SettingsWireless { theme: root.theme; backend: root.backend; hotspot: root.setting.kind === "hotspot" }
+    }
     Component {
         id: networkControl
         SettingsNetwork { theme: root.theme; backend: root.backend }

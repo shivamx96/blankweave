@@ -8,9 +8,11 @@ FloatingWindow {
     required property var preferences
     property var sound: null
     property var voice: null
+    property var wireless: null
     property var connections: null
     property var wifi: null
     property var bluetooth: null
+    Binding { target: root.wireless; property: "active"; value: root.wifiActive; when: root.wireless !== null }
     Binding { target: root.connections; property: "settingsActive"; value: root.wifiActive; when: root.connections !== null }
     Binding { target: root.bluetooth; property: "settingsActive"; value: root.wifiActive; when: root.bluetooth !== null }
     readonly property bool wifiActive: visible && !minimized && content.page !== null && content.page.id === "network"
@@ -74,6 +76,7 @@ FloatingWindow {
         displays: displaysBackend
         sound: root.sound
         voice: root.voice
+        wireless: root.wireless
         connections: root.connections
         wifi: root.wifi
         bluetooth: root.bluetooth
