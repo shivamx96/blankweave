@@ -407,6 +407,21 @@ are cached until the active interface changes. DNS choices modify only the
 active NetworkManager connection and must never replace ISP/DHCP DNS unless the
 user explicitly selects a provider.
 
+Ethernet and DNS use the shell-owned `NetworkConnections` backend shared by
+Settings and the bar. Poll only while a requesting view is open. Its
+`network-connections.py` helper captures the NetworkManager owner, device path,
+interface, active-connection path, and UUID; revalidate those before every
+mutation so hotplug, reconnects, or daemon restarts cannot retarget a click.
+Ethernet activates an explicitly selected compatible profile, or creates an
+automatic DHCP profile only when none exists. Disconnect addresses the captured
+activation. Never request connection secrets. DNS persistence uses nmcli's
+partial update; live application patches only DNS in `GetAppliedConnection`
+with its version guard and preserves external addresses. Read back both saved
+and applied DNS. On live failure, report that the profile was saved but needs
+reconnection; never silently reconnect it. Disabled IP families stay untouched.
+Network UI tests use an injected helper, and helper tests mock the bus and
+nmcli. Never change host DNS or real connections for validation.
+
 `wifi-profiles.py` lists saved Wi-Fi profiles through NetworkManager's D-Bus
 settings API using `busctl` JSON, including profiles without a nearby access
 point. Never request secrets for this list. Forget by UUID after rechecking the

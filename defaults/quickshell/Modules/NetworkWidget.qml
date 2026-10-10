@@ -10,6 +10,7 @@ WidgetFrame {
 
     readonly property string shellDir: Quickshell.env("HOME") + "/.local/share/blankweave/shell"
     readonly property string statusScript: shellDir + "/network-status.sh"
+    property var connections: null
     required property var wifi
     readonly property var networkDevices: wifi.networkDevices
     readonly property var wifiDevice: wifi.wifiDevice
@@ -40,21 +41,13 @@ WidgetFrame {
     property var publicInfo: ({ "ipv4": "", "ipv6": "" })
     property string publicInterface: ""
     property bool publicLookupDone: false
-    property var dnsInfo: ({
-        "provider": "",
-        "servers": "",
-        "ipv4Servers": "",
-        "ipv6Servers": "",
-        "error": ""
-    })
-    property string pendingDnsProvider: ""
-    readonly property var dnsProviders: [
-        "ISP Default",
-        "Cloudflare",
-        "Google",
-        "Quad9",
-        "OpenDNS"
-    ]
+    readonly property var dnsRow: connections && connections.ready
+        ? connections.connected.find(row => row.interface === String(info.interface || "")) || null : null
+    readonly property var dnsInfo: ({provider: dnsRow ? dnsRow.provider : "",
+        ipv4Servers: dnsRow ? dnsRow.ipv4.dns.join(", ") : "",
+        ipv6Servers: dnsRow ? dnsRow.ipv6.dns.join(", ") : "",
+        error: connections ? connections.error : ""})
+    readonly property var dnsProviders: ["Automatic", "Cloudflare", "Google", "Quad9", "OpenDNS"]
     readonly property bool busy: wifi.busy
 
     function wifiIcon(strength) {
@@ -194,42 +187,8 @@ WidgetFrame {
         publicLookupDone = true
     }
 
-    function refreshDns() {
-        if (!info.interface || dnsProcess.running)
-            return
-        dnsProcess.command = [root.shellDir + "/network-dns.sh", "status"]
-        dnsProcess.running = true
-    }
-
-    function setDns(provider) {
-        if (!provider || dnsProcess.running)
-            return
-        pendingDnsProvider = provider
-        dnsInfo = {
-            "provider": String(dnsInfo.provider || ""),
-            "servers": String(dnsInfo.servers || ""),
-            "ipv4Servers": String(dnsInfo.ipv4Servers || ""),
-            "ipv6Servers": String(dnsInfo.ipv6Servers || ""),
-            "error": ""
-        }
-        dnsProcess.command = [root.shellDir + "/network-dns.sh", provider]
-        dnsProcess.running = true
-    }
-
-    function updateDns(payload) {
-        try {
-            dnsInfo = JSON.parse(String(payload || ""))
-        } catch (error) {
-            dnsInfo = ({
-                "provider": String(dnsInfo.provider || ""),
-                "servers": String(dnsInfo.servers || ""),
-                "ipv4Servers": String(dnsInfo.ipv4Servers || ""),
-                "ipv6Servers": String(dnsInfo.ipv6Servers || ""),
-                "error": "Could not read DNS configuration"
-            })
-        }
-        pendingDnsProvider = ""
-    }
+    function refreshDns() { if (connections) connections.refresh() }
+    function setDns(provider) { if (connections && dnsRow) connections.setDns(dnsRow, provider) }
 
     readonly property string networkIcon: kind === "ethernet"
         ? "󰈀"
@@ -309,28 +268,6 @@ WidgetFrame {
         }
     }
 
-    Process {
-        id: dnsProcess
-
-        stdout: StdioCollector {
-            waitForEnd: true
-            onStreamFinished: root.updateDns(text)
-        }
-
-        onExited: (exitCode, exitStatus) => {
-            if (exitCode !== 0 && !root.dnsInfo.error) {
-                root.dnsInfo = {
-                    "provider": String(root.dnsInfo.provider || ""),
-                    "servers": String(root.dnsInfo.servers || ""),
-                    "ipv4Servers": String(root.dnsInfo.ipv4Servers || ""),
-                    "ipv6Servers": String(root.dnsInfo.ipv6Servers || ""),
-                    "error": "Could not update DNS configuration"
-                }
-                root.pendingDnsProvider = ""
-            }
-        }
-    }
-
     ControlPopup {
         id: networkPanel
         bar: root.bar
@@ -340,6 +277,7 @@ WidgetFrame {
 
         onOpenChanged: {
             root.scanPaused = false
+            if (root.connections) root.connections.setActive(root, open)
             root.cancelPasswordPrompt()
             root.setScannerEnabled(open && root.wifi.enabled)
             if (open) {
@@ -462,12 +400,10 @@ WidgetFrame {
 
                     Layout.fillWidth: true
                     theme: root.theme
-                    text: modelData === "ISP Default" ? "Default" : modelData
-                    selected: root.pendingDnsProvider
-                        ? root.pendingDnsProvider === modelData
-                        : String(root.dnsInfo.provider || "") === modelData
-                    busy: root.pendingDnsProvider === modelData
-                    enabled: !dnsProcess.running
+                    text: modelData === "Automatic" ? "Default" : modelData
+                    selected: String(root.dnsInfo.provider || "") === modelData
+                    busy: root.connections !== null && root.connections.pending !== ""
+                    enabled: root.dnsRow !== null && !root.connections.busy
                     onPressed: root.setDns(modelData)
                 }
             }
@@ -478,7 +414,7 @@ WidgetFrame {
             Layout.fillWidth: true
             text: root.dnsInfo.error
                 ? String(root.dnsInfo.error)
-                : (dnsProcess.running && !root.pendingDnsProvider
+                : (root.connections && root.connections.busy
                     ? "Reading active connection…"
                     : (root.dnsInfo.provider
                         ? String(root.dnsInfo.provider)
@@ -817,5 +753,5 @@ WidgetFrame {
 
     Component.onCompleted: root.syncWifiModel()
 
-    Component.onDestruction: wifi.setScanRequest(root, false)
+    Component.onDestruction: { wifi.setScanRequest(root, false); if (connections) connections.setActive(root, false) }
 }

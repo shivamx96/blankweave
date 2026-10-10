@@ -15,6 +15,7 @@ ShellRoot {
     property ShellPreferences preferences: ShellPreferences { }
     property Voxtype voxtype: Voxtype { }
     property AudioService audio: AudioService { }
+    property NetworkConnections connections: NetworkConnections { }
     property NetworkWifi wifi: NetworkWifi { }
     property BluetoothService bluetooth: BluetoothService { }
     property AgentUsage agentUsage: AgentUsage { }
@@ -32,6 +33,7 @@ ShellRoot {
         preferences: root.preferences
         sound: root.audio
         voice: root.voxtype
+        connections: root.connections
         wifi: root.wifi
         bluetooth: root.bluetooth
     }

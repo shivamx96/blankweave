@@ -13,6 +13,7 @@ exit "${SETTINGS_TEST_EXIT:-0}"
 EOF
 chmod +x "$test_root/bin/qs"
 export SETTINGS_TEST_LOG="$test_root/command"
+export SETTINGS_NETWORK_STATE="$test_root/network-state"
 export SETTINGS_WIFI_PROFILES_STATE="$test_root/wifi-profiles-state"
 export SETTINGS_SYSTEM_SOUNDS_STATE="$test_root/system-sounds-state"
 export SETTINGS_VOICE_LOG="$test_root/voice-commands"
@@ -120,6 +121,24 @@ if ! grep -q SETTINGS_WIFI_PASSED "$test_root/wifi.log" \
     exit 1
 fi
 
+# Ethernet and DNS actions are isolated from host NetworkManager.
+mkdir -p "$test_root/network"
+cp -R "$repository/defaults/quickshell/"{Services,Settings,Components,Assets} "$test_root/network/"
+cp "$repository/defaults/quickshell/Theme.qml" "$test_root/network/"
+cp "$repository/tests/quickshell/settings-network.qml" "$test_root/network/shell.qml"
+cp "$repository/tests/fixtures/settings-network.py" "$test_root/network/network.py"
+if ! HOME="$test_root/home" XDG_CONFIG_HOME="$test_root/home/.config" \
+    XDG_RUNTIME_DIR="$test_root/runtime" QT_QPA_PLATFORM=offscreen \
+    QT_QUICK_BACKEND=software timeout 15 qs -p "$test_root/network" > "$test_root/network.log" 2>&1; then
+    cat "$test_root/network.log"
+    exit 1
+fi
+if ! grep -q SETTINGS_NETWORK_PASSED "$test_root/network.log" \
+    || grep -Eq '(TypeError|ReferenceError|Binding loop|Unable to assign|Failed to load|Error:)' "$test_root/network.log"; then
+    cat "$test_root/network.log"
+    exit 1
+fi
+
 # Bluetooth uses fake BlueZ objects and a JSON helper, never host pairing or rfkill.
 mkdir -p "$test_root/bluetooth"
 cp -R "$repository/defaults/quickshell/"{Services,Settings,Components,Assets,Modules} "$test_root/bluetooth/"
@@ -187,6 +206,7 @@ cp "$repository/tests/quickshell/settings-window.qml" "$test_root/window/shell.q
 cp "$repository/tests/fixtures/settings-theme.sh" "$test_root/home/.local/share/blankweave/shell/theme-apply.sh"
 cp "$repository/tests/fixtures/settings-system-sounds.py" "$test_root/home/.local/share/blankweave/shell/system-sounds.py"
 cp "$repository/tests/fixtures/settings-wifi-profiles.py" "$test_root/home/.local/share/blankweave/shell/wifi-profiles.py"
+cp "$repository/tests/fixtures/settings-network.py" "$test_root/home/.local/share/blankweave/shell/network-connections.py"
 cp "$repository/tests/fixtures/settings-displays.sh" "$test_root/home/.local/share/blankweave/shell/monitor-layout.sh"
 cp "$repository/tests/fixtures/settings-brightness.sh" "$test_root/home/.local/share/blankweave/shell/brightness.sh"
 cp "$repository/defaults/themes/obsidian/theme.json" "$test_root/home/.local/share/blankweave/themes/obsidian/"

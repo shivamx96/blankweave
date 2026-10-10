@@ -394,8 +394,16 @@ shows connection and battery state, and disconnects or forgets saved devices.
 Pairing supports confirmation codes, PIN entry, and codes to type on a keyboard;
 closing the initiating view cancels an unfinished pairing request. The bar and
 Settings share discovery and actions, and report command failures. Bluetooth
-audio connections select the matching sound output. Ethernet/DNS, airplane mode,
-and hotspot remain previews for subsequent slices.
+audio connections select the matching sound output.
+
+**Ethernet & DNS** shows cable and connection state, available wired profiles,
+and link speed. Connect an existing profile, create an automatic DHCP connection
+when no profile exists, or disconnect. Select an active Ethernet or Wi-Fi
+connection to inspect IPv4/IPv6 addresses, gateways, and DNS servers. DNS supports
+automatic network settings, provider presets, and custom addresses. Changes are
+saved to that profile and applied live without reconnecting; a failed live update
+is reported explicitly. The bar shares the same DNS backend. Airplane mode and
+hotspot remain previews for the next slice.
 
 Controls awaiting implementation are marked **Preview** and disabled. Their
 example values are not device readings, and they never apply changes. Those pages will
