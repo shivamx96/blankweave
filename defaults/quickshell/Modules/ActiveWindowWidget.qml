@@ -6,7 +6,9 @@ import "../Components"
 WidgetFrame {
     id: root
 
-    readonly property var activeWindow: Hyprland.activeToplevel
+    property var hyprland: Hyprland
+    property bool focusCleared: false
+    readonly property var activeWindow: focusCleared ? null : hyprland.activeToplevel
     readonly property string windowTitle: activeWindow && activeWindow.title
         ? String(activeWindow.title)
         : "Desktop"
@@ -44,4 +46,13 @@ WidgetFrame {
             : windowTitle)
         : "No active window"
     horizontalPadding: 10
+
+    Connections {
+        target: root.hyprland
+
+        function onRawEvent(event) {
+            if (event.name === "activewindowv2")
+                root.focusCleared = !parseInt(event.data, 16)
+        }
+    }
 }
