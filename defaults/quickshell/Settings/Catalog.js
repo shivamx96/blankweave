@@ -59,7 +59,7 @@ var pages = [
     { id: "power", title: "Power", icon: "󰁹", description: "Balance performance, comfort, and battery life.", groups: [
         { title: "Energy", rows: [
             { id: "profile", title: "Power profile", description: "Choose a balance of performance and energy use.", kind: "power-profile", live: true },
-            { id: "automatic-power", title: "Automatic power profiles", description: "Choose profiles for charging, battery, and low battery.", kind: "toggle" },
+            { id: "automatic-power", title: "Automatic power profiles", description: "Choose profiles for plugged-in use, battery, and low battery.", kind: "automatic-power", live: true },
             { id: "battery-health", title: "Battery health & charge limit", description: "Review wear and configure supported charge limits.", kind: "action", action: "View details" }
         ] },
         { title: "Idle & sleep", rows: [

@@ -100,6 +100,20 @@ if ! grep -q SETTINGS_POWER_PASSED "$test_root/power.log" \
     exit 1
 fi
 
+# Run automatic transitions while the Settings page is inactive, using only fixtures.
+cp "$repository/tests/quickshell/settings-automatic-power.qml" "$test_root/power/shell.qml"
+if ! HOME="$test_root/home" XDG_CONFIG_HOME="$test_root/home/.config" \
+    XDG_RUNTIME_DIR="$test_root/runtime" QT_QPA_PLATFORM=offscreen \
+    QT_QUICK_BACKEND=software timeout 15 qs -p "$test_root/power" > "$test_root/automatic-power.log" 2>&1; then
+    cat "$test_root/automatic-power.log"
+    exit 1
+fi
+if ! grep -q SETTINGS_AUTOMATIC_POWER_PASSED "$test_root/automatic-power.log" \
+    || grep -Eq '(TypeError|ReferenceError|Binding loop|Unable to assign|Failed to load|Error:)' "$test_root/automatic-power.log"; then
+    cat "$test_root/automatic-power.log"
+    exit 1
+fi
+
 # Sound preferences and playback are isolated from the session's settings bus.
 mkdir -p "$test_root/sounds/Services"
 cp "$repository/defaults/quickshell/Services/SettingsSystemSounds.qml" "$test_root/sounds/Services/"
@@ -259,6 +273,20 @@ fi
 if ! grep -q SETTINGS_WINDOW_PASSED "$test_root/window.log" \
     || grep -Eq '(TypeError|ReferenceError|Binding loop|Unable to assign|Failed to load)' "$test_root/window.log"; then
     cat "$test_root/window.log"
+    exit 1
+fi
+# Exercise real Settings dropdowns across hidden/minimized window transitions.
+cp "$repository/tests/quickshell/settings-power-lifecycle.qml" "$test_root/window/shell.qml"
+if ! HOME="$test_root/home" XDG_CONFIG_HOME="$test_root/home/.config" \
+    XDG_RUNTIME_DIR="$test_root/runtime" QT_QPA_PLATFORM=offscreen \
+    SETTINGS_POWER_STATE="$test_root/lifecycle-power-state" \
+    QT_QUICK_BACKEND=software timeout 30 qs -p "$test_root/window" > "$test_root/power-lifecycle.log" 2>&1; then
+    cat "$test_root/power-lifecycle.log"
+    exit 1
+fi
+if ! grep -q SETTINGS_POWER_LIFECYCLE_PASSED "$test_root/power-lifecycle.log" \
+    || grep -Eq '(TypeError|ReferenceError|Binding loop|Unable to assign|Failed to load|Error:)' "$test_root/power-lifecycle.log"; then
+    cat "$test_root/power-lifecycle.log"
     exit 1
 fi
 printf 'Settings command and interface tests passed.\n'

@@ -86,6 +86,15 @@ ColumnLayout {
         font.pixelSize: root.theme.smallTextSize
         wrapMode: Text.WordWrap
     }
+    Text {
+        Layout.fillWidth: true
+        visible: root.backend !== null && root.backend.automaticEnabled
+        text: "Choosing a profile manually turns automatic switching off."
+        color: root.theme.textMuted
+        font.family: root.theme.fontFamily
+        font.pixelSize: root.theme.smallTextSize
+        wrapMode: Text.WordWrap
+    }
     SettingsButton {
         objectName: "powerProfileRefresh"
         theme: root.theme

@@ -7,6 +7,19 @@ QtObject {
     property string helper: Quickshell.env("HOME") + "/.local/share/blankweave/shell/power-profiles.py"
     property bool settingsActive: false
     property bool menuOpen: false
+    property bool automaticMenuOpen: false
+    // Popups can retain their open state after their window is hidden or
+    // minimized. Only visible Settings controls may pause background work.
+    readonly property bool menuPaused: settingsActive && (menuOpen || automaticMenuOpen)
+    property int automaticInterval: 10000
+    property var automatic: ({ready: false, settings: {enabled: false}, source: {available: false}, message: "Loading automatic profiles…"})
+    property string automaticSaveError: ""
+    property string automaticRunError: ""
+    readonly property string automaticError: automaticSaveError || automaticRunError
+    property string actionKind: ""
+    property string pendingConfig: ""
+    property bool tickAfterRead: true
+    readonly property bool automaticEnabled: automatic.ready && automatic.settings.enabled
     property var owners: []
     readonly property bool active: settingsActive || owners.length > 0
     property bool ready: false
@@ -36,7 +49,7 @@ QtObject {
         owners = next
     }
     function refresh(clearError = false) {
-        if (busy || menuOpen) return
+        if (busy || menuPaused) return
         if (clearError) error = ""
         status.running = true
     }
@@ -47,13 +60,33 @@ QtObject {
             error = "The power service changed. Refresh and choose a profile again."
             return
         }
-        if (profile === id) return
-        error = ""
+        if (profile === id && !automaticEnabled) return
+        error = ""; automaticSaveError = ""; automaticRunError = ""
         verifying = true
+        actionKind = "manual"
         action.command = ["python3", helper, "set", capturedService, capturedOwner, id]
         action.running = true
     }
+    function configureAutomatic(changes) {
+        if (busy || !automatic.ready) return
+        pendingConfig = JSON.stringify({expected: automatic.settings, settings: Object.assign({}, automatic.settings, changes)})
+        error = ""; automaticSaveError = ""; automaticRunError = ""; verifying = true
+        actionKind = "configure"
+        action.command = ["python3", helper, "auto-configure"]
+        action.running = true
+    }
+    function tick() {
+        if (!automaticEnabled || busy || menuPaused) return
+        verifying = true; actionKind = "automatic"
+        action.command = ["python3", helper, "auto-tick"]
+        action.running = true
+    }
+    Component.onCompleted: refresh()
     onActiveChanged: if (active) refresh(true)
+    property Timer automation: Timer {
+        interval: root.automaticInterval; running: root.automaticEnabled || !root.automatic.ready; repeat: true
+        onTriggered: { if (!root.automatic.ready) root.refresh(); else root.tick() }
+    }
     property Timer poll: Timer { interval: 5000; running: root.active; repeat: true; onTriggered: root.refresh() }
     property Process status: Process {
         command: ["python3", root.helper, "status"]
@@ -69,6 +102,16 @@ QtObject {
                     || !Array.isArray(data.holds) || data.holds.some(row => !row || ["application", "profile", "reason"].some(key => typeof row[key] !== "string"))
                     || (data.available && (!data.owner.startsWith(":") || !data.service || !data.profile)))
                     throw new Error("Invalid power profile response.")
+                const policy = data.automatic
+                if (!policy || typeof policy.ready !== "boolean" || !policy.settings || typeof policy.settings.enabled !== "boolean"
+                    || !policy.source || typeof policy.source.available !== "boolean" || typeof policy.message !== "string"
+                    || (policy.source.available && (typeof policy.source.onBattery !== "boolean" || typeof policy.source.percentage !== "number"
+                        || !Number.isFinite(policy.source.percentage) || policy.source.percentage < 0 || policy.source.percentage > 100))
+                    || (policy.ready && (policy.settings.version !== 1 || ["ac", "battery", "low"].some(key => !["power-saver", "balanced", "performance"].includes(policy.settings[key]))
+                        || !Number.isInteger(policy.settings.threshold) || policy.settings.threshold < 5 || policy.settings.threshold > 50)))
+                    throw new Error("Invalid automatic power response.")
+                if (!root.ready) root.error = ""
+                root.automatic = policy
                 root.available = data.available
                 root.service = data.service; root.owner = data.owner
                 root.profile = data.profile; root.profiles = data.profiles
@@ -80,12 +123,28 @@ QtObject {
                 root.error = String(error)
             }
             root.verifying = false
+            if (root.tickAfterRead) {
+                root.tickAfterRead = false
+                Qt.callLater(() => root.tick())
+            }
         }
     }
     property Process action: Process {
+        stdinEnabled: true
+        onStarted: {
+            if (root.actionKind === "configure") write(root.pendingConfig + "\n")
+            stdinEnabled = false
+        }
         stderr: StdioCollector { id: writeError }
         onExited: (code, exitStatus) => {
-            if (code !== 0 || exitStatus !== 0) root.error = writeError.text.trim() || "Could not change the power profile."
+            const failed = code !== 0 || exitStatus !== 0
+            const message = failed ? writeError.text.trim() || "Could not change the power profile." : ""
+            if (root.actionKind === "automatic") root.automaticRunError = message
+            else if (root.actionKind === "configure") root.automaticSaveError = message
+            else root.error = message
+            root.tickAfterRead = root.actionKind === "configure" && !failed
+            root.actionKind = ""; root.pendingConfig = ""
+            stdinEnabled = true
             root.verifying = true
             // Always read back, including after failure or after the last view closes.
             root.status.running = true

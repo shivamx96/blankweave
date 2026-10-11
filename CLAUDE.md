@@ -837,7 +837,8 @@ Do not imply these preferences control Dunst notifications or VoxType cues.
 Tests mock GSettings and playback and isolate the native Settings backend.
 
 `PowerService` shares power-profile state and writes between Settings and every
-battery panel. Poll only while a view requests it. `power-profiles.py` reads the
+battery panel. Read saved automation once at startup; poll manual profile status
+only while a view requests it. `power-profiles.py` reads the
 running daemon without activation, supports the current and legacy D-Bus names,
 and offers only reported profiles. Capture its unique owner when opening a
 selection menu, recheck before writing, and verify the resulting active profile.
@@ -846,6 +847,25 @@ services, failed writes, performance degradation, and application profile holds;
 manual profile changes release holds according to the daemon's own policy.
 All mutation tests use an injected helper or fake bus; never switch the host's
 power profile during validation. This control does not change idle or lock policy.
+
+`power_policy.py` owns opt-in automatic profiles in `power-profiles.json`, with
+atomic writes and a shared lock for preference changes, manual choices, and ticks.
+The shell runs ticks every ten seconds while enabled, including with Settings
+hidden; open profile menus pause polling and ticks only while Power Settings is
+visible and not minimized. UPower's aggregate battery state and `OnBattery`
+determine plugged-in, battery, and low-battery states. Empty/discharging states
+remain on battery policy even when `OnBattery` is false; inferring AC requires
+a charging, fully charged, or pending-charge state. Unknown
+or absent battery data must never be treated as AC. A five-point recovery margin
+prevents threshold oscillation. Persist successful transition identities across
+shell reloads, including the boot ID and daemon owners; do not continually force a profile
+when another tool changes it. Application holds defer pending transitions.
+Revalidate the source and holds immediately before applying an automatic profile.
+Manual choices from Settings or the bar durably disable automation before
+writing (including an unchanged profile or failed write). Disabling alone leaves
+the active profile in place. Saved preferences use compare-and-swap to reject stale
+edits; corrupt files remain untouched. All tests use fake system buses, isolated
+config/state directories, or the injected Settings helper.
 
 ### Adding a new Quickshell module
 
