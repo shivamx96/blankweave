@@ -17,7 +17,7 @@ blankweave/
     plymouth/        # Boot splash: script template, master artwork to tint
     fontconfig/      # Font fallback config
     xdg-desktop-portal/  # Portal routing (hyprland → gtk fallback)
-    applications/    # Desktop entries: Settings, and the Steam shadow entry
+    applications/    # Desktop entries (Settings)
     spotify-launcher/  # Wayland launch flags (desktop profile)
     mangohud/        # Default overlay layout (gaming profile)
   packages/
@@ -213,18 +213,14 @@ screen (a 4K panel at 1.5 looks like 2560x1440 to a Proton game, which then
 cannot offer its native resolution). Unscaled XWayland windows are sharp and
 see the physical panel, at the cost that a client which cannot read the
 compositor scale draws small. The session's own toolkits are already steered
-to Wayland by `env.lua`, so the holdouts are Steam (X11 only, and the Proton
-games it starts inherit its environment) and CEF applications such as Spotify.
+to Wayland by `env.lua`, so the holdouts are Steam (X11 only) and CEF
+applications such as Spotify.
 
-- Steam goes through `defaults/shell/xwayland-launch.sh`: it reads the focused
-  monitor's scale from `hyprctl monitors -j`, exports
-  `STEAM_FORCE_DESKTOPUI_SCALING` and a matching `XCURSOR_SIZE`, and execs the
-  command. The scale is a display-panel choice, so it is read at launch rather
-  than baked into `env.lua`. The gaming profile renders
-  `defaults/applications/steam.desktop` (tagged `X-Blankweave-Entry=steam`,
-  placeholder `@BLANKWEAVE_SHELL_DIR@`) into
-  `~/.local/share/applications/`, shadowing the packaged entry while keeping
-  its `steam://` handler and actions; only that tagged file is ever removed.
+- Steam has no Wayland mode and, as of client build 1788652215, no longer
+  honours `STEAM_FORCE_DESKTOPUI_SCALING` or `-forcedesktopscaling`; its
+  interface scale is the persistent client setting under Settings >
+  Accessibility > UI scale, which the user sets once. Do not shadow its
+  desktop entry or wrap its launch for scaling.
 - Spotify gets Wayland flags through a managed
   `~/.config/spotify-launcher.conf` (desktop profile). That file shadows
   `/etc/spotify-launcher.conf` entirely, so the managed copy is complete.
@@ -233,7 +229,14 @@ games it starts inherit its environment) and CEF applications such as Spotify.
 
 Do not bump the global `XCURSOR_SIZE` or add `GDK_SCALE` to compensate:
 Wayland clients multiply those by the compositor scale themselves, and
-`GDK_SCALE` only takes whole numbers. Tests: `tests/xwayland-launch.sh`.
+`GDK_SCALE` only takes whole numbers.
+
+`windowrules.lua` marks `steam_app_*` windows render-unfocused. A game
+presents through the compositor, so a window on an off-screen workspace never
+gets its buffers back, Present blocks, and the game's main thread stalls with
+it (Cities: Skylines II loaded one prefab a minute that way, with no CPU,
+disk, or network activity and DXVK's submit thread parked on a GPU sync
+object). `misc.render_unfocused_fps` bounds the cost.
 
 ### Secret Service and keyring unlock
 

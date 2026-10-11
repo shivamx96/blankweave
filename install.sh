@@ -509,21 +509,6 @@ copy_file_atomically "$REPO_DIR/defaults/applications/blankweave-settings.deskto
 chown "$SUDO_USER:$SUDO_USER" "$USER_HOME/.local/share/applications" \
     "$USER_HOME/.local/share/applications/blankweave-settings.desktop"
 
-# Steam is an X11 client, and XWayland is left unscaled for sharpness, so the
-# gaming profile shadows its desktop entry with one that launches it through
-# the scale-aware wrapper. Only Blankweave's own tagged entry is ever removed.
-STEAM_ENTRY="$USER_HOME/.local/share/applications/steam.desktop"
-if installer_profile_enabled gaming; then
-    STEAM_ENTRY_STAGED=$(mktemp "$USER_HOME/.local/share/applications/.blankweave.XXXXXX")
-    sed "s|@BLANKWEAVE_SHELL_DIR@|$DOTS_DIR/shell|g" \
-        "$REPO_DIR/defaults/applications/steam.desktop" > "$STEAM_ENTRY_STAGED"
-    chmod 0644 "$STEAM_ENTRY_STAGED"
-    chown "$SUDO_USER:$SUDO_USER" "$STEAM_ENTRY_STAGED"
-    mv -f "$STEAM_ENTRY_STAGED" "$STEAM_ENTRY"
-elif grep -qsx 'X-Blankweave-Entry=steam' "$STEAM_ENTRY"; then
-    rm -f "$STEAM_ENTRY"
-fi
-
 # Bundled web apps are desktop entries that open a site in Helium's app mode.
 # Helium ships with the optional desktop profile, so the script skips itself
 # when the browser is absent; a failed icon download is not worth aborting an

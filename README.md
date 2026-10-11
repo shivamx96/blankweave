@@ -342,8 +342,10 @@ keeps changes made from the bar in sync, and saves choices through the existing
 monitor configuration. A saved choice that differs from the active scale is
 reported separately, including after a failed apply.
 XWayland windows are left unscaled so they stay sharp and games see the
-display's native resolution; Steam is started through a wrapper that passes
-the focused display's scale to its interface and to the games it launches.
+display's native resolution. Steam is the one X11 application whose interface
+does not follow the display scale: set it once under Steam's Settings >
+Accessibility > UI scale. Games keep rendering while another workspace is on
+screen, so loading or running a game and switching away no longer stalls it.
 With multiple displays connected, select an external display and choose its
 saved position: left, right, above, below, or Automatic around the existing
 desktop layout. Position changes preserve its scaling preference and follow
