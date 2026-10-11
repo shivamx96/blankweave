@@ -60,7 +60,7 @@ var pages = [
         { title: "Energy", rows: [
             { id: "profile", title: "Power profile", description: "Choose a balance of performance and energy use.", kind: "power-profile", live: true },
             { id: "automatic-power", title: "Automatic power profiles", description: "Choose profiles for plugged-in use, battery, and low battery.", kind: "automatic-power", live: true },
-            { id: "battery-health", title: "Battery health & charge limit", description: "Review wear and configure supported charge limits.", kind: "action", action: "View details" }
+            { id: "battery-health", title: "Battery health & charge limit", description: "Review battery health and enable supported charge limits.", kind: "battery-health", live: true }
         ] },
         { title: "Idle & sleep", rows: [
             { id: "screen-off", title: "Turn off screen after", description: "Set separate timeouts for battery and plugged-in use.", kind: "choice", options: ["5 minutes", "10 minutes", "15 minutes", "Never"] },

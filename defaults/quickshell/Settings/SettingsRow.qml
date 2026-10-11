@@ -18,7 +18,7 @@ Item {
         ? backend.description(setting.id) || setting.description : setting.description
     readonly property var choices: live && typeof backend.choices === "function" ? backend.choices(setting.id) : (setting.options || [])
     readonly property int selection: live && typeof backend.selection === "function" ? backend.selection(setting.id) : 0
-    readonly property bool expandedControl: ["automatic-power", "power-profile", "presets", "night-light", "color-profile", "sound-output", "sound-input", "dictation", "system-sounds", "wifi", "bluetooth", "network", "airplane", "hotspot"].includes(setting.kind)
+    readonly property bool expandedControl: ["battery-health", "automatic-power", "power-profile", "presets", "night-light", "color-profile", "sound-output", "sound-input", "dictation", "system-sounds", "wifi", "bluetooth", "network", "airplane", "hotspot"].includes(setting.kind)
     readonly property bool compact: width < 510
     implicitHeight: content.implicitHeight + 28
 
@@ -56,7 +56,8 @@ Item {
             Layout.fillWidth: root.expandedControl
             Layout.preferredWidth: root.expandedControl ? content.width : root.compact ? Math.min(240, content.width) : 190
             Layout.preferredHeight: root.expandedControl && item ? (item as Item).implicitHeight : 36
-            sourceComponent: root.setting.kind === "automatic-power" ? automaticPowerControl
+            sourceComponent: root.setting.kind === "battery-health" ? batteryControl
+                : root.setting.kind === "automatic-power" ? automaticPowerControl
                 : root.setting.kind === "power-profile" ? powerControl
                 : ["airplane", "hotspot"].includes(root.setting.kind) ? wirelessControl
                 : root.setting.kind === "network" ? networkControl
@@ -75,6 +76,10 @@ Item {
         }
     }
 
+    Component {
+        id: batteryControl
+        SettingsBatteryHealth { theme: root.theme; backend: root.backend }
+    }
     Component {
         id: automaticPowerControl
         SettingsAutomaticPower { theme: root.theme; backend: root.backend }

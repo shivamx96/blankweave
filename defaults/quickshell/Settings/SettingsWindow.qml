@@ -44,6 +44,10 @@ FloatingWindow {
         preferences: root.preferences
     }
 
+    property SettingsBattery battery: SettingsBattery {
+        active: root.visible && !root.minimized && content.page !== null && content.page.id === "power"
+    }
+
     SettingsNightLight { id: nightLightBackend }
     SettingsSystemSounds {
         id: systemSoundsBackend
@@ -76,6 +80,7 @@ FloatingWindow {
         theme: root.theme
         appearance: appearanceBackend
         displays: displaysBackend
+        battery: root.battery
         power: root.power
         sound: root.sound
         voice: root.voice

@@ -12,6 +12,7 @@ printf '%s\n' "$@" > "$SETTINGS_TEST_LOG"
 exit "${SETTINGS_TEST_EXIT:-0}"
 EOF
 chmod +x "$test_root/bin/qs"
+export SETTINGS_BATTERY_STATE="$test_root/battery-state"
 export SETTINGS_POWER_STATE="$test_root/power-state"
 export SETTINGS_TEST_LOG="$test_root/command"
 export SETTINGS_WIRELESS_STATE="$test_root/wireless-state"
@@ -111,6 +112,24 @@ fi
 if ! grep -q SETTINGS_AUTOMATIC_POWER_PASSED "$test_root/automatic-power.log" \
     || grep -Eq '(TypeError|ReferenceError|Binding loop|Unable to assign|Failed to load|Error:)' "$test_root/automatic-power.log"; then
     cat "$test_root/automatic-power.log"
+    exit 1
+fi
+
+# Battery limit mutations use fake devices and never change host charging policy.
+mkdir -p "$test_root/battery"
+cp -R "$repository/defaults/quickshell/"{Services,Settings,Components,Assets} "$test_root/battery/"
+cp "$repository/defaults/quickshell/Theme.qml" "$test_root/battery/"
+cp "$repository/tests/quickshell/settings-battery.qml" "$test_root/battery/shell.qml"
+cp "$repository/tests/fixtures/settings-battery.py" "$test_root/battery/battery.py"
+if ! HOME="$test_root/home" XDG_CONFIG_HOME="$test_root/home/.config" \
+    XDG_RUNTIME_DIR="$test_root/runtime" QT_QPA_PLATFORM=offscreen \
+    QT_QUICK_BACKEND=software timeout 15 qs -p "$test_root/battery" > "$test_root/battery.log" 2>&1; then
+    cat "$test_root/battery.log"
+    exit 1
+fi
+if ! grep -q SETTINGS_BATTERY_PASSED "$test_root/battery.log" \
+    || grep -Eq '(TypeError|ReferenceError|Binding loop|Unable to assign|Failed to load|Error:)' "$test_root/battery.log"; then
+    cat "$test_root/battery.log"
     exit 1
 fi
 
@@ -256,6 +275,7 @@ cp -R "$repository/defaults/quickshell/"{Settings,Services,Components,Assets} "$
 cp "$repository/defaults/quickshell/Theme.qml" "$test_root/window/"
 cp "$repository/tests/quickshell/settings-window.qml" "$test_root/window/shell.qml"
 cp "$repository/tests/fixtures/settings-theme.sh" "$test_root/home/.local/share/blankweave/shell/theme-apply.sh"
+cp "$repository/tests/fixtures/settings-battery.py" "$test_root/home/.local/share/blankweave/shell/battery-health.py"
 cp "$repository/tests/fixtures/settings-power.py" "$test_root/home/.local/share/blankweave/shell/power-profiles.py"
 cp "$repository/tests/fixtures/settings-system-sounds.py" "$test_root/home/.local/share/blankweave/shell/system-sounds.py"
 cp "$repository/tests/fixtures/settings-wifi-profiles.py" "$test_root/home/.local/share/blankweave/shell/wifi-profiles.py"
