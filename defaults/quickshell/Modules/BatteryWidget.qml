@@ -6,6 +6,12 @@ import "../Components"
 WidgetFrame {
     id: root
 
+    required property var power
+    readonly property bool profileRequested: batteryPanel.open || bar.tooltipTarget === root
+    onProfileRequestedChanged: power.setActive(root, profileRequested)
+    readonly property string holdsLabel: power.holds.map(hold => (hold.application || "An application") + " · " + hold.reason).join("; ")
+    Component.onDestruction: power.setActive(root, false)
+
     readonly property var device: UPower.displayDevice
     readonly property bool batteryAvailable: Boolean(
         device && device.ready && device.isPresent && device.isLaptopBattery
@@ -26,7 +32,6 @@ WidgetFrame {
     readonly property real remainingSeconds: charging
         ? Number(device.timeToFull || 0)
         : (discharging ? Number(device.timeToEmpty || 0) : 0)
-    readonly property int profile: PowerProfiles.profile
 
     function batteryIcon() {
         if (charging)
@@ -69,42 +74,12 @@ WidgetFrame {
         return root.formatDuration(remainingSeconds) + (charging ? " to full" : " remaining")
     }
 
-    function profileLabel(profileValue) {
-        if (profileValue === PowerProfile.PowerSaver) return "Power saver"
-        if (profileValue === PowerProfile.Performance) return "Performance"
-        return "Balanced"
-    }
-
-    function degradationLabel() {
-        if (PowerProfiles.degradationReason === PerformanceDegradationReason.HighTemperature)
-            return "Performance is limited because the system is running hot."
-        if (PowerProfiles.degradationReason === PerformanceDegradationReason.LapDetected)
-            return "Performance is limited while the laptop is detected on your lap."
-        return ""
-    }
-
-    function holdsLabel() {
-        const holds = PowerProfiles.holds || []
-        if (holds.length === 0)
-            return ""
-        const hold = holds[0]
-        const application = String(hold.applicationId || "An application")
-        const reason = String(hold.reason || "requested this power mode")
-        return application + " · " + reason
-    }
-
-    function setProfile(profileValue) {
-        if (profileValue === PowerProfile.Performance && !PowerProfiles.hasPerformanceProfile)
-            return
-        PowerProfiles.profile = profileValue
-    }
-
     visible: batteryAvailable
     icon: batteryIcon()
     label: full ? "Full" : percentage + "%"
     tooltip: stateLabel() + " · " + percentage + "%"
         + (remainingSeconds > 0 ? "\n" + timeLabel() : "")
-        + "\n" + profileLabel(profile)
+        + (root.power.ready && root.power.available ? "\n" + root.power.profileName : "")
     attention: !charging && percentage <= 15
     active: charging || batteryPanel.open
 
@@ -205,32 +180,44 @@ WidgetFrame {
                 Layout.fillWidth: true
                 theme: root.theme
                 text: "Saver"
-                selected: root.profile === PowerProfile.PowerSaver
-                onPressed: root.setProfile(PowerProfile.PowerSaver)
+                enabled: root.power.canSelect("power-saver")
+                selected: root.power.ready && root.power.profile === "power-saver"
+                onPressed: root.power.select("power-saver")
             }
 
             ControlChoice {
                 Layout.fillWidth: true
                 theme: root.theme
                 text: "Balanced"
-                selected: root.profile === PowerProfile.Balanced
-                onPressed: root.setProfile(PowerProfile.Balanced)
+                enabled: root.power.canSelect("balanced")
+                selected: root.power.ready && root.power.profile === "balanced"
+                onPressed: root.power.select("balanced")
             }
 
             ControlChoice {
                 Layout.fillWidth: true
                 theme: root.theme
                 text: "Performance"
-                enabled: PowerProfiles.hasPerformanceProfile
-                selected: root.profile === PowerProfile.Performance
-                onPressed: root.setProfile(PowerProfile.Performance)
+                enabled: root.power.canSelect("performance")
+                selected: root.power.ready && root.power.profile === "performance"
+                onPressed: root.power.select("performance")
             }
         }
 
         Text {
-            visible: root.degradationLabel() !== ""
             Layout.fillWidth: true
-            text: root.degradationLabel()
+            text: root.power.error || root.power.explanation
+            textFormat: Text.PlainText
+            color: root.power.error ? root.theme.critical : root.theme.textMuted
+            wrapMode: Text.WordWrap
+            font.family: root.theme.fontFamily
+            font.pixelSize: root.theme.microTextSize
+        }
+
+        Text {
+            visible: root.power.degradation !== ""
+            Layout.fillWidth: true
+            text: root.power.degradation
             color: root.theme.warning
             wrapMode: Text.Wrap
             font.family: root.theme.fontFamily
@@ -239,9 +226,10 @@ WidgetFrame {
         }
 
         Text {
-            visible: root.holdsLabel() !== ""
+            visible: root.holdsLabel !== ""
             Layout.fillWidth: true
-            text: "Profile hold · " + root.holdsLabel()
+            textFormat: Text.PlainText
+            text: "Profile hold · " + root.holdsLabel
             color: root.theme.textMuted
             elide: Text.ElideRight
             font.family: root.theme.fontFamily

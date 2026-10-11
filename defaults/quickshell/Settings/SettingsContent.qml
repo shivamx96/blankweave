@@ -10,6 +10,7 @@ Rectangle {
     required property var theme
     required property var appearance
     property var displays: null
+    property var power: null
     property var sound: null
     property var voice: null
     property var systemSounds: null
@@ -264,6 +265,8 @@ Rectangle {
                                     ? "Mode, mirror, and setup changes have a 20-second preview. Other display changes apply immediately; night light applies to all displays."
                                     : root.page && root.page.id === "sound" && root.sound
                                     ? "Sound controls are available. Changes apply to the selected device or supported apps."
+                                    : root.page && root.page.id === "power" && root.power
+                                    ? "Power profile changes apply immediately. Other power controls are previews."
                                     : root.page && root.page.id === "network" && root.wifi
                                     ? "Connection, radio, and hotspot controls are available. VPN and file sharing are previews."
                                     : "Preview — changes aren’t applied. These controls show what’s planned; values are examples, not your device’s status."
@@ -406,7 +409,8 @@ Rectangle {
                                                     Layout.fillWidth: true
                                                     theme: root.theme
                                                     setting: settingGroup.modelData
-                                                    backend: ["airplane", "hotspot"].includes(settingGroup.modelData.kind) ? root.wireless
+                                                    backend: settingGroup.modelData.kind === "power-profile" ? root.power
+                                                        : ["airplane", "hotspot"].includes(settingGroup.modelData.kind) ? root.wireless
                                                         : settingGroup.modelData.kind === "network" ? root.connections
                                                         : settingGroup.modelData.kind === "bluetooth" ? root.bluetooth
                                                         : settingGroup.modelData.kind === "wifi" ? root.wifi

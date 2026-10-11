@@ -6,6 +6,8 @@ FloatingWindow {
     id: root
     required property var theme
     required property var preferences
+    property var power: null
+    Binding { target: root.power; property: "settingsActive"; value: root.visible && !root.minimized && content.page !== null && content.page.id === "power"; when: root.power !== null }
     property var sound: null
     property var voice: null
     property var wireless: null
@@ -74,6 +76,7 @@ FloatingWindow {
         theme: root.theme
         appearance: appearanceBackend
         displays: displaysBackend
+        power: root.power
         sound: root.sound
         voice: root.voice
         wireless: root.wireless
