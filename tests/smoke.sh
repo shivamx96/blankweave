@@ -83,10 +83,31 @@ mkdir -p "$test_root/cache/hyprarch"
 touch "$test_root/cache/hyprarch/git-prs.json"
 touch "$test_root/cache/hyprarch/git-login"
 
+# The Steam shadow-entry migration removes only Blankweave's tagged launcher;
+# a user's own steam.desktop at the same path is kept.
+applications_dir=$test_root/home/.local/share/applications
+mkdir -p "$applications_dir"
+printf '[Desktop Entry]\nName=Steam\nExec=/missing/xwayland-launch.sh /usr/bin/steam %%U\nX-Blankweave-Entry=steam\n' \
+    > "$applications_dir/steam.desktop"
+printf '[Desktop Entry]\nName=Steam\nExec=/usr/bin/steam -custom %%U\n' \
+    > "$applications_dir/steam-custom.desktop"
+
+# XDG_DATA_HOME is passed explicitly: a developer's session may export it, and
+# the migrations must act on the sandbox, never on the real home.
 HOME="$test_root/home" \
     XDG_CACHE_HOME="$test_root/cache" \
+    XDG_DATA_HOME="$test_root/home/.local/share" \
     XDG_STATE_HOME="$test_root/state" \
     "$repository/scripts/run-migrations.sh" "$migration_repository"
+
+[[ ! -e "$applications_dir/steam.desktop" ]]
+grep -Fxq 'Exec=/usr/bin/steam -custom %U' "$applications_dir/steam-custom.desktop"
+
+# The same migration must keep an untagged user launcher at the managed path.
+printf '[Desktop Entry]\nName=Steam\nExec=/usr/bin/steam -mine %%U\n' > "$applications_dir/steam.desktop"
+HOME="$test_root/home" XDG_DATA_HOME="$test_root/home/.local/share" \
+    "$repository/migrations/20261011-drop-steam-shadow-entry.sh"
+grep -Fxq 'Exec=/usr/bin/steam -mine %U' "$applications_dir/steam.desktop"
 
 state_dir=$test_root/state/blankweave
 [[ $(< "$state_dir/repository") == "$migration_repository" ]]
