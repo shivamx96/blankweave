@@ -867,6 +867,17 @@ the active profile in place. Saved preferences use compare-and-swap to reject st
 edits; corrupt files remain untouched. All tests use fake system buses, isolated
 config/state directories, or the injected Settings helper.
 
+`SettingsBattery` reads individual present system batteries through UPower only
+while the Power page is visible and not minimized. `battery-health.py` excludes
+peripheral, UPS, and aggregate devices; unknown health, energy, cycles, and
+thresholds remain unknown. Charge-limit actions capture the daemon owner,
+object path, and a hash of hardware identity, revalidate before calling
+`EnableChargeThreshold`, and read back the resulting enabled state. Never expose
+serial numbers or silently retarget a removed/replaced battery. UPower owns the
+configured thresholds and their persistence: support its on/off control without
+writing sysfs or inventing a percentage for firmware-managed charging. All
+mutation tests use fake buses/helpers; never change host charging limits in tests.
+
 ### Adding a new Quickshell module
 
 1. Create `defaults/quickshell/Modules/<Name>Widget.qml`
