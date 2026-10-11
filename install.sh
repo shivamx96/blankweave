@@ -297,6 +297,10 @@ cp -rv "$REPO_DIR/defaults/dunst" "$DOTS_DIR/" || { echo "Failed to copy dunst";
 cp -rv "$REPO_DIR/defaults/ghostty" "$DOTS_DIR/" || { echo "Failed to copy ghostty"; exit 1; }
 cp -rv "$REPO_DIR/defaults/xdg-desktop-portal" "$DOTS_DIR/" || { echo "Failed to copy xdg-desktop-portal"; exit 1; }
 cp -rv "$REPO_DIR/defaults/fontconfig" "$DOTS_DIR/" || { echo "Failed to copy fontconfig"; exit 1; }
+# Profile-gated application configs are always mirrored; only their links below
+# depend on the selected profiles.
+cp -rv "$REPO_DIR/defaults/spotify-launcher" "$DOTS_DIR/" || { echo "Failed to copy spotify-launcher"; exit 1; }
+cp -rv "$REPO_DIR/defaults/mangohud" "$DOTS_DIR/" || { echo "Failed to copy mangohud"; exit 1; }
 # Shell helpers are another managed code tree and use the same exact mirror.
 blankweave_deploy_tree "$REPO_DIR/defaults/shell" "$DOTS_DIR/shell" \
     || { echo "Failed to deploy shell helpers"; exit 1; }
@@ -417,6 +421,23 @@ elif [[ -L $VOXTYPE_CONFIG && $(readlink "$VOXTYPE_CONFIG") == "$DOTS_DIR/voxtyp
     rm -f "$VOXTYPE_CONFIG"
 fi
 
+# Spotify ships with the desktop profile. Its launcher config shadows the
+# packaged /etc file completely, so the managed copy carries the whole file.
+SPOTIFY_LAUNCHER_CONFIG="$CONFIG_DIR/spotify-launcher.conf"
+if installer_profile_enabled desktop; then
+    user_config_link "$DOTS_DIR/spotify-launcher/spotify-launcher.conf" "$SPOTIFY_LAUNCHER_CONFIG"
+elif [[ -L $SPOTIFY_LAUNCHER_CONFIG && $(readlink "$SPOTIFY_LAUNCHER_CONFIG") == "$DOTS_DIR/spotify-launcher/spotify-launcher.conf" ]]; then
+    rm -f "$SPOTIFY_LAUNCHER_CONFIG"
+fi
+
+# MangoHud ships with the gaming profile; the overlay stays opt-in per game.
+MANGOHUD_CONFIG="$CONFIG_DIR/MangoHud/MangoHud.conf"
+if installer_profile_enabled gaming; then
+    user_config_link "$DOTS_DIR/mangohud/MangoHud.conf" "$MANGOHUD_CONFIG"
+elif [[ -L $MANGOHUD_CONFIG && $(readlink "$MANGOHUD_CONFIG") == "$DOTS_DIR/mangohud/MangoHud.conf" ]]; then
+    rm -f "$MANGOHUD_CONFIG"
+fi
+
 section "SETTING UP ZSH"
 chsh -s /usr/bin/zsh "$SUDO_USER"
 
@@ -487,6 +508,21 @@ copy_file_atomically "$REPO_DIR/defaults/applications/blankweave-settings.deskto
     "$USER_HOME/.local/share/applications/blankweave-settings.desktop"
 chown "$SUDO_USER:$SUDO_USER" "$USER_HOME/.local/share/applications" \
     "$USER_HOME/.local/share/applications/blankweave-settings.desktop"
+
+# Steam is an X11 client, and XWayland is left unscaled for sharpness, so the
+# gaming profile shadows its desktop entry with one that launches it through
+# the scale-aware wrapper. Only Blankweave's own tagged entry is ever removed.
+STEAM_ENTRY="$USER_HOME/.local/share/applications/steam.desktop"
+if installer_profile_enabled gaming; then
+    STEAM_ENTRY_STAGED=$(mktemp "$USER_HOME/.local/share/applications/.blankweave.XXXXXX")
+    sed "s|@BLANKWEAVE_SHELL_DIR@|$DOTS_DIR/shell|g" \
+        "$REPO_DIR/defaults/applications/steam.desktop" > "$STEAM_ENTRY_STAGED"
+    chmod 0644 "$STEAM_ENTRY_STAGED"
+    chown "$SUDO_USER:$SUDO_USER" "$STEAM_ENTRY_STAGED"
+    mv -f "$STEAM_ENTRY_STAGED" "$STEAM_ENTRY"
+elif grep -qsx 'X-Blankweave-Entry=steam' "$STEAM_ENTRY"; then
+    rm -f "$STEAM_ENTRY"
+fi
 
 # Bundled web apps are desktop entries that open a site in Helium's app mode.
 # Helium ships with the optional desktop profile, so the script skips itself

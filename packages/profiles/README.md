@@ -20,6 +20,8 @@ Profiles currently available:
 - `development` — editors, containers, language tooling, and coding tools;
 - `communication` — messaging and local sharing applications;
 - `gaming` — Steam, Proton, overlays, and the detected GPU's 32-bit driver;
+  also installs a scale-aware Steam desktop entry and a default MangoHud
+  layout;
 - `voice-dictation` — VoxType, Wayland text injection, a verified local model,
   and the matching Blankweave shell integration.
 

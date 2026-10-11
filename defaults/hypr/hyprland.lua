@@ -48,6 +48,16 @@ hl.config({
         disable_hyprland_logo = true,
         focus_on_activate = true,
     },
+    -- XWayland cannot scale itself, so on a scaled display Hyprland would
+    -- otherwise stretch its 1x output into a blurry window and hand the
+    -- application a shrunken screen (a 4K panel at 1.5 looks like 2560x1440
+    -- to a Proton game). Leaving XWayland unscaled keeps those windows sharp
+    -- and lets games pick the panel's native resolution; the few remaining
+    -- XWayland applications are launched through shell/xwayland-launch.sh,
+    -- which tells them the focused monitor's scale.
+    xwayland = {
+        force_zero_scaling = true,
+    },
     decoration = {
         rounding = 10,
         active_opacity = 1.0,
