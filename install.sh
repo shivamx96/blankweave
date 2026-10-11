@@ -297,6 +297,10 @@ cp -rv "$REPO_DIR/defaults/dunst" "$DOTS_DIR/" || { echo "Failed to copy dunst";
 cp -rv "$REPO_DIR/defaults/ghostty" "$DOTS_DIR/" || { echo "Failed to copy ghostty"; exit 1; }
 cp -rv "$REPO_DIR/defaults/xdg-desktop-portal" "$DOTS_DIR/" || { echo "Failed to copy xdg-desktop-portal"; exit 1; }
 cp -rv "$REPO_DIR/defaults/fontconfig" "$DOTS_DIR/" || { echo "Failed to copy fontconfig"; exit 1; }
+# Profile-gated application configs are always mirrored; only their links below
+# depend on the selected profiles.
+cp -rv "$REPO_DIR/defaults/spotify-launcher" "$DOTS_DIR/" || { echo "Failed to copy spotify-launcher"; exit 1; }
+cp -rv "$REPO_DIR/defaults/mangohud" "$DOTS_DIR/" || { echo "Failed to copy mangohud"; exit 1; }
 # Shell helpers are another managed code tree and use the same exact mirror.
 blankweave_deploy_tree "$REPO_DIR/defaults/shell" "$DOTS_DIR/shell" \
     || { echo "Failed to deploy shell helpers"; exit 1; }
@@ -415,6 +419,23 @@ if installer_profile_enabled voice-dictation; then
     user_config_link "$DOTS_DIR/voxtype/config.toml" "$VOXTYPE_CONFIG"
 elif [[ -L $VOXTYPE_CONFIG && $(readlink "$VOXTYPE_CONFIG") == "$DOTS_DIR/voxtype/config.toml" ]]; then
     rm -f "$VOXTYPE_CONFIG"
+fi
+
+# Spotify ships with the desktop profile. Its launcher config shadows the
+# packaged /etc file completely, so the managed copy carries the whole file.
+SPOTIFY_LAUNCHER_CONFIG="$CONFIG_DIR/spotify-launcher.conf"
+if installer_profile_enabled desktop; then
+    user_config_link "$DOTS_DIR/spotify-launcher/spotify-launcher.conf" "$SPOTIFY_LAUNCHER_CONFIG"
+elif [[ -L $SPOTIFY_LAUNCHER_CONFIG && $(readlink "$SPOTIFY_LAUNCHER_CONFIG") == "$DOTS_DIR/spotify-launcher/spotify-launcher.conf" ]]; then
+    rm -f "$SPOTIFY_LAUNCHER_CONFIG"
+fi
+
+# MangoHud ships with the gaming profile; the overlay stays opt-in per game.
+MANGOHUD_CONFIG="$CONFIG_DIR/MangoHud/MangoHud.conf"
+if installer_profile_enabled gaming; then
+    user_config_link "$DOTS_DIR/mangohud/MangoHud.conf" "$MANGOHUD_CONFIG"
+elif [[ -L $MANGOHUD_CONFIG && $(readlink "$MANGOHUD_CONFIG") == "$DOTS_DIR/mangohud/MangoHud.conf" ]]; then
+    rm -f "$MANGOHUD_CONFIG"
 fi
 
 section "SETTING UP ZSH"

@@ -17,6 +17,9 @@ blankweave/
     plymouth/        # Boot splash: script template, master artwork to tint
     fontconfig/      # Font fallback config
     xdg-desktop-portal/  # Portal routing (hyprland → gtk fallback)
+    applications/    # Desktop entries (Settings)
+    spotify-launcher/  # Wayland launch flags (desktop profile)
+    mangohud/        # Default overlay layout (gaming profile)
   packages/
     base.txt         # Required pacman packages (shared)
     aur.txt          # Required exact AUR packages (shared)
@@ -139,7 +142,8 @@ Hypridle for idle, suspend, and resume protection.
    `hardware-capabilities.json`
 3. Selects GPU environment, monitor, and Hypridle configuration from those capabilities
 4. Launches Quickshell directly from `~/.local/share/blankweave/quickshell/`
-5. Symlinks app configs: `~/.config/{dunst,ghostty}/` → `~/.local/share/blankweave/`
+5. Symlinks app configs: `~/.config/{dunst,ghostty}/` → `~/.local/share/blankweave/`,
+   plus the profile-gated `spotify-launcher.conf` and `MangoHud/MangoHud.conf`
 6. Runs `theme-apply.sh` as the user, rendering `dunstrc`,
    `ghostty/config`, `hyprlock-theme.conf`, and `~/.config/blankweave/theme.lua`
    from their `.tmpl` sources and writing `~/.config/blankweave/theme.json`
@@ -199,6 +203,40 @@ override with native `config-file`; Dunst links its override as a native
 arguments so both full user configs and snippets remain effective. Zsh sources
 `overrides/zsh.zsh` before its legacy marked custom tail, preserved verbatim.
 Fully custom config entry points retain responsibility for loading overrides.
+
+### HiDPI and XWayland
+
+`hyprland.lua` sets `xwayland.force_zero_scaling`, the Hyprland wiki's HiDPI
+treatment: XWayland cannot scale itself, so a scaled compositor would otherwise
+stretch its 1x output into a blurry window and hand the client a shrunken
+screen (a 4K panel at 1.5 looks like 2560x1440 to a Proton game, which then
+cannot offer its native resolution). Unscaled XWayland windows are sharp and
+see the physical panel, at the cost that a client which cannot read the
+compositor scale draws small. The session's own toolkits are already steered
+to Wayland by `env.lua`, so the holdouts are Steam (X11 only) and CEF
+applications such as Spotify.
+
+- Steam has no Wayland mode and, as of client build 1788652215, no longer
+  honours `STEAM_FORCE_DESKTOPUI_SCALING` or `-forcedesktopscaling`; its
+  interface scale is the persistent client setting under Settings >
+  Accessibility > UI scale, which the user sets once. Do not shadow its
+  desktop entry or wrap its launch for scaling.
+- Spotify gets Wayland flags through a managed
+  `~/.config/spotify-launcher.conf` (desktop profile). That file shadows
+  `/etc/spotify-launcher.conf` entirely, so the managed copy is complete.
+- MangoHud's default layout is linked to `~/.config/MangoHud/MangoHud.conf`
+  (gaming profile); the overlay itself stays opt-in per game.
+
+Do not bump the global `XCURSOR_SIZE` or add `GDK_SCALE` to compensate:
+Wayland clients multiply those by the compositor scale themselves, and
+`GDK_SCALE` only takes whole numbers.
+
+`windowrules.lua` marks `steam_app_*` windows render-unfocused. A game
+presents through the compositor, so a window on an off-screen workspace never
+gets its buffers back, Present blocks, and the game's main thread stalls with
+it (Cities: Skylines II loaded one prefab a minute that way, with no CPU,
+disk, or network activity and DXVK's submit thread parked on a GPU sync
+object). `misc.render_unfocused_fps` bounds the cost.
 
 ### Secret Service and keyring unlock
 
