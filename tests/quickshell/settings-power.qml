@@ -37,7 +37,7 @@ ShellRoot {
                 const choice = test.find(controls, "powerProfileChoice")
                 switch (test.step++) {
                 case 0:
-                    test.check(!backend.active && !backend.ready, "Inactive service should not poll")
+                    test.check(!backend.active && backend.ready && !backend.automaticEnabled, "Startup preferences were not read")
                     backend.settingsActive = true
                     break
                 case 1:

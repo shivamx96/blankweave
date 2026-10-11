@@ -215,6 +215,17 @@ WidgetFrame {
         }
 
         Text {
+            Layout.fillWidth: true
+            visible: root.power.automaticEnabled || root.power.automaticError !== ""
+            text: root.power.automaticError || "Automatic profiles on · choosing a mode turns them off."
+            textFormat: Text.PlainText
+            color: root.power.automaticError ? root.theme.warning : root.theme.textMuted
+            wrapMode: Text.WordWrap
+            font.family: root.theme.fontFamily
+            font.pixelSize: root.theme.microTextSize
+        }
+
+        Text {
             visible: root.power.degradation !== ""
             Layout.fillWidth: true
             text: root.power.degradation

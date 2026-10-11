@@ -266,7 +266,7 @@ Rectangle {
                                     : root.page && root.page.id === "sound" && root.sound
                                     ? "Sound controls are available. Changes apply to the selected device or supported apps."
                                     : root.page && root.page.id === "power" && root.power
-                                    ? "Power profile changes apply immediately. Other power controls are previews."
+                                    ? "Power profiles and automatic switching are available. Other power controls are previews."
                                     : root.page && root.page.id === "network" && root.wifi
                                     ? "Connection, radio, and hotspot controls are available. VPN and file sharing are previews."
                                     : "Preview — changes aren’t applied. These controls show what’s planned; values are examples, not your device’s status."
@@ -409,7 +409,7 @@ Rectangle {
                                                     Layout.fillWidth: true
                                                     theme: root.theme
                                                     setting: settingGroup.modelData
-                                                    backend: settingGroup.modelData.kind === "power-profile" ? root.power
+                                                    backend: ["power-profile", "automatic-power"].includes(settingGroup.modelData.kind) ? root.power
                                                         : ["airplane", "hotspot"].includes(settingGroup.modelData.kind) ? root.wireless
                                                         : settingGroup.modelData.kind === "network" ? root.connections
                                                         : settingGroup.modelData.kind === "bluetooth" ? root.bluetooth

@@ -60,7 +60,7 @@ class Power:
         return {'available': False, 'service': '', 'owner': '', 'profile': '',
                 'profiles': [], 'degraded': '', 'holds': []}
 
-    def apply(self, service, owner, profile):
+    def apply(self, service, owner, profile, guard=None):
         if service not in ENDPOINTS or profile not in LABELS or not owner.startswith(':'):
             raise ValueError('Invalid power profile request.')
         if self.owner(service) != owner:
@@ -68,6 +68,8 @@ class Power:
         current = self.snapshot(service, owner)
         if profile not in [row['id'] for row in current['profiles']]:
             raise ValueError('That power profile is no longer available. Refresh and choose another.')
+        if guard is not None:
+            guard(current)
         # A no-op must not cancel an application's profile hold.
         if current['profile'] == profile:
             return
@@ -83,13 +85,22 @@ class Power:
 
 
 def main():
+    from power_policy import Policy
     arguments = sys.argv[1:]
+    policy = Policy()
     if arguments == ['status']:
-        print(json.dumps(Power().status()))
+        power = Power()
+        current = power.status()
+        current['automatic'] = policy.status(power, current)
+        print(json.dumps(current))
     elif len(arguments) == 4 and arguments[0] == 'set':
-        Power().apply(*arguments[1:])
+        policy.manual(Power(), *arguments[1:])
+    elif arguments == ['auto-tick']:
+        policy.tick(Power())
+    elif arguments == ['auto-configure']:
+        policy.configure(Power(), json.load(sys.stdin))
     else:
-        raise ValueError('Usage: power-profiles.py status | set <service> <owner> <profile>')
+        raise ValueError('Usage: power-profiles.py status | set <service> <owner> <profile> | auto-tick | auto-configure (JSON on stdin)')
 
 
 if __name__ == '__main__':
