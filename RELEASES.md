@@ -76,3 +76,22 @@ Blankweave release versions.
   preserving hover-to-reveal.
 - Deploy the managed Quickshell and shell-helper trees atomically so live
   reloads never see a missing or partially copied tree.
+
+## 0.9.0
+
+- Add native Settings with live appearance controls and authenticated system
+  theme application. Open it with `blankweave settings` or `Super+,`.
+- Add per-display brightness, scaling, positioning, confirmed mode changes,
+  mirroring, saved monitor setups, night light, and color profiles.
+- Share sound output, microphone, local voice dictation, and desktop event
+  sound controls between Settings and the bar.
+- Add shared Wi-Fi and saved-network controls, Bluetooth pairing, Ethernet
+  and DNS settings, airplane mode, and temporary Wi-Fi hotspots.
+- Add shared power profile controls, automatic switching for AC/battery and
+  low-charge states, plus battery health and supported charge-limit controls.
+- Keep XWayland sharp on HiDPI displays, launch Spotify with Wayland flags,
+  provide an opt-in MangoHud layout, and keep off-workspace Steam games rendering.
+  Steam's interface scale remains its own Accessibility setting.
+- Clear the bar's active application name on empty workspaces.
+- Keep unfinished Settings controls explicitly labeled as disabled previews.
+  The minimum supported configuration rollback release remains `0.1.0`.
