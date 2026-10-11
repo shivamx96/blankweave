@@ -22,6 +22,7 @@ class BatteryBus(Bus):
         self.percentage = 70.0
         self.present = True
         self.kind = 2
+        self.state = None
         self.source_reads = 0
         self.change_on_guard = False
         self.hold_on_guard = False
@@ -41,7 +42,8 @@ class BatteryBus(Bus):
                 return GLib.Variant('(a{sv})', ({'OnBattery': GLib.Variant('b', self.on_battery)},))
             if path == policy.ROOT + '/devices/DisplayDevice':
                 return GLib.Variant('(a{sv})', ({'Type': GLib.Variant('u', self.kind),
-                    'IsPresent': GLib.Variant('b', self.present), 'Percentage': GLib.Variant('d', self.percentage)},))
+                    'IsPresent': GLib.Variant('b', self.present), 'Percentage': GLib.Variant('d', self.percentage),
+                    'State': GLib.Variant('u', self.state if self.state is not None else 2 if self.on_battery else 1)},))
             raise AssertionError(path)
         if method == 'GetAll':
             self.profile_reads += 1
@@ -98,6 +100,46 @@ class PolicyTests(unittest.TestCase):
             self.bus.percentage = level
             self.policy.tick(self.power)
         self.assertEqual(self.bus.writes, ['power-saver', 'balanced'])
+
+    def test_empty_battery_does_not_become_ac(self):
+        self.enable()
+        self.bus.on_battery, self.bus.percentage = True, 2
+        self.policy.tick(self.power)
+        self.bus.on_battery, self.bus.percentage, self.bus.state = False, 0, 3
+        self.policy.tick(self.power)
+        self.assertEqual(self.bus.writes, ['power-saver'])
+        self.assertEqual(self.policy.previous()['condition'], 'low')
+        self.assertTrue(self.policy.status(self.power, self.power.status())['source']['onBattery'])
+        # An actual transition to charging still selects the AC profile.
+        self.bus.state = 1
+        self.policy.tick(self.power)
+        self.assertEqual(self.bus.writes, ['power-saver', 'performance'])
+
+    def test_battery_states_override_false_on_battery(self):
+        self.enable()
+        self.bus.percentage = 0
+        for state in (2, 3, 6):  # Discharging, empty, pending discharge.
+            self.bus.state = state
+            self.policy.tick(self.power)
+            self.assertEqual(self.policy.previous()['condition'], 'low')
+        self.assertEqual(self.bus.writes, ['power-saver'])
+
+    def test_unknown_battery_state_is_not_confirmed_ac(self):
+        self.enable()
+        for state in (0, 99):
+            self.bus.state = state
+            with self.assertRaisesRegex(ValueError, 'unknown'):
+                self.policy.tick(self.power)
+        self.assertEqual(self.bus.writes, [])
+        self.assertFalse(self.policy.state.exists())
+
+    def test_ac_states_remain_supported(self):
+        self.enable()
+        for state in (1, 4, 5):  # Charging, fully charged, pending charge.
+            self.bus.state = state
+            self.policy.tick(self.power)
+            self.assertEqual(self.policy.previous()['condition'], 'ac')
+        self.assertEqual(self.bus.writes, ['performance'])
 
     def test_preferences_and_transition_survive_restart(self):
         self.enable()

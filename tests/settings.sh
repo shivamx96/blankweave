@@ -275,4 +275,18 @@ if ! grep -q SETTINGS_WINDOW_PASSED "$test_root/window.log" \
     cat "$test_root/window.log"
     exit 1
 fi
+# Exercise real Settings dropdowns across hidden/minimized window transitions.
+cp "$repository/tests/quickshell/settings-power-lifecycle.qml" "$test_root/window/shell.qml"
+if ! HOME="$test_root/home" XDG_CONFIG_HOME="$test_root/home/.config" \
+    XDG_RUNTIME_DIR="$test_root/runtime" QT_QPA_PLATFORM=offscreen \
+    SETTINGS_POWER_STATE="$test_root/lifecycle-power-state" \
+    QT_QUICK_BACKEND=software timeout 30 qs -p "$test_root/window" > "$test_root/power-lifecycle.log" 2>&1; then
+    cat "$test_root/power-lifecycle.log"
+    exit 1
+fi
+if ! grep -q SETTINGS_POWER_LIFECYCLE_PASSED "$test_root/power-lifecycle.log" \
+    || grep -Eq '(TypeError|ReferenceError|Binding loop|Unable to assign|Failed to load|Error:)' "$test_root/power-lifecycle.log"; then
+    cat "$test_root/power-lifecycle.log"
+    exit 1
+fi
 printf 'Settings command and interface tests passed.\n'

@@ -851,8 +851,11 @@ power profile during validation. This control does not change idle or lock polic
 `power_policy.py` owns opt-in automatic profiles in `power-profiles.json`, with
 atomic writes and a shared lock for preference changes, manual choices, and ticks.
 The shell runs ticks every ten seconds while enabled, including with Settings
-hidden; open profile menus pause polling and ticks. UPower's aggregate battery
-and `OnBattery` determine plugged-in, battery, and low-battery states. Unknown
+hidden; open profile menus pause polling and ticks only while Power Settings is
+visible and not minimized. UPower's aggregate battery state and `OnBattery`
+determine plugged-in, battery, and low-battery states. Empty/discharging states
+remain on battery policy even when `OnBattery` is false; inferring AC requires
+a charging, fully charged, or pending-charge state. Unknown
 or absent battery data must never be treated as AC. A five-point recovery margin
 prevents threshold oscillation. Persist successful transition identities across
 shell reloads, including the boot ID and daemon owners; do not continually force a profile

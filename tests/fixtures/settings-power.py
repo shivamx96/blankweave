@@ -43,5 +43,8 @@ elif sys.argv[1:] == ['auto-tick']:
 elif sys.argv[1:] == ['fixture-source']:
     value['automatic']['source'].update(onBattery=True, percentage=10)
     path.write_text(json.dumps(value))
+elif sys.argv[1:] == ['fixture-ac']:
+    value['automatic']['source'].update(onBattery=False, percentage=70)
+    path.write_text(json.dumps(value))
 else:
     sys.exit('Invalid fixture request')

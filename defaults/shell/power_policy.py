@@ -65,6 +65,14 @@ def source(power):
     if (type(on_battery) is not bool or type(percentage) not in (int, float)
             or not math.isfinite(percentage) or not 0 <= percentage <= 100):
         raise ValueError('Battery status is unknown. Automatic switching is paused.')
+    # OnBattery is a convenience flag, not positive evidence of AC: UPower
+    # also clears it when a battery becomes empty. Keep battery states on the
+    # battery policy, and require a charging/full state before inferring AC.
+    state = device.get('State')
+    if state in (2, 3, 6):  # Discharging, empty, pending discharge.
+        on_battery = True
+    elif not on_battery and state not in (1, 4, 5):
+        raise ValueError('Battery power source is unknown. Automatic switching is paused.')
     return {'available': device.get('Type') == 2 and device.get('IsPresent') is True,
             'owner': owner, 'onBattery': on_battery, 'percentage': percentage}
 

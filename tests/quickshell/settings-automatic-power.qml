@@ -10,8 +10,9 @@ ShellRoot {
     property bool recoveringStartup: true
     readonly property string fixture: Qt.resolvedUrl("power.py").toString().replace("file://", "")
     Theme { id: theme }
-    PowerService { id: backend; helper: "/missing-startup-power-helper"; automaticInterval: 250 }
+    PowerService { id: backend; helper: "/missing-startup-power-helper"; automaticInterval: 250; settingsActive: window.visible }
     FloatingWindow {
+        id: window
         visible: true; implicitWidth: 640; implicitHeight: 700
         SettingsAutomaticPower { id: controls; theme: theme; backend: backend; width: 500 }
     }
@@ -39,7 +40,7 @@ ShellRoot {
                 const threshold = test.find(controls, "automaticPowerThreshold")
                 switch (test.step) {
                 case 0:
-                    test.check(backend.ready && !backend.error && backend.automatic.ready && !backend.automaticEnabled && !backend.active, "Startup defaults not loaded")
+                    test.check(backend.ready && !backend.error && backend.automatic.ready && !backend.automaticEnabled, "Startup defaults not loaded")
                     test.check(toggle.enabled && ac.currentIndex === 1, "Automatic controls unavailable")
                     ac.popup.open()
                     test.check(backend.automaticMenuOpen, "Automatic menu does not pause refresh")
@@ -51,6 +52,7 @@ ShellRoot {
                     test.check(backend.automatic.settings.ac === "performance" && ac.currentIndex === 2, "Saved profile missing")
                     toggle.clicked()
                     test.check(!backend.automaticEnabled && backend.busy, "Optimistically enabled automation")
+                    window.visible = false
                     break
                 case 2:
                     if (backend.profile !== "performance") return

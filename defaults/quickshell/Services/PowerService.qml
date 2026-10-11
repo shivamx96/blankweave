@@ -8,6 +8,9 @@ QtObject {
     property bool settingsActive: false
     property bool menuOpen: false
     property bool automaticMenuOpen: false
+    // Popups can retain their open state after their window is hidden or
+    // minimized. Only visible Settings controls may pause background work.
+    readonly property bool menuPaused: settingsActive && (menuOpen || automaticMenuOpen)
     property int automaticInterval: 10000
     property var automatic: ({ready: false, settings: {enabled: false}, source: {available: false}, message: "Loading automatic profiles…"})
     property string automaticSaveError: ""
@@ -46,7 +49,7 @@ QtObject {
         owners = next
     }
     function refresh(clearError = false) {
-        if (busy || menuOpen || automaticMenuOpen) return
+        if (busy || menuPaused) return
         if (clearError) error = ""
         status.running = true
     }
@@ -73,7 +76,7 @@ QtObject {
         action.running = true
     }
     function tick() {
-        if (!automaticEnabled || busy || menuOpen || automaticMenuOpen) return
+        if (!automaticEnabled || busy || menuPaused) return
         verifying = true; actionKind = "automatic"
         action.command = ["python3", helper, "auto-tick"]
         action.running = true
