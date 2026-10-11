@@ -9,6 +9,7 @@ ShellRoot {
     property int step: 0
     Theme { id: desktopTheme }
     ShellPreferences { id: preferences }
+    PowerService { id: power }
     AudioService { id: audio }
     Voxtype { id: voice }
     QtObject {
@@ -27,7 +28,7 @@ ShellRoot {
         property QtObject devices: QtObject { property var values: [] }
     }
     BluetoothService { id: bluetooth; provider: bluetoothProvider }
-    SettingsWindow { id: settings; theme: desktopTheme; preferences: preferences; sound: audio; voice: voice; wifi: wifi; connections: connections; wireless: wireless; bluetooth: bluetooth }
+    SettingsWindow { id: settings; theme: desktopTheme; preferences: preferences; power: power; sound: audio; voice: voice; wifi: wifi; connections: connections; wireless: wireless; bluetooth: bluetooth }
     Timer {
         interval: 200
         running: true
@@ -64,7 +65,19 @@ ShellRoot {
             } else if (root.step === 9) {
                 if (wifi.scanOwners.length || wifi.profilesActive || bluetooth.settingsActive || bluetooth.scanOwners.length || connections.settingsActive || wireless.active) { console.error("Wi-Fi active while minimized"); Qt.quit(); return }
                 settings.minimized = false; settings.visible = false
+            } else if (root.step === 10) {
+                settings.selectedPage = "power"; settings.openSettings()
+            } else if (root.step === 11) {
+                if (!power.active) { console.error("Power inactive on visible page"); Qt.quit(); return }
+                settings.minimized = true
+            } else if (root.step === 12) {
+                if (power.active) { console.error("Power active while minimized"); Qt.quit(); return }
+                settings.minimized = false; settings.selectedPage = "appearance"
+            } else if (root.step === 13) {
+                if (power.active) { console.error("Power active on another page"); Qt.quit(); return }
+                settings.selectedPage = "power"; settings.visible = false
             } else {
+                if (power.active) { console.error("Power active while hidden"); Qt.quit(); return }
                 if (wifi.scanOwners.length || wifi.profilesActive || bluetooth.settingsActive || bluetooth.scanOwners.length || connections.settingsActive || wireless.active) { console.error("Wi-Fi active while hidden"); Qt.quit(); return }
                 if (audio.microphone.active) { console.error("Microphone meter requested while hidden"); Qt.quit(); return }
                 console.log("SETTINGS_WINDOW_PASSED")

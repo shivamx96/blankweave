@@ -836,6 +836,17 @@ and sound updates use it so they preserve each other's keys and user settings.
 Do not imply these preferences control Dunst notifications or VoxType cues.
 Tests mock GSettings and playback and isolate the native Settings backend.
 
+`PowerService` shares power-profile state and writes between Settings and every
+battery panel. Poll only while a view requests it. `power-profiles.py` reads the
+running daemon without activation, supports the current and legacy D-Bus names,
+and offers only reported profiles. Capture its unique owner when opening a
+selection menu, recheck before writing, and verify the resulting active profile.
+Never claim a requested profile is active before readback. Show unavailable
+services, failed writes, performance degradation, and application profile holds;
+manual profile changes release holds according to the daemon's own policy.
+All mutation tests use an injected helper or fake bus; never switch the host's
+power profile during validation. This control does not change idle or lock policy.
+
 ### Adding a new Quickshell module
 
 1. Create `defaults/quickshell/Modules/<Name>Widget.qml`

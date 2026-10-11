@@ -261,7 +261,7 @@ PanelWindow {
             BluetoothWidget { bar: root; theme: root.theme; bluetooth: root.shell.bluetooth; iconOnly: true }
             NetworkWidget { bar: root; theme: root.theme; wifi: root.shell.wifi; connections: root.shell.connections; iconOnly: true }
             NotificationWidget { bar: root; theme: root.theme }
-            BatteryWidget { bar: root; theme: root.theme; iconOnly: true }
+            BatteryWidget { bar: root; theme: root.theme; power: root.shell.power; iconOnly: true }
             BarDivider { theme: root.theme }
 
             MemoryWidget {

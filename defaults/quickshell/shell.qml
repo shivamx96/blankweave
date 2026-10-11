@@ -14,6 +14,7 @@ ShellRoot {
     property Theme theme: Theme { }
     property ShellPreferences preferences: ShellPreferences { }
     property Voxtype voxtype: Voxtype { }
+    property PowerService power: PowerService { }
     property AudioService audio: AudioService { }
     property WirelessControls wireless: WirelessControls { wifi: root.wifi; bluetooth: root.bluetooth; connections: root.connections }
     property NetworkConnections connections: NetworkConnections { }
@@ -32,6 +33,7 @@ ShellRoot {
         id: settingsWindow
         theme: root.theme
         preferences: root.preferences
+        power: root.power
         sound: root.audio
         voice: root.voxtype
         wireless: root.wireless
