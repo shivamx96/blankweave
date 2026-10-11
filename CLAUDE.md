@@ -532,6 +532,15 @@ recording. Model/device/shortcut readouts must not imply editable controls or
 create another configuration writer. Test actions against the isolated voice
 fixture in `tests/settings.sh`, never the developer's daemon.
 
+`Services/ActiveWindow.qml` owns one focus listener and one startup
+`hyprctl -j activewindow` query per shell. Bars consume it through
+`bar.shell.activeWindow`; never seed focus from Quickshell's cached
+`Hyprland.activeToplevel` alone, which can retain a window after an empty focus
+event. New focus events invalidate pending startup results. Window addresses
+are compared as strings, not JavaScript numbers. `tests/active-window.sh`
+covers widget recreation, shell initialization, and startup/event races without
+contacting the running compositor.
+
 Process-backed modules (CPU, GPU, memory, network) use scripts that output JSON:
 
 ```json

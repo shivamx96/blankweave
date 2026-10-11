@@ -1,17 +1,14 @@
 import QtQuick
 import Quickshell
-import Quickshell.Hyprland
 import "../Components"
 
 WidgetFrame {
     id: root
 
-    property var hyprland: Hyprland
-    property bool focusCleared: false
-    readonly property var activeWindow: focusCleared ? null : hyprland.activeToplevel
-    readonly property string windowTitle: activeWindow && activeWindow.title
-        ? String(activeWindow.title)
-        : "Desktop"
+    readonly property var activeWindow: bar.shell.activeWindow.activeWindow
+    readonly property string windowTitle: !activeWindow ? "Desktop"
+        : (activeWindow.title ? String(activeWindow.title)
+            : (appEntry && appEntry.name ? String(appEntry.name) : (appId || "Untitled window")))
     // Wayland reports the app id a desktop entry can be looked up by; the
     // Hyprland window class is the fallback for XWayland clients.
     readonly property string appId: {
@@ -46,13 +43,4 @@ WidgetFrame {
             : windowTitle)
         : "No active window"
     horizontalPadding: 10
-
-    Connections {
-        target: root.hyprland
-
-        function onRawEvent(event) {
-            if (event.name === "activewindowv2")
-                root.focusCleared = !parseInt(event.data, 16)
-        }
-    }
 }
