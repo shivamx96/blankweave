@@ -95,3 +95,10 @@ Blankweave release versions.
 - Clear the bar's active application name on empty workspaces.
 - Keep unfinished Settings controls explicitly labeled as disabled previews.
   The minimum supported configuration rollback release remains `0.1.0`.
+
+## 0.9.1
+
+- Fix launching Blankweave Settings from application launchers when the graphical
+  session's PATH does not include `~/.local/bin`.
+- Bundle a Settings application icon in the standard hicolor fallback theme so
+  it displays even when Qt does not select the GTK icon theme.
