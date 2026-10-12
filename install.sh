@@ -10,7 +10,7 @@ if [ "$EUID" -ne 0 ]; then
     echo "###"
     echo "###   This will install and configure:"
     echo "###     - Hyprland (window manager)"
-    echo "###     - Quickshell, Dunst, Ghostty, Fuzzel"
+    echo "###     - Quickshell launcher, Dunst, Ghostty"
     echo "###     - PipeWire audio, Bluetooth, NetworkManager"
     echo "###     - ZSH with Powerlevel10k"
     echo "###     - Capability-selected GPU drivers and hardware services"
@@ -29,13 +29,13 @@ elif [ -z "$SUDO_USER" ]; then
     exit 1
 fi
 
-section() {
-    echo ""
-    echo "#############################################################################"
-    echo "### $1"
-    echo "#############################################################################"
-    echo ""
-}
+REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=scripts/install-progress.sh
+source "$REPO_DIR/scripts/install-progress.sh"
+trap 'install_progress_exit "$?"' EXIT
+
+section "CHECKING PREREQUISITES"
+"$REPO_DIR/scripts/installer-preflight.sh"
 
 WARNINGS=()
 
@@ -73,7 +73,6 @@ verify_packages_installed() {
     fi
 }
 
-REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 USER_HOME="$(getent passwd "$SUDO_USER" | cut -d: -f6)"
 [ -n "$USER_HOME" ] || { echo "Could not resolve the home directory for $SUDO_USER" >&2; exit 1; }
 USER_UID="$(id -u "$SUDO_USER")"
@@ -101,10 +100,12 @@ echo "$SUDO_USER ALL=(ALL) NOPASSWD: ALL" > "$SUDOERS_TMP"
 chmod 440 "$SUDOERS_TMP"
 
 cleanup_install() {
+    local install_status=$?
     rm -f "$SUDOERS_TMP"
     if [[ -n "$PARU_BUILD_DIR" && "$PARU_BUILD_DIR" == /tmp/blankweave-paru.* ]]; then
         rm -rf -- "$PARU_BUILD_DIR"
     fi
+    install_progress_exit "$install_status"
 }
 trap cleanup_install EXIT
 
