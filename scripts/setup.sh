@@ -118,8 +118,17 @@ choose_profiles() {
     local profile default
     local -a selected=()
 
-    printf '\nOptional features and application profiles\n' >&$TTY_FD
+    printf '\n[1/4] Applications and features\n' >&$TTY_FD
+    printf 'Core desktop and detected hardware support are always included.\n' >&$TTY_FD
+    printf 'Disabling a profile does not uninstall its existing applications.\n' >&$TTY_FD
     for profile in "${INSTALLER_AVAILABLE_PROFILES[@]}"; do
+        case "$profile" in
+            desktop) printf '\n  Desktop: browsers, notes, and personal utilities.\n' >&$TTY_FD ;;
+            development) printf '\n  Development: editors, containers, languages, and coding tools.\n' >&$TTY_FD ;;
+            communication) printf '\n  Communication: messaging and local file sharing.\n' >&$TTY_FD ;;
+            gaming) printf '\n  Gaming: Steam, Proton, overlays, and compatible GPU support.\n' >&$TTY_FD ;;
+            voice-dictation) printf '\n  Voice dictation: local speech recognition with a downloaded model.\n' >&$TTY_FD ;;
+        esac
         if profile_enabled "$profile"; then default=yes; else default=no; fi
         prompt_yes_no "  Enable $profile?" "$default"
         [[ $REPLY == yes ]] && selected+=("$profile")
@@ -130,7 +139,7 @@ choose_profiles() {
 choose_theme() {
     local theme
 
-    printf '\nAvailable themes:\n' >&$TTY_FD
+    printf '\n[2/4] Appearance\nAvailable themes:\n' >&$TTY_FD
     while IFS= read -r theme; do
         printf '  - %s\n' "$theme" >&$TTY_FD
     done < <(available_themes)
@@ -155,6 +164,7 @@ choose_git() {
     local default=no
 
     [[ $SETUP_GIT_IDENTITY == configure ]] && default=yes
+    printf '\n[3/4] Git and SSH (optional)\n' >&$TTY_FD
     prompt_yes_no $'\nConfigure the global Git name and email?' "$default"
     if [[ $REPLY == yes ]]; then
         SETUP_GIT_IDENTITY=configure
@@ -201,6 +211,11 @@ choose_git() {
 
 print_review() {
     local git_summary ssh_summary
+    local -a repository_packages=() aur_packages=() providers=()
+
+    resolve_package_manifests "$REPOSITORY" "$CAPABILITIES" repository repository_packages
+    resolve_package_manifests "$REPOSITORY" "$CAPABILITIES" aur aur_packages
+    resolve_package_manifests "$REPOSITORY" "$CAPABILITIES" providers providers
 
     if [[ $SETUP_GIT_IDENTITY == configure ]]; then
         git_summary="$SETUP_GIT_NAME <$SETUP_GIT_EMAIL>"
@@ -215,13 +230,49 @@ print_review() {
         ssh_summary='skip'
     fi
 
-    printf '\nSetup review\n'
+    printf '\n[4/4] Setup review\n'
     printf '  Capabilities: %s (detected)\n' "${CAPABILITIES:-none}"
     printf '  Profiles:     %s\n' "${INSTALLER_PROFILES[*]:-none}"
     printf '  Theme:        %s / %s\n' "$SETUP_THEME" "$SETUP_MODE"
     printf '  Git identity: %s\n' "$git_summary"
     printf '  SSH key:      %s\n' "$ssh_summary"
-    printf '\nThe installer will now install packages and reconcile system/user configuration.\n'
+    printf '  Packages:     %s repository targets, %s AUR targets, %s provider targets\n' \
+        "${#repository_packages[@]}" "${#aur_packages[@]}" "${#providers[@]}"
+    printf '                Includes installed targets; dependencies and sizes are resolved during installation.\n'
+    printf '\nApplying installs packages and configures the desktop, services, boot manager,\n'
+    printf 'and automatic login. Administrator authentication is required.\n'
+    printf 'Installation includes a full system upgrade. AUR builds and model downloads can take longer.\n'
+}
+
+print_packages() {
+    local kind
+    local -a packages=()
+    for kind in repository aur providers; do
+        resolve_package_manifests "$REPOSITORY" "$CAPABILITIES" "$kind" packages
+        printf '\n%s package targets:\n' "$kind"
+        if (( ${#packages[@]} )); then
+            printf '  %s\n' "${packages[@]}"
+        else
+            printf '  None\n'
+        fi
+    done
+}
+
+review_choices() {
+    while true; do
+        print_review
+        printf '\nEnter profiles, theme, or git to revise a section; packages to inspect the plan.\n' >&$TTY_FD
+        prompt_line 'Apply these choices? [y/N/profiles/theme/git/packages]: ' no
+        case "${REPLY,,}" in
+            y|yes) return 0 ;;
+            n|no) return 1 ;;
+            profiles) choose_profiles ;;
+            theme) choose_theme ;;
+            git) choose_git ;;
+            packages) print_packages ;;
+            *) printf 'Choose yes, no, profiles, theme, git, or packages.\n' >&$TTY_FD ;;
+        esac
+    done
 }
 
 write_atomic() {
@@ -267,6 +318,28 @@ apply_setup() {
     fi
 }
 
+run_installation() {
+    local log_directory log_file install_status
+
+    log_directory=${XDG_STATE_HOME:-$HOME/.local/state}/blankweave/setup
+    mkdir -p "$log_directory"
+    log_file=$(mktemp "$log_directory/install-$(date +%Y%m%d-%H%M%S).XXXXXX.log")
+    printf '\nInstalling Blankweave. Output is saved to:\n  %s\n\n' "$log_file"
+    # apply_setup returns the external installer's status; pipefail also catches
+    # failures to write the log, rather than reporting a successful setup.
+    if apply_setup 2>&1 | tee "$log_file"; then
+        printf '\nSetup completed. Log: %s\n' "$log_file"
+        printf 'After restarting your session, open Settings with Super+, and the launcher with Super+Space.\n'
+        printf 'Check system health with: %q doctor\n' "$REPOSITORY/bin/blankweave"
+    else
+        install_status=$?
+        printf '\nSetup did not complete (exit %s). Some changes may already be applied.\n' "$install_status" >&2
+        printf 'Saved choices are available for retry; see the error in:\n  %s\n' "$log_file" >&2
+        printf 'After resolving it, retry with:\n  %q setup --non-interactive\n' "$REPOSITORY/bin/blankweave" >&2
+        return "$install_status"
+    fi
+}
+
 main() {
     case "${1:-}" in
         '') ;;
@@ -285,6 +358,8 @@ main() {
     source "$REPOSITORY/scripts/setup-config.sh"
     # shellcheck source=scripts/hardware-capabilities.sh
     source "$REPOSITORY/scripts/hardware-capabilities.sh"
+    # shellcheck source=scripts/package-manifests.sh
+    source "$REPOSITORY/scripts/package-manifests.sh"
     hardware_capabilities_detect
     CAPABILITIES=$(hardware_capabilities_list)
 
@@ -301,6 +376,11 @@ main() {
         load_initial_choices
         printf 'Blankweave guided setup\nDetected capabilities: %s\n' \
             "${CAPABILITIES:-none}" >&$TTY_FD
+        printf 'Choose applications, appearance, and optional Git/SSH settings, then review.\n' >&$TTY_FD
+        printf 'Press Enter to keep the displayed choice. Nothing is applied until you confirm.\n' >&$TTY_FD
+        if [[ -f $INSTALL_CONFIG || -f $SETUP_CONFIG ]]; then
+            printf 'Existing choices have been loaded as defaults.\n' >&$TTY_FD
+        fi
         choose_profiles
         choose_theme
         choose_git
@@ -308,16 +388,18 @@ main() {
 
     theme_available "$SETUP_THEME" || die "theme is not available: $SETUP_THEME"
     setup_config_validate
-    print_review
     if [[ $NON_INTERACTIVE == false ]]; then
-        prompt_yes_no 'Apply these choices?' no
-        if [[ $REPLY != yes ]]; then
+        if ! review_choices; then
             printf 'Setup cancelled; no choices or system configuration were changed.\n'
             return 0
         fi
+        theme_available "$SETUP_THEME" || die "theme is not available: $SETUP_THEME"
+        setup_config_validate
         save_choices
+    else
+        print_review
     fi
-    apply_setup
+    run_installation
 }
 
 if [[ ${BASH_SOURCE[0]} == "$0" ]]; then

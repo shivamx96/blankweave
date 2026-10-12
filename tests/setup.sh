@@ -5,6 +5,7 @@ set -euo pipefail
 repository=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)
 test_root=$(mktemp -d)
 export BLANKWEAVE_SETUP_TEST_ALLOW_ROOT=1
+export XDG_STATE_HOME=$test_root/state
 
 cleanup() {
     if [[ -n $test_root && -d $test_root ]]; then
@@ -123,5 +124,46 @@ setup_config_load "$guided_config/setup.conf"
 mapfile -t guided_apply < "$guided_home/apply-called"
 [[ ${guided_apply[1]} == moss ]]
 [[ ${guided_apply[2]} == light ]]
+
+# The review can revisit a section without restarting or saving partial choices.
+edit_home=$test_root/edit-home
+mkdir -p "$edit_home"
+printf '\n\n\n\n\nmoss\nlight\nn\nn\npackages\ntheme\nobsidian\ndark\ny\n' | \
+    HOME=$edit_home \
+    XDG_CONFIG_HOME=$edit_home/config \
+    BLANKWEAVE_SETUP_APPLY_COMMAND=$fake_apply \
+    script -qec "'$repository/scripts/setup.sh'" /dev/null > "$test_root/edit.out"
+setup_config_load "$edit_home/config/blankweave/setup.conf"
+[[ $SETUP_THEME == obsidian && $SETUP_MODE == dark ]]
+mapfile -t edited_apply < "$edit_home/apply-called"
+[[ ${edited_apply[1]} == obsidian && ${edited_apply[2]} == dark ]]
+grep -q 'repository package targets:' "$test_root/edit.out"
+grep -q 'aur package targets:' "$test_root/edit.out"
+grep -q 'lmstudio-bin' "$test_root/edit.out"
+
+# Failure output must survive, retain the exit status, and offer a retry using
+# saved choices. Both stdout and stderr belong in a private log.
+failure_apply=$test_root/failure-apply
+printf '%s\n' '#!/usr/bin/env bash' \
+    'echo "fixture installer output"' \
+    'echo "fixture installer error" >&2' \
+    'exit 23' > "$failure_apply"
+chmod +x "$failure_apply"
+failure_status=0
+HOME=$replay_home XDG_CONFIG_HOME=$replay_home/config \
+    XDG_STATE_HOME=$test_root/failure-state \
+    BLANKWEAVE_SETUP_APPLY_COMMAND=$failure_apply \
+    "$repository/scripts/setup.sh" --non-interactive > "$test_root/failure.out" 2>&1 \
+    || failure_status=$?
+[[ $failure_status == 23 ]]
+failure_logs=("$test_root/failure-state/blankweave/setup/"*.log)
+[[ ${#failure_logs[@]} == 1 && -f ${failure_logs[0]} ]]
+[[ $(stat -c %a "${failure_logs[0]}") == 600 ]]
+grep -q 'fixture installer output' "${failure_logs[0]}"
+grep -q 'fixture installer error' "${failure_logs[0]}"
+grep -q 'setup --non-interactive' "$test_root/failure.out"
+grep -q 'Some changes may already be applied' "$test_root/failure.out"
+[[ $(sha256sum "$replay_config/install.conf") == "$install_before" ]]
+[[ $(sha256sum "$replay_config/setup.conf") == "$setup_before" ]]
 
 printf 'Guided setup and setup config tests passed.\n'
