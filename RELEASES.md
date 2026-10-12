@@ -102,3 +102,10 @@ Blankweave release versions.
   session's PATH does not include `~/.local/bin`.
 - Bundle a Settings application icon in the standard hicolor fallback theme so
   it displays even when Qt does not select the GTK icon theme.
+
+## 0.9.2
+
+- Continue desktop setup when an optional profile application fails to download or build, and list failed packages with individual retry commands. Required packages still stop installation on failure; checksum and signature verification remain enabled.
+- Explain optional profiles, preview package selections, and allow editing individual sections from the setup review before applying.
+- Save private installation logs and show recovery commands that reuse saved choices.
+- Check basic installation prerequisites early and show numbered stages, elapsed time, and the active stage on failure.
