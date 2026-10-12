@@ -179,6 +179,8 @@ development, and communication; gaming is also enabled on a gaming-capable
 machine without a battery. Ordinary updates consume the saved package/Git/SSH
 choices but preserve any theme selected after setup.
 
+Required core and hardware packages, plus deliberate dependency providers, must install successfully. Optional profile applications are attempted individually; a failed download or build is reported while the other applications and desktop setup continue. The final summary lists failed packages with individual retry commands. Source checksum and signature checks remain enabled. A checksum mismatch can mean a corrupt cached download or an upstream packaging problem; do not bypass verification. If an optional feature such as voice dictation could not be configured, rerun setup after resolving its error.
+
 ## Voice dictation
 
 Add `voice-dictation` to the space-separated `profiles=` line in

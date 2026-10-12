@@ -124,6 +124,8 @@ source "$REPO_DIR/scripts/installer-config.sh"
 source "$REPO_DIR/scripts/setup-config.sh"
 # shellcheck source=scripts/package-manifests.sh
 source "$REPO_DIR/scripts/package-manifests.sh"
+# shellcheck source=scripts/install-packages.sh
+source "$REPO_DIR/scripts/install-packages.sh"
 # shellcheck source=scripts/hardware-capabilities.sh
 source "$REPO_DIR/scripts/hardware-capabilities.sh"
 
@@ -169,35 +171,13 @@ if ! pacman -Fy --noconfirm; then
     warn "File database sync failed; package installation will continue."
 fi
 
-echo "Installing base packages..."
-PROVIDER_PACKAGES=()
-REPO_PACKAGES=()
-AUR_PACKAGES=()
-resolve_package_manifests "$REPO_DIR" "$CAPABILITIES" providers PROVIDER_PACKAGES
-if [ "${#PROVIDER_PACKAGES[@]}" -gt 0 ]; then
-    echo "Installing pinned virtual dependency providers..."
-    pacman -S --noconfirm --needed "${PROVIDER_PACKAGES[@]}"
-    verify_packages_installed "virtual dependency provider" "${PROVIDER_PACKAGES[@]}"
-fi
+# Core/hardware and selected dependency providers are required. Each optional
+# profile app is isolated so a failed upstream build does not abort the desktop.
+install_manifest_packages "$REPO_DIR" "$CAPABILITIES" providers
+install_manifest_packages "$REPO_DIR" "$CAPABILITIES" repository
+install_manifest_packages "$REPO_DIR" "$CAPABILITIES" aur
 
-resolve_package_manifests "$REPO_DIR" "$CAPABILITIES" repository REPO_PACKAGES
-pacman -S --noconfirm --needed "${REPO_PACKAGES[@]}"
-verify_packages_installed "repository package" "${REPO_PACKAGES[@]}"
-
-resolve_package_manifests "$REPO_DIR" "$CAPABILITIES" aur AUR_PACKAGES
-
-if [ "${#AUR_PACKAGES[@]}" -gt 0 ]; then
-    echo "Installing exact AUR packages..."
-    AUR_TARGETS=()
-    for package in "${AUR_PACKAGES[@]}"; do
-        AUR_TARGETS+=("aur/$package")
-    done
-
-    sudo -H -u "$SUDO_USER" paru -S --noconfirm --needed --noprovides "${AUR_TARGETS[@]}"
-    verify_packages_installed "AUR package" "${AUR_PACKAGES[@]}"
-fi
-
-echo "Package installation complete."
+printf 'Package phase finished: %s optional package(s) need attention.\n' "${#OPTIONAL_PACKAGE_FAILURES[@]}"
 
 if hardware_capability_has gpu-intel; then
     if ! "$REPO_DIR/scripts/configure-intel-gpu-monitoring.sh"; then
@@ -224,7 +204,7 @@ systemctl enable tailscaled.service
 systemctl start tailscaled.service || warn "Could not start Tailscale."
 # Log in separately (interactive/browser auth):  tailscale up
 
-if installer_profile_enabled development; then
+if installer_profile_enabled development && pacman -Q docker >/dev/null 2>&1; then
     echo "Setting up Docker..."
     systemctl enable docker.service
     systemctl start docker.service || warn "Could not start Docker."
@@ -476,7 +456,9 @@ fi
 
 section "CONFIGURING VOICE DICTATION"
 
-if installer_profile_enabled voice-dictation; then
+if installer_profile_enabled voice-dictation && ! command -v voxtype >/dev/null 2>&1; then
+    warn "Voice dictation is unavailable because VoxType is missing. Retry its package and rerun setup to configure it."
+elif installer_profile_enabled voice-dictation; then
     # VoxType chooses Vulkan/CUDA/MIGraphX for the detected machine and leaves
     # its packaged CPU entry point in place when no accelerator is suitable.
     if ! voxtype setup gpu --enable; then
@@ -489,8 +471,7 @@ if installer_profile_enabled voice-dictation; then
         XDG_RUNTIME_DIR="$USER_RUNTIME_DIR" \
         DBUS_SESSION_BUS_ADDRESS="unix:path=$USER_RUNTIME_DIR/bus" \
         "$DOTS_DIR/shell/voxtype-setup.sh" enable; then
-        echo "Error: Could not configure local voice dictation." >&2
-        exit 1
+        warn "Could not configure local voice dictation. Rerun setup after resolving its error; desktop setup will continue."
     fi
 else
     sudo -H -u "$SUDO_USER" env \
@@ -657,7 +638,11 @@ sudo -H -u "$SUDO_USER" env \
 
 section "DONE"
 
-echo "Installation complete!"
+if [ "${#WARNINGS[@]}" -gt 0 ]; then
+    echo "Desktop configuration complete, with items needing attention."
+else
+    echo "Installation complete!"
+fi
 echo "  Capabilities: ${CAPABILITIES:-none}"
 echo "  Defaults: ~/.local/share/blankweave"
 echo "  User configs: ~/.config"
@@ -687,3 +672,5 @@ if [ "${#WARNINGS[@]}" -gt 0 ]; then
     echo "Completed with ${#WARNINGS[@]} warning(s):"
     printf '  - %s\n' "${WARNINGS[@]}"
 fi
+
+print_optional_package_retries
