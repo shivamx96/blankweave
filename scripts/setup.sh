@@ -360,6 +360,10 @@ main() {
     source "$REPOSITORY/scripts/hardware-capabilities.sh"
     # shellcheck source=scripts/package-manifests.sh
     source "$REPOSITORY/scripts/package-manifests.sh"
+    # Injected apply commands exercise setup without requiring an installed host.
+    if [[ -z ${BLANKWEAVE_SETUP_APPLY_COMMAND:-} ]]; then
+        "$REPOSITORY/scripts/installer-preflight.sh"
+    fi
     hardware_capabilities_detect
     CAPABILITIES=$(hardware_capabilities_list)
 

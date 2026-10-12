@@ -181,7 +181,7 @@ choices but preserve any theme selected after setup.
 
 At the setup review, enter `profiles`, `theme`, or `git` to revise that section before applying. Setup saves installation output in private log files under `${XDG_STATE_HOME:-~/.local/state}/blankweave/setup/`. If installation fails, it prints the log path and a command to retry with your saved choices; the retry reapplies configuration rather than resuming at the failed step.
 
-The review shows package target counts; enter `packages` to inspect the full list for your selections and detected hardware.
+The review shows package target counts; enter `packages` to inspect the full list for your selections and detected hardware. Before applying, basic checks catch unsupported systems, missing tools, an existing package-manager lock, and enabled Secure Boot when readable. Installation displays numbered stages, elapsed time, and the active stage if it stops.
 
 Required core and hardware packages, plus deliberate dependency providers, must install successfully. Optional profile applications are attempted individually; a failed download or build is reported while the other applications and desktop setup continue. The final summary lists failed packages with individual retry commands. Source checksum and signature checks remain enabled. A checksum mismatch can mean a corrupt cached download or an upstream packaging problem; do not bypass verification. If an optional feature such as voice dictation could not be configured, rerun setup after resolving its error.
 
