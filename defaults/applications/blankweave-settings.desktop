@@ -2,8 +2,8 @@
 Type=Application
 Name=Blankweave Settings
 Comment=Personalize your desktop and explore upcoming system settings
-Exec=blankweave settings
-Icon=preferences-system
+Exec=sh -c "exec \\"\\$HOME/.local/bin/blankweave\\" settings"
+Icon=blankweave-settings
 Terminal=false
 Categories=Settings;DesktopSettings;
 Keywords=preferences;theme;appearance;display;power;keyboard;backup;
