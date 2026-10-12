@@ -179,6 +179,10 @@ development, and communication; gaming is also enabled on a gaming-capable
 machine without a battery. Ordinary updates consume the saved package/Git/SSH
 choices but preserve any theme selected after setup.
 
+At the setup review, enter `profiles`, `theme`, or `git` to revise that section before applying. Setup saves installation output in private log files under `${XDG_STATE_HOME:-~/.local/state}/blankweave/setup/`. If installation fails, it prints the log path and a command to retry with your saved choices; the retry reapplies configuration rather than resuming at the failed step.
+
+The review shows package target counts; enter `packages` to inspect the full list for your selections and detected hardware.
+
 Required core and hardware packages, plus deliberate dependency providers, must install successfully. Optional profile applications are attempted individually; a failed download or build is reported while the other applications and desktop setup continue. The final summary lists failed packages with individual retry commands. Source checksum and signature checks remain enabled. A checksum mismatch can mean a corrupt cached download or an upstream packaging problem; do not bypass verification. If an optional feature such as voice dictation could not be configured, rerun setup after resolving its error.
 
 ## Voice dictation
