@@ -509,6 +509,12 @@ copy_file_atomically "$REPO_DIR/defaults/applications/blankweave-settings.deskto
 chown "$SUDO_USER:$SUDO_USER" "$USER_HOME/.local/share/applications" \
     "$USER_HOME/.local/share/applications/blankweave-settings.desktop"
 
+# Ship the Settings icon in the standard fallback theme so launchers do not
+# depend on Qt selecting the user's GTK icon theme.
+install -D -m 0644 -o "$SUDO_USER" -g "$SUDO_USER" \
+    "$REPO_DIR/defaults/applications/blankweave-settings.svg" \
+    "$USER_HOME/.local/share/icons/hicolor/scalable/apps/blankweave-settings.svg"
+
 # Bundled web apps are desktop entries that open a site in Helium's app mode.
 # Helium ships with the optional desktop profile, so the script skips itself
 # when the browser is absent; a failed icon download is not worth aborting an
