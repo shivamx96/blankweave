@@ -4,7 +4,7 @@ local startup_commands = {
     "~/.local/share/blankweave/shell/wallpaper.sh theme",
     "quickshell -n -p ~/.local/share/blankweave/quickshell",
     "dunst",
-    "hypridle",
+    "~/.local/share/blankweave/shell/idle-policy.sh",
     "wl-paste --type text --watch cliphist store",
     "wl-paste --type image --watch cliphist store",
     "/usr/lib/polkit-gnome/polkit-gnome-authentication-agent-1",

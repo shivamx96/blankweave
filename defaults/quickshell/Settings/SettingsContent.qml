@@ -12,6 +12,7 @@ Rectangle {
     property var displays: null
     property var power: null
     property var battery: null
+    property var idle: null
     property var sound: null
     property var voice: null
     property var systemSounds: null
@@ -267,7 +268,7 @@ Rectangle {
                                     : root.page && root.page.id === "sound" && root.sound
                                     ? "Sound controls are available. Changes apply to the selected device or supported apps."
                                     : root.page && root.page.id === "power" && root.power
-                                    ? "Power profiles, automatic switching, and battery controls are available. Idle and sleep controls are previews."
+                                    ? "Power profiles, battery controls, and idle timeouts are available. Hibernation and keep-awake remain previews."
                                     : root.page && root.page.id === "network" && root.wifi
                                     ? "Connection, radio, and hotspot controls are available. VPN and file sharing are previews."
                                     : "Preview — changes aren’t applied. These controls show what’s planned; values are examples, not your device’s status."
@@ -410,7 +411,8 @@ Rectangle {
                                                     Layout.fillWidth: true
                                                     theme: root.theme
                                                     setting: settingGroup.modelData
-                                                    backend: settingGroup.modelData.kind === "battery-health" ? root.battery
+                                                    backend: settingGroup.modelData.kind === "idle" ? root.idle
+                                                        : settingGroup.modelData.kind === "battery-health" ? root.battery
                                                         : ["power-profile", "automatic-power"].includes(settingGroup.modelData.kind) ? root.power
                                                         : ["airplane", "hotspot"].includes(settingGroup.modelData.kind) ? root.wireless
                                                         : settingGroup.modelData.kind === "network" ? root.connections
