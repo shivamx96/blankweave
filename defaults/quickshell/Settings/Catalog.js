@@ -86,7 +86,7 @@ var pages = [
             { id: "defaults", title: "Default applications", description: "Choose handlers for web links, email, folders, documents, and media.", kind: "default-apps", live: true },
             { id: "startup", title: "Startup applications", description: "Choose what starts when you sign in.", kind: "startup", live: true },
             { id: "permissions", title: "Application permissions", description: "Review supported camera, microphone, and file permissions.", kind: "action", action: "Review" },
-            { id: "webapps", title: "Web apps", description: "Add and manage sites that open as applications.", kind: "action", action: "Manage" }
+            { id: "webapps", title: "Web apps", description: "Add and manage sites that open as applications.", kind: "webapps", live: true }
         ] },
         { title: "Notifications", rows: [
             { id: "dnd", title: "Do not disturb", description: "Pause notifications or create a quiet-hours schedule.", kind: "notifications", live: true },

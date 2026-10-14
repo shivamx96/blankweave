@@ -1164,3 +1164,10 @@ IDs, appends newly introduced widgets, and keeps system/power menus available.
 `WidgetSection` loads only enabled widgets and retains compact-window/battery
 availability behavior; all displays use the same preferences. Settings exposes
 left/center/right sections and reset without creating another file writer.
+
+`webapps-settings.py` adapts the existing `webapp.sh` installer/remover without
+launching the browser. Creation requires Helium, uses a browser icon (`-` in the
+CLI), rejects colliding slugs/invalid URLs/multiline names, and escapes URL field
+codes through the existing writer. Only user-created, nonsymlink entries can be
+removed; bundled entries remain owned by manifest sync. Removal confirms the
+selected identity/revision and retains browser session data.
