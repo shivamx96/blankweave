@@ -13,6 +13,7 @@ Rectangle {
     property var power: null
     property var battery: null
     property var idle: null
+    property var defaultApps: null
     property var accessibility: null
     property var interfaceSettings: null
     property var shortcuts: null
@@ -276,6 +277,8 @@ Rectangle {
                                     ? "Power profiles, battery controls, and idle timeouts are available. Hibernation and keep-awake remain previews."
                                     : root.page && root.page.id === "input" && root.pointer
                                     ? "Input, text size, reduced motion, and high contrast controls are available. Assistive-tool setup remains a preview."
+                                    : root.page && root.page.id === "apps" && root.defaultApps
+                                    ? "Default applications are available. Other application controls remain previews."
                                     : root.page && root.page.id === "network" && root.wifi
                                     ? "Connection, radio, and hotspot controls are available. VPN and file sharing are previews."
                                     : "Preview — changes aren’t applied. These controls show what’s planned; values are examples, not your device’s status."
@@ -418,7 +421,8 @@ Rectangle {
                                                     Layout.fillWidth: true
                                                     theme: root.theme
                                                     setting: settingGroup.modelData
-                                                    backend: settingGroup.modelData.kind === "accessibility" ? root.accessibility
+                                                    backend: settingGroup.modelData.kind === "default-apps" ? root.defaultApps
+                                                        : settingGroup.modelData.kind === "accessibility" ? root.accessibility
                                                         : settingGroup.modelData.kind === "interface-size" ? root.interfaceSettings
                                                         : settingGroup.modelData.kind === "shortcuts" ? root.shortcuts
                                                         : settingGroup.modelData.kind === "keyboard" ? root.keyboard

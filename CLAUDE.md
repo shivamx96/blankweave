@@ -1115,3 +1115,17 @@ or notification timers. New explicit UI animations must honor `theme.reducedMoti
 Theme changes preserve accessibility preferences and GTK animation keys. Native
 tests check both palettes' text/background contrast, restoration, and immediate
 control transitions; helper and wallpaper tests never touch the host session.
+
+`Services/SettingsDefaultApps.qml` and `default-apps.py` expose effective GIO
+handlers for web/email links, folders, PDF, plain text, PNG/JPEG, MP3, MP4, and
+ZIP. Choices intersect registered, visible desktop applications across every
+listed MIME type; application launch shortcuts remain independently configured.
+The helper atomically edits only selected `[Default Applications]` keys in
+`$XDG_CONFIG_HOME/mimeapps.list`, retaining comments, unrelated associations,
+fallback IDs, and file permissions. Reset removes selected user default keys.
+Symlinked or malformed user files are not rewritten. A locked revision/context
+check includes application identities and desktop-entry contents. Verification
+uses a fresh GIO process; higher-priority overrides trigger rollback, preserving
+external changes. Discovery and selection never launch applications. Native
+controls freeze popup identities and revisions, refresh after hidden writes,
+and only poll on the visible Apps page. Real GIO tests use disposable XDG trees.
