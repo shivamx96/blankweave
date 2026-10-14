@@ -458,4 +458,23 @@ if ! grep -q SETTINGS_DEFAULT_APPS_PASSED "$test_root/default-apps.log" \
     exit 1
 fi
 
+# Shared task backend actions use a fixture, never the host compositor or input devices.
+export SETTINGS_TASK_STATE="$test_root/task-state"
+mkdir -p "$test_root/task"
+cp -R "$repository/defaults/quickshell/"{Services,Settings,Components,Assets,Modules} "$test_root/task/"
+cp "$repository/defaults/quickshell/Theme.qml" "$test_root/task/"
+cp "$repository/tests/quickshell/settings-task.qml" "$test_root/task/shell.qml"
+cp "$repository/tests/fixtures/settings-task.py" "$test_root/task/task.py"
+if ! HOME="$test_root/home" XDG_CONFIG_HOME="$test_root/home/.config" \
+    XDG_RUNTIME_DIR="$test_root/runtime" QT_QPA_PLATFORM=offscreen \
+    QT_QUICK_BACKEND=software timeout 15 qs -p "$test_root/task" > "$test_root/task.log" 2>&1; then
+    cat "$test_root/task.log"
+    exit 1
+fi
+if ! grep -q SETTINGS_TASK_PASSED "$test_root/task.log" \
+    || grep -Eq '(TypeError|ReferenceError|Binding loop|Unable to assign|Failed to load|Error:)' "$test_root/task.log"; then
+    cat "$test_root/task.log"
+    exit 1
+fi
+
 printf 'Settings command and interface tests passed.\n'

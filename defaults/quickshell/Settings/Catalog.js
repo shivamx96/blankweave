@@ -64,7 +64,6 @@ var pages = [
         ] },
         { title: "Idle & sleep", rows: [
             { id: "screen-off", title: "Idle timeouts", description: "Choose dimming, locking, screen-off, and sleep delays for battery and plugged-in use.", kind: "idle", live: true },
-            { id: "awake", title: "Keep awake", description: "Temporarily prevent idle sleep with an expiry time.", kind: "choice", options: ["Off", "30 minutes", "1 hour", "2 hours"] },
             { id: "hibernate", title: "Hibernation", description: "Configure saving your session to disk where supported.", kind: "action", action: "Set up" }
         ] }
     ] },
@@ -90,7 +89,7 @@ var pages = [
             { id: "webapps", title: "Web apps", description: "Add and manage sites that open as applications.", kind: "action", action: "Manage" }
         ] },
         { title: "Notifications", rows: [
-            { id: "dnd", title: "Do not disturb", description: "Pause notifications or create a quiet-hours schedule.", kind: "toggle" },
+            { id: "dnd", title: "Do not disturb", description: "Pause notifications or create a quiet-hours schedule.", kind: "notifications", live: true },
             { id: "notifications", title: "Notification preferences", description: "Choose which apps can notify you.", kind: "action", action: "Configure" }
         ] }
     ] },
