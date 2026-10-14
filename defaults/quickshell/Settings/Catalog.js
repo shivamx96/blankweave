@@ -70,7 +70,7 @@ var pages = [
     ] },
     { id: "input", title: "Input & Accessibility", icon: "󰌌", description: "Make your computer work the way you do.", groups: [
         { title: "Keyboard & pointer", rows: [
-            { id: "layouts", title: "Keyboard layouts & languages", description: "Add layouts, input methods, and a layout switcher.", kind: "action", action: "Manage" },
+            { id: "layouts", title: "Keyboard layouts & languages", description: "Add keyboard layouts and variants, choose a switching shortcut, and switch layouts.", kind: "keyboard", live: true },
             { id: "shortcuts", title: "Keyboard shortcuts", description: "Discover and customize desktop shortcuts.", kind: "action", action: "Edit shortcuts" },
             { id: "pointer", title: "Mouse & touchpad", description: "Adjust speed, acceleration, scrolling, buttons, tap to click, and typing protection.", kind: "pointer", live: true }
         ] },

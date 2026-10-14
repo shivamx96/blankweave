@@ -14,6 +14,7 @@ EOF
 chmod +x "$test_root/bin/qs"
 export SETTINGS_IDLE_STATE="$test_root/window-idle-state"
 export SETTINGS_POINTER_STATE="$test_root/window-pointer-state"
+export SETTINGS_KEYBOARD_STATE="$test_root/window-keyboard-state"
 export SETTINGS_BATTERY_STATE="$test_root/battery-state"
 export SETTINGS_POWER_STATE="$test_root/power-state"
 export SETTINGS_TEST_LOG="$test_root/command"
@@ -280,6 +281,7 @@ cp "$repository/tests/fixtures/settings-theme.sh" "$test_root/home/.local/share/
 cp "$repository/tests/fixtures/settings-battery.py" "$test_root/home/.local/share/blankweave/shell/battery-health.py"
 cp "$repository/tests/fixtures/settings-idle.py" "$test_root/home/.local/share/blankweave/shell/idle-policy.py"
 cp "$repository/tests/fixtures/settings-pointer.py" "$test_root/home/.local/share/blankweave/shell/pointer-settings.py"
+cp "$repository/tests/fixtures/settings-keyboard.py" "$test_root/home/.local/share/blankweave/shell/keyboard-settings.py"
 cp "$repository/tests/fixtures/settings-power.py" "$test_root/home/.local/share/blankweave/shell/power-profiles.py"
 cp "$repository/tests/fixtures/settings-system-sounds.py" "$test_root/home/.local/share/blankweave/shell/system-sounds.py"
 cp "$repository/tests/fixtures/settings-wifi-profiles.py" "$test_root/home/.local/share/blankweave/shell/wifi-profiles.py"
@@ -350,6 +352,25 @@ fi
 if ! grep -q SETTINGS_POINTER_PASSED "$test_root/pointer.log" \
     || grep -Eq '(TypeError|ReferenceError|Binding loop|Unable to assign|Failed to load|Error:)' "$test_root/pointer.log"; then
     cat "$test_root/pointer.log"
+    exit 1
+fi
+
+# Keyboard actions use a fixture, never the host compositor or input devices.
+export SETTINGS_KEYBOARD_STATE="$test_root/keyboard-state"
+mkdir -p "$test_root/keyboard"
+cp -R "$repository/defaults/quickshell/"{Services,Settings,Components,Assets,Modules} "$test_root/keyboard/"
+cp "$repository/defaults/quickshell/Theme.qml" "$test_root/keyboard/"
+cp "$repository/tests/quickshell/settings-keyboard.qml" "$test_root/keyboard/shell.qml"
+cp "$repository/tests/fixtures/settings-keyboard.py" "$test_root/keyboard/keyboard.py"
+if ! HOME="$test_root/home" XDG_CONFIG_HOME="$test_root/home/.config" \
+    XDG_RUNTIME_DIR="$test_root/runtime" QT_QPA_PLATFORM=offscreen \
+    QT_QUICK_BACKEND=software timeout 15 qs -p "$test_root/keyboard" > "$test_root/keyboard.log" 2>&1; then
+    cat "$test_root/keyboard.log"
+    exit 1
+fi
+if ! grep -q SETTINGS_KEYBOARD_PASSED "$test_root/keyboard.log" \
+    || grep -Eq '(TypeError|ReferenceError|Binding loop|Unable to assign|Failed to load|Error:)' "$test_root/keyboard.log"; then
+    cat "$test_root/keyboard.log"
     exit 1
 fi
 
