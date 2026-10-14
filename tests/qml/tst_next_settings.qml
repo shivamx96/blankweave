@@ -39,6 +39,11 @@ TestCase {
         find(item, "Save quiet hours").clicked()
         compare(fakeBackend.request, {action: "schedule", enabled: true, start: "22:00", end: "08:00"})
     }
+    function test_app_notification_control_uses_app_identity() {
+        const item = createTemporaryObject(notifications, test, {settingId: "notifications"})
+        find(item, "Mute popups").clicked()
+        compare(fakeBackend.request, {action: "app", app: "Mail", blocked: true})
+    }
     function test_startup_keeps_entry_identity() {
         fakeBackend.data = Object.assign({}, fakeBackend.data, {rows: [{id: "one.desktop", name: "One", source: "System", enabled: true, writable: true, reset: false, reason: ""}]})
         const item = createTemporaryObject(startup, test)
