@@ -14,6 +14,7 @@ Rectangle {
     property var battery: null
     property var idle: null
     property var startup: null
+    property var wallpaper: null
     property var notifications: null
     property var defaultApps: null
     property var accessibility: null

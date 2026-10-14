@@ -91,6 +91,11 @@ Item {
     }
 
     Component {
+        id: wallpaperControl
+        SettingsWallpaper { theme: root.theme; backend: root.backend }
+    }
+
+    Component {
         id: notificationsControl
         SettingsNotifications { theme: root.theme; backend: root.backend; settingId: root.setting.id }
     }
