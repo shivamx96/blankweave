@@ -286,6 +286,19 @@ fi
 grep -Fq 'missing colours: accent' "$test_root/broken.err"
 [[ $(jq -r '.theme' "$state") == ember ]]
 
+# Text size is independent of themes, and saved cursor size survives a switch.
+printf '{"version":1,"text_scale":1.3,"cursor_size":48}\n' > "$XDG_CONFIG_HOME/blankweave/interface.json"
+"$script" mode light
+for version in gtk-3.0 gtk-4.0; do
+    grep -Fxq 'gtk-cursor-theme-size=48' "$XDG_CONFIG_HOME/$version/settings.ini"
+done
+grep -Fq 'cursor-size 48' "$FAKE_LOG"
+jq -e '.text_scale == 1.3 and .cursor_size == 48' "$XDG_CONFIG_HOME/blankweave/interface.json" > /dev/null
+"$script" mode dark
+printf '{"version":1,"text_scale":1.3,"cursor_size":-1}\n' > "$XDG_CONFIG_HOME/blankweave/interface.json"
+expect_failure "$script" mode light
+rm "$XDG_CONFIG_HOME/blankweave/interface.json"
+
 # An unknown placeholder in a template aborts the render and leaves no
 # staged output behind the previously rendered file.
 printf '\nbogus = "{{colors.nothing}}"\n' >> "$data/dunst/dunstrc.tmpl"

@@ -64,9 +64,23 @@ QtObject {
     readonly property string monoFontFamily: "JetBrainsMono Nerd Font"
     readonly property string iconFontFamily: "JetBrainsMono Nerd Font"
 
-    readonly property int textSize: 13
-    readonly property int smallTextSize: 12
-    readonly property int microTextSize: 11
+    property real textScale: 1.0
+    property FileView interfaceFile: FileView {
+        path: root.configDirectory + "/interface.json"
+        watchChanges: true
+        printErrors: false
+        onLoaded: {
+            const next = root.parse(text())
+            if (next && next.version === 1 && [1, 1.15, 1.3].includes(next.text_scale))
+                root.textScale = next.text_scale
+        }
+        onLoadFailed: root.textScale = 1.0
+        onFileChanged: reload()
+    }
+
+    readonly property int textSize: Math.round(13 * textScale)
+    readonly property int smallTextSize: Math.round(12 * textScale)
+    readonly property int microTextSize: Math.round(11 * textScale)
     readonly property int iconSize: 15
     // The bar's optical target: a Nerd Font glyph fills roughly 7/8 of its em
     // box and a vector mark 5/6 of its keyline, so 18 here and 19 for a mark

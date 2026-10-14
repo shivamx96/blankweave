@@ -1079,3 +1079,21 @@ keycode bindings conservatively reserve their modifier combination because their
 logical key depends on the layout. Application-local shortcuts cannot be checked.
 Input-page visibility controls polling, and writes refresh even when hidden.
 Native tests use `tests/fixtures/settings-shortcuts.py`, never real shortcuts.
+
+`Services/SettingsInterface.qml` owns text/pointer size controls on Appearance
+and Input & Accessibility through `interface-settings.py`. Text presets are
+100%, 115%, and 130%; pointer presets are 24, 32, and 48 px. The helper owns
+`interface.json` and generated `interface.lua`; `Theme.qml` only watches the JSON
+and scales shared text tokens. Compatible applications receive the GSettings
+text-scaling-factor; applications with independent font controls may not follow
+it. Display scale and typeface are separate. Cursor updates reach Hyprland,
+GSettings, and both GTK settings files through the existing locked GTK writer.
+
+`hypr/env.lua` loads saved pointer-size environment defaults for future sessions.
+`theme-apply.sh` reads the saved cursor size under the same `interface.lock`, so
+switching themes cannot reset or race sizing changes. Theme application leaves
+text scaling alone. Preference writes validate session/revision/desktop/theme,
+verify reload and desktop readback, and roll back files and desktop values on
+failure. Cursor UI reports the saved preference and desktop-setting drift;
+Hyprland has no direct live cursor-size query. Tests use isolated compositor and
+GSettings fixtures, and `settings-interface.qml` verifies live Theme font updates.
