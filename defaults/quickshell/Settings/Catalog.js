@@ -15,8 +15,8 @@ var pages = [
         ] },
         { title: "Personalization", rows: [
             { id: "wallpaper", title: "Wallpaper", description: "Choose a background and fit for each display.", kind: "action", action: "Choose image" },
-            { id: "fonts", title: "Interface font", description: "Adjust text size and typeface.", kind: "choice", options: ["Default", "Large"] },
-            { id: "cursor", title: "Pointer size", description: "Make the pointer easier to see.", kind: "choice", options: ["Default", "Large", "Extra large"] }
+            { id: "fonts", title: "Text size", description: "Resize shell text and text in compatible applications.", kind: "interface-size", live: true },
+            { id: "cursor", title: "Pointer size", description: "Make the pointer easier to see.", kind: "interface-size", live: true }
         ] }
     ] },
     { id: "displays", title: "Displays", icon: "󰍹", description: "Arrange your workspace, wherever you connect.", groups: [
@@ -75,7 +75,7 @@ var pages = [
             { id: "pointer", title: "Mouse & touchpad", description: "Adjust speed, acceleration, scrolling, buttons, tap to click, and typing protection.", kind: "pointer", live: true }
         ] },
         { title: "Accessibility", rows: [
-            { id: "large-text", title: "Large text", description: "Increase text size throughout the interface.", kind: "toggle" },
+            { id: "large-text", title: "Text size", description: "The same text-size preference as Appearance.", kind: "interface-size", live: true },
             { id: "contrast", title: "High contrast", description: "Make controls and text easier to distinguish.", kind: "toggle" },
             { id: "motion", title: "Reduce motion", description: "Limit interface animations.", kind: "toggle" },
             { id: "assistive", title: "Screen reader, magnifier & on-screen keyboard", description: "Set up assistive tools and their shortcuts.", kind: "action", action: "Configure" }

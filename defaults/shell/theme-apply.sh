@@ -38,7 +38,7 @@ LEGACY_STATE_FILE=$DOTS_DIR/theme
 PLYMOUTH_STAGE=$DOTS_DIR/plymouth/blankweave
 DEFAULT_THEME=obsidian
 DEFAULT_MODE=dark
-# Cursor size is rice geometry, matching HYPRCURSOR_SIZE in env.lua.
+# Fallback until an interface preference is saved.
 CURSOR_SIZE=24
 
 # Where the privileged parts land; overridable so the tests never look at the
@@ -388,6 +388,20 @@ main() {
     local command=${1:-apply}
     shift || true
 
+    # Serialize with interface sizing so a theme switch cannot restore an old
+    # cursor size over a concurrent Settings write. Read-only queries need no lock.
+    if [[ $command == apply || $command == set || $command == mode || $command == toggle ]]; then
+        mkdir -p "$BLANKWEAVE_CONFIG_DIR"
+        exec {interface_lock}> "$BLANKWEAVE_CONFIG_DIR/interface.lock"
+        flock -x "$interface_lock"
+        trap 'flock -u "$interface_lock"' EXIT
+        if [[ -e $BLANKWEAVE_CONFIG_DIR/interface.json ]]; then
+            CURSOR_SIZE=$(jq -er '
+                select(.version == 1 and (.text_scale == 1 or .text_scale == 1.15 or .text_scale == 1.3))
+                | .cursor_size | select(. == 24 or . == 32 or . == 48)
+            ' "$BLANKWEAVE_CONFIG_DIR/interface.json") || die "Invalid interface sizing preferences"
+        fi
+    fi
     load_selection
     if [[ -n ${BLANKWEAVE_SETUP_THEME:-} ]]; then
         THEME=$BLANKWEAVE_SETUP_THEME

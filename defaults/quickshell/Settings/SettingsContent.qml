@@ -13,6 +13,7 @@ Rectangle {
     property var power: null
     property var battery: null
     property var idle: null
+    property var interfaceSettings: null
     property var shortcuts: null
     property var keyboard: null
     property var pointer: null
@@ -77,7 +78,7 @@ Rectangle {
                     text: "Settings"
                     color: root.theme.text
                     font.family: root.theme.fontFamily
-                    font.pixelSize: 20
+                    font.pixelSize: Math.round(20 * (root.theme.textScale || 1))
                     font.weight: Font.DemiBold
                 }
                 Item { Layout.fillWidth: true }
@@ -241,7 +242,7 @@ Rectangle {
                             text: root.page ? root.page.title : "No settings found"
                             color: root.theme.text
                             font.family: root.theme.fontFamily
-                            font.pixelSize: 28
+                            font.pixelSize: Math.round(28 * (root.theme.textScale || 1))
                             font.weight: Font.DemiBold
                             wrapMode: Text.WordWrap
                         }
@@ -265,7 +266,7 @@ Rectangle {
                                 id: notice
                                 anchors { fill: parent; margins: 14 }
                                 text: root.page && root.page.id === "appearance"
-                                    ? "Theme, color mode, and bar changes apply immediately. Other controls are previews."
+                                    ? "Theme, color mode, bar, text, and pointer sizes apply immediately. Other controls are previews."
                                     : root.page && root.page.id === "displays" && root.displays
                                     ? "Mode, mirror, and setup changes have a 20-second preview. Other display changes apply immediately; night light applies to all displays."
                                     : root.page && root.page.id === "sound" && root.sound
@@ -273,7 +274,7 @@ Rectangle {
                                     : root.page && root.page.id === "power" && root.power
                                     ? "Power profiles, battery controls, and idle timeouts are available. Hibernation and keep-awake remain previews."
                                     : root.page && root.page.id === "input" && root.pointer
-                                    ? "Keyboard layouts, shortcuts, mouse, and touchpad controls are available. Other input and accessibility controls remain previews."
+                                    ? "Keyboard layouts, shortcuts, text sizing, mouse, and touchpad controls are available. Other input and accessibility controls remain previews."
                                     : root.page && root.page.id === "network" && root.wifi
                                     ? "Connection, radio, and hotspot controls are available. VPN and file sharing are previews."
                                     : "Preview — changes aren’t applied. These controls show what’s planned; values are examples, not your device’s status."
@@ -416,7 +417,8 @@ Rectangle {
                                                     Layout.fillWidth: true
                                                     theme: root.theme
                                                     setting: settingGroup.modelData
-                                                    backend: settingGroup.modelData.kind === "shortcuts" ? root.shortcuts
+                                                    backend: settingGroup.modelData.kind === "interface-size" ? root.interfaceSettings
+                                                        : settingGroup.modelData.kind === "shortcuts" ? root.shortcuts
                                                         : settingGroup.modelData.kind === "keyboard" ? root.keyboard
                                                         : settingGroup.modelData.kind === "pointer" ? root.pointer
                                                         : settingGroup.modelData.kind === "idle" ? root.idle

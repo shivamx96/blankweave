@@ -15,3 +15,15 @@ hl.env("XDG_SESSION_DESKTOP", "Hyprland")
 hl.env("GNOME_DESKTOP_SESSION_ID", "blankweave")
 hl.env("HYPRCURSOR_SIZE", "24")
 hl.env("XCURSOR_SIZE", "24")
+
+-- Saved pointer sizes seed the next session; Settings also updates live cursors.
+_G.blankweave_interface_revision = "defaults"
+local path = (os.getenv("XDG_CONFIG_HOME") or (os.getenv("HOME") .. "/.config"))
+    .. "/blankweave/interface.lua"
+local file, message, code = io.open(path, "r")
+if file then
+    file:close()
+    dofile(path)
+elseif code ~= 2 then
+    error(message)
+end

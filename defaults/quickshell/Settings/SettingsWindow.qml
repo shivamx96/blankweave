@@ -52,6 +52,10 @@ FloatingWindow {
         active: root.visible && !root.minimized && content.page !== null && content.page.id === "power"
     }
 
+    property SettingsInterface interfaceSettings: SettingsInterface {
+        active: root.visible && !root.minimized && content.page !== null && ["appearance", "input"].includes(content.page.id)
+    }
+
     property SettingsShortcuts shortcuts: SettingsShortcuts {
         active: root.visible && !root.minimized && content.page !== null && content.page.id === "input"
     }
@@ -98,6 +102,7 @@ FloatingWindow {
         displays: displaysBackend
         battery: root.battery
         idle: root.idle
+        interfaceSettings: root.interfaceSettings
         shortcuts: root.shortcuts
         keyboard: root.keyboard
         pointer: root.pointer
