@@ -1140,3 +1140,11 @@ honor the configured regex/glob mode. Writes lock, reject stale revisions, and
 restore managed files/pause state after failures. `SettingsTask` is the common
 JSON helper adapter for subsequent Settings pages, with no optimistic updates.
 The temporary Keep awake preview was removed; idle timeouts remain authoritative.
+
+`startup-settings.py` manages existing XDG autostart desktop entries for the next
+sign-in, never launches/stops processes, and leaves core Hyprland services alone.
+System entries are disabled through user copies with Hidden=true; only copies
+marked by Blankweave offer reset to the inherited system entry. Personal entries
+keep their other keys, localized names, desktop restrictions, and commands.
+Symlinked user entries and malformed files are read-only. Revisions include
+source contents and the current desktop; settings follow XDG directory precedence.
