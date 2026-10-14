@@ -26,3 +26,16 @@ if pointer_file then
 elseif pointer_code ~= 2 then
     error(pointer_error)
 end
+
+-- Saved keyboard choices load before personal overrides. Missing preferences
+-- are optional; a corrupt existing file must be visible in configerrors.
+_G.blankweave_keyboard_revision = "defaults"
+local keyboard_path = (os.getenv("XDG_CONFIG_HOME") or (os.getenv("HOME") .. "/.config"))
+    .. "/blankweave/keyboard.lua"
+local keyboard_file, keyboard_error, keyboard_code = io.open(keyboard_path, "r")
+if keyboard_file then
+    keyboard_file:close()
+    dofile(keyboard_path)
+elseif keyboard_code ~= 2 then
+    error(keyboard_error)
+end

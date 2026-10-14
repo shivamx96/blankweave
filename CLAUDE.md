@@ -1048,3 +1048,16 @@ never mutate host input settings from automated tests.
 - `awww img` only paints the outputs that exist when it runs, and the daemon's cache is keyed by connector name, so a monitor plugged in after startup stays black. `autostart.lua` subscribes to `monitor.added` (the callback receives the compositor's monitor object; its `.name` is the connector) and runs `wallpaper.sh restore <output>`, which repaints the current wallpaper without a transition once awww lists the output. Test hotplug paths with `hyprctl output create headless` / `hyprctl output remove HEADLESS-N`, and register hooks at runtime with `hyprctl eval` rather than reloading the config
 - `force_default_wallpaper = 0` and `disable_hyprland_logo = true` in `hyprland.lua` — otherwise Hyprland flashes its own wallpaper on startup
 - `focus_on_activate = true` in `hyprland.lua` — otherwise Hyprland drops xdg-activation requests, so clicking a link opens the tab in the already-running browser without ever moving you to its workspace. Hyprland exposes no per-window rule for this, so the setting is necessarily global and any app that requests activation can pull focus
+
+`Services/SettingsKeyboard.qml` reads installed XKB layouts/variants and live
+keyboard state through `keyboard-settings.py`. Input-page visibility controls
+polling; writes refresh even after the page is hidden. The editor snapshots the
+live config, saved revision, and compositor session, so stale drafts are rejected.
+It supports one to four unique layout/variant pairs, reordering, reset, and XKB
+group-switch shortcuts while preserving other options. Custom keymap files and
+custom rule sets are read-only. `keyboard.json` and generated `keyboard.lua` live
+under the Blankweave config directory; `hypr/input.lua` loads them before personal
+overrides. Writes use atomic replacement, reload/readback, and rollback on failure.
+Per-device layout switching checks name, address, layout list, and session before
+switching; it does not persist device overrides. Input-method installation is out
+of scope. Tests use `tests/fixtures/settings-keyboard.py`, never real input devices.

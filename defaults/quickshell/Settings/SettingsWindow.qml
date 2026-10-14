@@ -52,6 +52,10 @@ FloatingWindow {
         active: root.visible && !root.minimized && content.page !== null && content.page.id === "power"
     }
 
+    property SettingsKeyboard keyboard: SettingsKeyboard {
+        active: root.visible && !root.minimized && content.page !== null && content.page.id === "input"
+    }
+
     property SettingsPointer pointer: SettingsPointer {
         active: root.visible && !root.minimized && content.page !== null && content.page.id === "input"
     }
@@ -90,6 +94,7 @@ FloatingWindow {
         displays: displaysBackend
         battery: root.battery
         idle: root.idle
+        keyboard: root.keyboard
         pointer: root.pointer
         power: root.power
         sound: root.sound
