@@ -57,7 +57,7 @@ RowLayout {
             height: 1
             color: root.theme.accentBright
 
-            Behavior on width { NumberAnimation { duration: 120 } }
+            Behavior on width { NumberAnimation { duration: root.theme.reducedMotion ? 0 : 120 } }
         }
 
         MouseArea {

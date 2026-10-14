@@ -76,8 +76,8 @@ var pages = [
         ] },
         { title: "Accessibility", rows: [
             { id: "large-text", title: "Text size", description: "The same text-size preference as Appearance.", kind: "interface-size", live: true },
-            { id: "contrast", title: "High contrast", description: "Make controls and text easier to distinguish.", kind: "toggle" },
-            { id: "motion", title: "Reduce motion", description: "Limit interface animations.", kind: "toggle" },
+            { id: "contrast", title: "High contrast", description: "Increase shell contrast and request it in compatible applications.", kind: "accessibility", live: true },
+            { id: "motion", title: "Reduce motion", description: "Disable desktop transitions and request fewer animations in compatible applications.", kind: "accessibility", live: true },
             { id: "assistive", title: "Screen reader, magnifier & on-screen keyboard", description: "Set up assistive tools and their shortcuts.", kind: "action", action: "Configure" }
         ] }
     ] },

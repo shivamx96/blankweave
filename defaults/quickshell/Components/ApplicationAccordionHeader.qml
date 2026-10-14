@@ -22,7 +22,7 @@ Item {
         anchors.fill: parent
         color: headerMouse.containsMouse ? root.theme.accentSurface : "transparent"
 
-        Behavior on color { ColorAnimation { duration: 120 } }
+        Behavior on color { ColorAnimation { duration: root.theme.reducedMotion ? 0 : 120 } }
     }
 
     Rectangle {
@@ -32,7 +32,7 @@ Item {
         height: root.expanded ? 26 : 14
         color: root.active ? root.theme.accentBright : root.theme.divider
 
-        Behavior on height { NumberAnimation { duration: 140 } }
+        Behavior on height { NumberAnimation { duration: root.theme.reducedMotion ? 0 : 140 } }
     }
 
     RowLayout {

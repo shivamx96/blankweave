@@ -80,13 +80,13 @@ ShellRoot {
             } else if (root.step === 14) {
                 settings.selectedPage = "input"; settings.openSettings()
             } else if (root.step === 15) {
-                if (!settings.pointer.active || !settings.keyboard.active || !settings.shortcuts.active || !settings.interfaceSettings.active) { console.error("Input backend inactive on visible Input page"); Qt.quit(); return }
+                if (!settings.pointer.active || !settings.keyboard.active || !settings.shortcuts.active || !settings.interfaceSettings.active || !settings.accessibility.active) { console.error("Input backend inactive on visible Input page"); Qt.quit(); return }
                 settings.minimized = true
             } else if (root.step === 16) {
-                if (settings.pointer.active || settings.keyboard.active || settings.shortcuts.active || settings.interfaceSettings.active) { console.error("Input backend active while minimized"); Qt.quit(); return }
+                if (settings.pointer.active || settings.keyboard.active || settings.shortcuts.active || settings.interfaceSettings.active || settings.accessibility.active) { console.error("Input backend active while minimized"); Qt.quit(); return }
                 settings.minimized = false; settings.visible = false
             } else {
-                if (settings.pointer.active || settings.keyboard.active || settings.shortcuts.active || settings.interfaceSettings.active) { console.error("Input backend active while hidden"); Qt.quit(); return }
+                if (settings.pointer.active || settings.keyboard.active || settings.shortcuts.active || settings.interfaceSettings.active || settings.accessibility.active) { console.error("Input backend active while hidden"); Qt.quit(); return }
                 if (power.active || settings.battery.active || settings.idle.active) { console.error("Power active while hidden"); Qt.quit(); return }
                 if (wifi.scanOwners.length || wifi.profilesActive || bluetooth.settingsActive || bluetooth.scanOwners.length || connections.settingsActive || wireless.active) { console.error("Wi-Fi active while hidden"); Qt.quit(); return }
                 if (audio.microphone.active) { console.error("Microphone meter requested while hidden"); Qt.quit(); return }

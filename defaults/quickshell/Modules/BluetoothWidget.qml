@@ -273,7 +273,7 @@ WidgetFrame {
                         color: root.theme.accentBright
 
                         Behavior on height {
-                            NumberAnimation { duration: 140; easing.type: Easing.OutCubic }
+                            NumberAnimation { duration: root.theme.reducedMotion ? 0 : 140; easing.type: Easing.OutCubic }
                         }
                     }
 
@@ -339,7 +339,7 @@ WidgetFrame {
                                 height: 1
                                 color: deviceDelegate.confirmForget ? root.theme.critical : root.theme.accentBright
 
-                                Behavior on width { NumberAnimation { duration: 140 } }
+                                Behavior on width { NumberAnimation { duration: root.theme.reducedMotion ? 0 : 140 } }
                             }
 
                             MouseArea {
@@ -382,7 +382,7 @@ WidgetFrame {
                                 height: 1
                                 color: root.theme.accentBright
 
-                                Behavior on width { NumberAnimation { duration: 140 } }
+                                Behavior on width { NumberAnimation { duration: root.theme.reducedMotion ? 0 : 140 } }
                             }
 
                             MouseArea {

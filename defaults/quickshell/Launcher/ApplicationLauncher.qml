@@ -509,7 +509,7 @@ PanelWindow {
                                 ? root.theme.accentBright
                                 : root.theme.divider
 
-                            Behavior on height { NumberAnimation { duration: 130 } }
+                            Behavior on height { NumberAnimation { duration: root.theme.reducedMotion ? 0 : 130 } }
                         }
 
                         RowLayout {

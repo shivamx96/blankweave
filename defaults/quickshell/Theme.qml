@@ -15,9 +15,41 @@ QtObject {
 
     property var resolved: null
     property var fallback: null
-    readonly property var palette: (resolved && resolved.colors)
+    readonly property var basePalette: (resolved && resolved.colors)
         || (fallback && fallback.colors)
         || ({})
+
+    readonly property var palette: highContrast ? (dark ? contrastDark : contrastLight) : basePalette
+    readonly property var contrastDark: ({
+        canvas: "#000000", barSurface: "#000000", barHighlight: "#202020", panelSurface: "#000000",
+        surface: "#000000", surfaceRaised: "#101010", surfaceHover: "#242424", surfacePressed: "#202020",
+        scrim: "#000000cc", text: "#ffffff", textMuted: "#eeeeee", accent: "#8ac7ff", accentBright: "#8ac7ff",
+        accentSurface: "#152536", outline: "#b0b0b0", outlineStrong: "#ffffff", divider: "#b0b0b0",
+        success: "#7aefad", warning: "#ffdb70", critical: "#ff9c9c"
+    })
+    readonly property var contrastLight: ({
+        canvas: "#ffffff", barSurface: "#ffffff", barHighlight: "#e8e8e8", panelSurface: "#ffffff",
+        surface: "#ffffff", surfaceRaised: "#f5f5f5", surfaceHover: "#dedede", surfacePressed: "#e8e8e8",
+        scrim: "#000000cc", text: "#000000", textMuted: "#202020", accent: "#003a80", accentBright: "#003a80",
+        accentSurface: "#d6e8ff", outline: "#4a4a4a", outlineStrong: "#000000", divider: "#4a4a4a",
+        success: "#005626", warning: "#6b4800", critical: "#a00000"
+    })
+    property bool reducedMotion: false
+    property bool highContrast: false
+    property FileView accessibilityFile: FileView {
+        path: root.configDirectory + "/accessibility.json"
+        watchChanges: true
+        printErrors: false
+        onLoaded: {
+            const next = root.parse(text())
+            if (next && next.version === 1 && typeof next.reduced_motion === "boolean" && typeof next.high_contrast === "boolean") {
+                root.reducedMotion = next.reduced_motion
+                root.highContrast = next.high_contrast
+            }
+        }
+        onLoadFailed: { root.reducedMotion = false; root.highContrast = false }
+        onFileChanged: reload()
+    }
 
     readonly property string themeId: resolved ? String(resolved.theme || "obsidian") : "obsidian"
     readonly property string mode: resolved ? String(resolved.mode || "dark") : "dark"

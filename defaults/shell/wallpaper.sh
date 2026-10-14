@@ -33,8 +33,12 @@ set_wallpaper() {
         sleep 0.5
     done
 
-    # Set wallpaper with transition
-    awww img "$wallpaper" --transition-type wipe --transition-duration 1
+    # Accessibility preferences also apply to theme and wallpaper transitions.
+    if jq -e '.reduced_motion == true' "${XDG_CONFIG_HOME:-$HOME/.config}/blankweave/accessibility.json" > /dev/null 2>&1; then
+        awww img "$wallpaper" --transition-type none
+    else
+        awww img "$wallpaper" --transition-type wipe --transition-duration 1
+    fi
 }
 
 # The wallpaper the session is meant to show: the last one set, or the

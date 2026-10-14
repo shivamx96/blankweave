@@ -161,7 +161,7 @@ PanelWindow {
 
         Behavior on y {
             NumberAnimation {
-                duration: 190
+                duration: root.theme.reducedMotion ? 0 : 190
                 easing.type: root.barShown ? Easing.OutCubic : Easing.InCubic
             }
         }
