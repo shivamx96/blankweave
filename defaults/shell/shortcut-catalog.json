@@ -1,0 +1,387 @@
+[
+  {
+    "id": "settings",
+    "label": "Open Settings",
+    "group": "Applications",
+    "default": "SUPER + comma",
+    "repeat": false
+  },
+  {
+    "id": "terminal",
+    "label": "Open terminal",
+    "group": "Applications",
+    "default": "SUPER + Return",
+    "repeat": false
+  },
+  {
+    "id": "browser",
+    "label": "Open browser",
+    "group": "Applications",
+    "default": "SUPER + B",
+    "repeat": false
+  },
+  {
+    "id": "bluetooth",
+    "label": "Open Bluetooth manager",
+    "group": "Applications",
+    "default": "SUPER + SHIFT + B",
+    "repeat": false
+  },
+  {
+    "id": "files",
+    "label": "Open file manager",
+    "group": "Applications",
+    "default": "SUPER + F",
+    "repeat": false
+  },
+  {
+    "id": "launcher",
+    "label": "Open launcher",
+    "group": "Applications",
+    "default": "SUPER + space",
+    "repeat": false
+  },
+  {
+    "id": "lock",
+    "label": "Lock screen",
+    "group": "Applications",
+    "default": "SUPER + L",
+    "repeat": false
+  },
+  {
+    "id": "theme",
+    "label": "Toggle theme",
+    "group": "Applications",
+    "default": "SUPER + T",
+    "repeat": false
+  },
+  {
+    "id": "wallpaper",
+    "label": "Next wallpaper",
+    "group": "Applications",
+    "default": "SUPER + SHIFT + W",
+    "repeat": false
+  },
+  {
+    "id": "clipboard",
+    "label": "Open clipboard",
+    "group": "Applications",
+    "default": "SUPER + SHIFT + V",
+    "repeat": false
+  },
+  {
+    "id": "reload-shell",
+    "label": "Reload desktop shell",
+    "group": "Applications",
+    "default": "SUPER + Y",
+    "repeat": false
+  },
+  {
+    "id": "screenshot-print",
+    "label": "Copy screenshot (Print)",
+    "group": "Screenshots",
+    "default": "Print",
+    "repeat": false
+  },
+  {
+    "id": "screenshot",
+    "label": "Copy screenshot",
+    "group": "Screenshots",
+    "default": "SUPER + S",
+    "repeat": false
+  },
+  {
+    "id": "screenshot-region",
+    "label": "Copy region screenshot",
+    "group": "Screenshots",
+    "default": "SUPER + SHIFT + S",
+    "repeat": false
+  },
+  {
+    "id": "volume-up",
+    "label": "Raise volume",
+    "group": "Media & brightness",
+    "default": "XF86AudioRaiseVolume",
+    "repeat": true
+  },
+  {
+    "id": "volume-down",
+    "label": "Lower volume",
+    "group": "Media & brightness",
+    "default": "XF86AudioLowerVolume",
+    "repeat": true
+  },
+  {
+    "id": "volume-mute",
+    "label": "Mute audio",
+    "group": "Media & brightness",
+    "default": "XF86AudioMute",
+    "repeat": false
+  },
+  {
+    "id": "media-play",
+    "label": "Play / pause media",
+    "group": "Media & brightness",
+    "default": "XF86AudioPlay",
+    "repeat": false
+  },
+  {
+    "id": "media-pause",
+    "label": "Pause media",
+    "group": "Media & brightness",
+    "default": "XF86AudioPause",
+    "repeat": false
+  },
+  {
+    "id": "media-next",
+    "label": "Next track",
+    "group": "Media & brightness",
+    "default": "XF86AudioNext",
+    "repeat": false
+  },
+  {
+    "id": "media-previous",
+    "label": "Previous track",
+    "group": "Media & brightness",
+    "default": "XF86AudioPrev",
+    "repeat": false
+  },
+  {
+    "id": "brightness-up",
+    "label": "Raise brightness",
+    "group": "Media & brightness",
+    "default": "XF86MonBrightnessUp",
+    "repeat": true
+  },
+  {
+    "id": "brightness-down",
+    "label": "Lower brightness",
+    "group": "Media & brightness",
+    "default": "XF86MonBrightnessDown",
+    "repeat": true
+  },
+  {
+    "id": "close-window",
+    "label": "Close window",
+    "group": "Windows",
+    "default": "SUPER + Q",
+    "repeat": false
+  },
+  {
+    "id": "float-window",
+    "label": "Toggle floating window",
+    "group": "Windows",
+    "default": "SUPER + V",
+    "repeat": false
+  },
+  {
+    "id": "pseudo-window",
+    "label": "Toggle pseudo tiling",
+    "group": "Windows",
+    "default": "SUPER + P",
+    "repeat": false
+  },
+  {
+    "id": "split",
+    "label": "Toggle split",
+    "group": "Windows",
+    "default": "SUPER + J",
+    "repeat": false
+  },
+  {
+    "id": "logout",
+    "label": "Log out",
+    "group": "Windows",
+    "default": "SUPER + M",
+    "repeat": false
+  },
+  {
+    "id": "focus-left",
+    "label": "Focus left",
+    "group": "Windows",
+    "default": "SUPER + left",
+    "repeat": false
+  },
+  {
+    "id": "focus-right",
+    "label": "Focus right",
+    "group": "Windows",
+    "default": "SUPER + right",
+    "repeat": false
+  },
+  {
+    "id": "focus-up",
+    "label": "Focus up",
+    "group": "Windows",
+    "default": "SUPER + up",
+    "repeat": false
+  },
+  {
+    "id": "focus-down",
+    "label": "Focus down",
+    "group": "Windows",
+    "default": "SUPER + down",
+    "repeat": false
+  },
+  {
+    "id": "move-monitor",
+    "label": "Move window to next monitor",
+    "group": "Windows",
+    "default": "SUPER + SHIFT + K",
+    "repeat": false
+  },
+  {
+    "id": "workspace-next",
+    "label": "Next workspace",
+    "group": "Workspaces",
+    "default": "SUPER + CTRL + right",
+    "repeat": false
+  },
+  {
+    "id": "workspace-previous",
+    "label": "Previous workspace",
+    "group": "Workspaces",
+    "default": "SUPER + CTRL + left",
+    "repeat": false
+  },
+  {
+    "id": "workspace-1",
+    "label": "Go to workspace 1",
+    "group": "Workspaces",
+    "default": "SUPER + 1",
+    "repeat": false
+  },
+  {
+    "id": "move-workspace-1",
+    "label": "Move window to workspace 1",
+    "group": "Workspaces",
+    "default": "SUPER + SHIFT + 1",
+    "repeat": false
+  },
+  {
+    "id": "workspace-2",
+    "label": "Go to workspace 2",
+    "group": "Workspaces",
+    "default": "SUPER + 2",
+    "repeat": false
+  },
+  {
+    "id": "move-workspace-2",
+    "label": "Move window to workspace 2",
+    "group": "Workspaces",
+    "default": "SUPER + SHIFT + 2",
+    "repeat": false
+  },
+  {
+    "id": "workspace-3",
+    "label": "Go to workspace 3",
+    "group": "Workspaces",
+    "default": "SUPER + 3",
+    "repeat": false
+  },
+  {
+    "id": "move-workspace-3",
+    "label": "Move window to workspace 3",
+    "group": "Workspaces",
+    "default": "SUPER + SHIFT + 3",
+    "repeat": false
+  },
+  {
+    "id": "workspace-4",
+    "label": "Go to workspace 4",
+    "group": "Workspaces",
+    "default": "SUPER + 4",
+    "repeat": false
+  },
+  {
+    "id": "move-workspace-4",
+    "label": "Move window to workspace 4",
+    "group": "Workspaces",
+    "default": "SUPER + SHIFT + 4",
+    "repeat": false
+  },
+  {
+    "id": "workspace-5",
+    "label": "Go to workspace 5",
+    "group": "Workspaces",
+    "default": "SUPER + 5",
+    "repeat": false
+  },
+  {
+    "id": "move-workspace-5",
+    "label": "Move window to workspace 5",
+    "group": "Workspaces",
+    "default": "SUPER + SHIFT + 5",
+    "repeat": false
+  },
+  {
+    "id": "workspace-6",
+    "label": "Go to workspace 6",
+    "group": "Workspaces",
+    "default": "SUPER + 6",
+    "repeat": false
+  },
+  {
+    "id": "move-workspace-6",
+    "label": "Move window to workspace 6",
+    "group": "Workspaces",
+    "default": "SUPER + SHIFT + 6",
+    "repeat": false
+  },
+  {
+    "id": "workspace-7",
+    "label": "Go to workspace 7",
+    "group": "Workspaces",
+    "default": "SUPER + 7",
+    "repeat": false
+  },
+  {
+    "id": "move-workspace-7",
+    "label": "Move window to workspace 7",
+    "group": "Workspaces",
+    "default": "SUPER + SHIFT + 7",
+    "repeat": false
+  },
+  {
+    "id": "workspace-8",
+    "label": "Go to workspace 8",
+    "group": "Workspaces",
+    "default": "SUPER + 8",
+    "repeat": false
+  },
+  {
+    "id": "move-workspace-8",
+    "label": "Move window to workspace 8",
+    "group": "Workspaces",
+    "default": "SUPER + SHIFT + 8",
+    "repeat": false
+  },
+  {
+    "id": "workspace-9",
+    "label": "Go to workspace 9",
+    "group": "Workspaces",
+    "default": "SUPER + 9",
+    "repeat": false
+  },
+  {
+    "id": "move-workspace-9",
+    "label": "Move window to workspace 9",
+    "group": "Workspaces",
+    "default": "SUPER + SHIFT + 9",
+    "repeat": false
+  },
+  {
+    "id": "workspace-10",
+    "label": "Go to workspace 10",
+    "group": "Workspaces",
+    "default": "SUPER + 0",
+    "repeat": false
+  },
+  {
+    "id": "move-workspace-10",
+    "label": "Move window to workspace 10",
+    "group": "Workspaces",
+    "default": "SUPER + SHIFT + 0",
+    "repeat": false
+  }
+]

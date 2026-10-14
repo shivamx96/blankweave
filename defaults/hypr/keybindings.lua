@@ -1,53 +1,72 @@
+-- Stable action IDs let Settings change keys without replacing dispatchers or flags.
+_G.blankweave_shortcuts_revision = "defaults"
+local saved = {}
+local path = (os.getenv("XDG_CONFIG_HOME") or (os.getenv("HOME") .. "/.config"))
+    .. "/blankweave/shortcuts.lua"
+local file, message, code = io.open(path, "r")
+if file then
+    file:close()
+    saved = dofile(path)
+    assert(type(saved) == "table", "Invalid saved shortcuts")
+elseif code ~= 2 then
+    error(message)
+end
+local function bind(id, default, action, options)
+    options = options or {}
+    options.description = "blankweave:" .. id
+    hl.bind(saved[id] or default, action, options)
+end
+
 local main_mod = "SUPER"
 
 -- Applications
-hl.bind(main_mod .. " + comma", hl.dsp.exec_cmd("~/.local/bin/blankweave settings"))
-hl.bind(main_mod .. " + Return", hl.dsp.exec_cmd("ghostty"))
-hl.bind(main_mod .. " + B", hl.dsp.exec_cmd("zen-browser"))
-hl.bind(main_mod .. " + SHIFT + B", hl.dsp.exec_cmd("blueman-manager"))
-hl.bind(main_mod .. " + F", hl.dsp.exec_cmd("thunar"))
-hl.bind(main_mod .. " + space", hl.dsp.exec_cmd([[qs ipc -n -p "$HOME/.local/share/blankweave/quickshell" call blankweave launcher]]))
-hl.bind(main_mod .. " + L", hl.dsp.exec_cmd("hyprlock"))
-hl.bind(main_mod .. " + T", hl.dsp.exec_cmd("~/.local/share/blankweave/shell/theme-apply.sh toggle"))
-hl.bind(main_mod .. " + SHIFT + W", hl.dsp.exec_cmd("~/.local/share/blankweave/shell/wallpaper.sh cycle"))
-hl.bind(main_mod .. " + SHIFT + V", hl.dsp.exec_cmd([[qs ipc -n -p "$HOME/.local/share/blankweave/quickshell" call blankweave clipboard]]))
-hl.bind(main_mod .. " + Y", hl.dsp.exec_cmd([[qs ipc -n -p "$HOME/.local/share/blankweave/quickshell" call blankweave reload]]))
+bind("settings", main_mod .. " + comma", hl.dsp.exec_cmd("~/.local/bin/blankweave settings"))
+bind("terminal", main_mod .. " + Return", hl.dsp.exec_cmd("ghostty"))
+bind("browser", main_mod .. " + B", hl.dsp.exec_cmd("zen-browser"))
+bind("bluetooth", main_mod .. " + SHIFT + B", hl.dsp.exec_cmd("blueman-manager"))
+bind("files", main_mod .. " + F", hl.dsp.exec_cmd("thunar"))
+bind("launcher", main_mod .. " + space", hl.dsp.exec_cmd([[qs ipc -n -p "$HOME/.local/share/blankweave/quickshell" call blankweave launcher]]))
+bind("lock", main_mod .. " + L", hl.dsp.exec_cmd("hyprlock"))
+bind("theme", main_mod .. " + T", hl.dsp.exec_cmd("~/.local/share/blankweave/shell/theme-apply.sh toggle"))
+bind("wallpaper", main_mod .. " + SHIFT + W", hl.dsp.exec_cmd("~/.local/share/blankweave/shell/wallpaper.sh cycle"))
+bind("clipboard", main_mod .. " + SHIFT + V", hl.dsp.exec_cmd([[qs ipc -n -p "$HOME/.local/share/blankweave/quickshell" call blankweave clipboard]]))
+bind("reload-shell", main_mod .. " + Y", hl.dsp.exec_cmd([[qs ipc -n -p "$HOME/.local/share/blankweave/quickshell" call blankweave reload]]))
 
 -- Screenshots
-hl.bind("Print", hl.dsp.exec_cmd("grim - | wl-copy"))
-hl.bind(main_mod .. " + S", hl.dsp.exec_cmd("grim - | wl-copy"))
-hl.bind(main_mod .. " + SHIFT + S", hl.dsp.exec_cmd([[grim -g "$(slurp)" - | wl-copy]]))
+bind("screenshot-print", "Print", hl.dsp.exec_cmd("grim - | wl-copy"))
+bind("screenshot", main_mod .. " + S", hl.dsp.exec_cmd("grim - | wl-copy"))
+bind("screenshot-region", main_mod .. " + SHIFT + S", hl.dsp.exec_cmd([[grim -g "$(slurp)" - | wl-copy]]))
 
 -- Multimedia keys (repeating = repeat on hold)
-hl.bind("XF86AudioRaiseVolume", hl.dsp.exec_cmd("wpctl set-volume -l 1.0 @DEFAULT_AUDIO_SINK@ 5%+ && ~/.local/share/blankweave/shell/volume-popup.sh"), { repeating = true })
-hl.bind("XF86AudioLowerVolume", hl.dsp.exec_cmd("wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%- && ~/.local/share/blankweave/shell/volume-popup.sh"), { repeating = true })
-hl.bind("XF86AudioMute", hl.dsp.exec_cmd("wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle && ~/.local/share/blankweave/shell/volume-popup.sh"))
-hl.bind("XF86AudioPlay", hl.dsp.exec_cmd("playerctl play-pause"))
-hl.bind("XF86AudioPause", hl.dsp.exec_cmd("playerctl pause"))
-hl.bind("XF86AudioNext", hl.dsp.exec_cmd("playerctl next"))
-hl.bind("XF86AudioPrev", hl.dsp.exec_cmd("playerctl previous"))
-hl.bind("XF86MonBrightnessUp", hl.dsp.exec_cmd("~/.local/share/blankweave/shell/brightness.sh up 5"), { repeating = true })
-hl.bind("XF86MonBrightnessDown", hl.dsp.exec_cmd("~/.local/share/blankweave/shell/brightness.sh down 5"), { repeating = true })
+bind("volume-up", "XF86AudioRaiseVolume", hl.dsp.exec_cmd("wpctl set-volume -l 1.0 @DEFAULT_AUDIO_SINK@ 5%+ && ~/.local/share/blankweave/shell/volume-popup.sh"), { repeating = true })
+bind("volume-down", "XF86AudioLowerVolume", hl.dsp.exec_cmd("wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%- && ~/.local/share/blankweave/shell/volume-popup.sh"), { repeating = true })
+bind("volume-mute", "XF86AudioMute", hl.dsp.exec_cmd("wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle && ~/.local/share/blankweave/shell/volume-popup.sh"))
+bind("media-play", "XF86AudioPlay", hl.dsp.exec_cmd("playerctl play-pause"))
+bind("media-pause", "XF86AudioPause", hl.dsp.exec_cmd("playerctl pause"))
+bind("media-next", "XF86AudioNext", hl.dsp.exec_cmd("playerctl next"))
+bind("media-previous", "XF86AudioPrev", hl.dsp.exec_cmd("playerctl previous"))
+bind("brightness-up", "XF86MonBrightnessUp", hl.dsp.exec_cmd("~/.local/share/blankweave/shell/brightness.sh up 5"), { repeating = true })
+bind("brightness-down", "XF86MonBrightnessDown", hl.dsp.exec_cmd("~/.local/share/blankweave/shell/brightness.sh down 5"), { repeating = true })
 
 -- Window management
-hl.bind(main_mod .. " + Q", hl.dsp.window.close())
-hl.bind(main_mod .. " + V", hl.dsp.window.float({ action = "toggle" }))
-hl.bind(main_mod .. " + P", hl.dsp.window.pseudo({ action = "toggle" }))
-hl.bind(main_mod .. " + J", hl.dsp.layout("togglesplit"))
-hl.bind(main_mod .. " + M", hl.dsp.exec_cmd("uwsm stop"))
+bind("close-window", main_mod .. " + Q", hl.dsp.window.close())
+bind("float-window", main_mod .. " + V", hl.dsp.window.float({ action = "toggle" }))
+bind("pseudo-window", main_mod .. " + P", hl.dsp.window.pseudo({ action = "toggle" }))
+bind("split", main_mod .. " + J", hl.dsp.layout("togglesplit"))
+bind("logout", main_mod .. " + M", hl.dsp.exec_cmd("uwsm stop"))
 
 -- Focus with arrow keys
-hl.bind(main_mod .. " + left", hl.dsp.focus({ direction = "l" }))
-hl.bind(main_mod .. " + right", hl.dsp.focus({ direction = "r" }))
-hl.bind(main_mod .. " + up", hl.dsp.focus({ direction = "u" }))
-hl.bind(main_mod .. " + down", hl.dsp.focus({ direction = "d" }))
+bind("focus-left", main_mod .. " + left", hl.dsp.focus({ direction = "l" }))
+bind("focus-right", main_mod .. " + right", hl.dsp.focus({ direction = "r" }))
+bind("focus-up", main_mod .. " + up", hl.dsp.focus({ direction = "u" }))
+bind("focus-down", main_mod .. " + down", hl.dsp.focus({ direction = "d" }))
 
 -- Move window to monitor
-hl.bind(main_mod .. " + SHIFT + K", hl.dsp.window.move({ monitor = "+1" }))
+bind("move-monitor", main_mod .. " + SHIFT + K", hl.dsp.window.move({ monitor = "+1" }))
 
 -- Scroll workspaces
-hl.bind(main_mod .. " + CTRL + right", hl.dsp.focus({ workspace = "e+1" }))
-hl.bind(main_mod .. " + CTRL + left", hl.dsp.focus({ workspace = "e-1" }))
+bind("workspace-next", main_mod .. " + CTRL + right", hl.dsp.focus({ workspace = "e+1" }))
+bind("workspace-previous", main_mod .. " + CTRL + left", hl.dsp.focus({ workspace = "e-1" }))
 
 -- Workspaces are not bound to monitors. Super+N brings workspace N to the
 -- focused monitor (swapping with whatever it was showing) instead of moving
@@ -69,6 +88,6 @@ end
 -- Switch workspaces and move windows to workspaces. Workspace 10 maps to key 0.
 for workspace = 1, 10 do
     local key = workspace % 10
-    hl.bind(main_mod .. " + " .. key, summon_workspace(workspace))
-    hl.bind(main_mod .. " + SHIFT + " .. key, hl.dsp.window.move({ workspace = workspace }))
+    bind("workspace-" .. workspace, main_mod .. " + " .. key, summon_workspace(workspace))
+    bind("move-workspace-" .. workspace, main_mod .. " + SHIFT + " .. key, hl.dsp.window.move({ workspace = workspace }))
 end

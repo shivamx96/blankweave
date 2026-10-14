@@ -71,7 +71,7 @@ var pages = [
     { id: "input", title: "Input & Accessibility", icon: "󰌌", description: "Make your computer work the way you do.", groups: [
         { title: "Keyboard & pointer", rows: [
             { id: "layouts", title: "Keyboard layouts & languages", description: "Add keyboard layouts and variants, choose a switching shortcut, and switch layouts.", kind: "keyboard", live: true },
-            { id: "shortcuts", title: "Keyboard shortcuts", description: "Discover and customize desktop shortcuts.", kind: "action", action: "Edit shortcuts" },
+            { id: "shortcuts", title: "Keyboard shortcuts", description: "Discover desktop shortcuts, change key combinations, and check conflicts.", kind: "shortcuts", live: true },
             { id: "pointer", title: "Mouse & touchpad", description: "Adjust speed, acceleration, scrolling, buttons, tap to click, and typing protection.", kind: "pointer", live: true }
         ] },
         { title: "Accessibility", rows: [

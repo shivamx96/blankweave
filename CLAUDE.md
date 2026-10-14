@@ -1061,3 +1061,21 @@ overrides. Writes use atomic replacement, reload/readback, and rollback on failu
 Per-device layout switching checks name, address, layout list, and session before
 switching; it does not persist device overrides. Input-method installation is out
 of scope. Tests use `tests/fixtures/settings-keyboard.py`, never real input devices.
+
+`Services/SettingsShortcuts.qml` exposes the bundled desktop actions through
+`shortcuts-settings.py` and `shortcut-catalog.json`. Stable IDs in
+`hypr/keybindings.lua` attach `blankweave:<id>` descriptions to live bindings;
+the wrapper selects a saved key combination without replacing the dispatcher,
+workspace callback, or repeat flags. Keep the catalog and Lua declarations in
+sync: `tests/shortcuts_settings_test.py` executes the real Lua against harmless
+stubs and checks every default. Personal and optional dictation bindings are
+read-only. Custom commands and disabling actions are not part of this editor.
+
+Shortcut preferences live in `shortcuts.json` and generated `shortcuts.lua` under
+the Blankweave config directory. Saves snapshot the revision, session, live bind
+list, and XKB options; validate known keys; check reported compositor conflicts;
+then reload and verify the tagged binding, rolling back on failure. Personal
+keycode bindings conservatively reserve their modifier combination because their
+logical key depends on the layout. Application-local shortcuts cannot be checked.
+Input-page visibility controls polling, and writes refresh even when hidden.
+Native tests use `tests/fixtures/settings-shortcuts.py`, never real shortcuts.
