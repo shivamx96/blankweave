@@ -1171,3 +1171,10 @@ CLI), rejects colliding slugs/invalid URLs/multiline names, and escapes URL fiel
 codes through the existing writer. Only user-created, nonsymlink entries can be
 removed; bundled entries remain owned by manifest sync. Removal confirms the
 selected identity/revision and retains browser session data.
+
+`system-settings.py` reads selected hardware/software fields without identifiers
+or serial numbers. Diagnostics run only after the explicit action, calling the
+installed CLI with `doctor --normal --report` (no elevation). A private local
+state file records timestamp, exit code, and plain-text output, including nonzero
+findings. Timeouts keep the previous report. The native view displays and copies
+reports on request; it does not trigger updates, repairs, or rollback.

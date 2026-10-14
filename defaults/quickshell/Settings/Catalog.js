@@ -109,13 +109,13 @@ var pages = [
         { title: "Maintenance", rows: [
             { id: "updates", title: "Updates & release notes", description: "Review Blankweave and package updates.", kind: "action", action: "Check updates" },
             { id: "firmware", title: "Device firmware", description: "Check for supported BIOS and peripheral updates.", kind: "action", action: "Check firmware" },
-            { id: "diagnostics", title: "Diagnostics & recovery", description: "Run health checks and review configuration rollback.", kind: "action", action: "Open diagnostics" }
+            { id: "diagnostics", title: "Diagnostics", description: "Run read-only health checks and copy a local report.", kind: "system-info", live: true }
         ] },
         { title: "This computer", rows: [
             { id: "accounts", title: "Users & sign-in", description: "Manage accounts, passwords, and sign-in preferences.", kind: "action", action: "Manage" },
             { id: "datetime", title: "Date, time & region", description: "Choose a timezone, formats, and clock synchronization.", kind: "action", action: "Configure" },
             { id: "printers", title: "Printers & scanners", description: "Add devices and manage print jobs.", kind: "action", action: "Manage devices" },
-            { id: "about", title: "About this computer", description: "View hardware, software versions, and support information.", kind: "action", action: "View details" }
+            { id: "about", title: "About this computer", description: "View hardware, software versions, and support information.", kind: "system-info", live: true }
         ] }
     ] }
 ];
