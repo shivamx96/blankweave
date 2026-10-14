@@ -52,6 +52,10 @@ FloatingWindow {
         active: root.visible && !root.minimized && content.page !== null && content.page.id === "power"
     }
 
+    property SettingsPointer pointer: SettingsPointer {
+        active: root.visible && !root.minimized && content.page !== null && content.page.id === "input"
+    }
+
     SettingsNightLight { id: nightLightBackend }
     SettingsSystemSounds {
         id: systemSoundsBackend
@@ -86,6 +90,7 @@ FloatingWindow {
         displays: displaysBackend
         battery: root.battery
         idle: root.idle
+        pointer: root.pointer
         power: root.power
         sound: root.sound
         voice: root.voice

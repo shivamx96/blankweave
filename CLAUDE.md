@@ -937,6 +937,17 @@ Settings must distinguish saved/pending state from acknowledged application.
 Tests use fake Hypridle/hyprctl processes and isolated XDG paths, never host idle,
 lock, screen-off, or suspend actions.
 
+`SettingsPointer` uses `pointer-settings.py` for live global options and saved
+per-device overrides. The helper owns `pointer.json` and its generated
+`pointer.lua`; `hypr/input.lua` loads it before personal overrides and publishes
+an acknowledgement revision. Never infer effective per-device values from global
+options: label them as saved overrides. Classify touchpads using udev properties,
+not name substrings. Capture the compositor session, config revision, device name,
+and address before writes; reject stale/replaced or ambiguous devices. Changes
+reload configuration, verify global readback and the loaded revision, and roll
+back files/live state on failure. Keep tests on mocked IPC or fixture helpers;
+never mutate host input settings from automated tests.
+
 ### Adding a new Quickshell module
 
 1. Create `defaults/quickshell/Modules/<Name>Widget.qml`

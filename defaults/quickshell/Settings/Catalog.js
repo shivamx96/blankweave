@@ -72,7 +72,7 @@ var pages = [
         { title: "Keyboard & pointer", rows: [
             { id: "layouts", title: "Keyboard layouts & languages", description: "Add layouts, input methods, and a layout switcher.", kind: "action", action: "Manage" },
             { id: "shortcuts", title: "Keyboard shortcuts", description: "Discover and customize desktop shortcuts.", kind: "action", action: "Edit shortcuts" },
-            { id: "pointer", title: "Mouse & touchpad", description: "Set sensitivity, scrolling, gestures, and tap to click.", kind: "action", action: "Configure" }
+            { id: "pointer", title: "Mouse & touchpad", description: "Adjust speed, acceleration, scrolling, buttons, tap to click, and typing protection.", kind: "pointer", live: true }
         ] },
         { title: "Accessibility", rows: [
             { id: "large-text", title: "Large text", description: "Increase text size throughout the interface.", kind: "toggle" },
