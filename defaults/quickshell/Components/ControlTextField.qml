@@ -25,7 +25,7 @@ TextField {
         border.color: root.activeFocus ? root.theme.accentBright : root.theme.outline
 
         Behavior on border.color {
-            ColorAnimation { duration: 120 }
+            ColorAnimation { duration: root.theme.reducedMotion ? 0 : 120 }
         }
     }
 }

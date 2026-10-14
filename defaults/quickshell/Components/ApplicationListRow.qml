@@ -40,7 +40,7 @@ Item {
         height: root.active ? 24 : 12
         color: root.active ? root.theme.accentBright : root.theme.divider
 
-        Behavior on height { NumberAnimation { duration: 140 } }
+        Behavior on height { NumberAnimation { duration: root.theme.reducedMotion ? 0 : 140 } }
     }
 
     RowLayout {
@@ -151,7 +151,7 @@ Item {
                             ? root.theme.critical
                             : root.theme.accentBright
 
-                        Behavior on width { NumberAnimation { duration: 120 } }
+                        Behavior on width { NumberAnimation { duration: root.theme.reducedMotion ? 0 : 120 } }
                     }
 
                     MouseArea {

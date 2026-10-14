@@ -18,3 +18,15 @@ hl.animation({ leaf = "border",      enabled = true, speed = 10, bezier = "defau
 hl.animation({ leaf = "borderangle", enabled = true, speed = 8,  bezier = "default" })
 hl.animation({ leaf = "fade",        enabled = true, speed = 7,  bezier = "default" })
 hl.animation({ leaf = "workspaces",  enabled = true, speed = 6,  bezier = "default" })
+
+-- Apply accessibility preferences after animation defaults, before personal overrides.
+_G.blankweave_accessibility_revision = "defaults"
+local path = (os.getenv("XDG_CONFIG_HOME") or (os.getenv("HOME") .. "/.config"))
+    .. "/blankweave/accessibility.lua"
+local file, message, code = io.open(path, "r")
+if file then
+    file:close()
+    dofile(path)
+elseif code ~= 2 then
+    error(message)
+end

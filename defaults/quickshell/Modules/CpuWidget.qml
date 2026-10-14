@@ -187,7 +187,7 @@ WidgetFrame {
                                 : root.theme.accentBright
 
                             Behavior on width {
-                                NumberAnimation { duration: 180; easing.type: Easing.OutCubic }
+                                NumberAnimation { duration: root.theme.reducedMotion ? 0 : 180; easing.type: Easing.OutCubic }
                             }
                         }
                     }

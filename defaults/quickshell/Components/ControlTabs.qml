@@ -77,7 +77,7 @@ RowLayout {
                 color: root.theme.accentBright
 
                 Behavior on width {
-                    NumberAnimation { duration: 150; easing.type: Easing.OutCubic }
+                    NumberAnimation { duration: root.theme.reducedMotion ? 0 : 150; easing.type: Easing.OutCubic }
                 }
             }
 

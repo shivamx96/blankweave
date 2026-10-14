@@ -488,7 +488,7 @@ WidgetFrame {
                         height: networkDelegate.connected ? 22 : (networkActionMouse.containsMouse ? 14 : 0)
                         color: root.theme.accentBright
 
-                        Behavior on height { NumberAnimation { duration: 140 } }
+                        Behavior on height { NumberAnimation { duration: root.theme.reducedMotion ? 0 : 140 } }
                     }
 
                     RowLayout {
@@ -616,7 +616,7 @@ WidgetFrame {
                                 height: 1
                                 color: root.theme.accentBright
 
-                                Behavior on width { NumberAnimation { duration: 140 } }
+                                Behavior on width { NumberAnimation { duration: root.theme.reducedMotion ? 0 : 140 } }
                             }
 
                             MouseArea {

@@ -286,6 +286,19 @@ fi
 grep -Fq 'missing colours: accent' "$test_root/broken.err"
 [[ $(jq -r '.theme' "$state") == ember ]]
 
+# Theme changes preserve saved accessibility preferences and GTK animation keys.
+printf '{"version":1,"reduced_motion":true,"high_contrast":true}\n' > "$XDG_CONFIG_HOME/blankweave/accessibility.json"
+for version in gtk-3.0 gtk-4.0; do
+    printf 'gtk-enable-animations=false\n' >> "$XDG_CONFIG_HOME/$version/settings.ini"
+done
+"$script" mode light
+for version in gtk-3.0 gtk-4.0; do
+    grep -Fxq 'gtk-enable-animations=false' "$XDG_CONFIG_HOME/$version/settings.ini"
+done
+jq -e '.reduced_motion and .high_contrast' "$XDG_CONFIG_HOME/blankweave/accessibility.json" > /dev/null
+"$script" mode dark
+rm "$XDG_CONFIG_HOME/blankweave/accessibility.json"
+
 # Text size is independent of themes, and saved cursor size survives a switch.
 printf '{"version":1,"text_scale":1.3,"cursor_size":48}\n' > "$XDG_CONFIG_HOME/blankweave/interface.json"
 "$script" mode light

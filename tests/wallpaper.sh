@@ -70,6 +70,17 @@ rm -f -- "$config/theme.json" "$theme_png"
 bash "$script" cycle
 [[ $(< "$cache") == "$extra_a" || $(< "$cache") == "$extra_b" ]]
 
+# Reduced motion makes wallpaper changes immediate, including theme changes.
+printf '{"version":1,"reduced_motion":true,"high_contrast":false}\n' > "$config/accessibility.json"
+: > "$FAKE_LOG"
+bash "$script" set "$extra_a"
+grep -Fq -- '--transition-type none' "$FAKE_LOG"
+if grep -Fq -- '--transition-type wipe' "$FAKE_LOG"; then
+    printf 'Reduced-motion wallpaper used an animated transition.\n' >&2
+    exit 1
+fi
+rm "$config/accessibility.json"
+
 # Neither extras nor a theme is an error, not a trip through a missing pack.
 rm -f -- "$extra_a" "$extra_b"
 if bash "$script" cycle 2>/dev/null; then

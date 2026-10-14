@@ -1097,3 +1097,21 @@ verify reload and desktop readback, and roll back files and desktop values on
 failure. Cursor UI reports the saved preference and desktop-setting drift;
 Hyprland has no direct live cursor-size query. Tests use isolated compositor and
 GSettings fixtures, and `settings-interface.qml` verifies live Theme font updates.
+
+`Services/SettingsAccessibility.qml` controls reduced motion and high contrast
+through `accessibility-settings.py`. The helper owns `accessibility.json` and
+`accessibility.lua`, sharing `interface.lock` with sizing/theme changes and the
+existing GTK writer lock. `hypr/animations.lua` loads saved animation preferences
+after defaults, before personal overrides. Writes verify compositor animations
+and GSettings, reject stale requests, and restore previous files/settings on failure.
+
+`Theme.qml` watches accessibility preferences independently of the selected theme:
+high contrast substitutes an opaque light/dark shell palette, and disabling it
+restores the original palette. GSettings signals contrast to compatible apps;
+legacy applications may not honor it. Reduced motion zeroes explicit shell
+animation durations, disables compositor animations, writes the desktop/GTK
+animation preference, and makes wallpaper changes immediate. Do not zero polling
+or notification timers. New explicit UI animations must honor `theme.reducedMotion`.
+Theme changes preserve accessibility preferences and GTK animation keys. Native
+tests check both palettes' text/background contrast, restoration, and immediate
+control transitions; helper and wallpaper tests never touch the host session.

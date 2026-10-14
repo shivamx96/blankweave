@@ -92,7 +92,7 @@ Item {
         opacity: mouse.pressed ? 1 : 0.72
 
         Behavior on width {
-            NumberAnimation { duration: 150; easing.type: Easing.OutCubic }
+            NumberAnimation { duration: root.theme.reducedMotion ? 0 : 150; easing.type: Easing.OutCubic }
         }
     }
 

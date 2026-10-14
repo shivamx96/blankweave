@@ -94,7 +94,7 @@ RowLayout {
                     color: actionItem.modelData.attention ? root.theme.critical : root.theme.accentBright
 
                     Behavior on width {
-                        NumberAnimation { duration: 140; easing.type: Easing.OutCubic }
+                        NumberAnimation { duration: root.theme.reducedMotion ? 0 : 140; easing.type: Easing.OutCubic }
                     }
                 }
 

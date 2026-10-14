@@ -50,7 +50,7 @@ Slider {
             }
 
             Behavior on width {
-                NumberAnimation { duration: 100 }
+                NumberAnimation { duration: root.theme.reducedMotion ? 0 : 100 }
             }
         }
     }

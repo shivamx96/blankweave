@@ -72,8 +72,8 @@ ColumnLayout {
                     : root.theme.outline
                 opacity: index < Math.ceil(root.progress * root.segments) ? 1 : 0.48
 
-                Behavior on color { ColorAnimation { duration: 140 } }
-                Behavior on opacity { NumberAnimation { duration: 140 } }
+                Behavior on color { ColorAnimation { duration: root.theme.reducedMotion ? 0 : 140 } }
+                Behavior on opacity { NumberAnimation { duration: root.theme.reducedMotion ? 0 : 140 } }
             }
         }
     }
