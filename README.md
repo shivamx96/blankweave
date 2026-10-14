@@ -603,7 +603,9 @@ generated files. A custom compositor configuration must load Blankweave's
   changes and reconnects. Use theme wallpaper removes that display's override.
   The lock screen retains the shared theme/cycle wallpaper.
 - **Bar widgets:** Show, hide, and reorder widgets within the left, center, and
-  right sections. Preferences apply across displays. System and power menus stay
+  right sections. The right side retains separate application, device-control,
+  and system-meter groups; reordering stays within those groups. Preferences
+  apply across displays. System and power menus stay
   available; Restore default widgets resets visibility and order.
 - **Web apps:** Settings → Apps creates named HTTP(S) apps through Helium and
   removes user-created entries after confirmation. Browser logins/data are kept.

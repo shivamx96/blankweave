@@ -1178,3 +1178,8 @@ installed CLI with `doctor --normal --report` (no elevation). A private local
 state file records timestamp, exit code, and plain-text output, including nonzero
 findings. Timeouts keep the previous report. The native view displays and copies
 reports on request; it does not trigger updates, repairs, or rollback.
+
+The right bar keeps three groups: application indicators, device controls, and
+system meters/power. Saved relative order is retained within each group; move
+controls cannot cross group boundaries. Dividers follow visible groups rather
+than specific widgets, avoiding orphan separators when widgets disappear.
