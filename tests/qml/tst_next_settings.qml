@@ -34,10 +34,16 @@ TestCase {
     function init() { fakeBackend.request = null; fakeBackend.ready = true; fakeBackend.writable = true; fakeBackend.data = {revision: "original", policy: {manual: false, schedule: false, start: "22:00", end: "08:00", blocked: []}, paused: false, quiet: false, apps: ["Mail"], browser: true, available: true, report: null, details: [], rows: []} }
     function test_manual_and_schedule_buttons() {
         const item = createTemporaryObject(notifications, test)
-        find(item, "Turn on manual DND").clicked()
+        find(item, "Pause notifications").clicked()
         compare(fakeBackend.request, {action: "manual", value: true})
         find(item, "Save quiet hours").clicked()
         compare(fakeBackend.request, {action: "schedule", enabled: true, start: "22:00", end: "08:00"})
+    }
+    function test_notification_toggle_follows_actual_pause_state() {
+        fakeBackend.data = Object.assign({}, fakeBackend.data, {paused: true})
+        const item = createTemporaryObject(notifications, test)
+        find(item, "Resume notifications").clicked()
+        compare(fakeBackend.request, {action: "manual", value: false})
     }
     function test_app_notification_control_uses_app_identity() {
         const item = createTemporaryObject(notifications, test, {settingId: "notifications"})

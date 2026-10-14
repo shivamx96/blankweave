@@ -8,6 +8,7 @@ BarSection {
     id: root
     required property var bar
     required property string group
+    property var included: null
     readonly property var prefs: bar.preferences
     property int layoutRevision: 0
     readonly property var visibleIds: {
@@ -24,7 +25,7 @@ BarSection {
         id: widgets
         onItemAdded: root.layoutRevision++
         onItemRemoved: root.layoutRevision++
-        model: Widgets.order(root.group, root.prefs[root.group + "Order"])
+        model: Widgets.order(root.group, root.prefs[root.group + "Order"]).filter(id => root.included === null || root.included.includes(id))
         delegate: RowLayout {
             id: entry
             required property string modelData

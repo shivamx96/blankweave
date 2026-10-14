@@ -17,7 +17,7 @@ function canMove(group, values, index, delta) {
 }
 function dividerBefore(group, visibleIds, id) {
     const index = visibleIds.indexOf(id)
-    return group === "right" && index > 0 && cluster(visibleIds[index - 1]) !== cluster(id)
+    return index > 0 && (group === "left" || (group === "right" && cluster(visibleIds[index - 1]) !== cluster(id)))
 }
 function order(group, saved) {
     const allowed = groups[group] || []

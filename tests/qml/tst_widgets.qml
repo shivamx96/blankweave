@@ -31,6 +31,8 @@ TestCase {
         compare(hiddenFirstMembers.filter(id => Widgets.dividerBefore("right", hiddenFirstMembers, id)), ["cpu"])
         verify(Widgets.dividerBefore("right", ["indicators", "power"], "power"))
         verify(!Widgets.dividerBefore("right", ["power"], "power"))
-        verify(!Widgets.dividerBefore("left", ["overview", "workspaces"], "workspaces"))
+        verify(Widgets.dividerBefore("left", ["overview", "workspaces"], "workspaces"))
+        verify(Widgets.dividerBefore("left", ["overview", "window"], "window"))
+        verify(!Widgets.dividerBefore("left", ["overview"], "overview"))
     }
 }

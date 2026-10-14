@@ -592,8 +592,10 @@ generated files. A custom compositor configuration must load Blankweave's
 - **Notifications:** Settings → Apps controls manual Do Not Disturb, daily quiet
   hours, and popup muting for apps seen in notification history. Quiet hours use
   local time, can cross midnight, and continue while Settings is closed. Manual
-  DND and quiet hours both need to be off to resume notifications. Muted popups
-  remain in history. The bar uses the same persistent DND policy.
+  pause/resume changes, including external Dunst controls, override the current
+  quiet-hours window. Scheduling resumes at the next window; ending a window
+  only releases a pause created by that schedule. Muted popups remain in history.
+  The bar toggles the actual Dunst pause state.
 - **Startup applications:** Enable or disable existing XDG autostart entries for
   the next sign-in. System entries use reversible user overrides; personal
   desktop restrictions and commands are preserved. Core desktop services are

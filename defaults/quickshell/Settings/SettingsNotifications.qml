@@ -16,9 +16,9 @@ ColumnLayout {
     }
     SettingsButton {
         visible: root.settingId === "dnd"
-        theme: root.theme; text: root.policy.manual ? "Turn off manual DND" : "Turn on manual DND"
+        theme: root.theme; text: root.backend && root.backend.data.paused ? "Resume notifications" : "Pause notifications"
         enabled: root.backend && root.backend.writable
-        onClicked: root.backend.apply({action: "manual", value: !root.policy.manual})
+        onClicked: root.backend.apply({action: "manual", value: !root.backend.data.paused})
     }
     RowLayout {
         visible: root.settingId === "dnd"
@@ -34,7 +34,7 @@ ColumnLayout {
     Text {
         visible: root.settingId === "dnd"
         Layout.fillWidth: true
-        text: "Daily local time, including overnight ranges. " + (root.policy.schedule ? "Schedule enabled." : "Schedule disabled.") + " Quiet hours continue while Settings is closed. Turn off both the schedule and manual DND to resume notifications."
+        text: "Daily local time, including overnight ranges. " + (root.policy.schedule ? "Schedule enabled." : "Schedule disabled.") + " Quiet hours continue while Settings is closed. Manual changes override the current quiet-hours window. The next scheduled window resumes normal scheduling."
         color: root.theme.textMuted; font.family: root.theme.fontFamily; font.pixelSize: root.theme.smallTextSize; wrapMode: Text.WordWrap
     }
     Repeater {
