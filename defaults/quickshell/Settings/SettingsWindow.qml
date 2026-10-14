@@ -48,6 +48,10 @@ FloatingWindow {
         active: root.visible && !root.minimized && content.page !== null && content.page.id === "power"
     }
 
+    property SettingsIdle idle: SettingsIdle {
+        active: root.visible && !root.minimized && content.page !== null && content.page.id === "power"
+    }
+
     SettingsNightLight { id: nightLightBackend }
     SettingsSystemSounds {
         id: systemSoundsBackend
@@ -81,6 +85,7 @@ FloatingWindow {
         appearance: appearanceBackend
         displays: displaysBackend
         battery: root.battery
+        idle: root.idle
         power: root.power
         sound: root.sound
         voice: root.voice

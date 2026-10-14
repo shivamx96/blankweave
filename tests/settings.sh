@@ -12,6 +12,7 @@ printf '%s\n' "$@" > "$SETTINGS_TEST_LOG"
 exit "${SETTINGS_TEST_EXIT:-0}"
 EOF
 chmod +x "$test_root/bin/qs"
+export SETTINGS_IDLE_STATE="$test_root/window-idle-state"
 export SETTINGS_BATTERY_STATE="$test_root/battery-state"
 export SETTINGS_POWER_STATE="$test_root/power-state"
 export SETTINGS_TEST_LOG="$test_root/command"
@@ -276,6 +277,7 @@ cp "$repository/defaults/quickshell/Theme.qml" "$test_root/window/"
 cp "$repository/tests/quickshell/settings-window.qml" "$test_root/window/shell.qml"
 cp "$repository/tests/fixtures/settings-theme.sh" "$test_root/home/.local/share/blankweave/shell/theme-apply.sh"
 cp "$repository/tests/fixtures/settings-battery.py" "$test_root/home/.local/share/blankweave/shell/battery-health.py"
+cp "$repository/tests/fixtures/settings-idle.py" "$test_root/home/.local/share/blankweave/shell/idle-policy.py"
 cp "$repository/tests/fixtures/settings-power.py" "$test_root/home/.local/share/blankweave/shell/power-profiles.py"
 cp "$repository/tests/fixtures/settings-system-sounds.py" "$test_root/home/.local/share/blankweave/shell/system-sounds.py"
 cp "$repository/tests/fixtures/settings-wifi-profiles.py" "$test_root/home/.local/share/blankweave/shell/wifi-profiles.py"
@@ -309,4 +311,24 @@ if ! grep -q SETTINGS_POWER_LIFECYCLE_PASSED "$test_root/power-lifecycle.log" \
     cat "$test_root/power-lifecycle.log"
     exit 1
 fi
+
+# Idle controls use a fixture; never restart the host idle daemon or suspend.
+export SETTINGS_IDLE_STATE="$test_root/idle-state"
+mkdir -p "$test_root/idle"
+cp -R "$repository/defaults/quickshell/"{Services,Settings,Components,Assets,Modules} "$test_root/idle/"
+cp "$repository/defaults/quickshell/Theme.qml" "$test_root/idle/"
+cp "$repository/tests/quickshell/settings-idle.qml" "$test_root/idle/shell.qml"
+cp "$repository/tests/fixtures/settings-idle.py" "$test_root/idle/idle.py"
+if ! HOME="$test_root/home" XDG_CONFIG_HOME="$test_root/home/.config" \
+    XDG_RUNTIME_DIR="$test_root/runtime" QT_QPA_PLATFORM=offscreen \
+    QT_QUICK_BACKEND=software timeout 15 qs -p "$test_root/idle" > "$test_root/idle.log" 2>&1; then
+    cat "$test_root/idle.log"
+    exit 1
+fi
+if ! grep -q SETTINGS_IDLE_PASSED "$test_root/idle.log" \
+    || grep -Eq '(TypeError|ReferenceError|Binding loop|Unable to assign|Failed to load)' "$test_root/idle.log"; then
+    cat "$test_root/idle.log"
+    exit 1
+fi
+
 printf 'Settings command and interface tests passed.\n'

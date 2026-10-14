@@ -63,8 +63,7 @@ var pages = [
             { id: "battery-health", title: "Battery health & charge limit", description: "Review battery health and enable supported charge limits.", kind: "battery-health", live: true }
         ] },
         { title: "Idle & sleep", rows: [
-            { id: "screen-off", title: "Turn off screen after", description: "Set separate timeouts for battery and plugged-in use.", kind: "choice", options: ["5 minutes", "10 minutes", "15 minutes", "Never"] },
-            { id: "sleep", title: "Suspend & lid behavior", description: "Choose when the computer sleeps.", kind: "action", action: "Configure" },
+            { id: "screen-off", title: "Idle timeouts", description: "Choose dimming, locking, screen-off, and sleep delays for battery and plugged-in use.", kind: "idle", live: true },
             { id: "awake", title: "Keep awake", description: "Temporarily prevent idle sleep with an expiry time.", kind: "choice", options: ["Off", "30 minutes", "1 hour", "2 hours"] },
             { id: "hibernate", title: "Hibernation", description: "Configure saving your session to disk where supported.", kind: "action", action: "Set up" }
         ] }

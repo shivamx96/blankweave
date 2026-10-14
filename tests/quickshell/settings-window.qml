@@ -68,16 +68,16 @@ ShellRoot {
             } else if (root.step === 10) {
                 settings.selectedPage = "power"; settings.openSettings()
             } else if (root.step === 11) {
-                if (!power.active || !settings.battery.active) { console.error("Power inactive on visible page"); Qt.quit(); return }
+                if (!power.active || !settings.battery.active || !settings.idle.active) { console.error("Power inactive on visible page"); Qt.quit(); return }
                 settings.minimized = true
             } else if (root.step === 12) {
-                if (power.active || settings.battery.active) { console.error("Power active while minimized"); Qt.quit(); return }
+                if (power.active || settings.battery.active || settings.idle.active) { console.error("Power active while minimized"); Qt.quit(); return }
                 settings.minimized = false; settings.selectedPage = "appearance"
             } else if (root.step === 13) {
-                if (power.active || settings.battery.active) { console.error("Power active on another page"); Qt.quit(); return }
+                if (power.active || settings.battery.active || settings.idle.active) { console.error("Power active on another page"); Qt.quit(); return }
                 settings.selectedPage = "power"; settings.visible = false
             } else {
-                if (power.active || settings.battery.active) { console.error("Power active while hidden"); Qt.quit(); return }
+                if (power.active || settings.battery.active || settings.idle.active) { console.error("Power active while hidden"); Qt.quit(); return }
                 if (wifi.scanOwners.length || wifi.profilesActive || bluetooth.settingsActive || bluetooth.scanOwners.length || connections.settingsActive || wireless.active) { console.error("Wi-Fi active while hidden"); Qt.quit(); return }
                 if (audio.microphone.active) { console.error("Microphone meter requested while hidden"); Qt.quit(); return }
                 console.log("SETTINGS_WINDOW_PASSED")

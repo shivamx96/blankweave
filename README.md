@@ -542,3 +542,26 @@ Files under `~/.local/share/blankweave/` remain managed and are replaced on
 update, including the Quickshell source. Keep personal themes and wallpapers
 in their documented `~/.config/blankweave/` directories. Theme state, display
 panel state, and GTK theme settings remain generated files, not override files.
+
+### Idle timeouts
+
+Settings → Power provides separate dim, lock, screen-off, and suspend delays for
+plugged-in and battery use. Preferences live in
+`~/.config/blankweave/idle.json` and survive updates. Until the first edit, the
+installed Hypridle policy remains unchanged. “Never” disables only that action;
+manual locking and lock-before-sleep remain available. Short screen-off or sleep
+delays move enabled lock and dim timers earlier. Set all four actions to Never
+to keep the session awake without a custom Hypridle override.
+Lid behavior remains controlled by the system.
+
+The session starts `idle-policy.sh`, which supervises its own Hypridle child.
+Saved edits and power-source changes restart the idle timers; they continue to
+work while Settings is closed. Settings distinguishes saved preferences awaiting
+application from an active policy. After upgrading an existing session, sign out
+and back in to start the new supervisor.
+
+A custom `~/.config/hypr/hypridle.conf` file or foreign symlink takes precedence.
+Settings explains this and disables its idle controls without modifying that
+file. To opt back into managed behavior, back up your custom configuration and
+restore the symlink to `~/.local/share/blankweave/hypr/hypridle.conf`, then sign
+out and back in.

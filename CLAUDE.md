@@ -925,6 +925,18 @@ configured thresholds and their persistence: support its on/off control without
 writing sysfs or inventing a percentage for firmware-managed charging. All
 mutation tests use fake buses/helpers; never change host charging limits in tests.
 
+`SettingsIdle` exposes separate AC/battery dim, lock, screen-off, and suspend delays through
+`idle-policy.py`. Preferences are strict, atomic, compare-and-swap JSON in
+`idle.json`. The Hyprland autostart wrapper supervises only its own Hypridle
+child, persists across Settings closing, and switches generated runtime configs
+on power-source changes. Until the first edit, retain the installed policy.
+Never overwrite custom Hypridle entry files or foreign symlinks; those make the
+Settings controls unavailable. Preserve manual locking and lock-before-sleep. Each idle action can be Never;
+short screen-off/suspend delays move enabled locking/dimming earlier.
+Settings must distinguish saved/pending state from acknowledged application.
+Tests use fake Hypridle/hyprctl processes and isolated XDG paths, never host idle,
+lock, screen-off, or suspend actions.
+
 ### Adding a new Quickshell module
 
 1. Create `defaults/quickshell/Modules/<Name>Widget.qml`
