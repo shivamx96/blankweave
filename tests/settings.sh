@@ -17,6 +17,7 @@ export SETTINGS_POINTER_STATE="$test_root/window-pointer-state"
 export SETTINGS_KEYBOARD_STATE="$test_root/window-keyboard-state"
 export SETTINGS_SHORTCUTS_STATE="$test_root/window-shortcuts-state"
 export SETTINGS_INTERFACE_STATE="$test_root/window-interface-state"
+export SETTINGS_DEFAULT_APPS_STATE="$test_root/window-default-apps-state"
 export SETTINGS_ACCESSIBILITY_STATE="$test_root/window-accessibility-state"
 export SETTINGS_BATTERY_STATE="$test_root/battery-state"
 export SETTINGS_POWER_STATE="$test_root/power-state"
@@ -288,6 +289,7 @@ cp "$repository/tests/fixtures/settings-keyboard.py" "$test_root/home/.local/sha
 cp "$repository/tests/fixtures/settings-shortcuts.py" "$test_root/home/.local/share/blankweave/shell/shortcuts-settings.py"
 cp "$repository/tests/fixtures/settings-interface.py" "$test_root/home/.local/share/blankweave/shell/interface-settings.py"
 cp "$repository/tests/fixtures/settings-accessibility.py" "$test_root/home/.local/share/blankweave/shell/accessibility-settings.py"
+cp "$repository/tests/fixtures/settings-default-apps.py" "$test_root/home/.local/share/blankweave/shell/default-apps.py"
 cp "$repository/tests/fixtures/settings-power.py" "$test_root/home/.local/share/blankweave/shell/power-profiles.py"
 cp "$repository/tests/fixtures/settings-system-sounds.py" "$test_root/home/.local/share/blankweave/shell/system-sounds.py"
 cp "$repository/tests/fixtures/settings-wifi-profiles.py" "$test_root/home/.local/share/blankweave/shell/wifi-profiles.py"
@@ -434,6 +436,25 @@ fi
 if ! grep -q SETTINGS_ACCESSIBILITY_PASSED "$test_root/accessibility.log" \
     || grep -Eq '(TypeError|ReferenceError|Binding loop|Unable to assign|Failed to load|Error:)' "$test_root/accessibility.log"; then
     cat "$test_root/accessibility.log"
+    exit 1
+fi
+
+# Default application actions use a fixture, never the host compositor or input devices.
+export SETTINGS_DEFAULT_APPS_STATE="$test_root/default-apps-state"
+mkdir -p "$test_root/default-apps"
+cp -R "$repository/defaults/quickshell/"{Services,Settings,Components,Assets,Modules} "$test_root/default-apps/"
+cp "$repository/defaults/quickshell/Theme.qml" "$test_root/default-apps/"
+cp "$repository/tests/quickshell/settings-default-apps.qml" "$test_root/default-apps/shell.qml"
+cp "$repository/tests/fixtures/settings-default-apps.py" "$test_root/default-apps/default-apps.py"
+if ! HOME="$test_root/home" XDG_CONFIG_HOME="$test_root/home/.config" \
+    XDG_RUNTIME_DIR="$test_root/runtime" QT_QPA_PLATFORM=offscreen \
+    QT_QUICK_BACKEND=software timeout 15 qs -p "$test_root/default-apps" > "$test_root/default-apps.log" 2>&1; then
+    cat "$test_root/default-apps.log"
+    exit 1
+fi
+if ! grep -q SETTINGS_DEFAULT_APPS_PASSED "$test_root/default-apps.log" \
+    || grep -Eq '(TypeError|ReferenceError|Binding loop|Unable to assign|Failed to load|Error:)' "$test_root/default-apps.log"; then
+    cat "$test_root/default-apps.log"
     exit 1
 fi
 

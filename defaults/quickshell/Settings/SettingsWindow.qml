@@ -52,6 +52,10 @@ FloatingWindow {
         active: root.visible && !root.minimized && content.page !== null && content.page.id === "power"
     }
 
+    property SettingsDefaultApps defaultApps: SettingsDefaultApps {
+        active: root.visible && !root.minimized && content.page !== null && content.page.id === "apps"
+    }
+
     property SettingsAccessibility accessibility: SettingsAccessibility {
         active: root.visible && !root.minimized && content.page !== null && content.page.id === "input"
     }
@@ -106,6 +110,7 @@ FloatingWindow {
         displays: displaysBackend
         battery: root.battery
         idle: root.idle
+        defaultApps: root.defaultApps
         accessibility: root.accessibility
         interfaceSettings: root.interfaceSettings
         shortcuts: root.shortcuts

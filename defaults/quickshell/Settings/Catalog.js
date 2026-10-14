@@ -84,7 +84,7 @@ var pages = [
     { id: "apps", title: "Apps", icon: "󰀻", description: "Manage your applications and their access.", groups: [
         { title: "Applications", rows: [
             { id: "installed", title: "Installed applications", description: "Browse, install, and remove software.", kind: "action", action: "Browse apps" },
-            { id: "defaults", title: "Default applications", description: "Choose a browser, email handler, and file associations.", kind: "action", action: "Choose defaults" },
+            { id: "defaults", title: "Default applications", description: "Choose handlers for web links, email, folders, documents, and media.", kind: "default-apps", live: true },
             { id: "startup", title: "Startup applications", description: "Choose what starts when you sign in.", kind: "action", action: "Manage" },
             { id: "permissions", title: "Application permissions", description: "Review supported camera, microphone, and file permissions.", kind: "action", action: "Review" },
             { id: "webapps", title: "Web apps", description: "Add and manage sites that open as applications.", kind: "action", action: "Manage" }
