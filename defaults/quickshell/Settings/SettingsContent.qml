@@ -271,7 +271,7 @@ Rectangle {
                                 id: notice
                                 anchors { fill: parent; margins: 14 }
                                 text: root.page && root.page.id === "appearance"
-                                    ? "Theme, color mode, bar, text, and pointer sizes apply immediately. Other controls are previews."
+                                    ? "Theme, color mode, bar widgets, wallpaper, text, and pointer sizes are available."
                                     : root.page && root.page.id === "displays" && root.displays
                                     ? "Mode, mirror, and setup changes have a 20-second preview. Other display changes apply immediately; night light applies to all displays."
                                     : root.page && root.page.id === "sound" && root.sound

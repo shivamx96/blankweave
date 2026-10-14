@@ -56,6 +56,10 @@ QtObject {
                 // edge and visibility policy across the desktop.
                 property string position: "top"
                 property string visibilityMode: "always"
+                property string leftOrder: ""
+                property string centerOrder: ""
+                property string rightOrder: ""
+                property string hiddenWidgets: ""
             }
         }
     }

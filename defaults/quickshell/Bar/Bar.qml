@@ -209,80 +209,23 @@ PanelWindow {
             }
         }
 
-        BarSection {
+        WidgetSection {
             id: leftIsland
-            theme: root.theme
-            anchors.left: parent.left
-            anchors.leftMargin: root.theme.sectionPadding
+            bar: root; theme: root.theme; group: "left"
+            anchors.left: parent.left; anchors.leftMargin: root.theme.sectionPadding
             anchors.verticalCenter: parent.verticalCenter
-
-            SystemOverviewWidget { bar: root; theme: root.theme }
-            BarDivider { theme: root.theme }
-            WorkspacesWidget { bar: root; theme: root.theme }
-            BarDivider { theme: root.theme; visible: !root.veryCompact }
-            ActiveWindowWidget { bar: root; theme: root.theme; visible: !root.veryCompact }
         }
-
-        BarSection {
+        WidgetSection {
             id: centerIsland
-            theme: root.theme
+            bar: root; theme: root.theme; group: "center"
             anchors.horizontalCenter: parent.horizontalCenter
-            anchors.verticalCenter: parent.verticalCenter
-            z: 2
-
-            ClockWidget { bar: root; theme: root.theme }
+            anchors.verticalCenter: parent.verticalCenter; z: 2
         }
-
-        BarSection {
-            theme: root.theme
-            anchors.right: centerIsland.left
-            anchors.verticalCenter: parent.verticalCenter
-            z: 2
-
-            WeatherWidget { bar: root; theme: root.theme }
-        }
-
-        BarSection {
+        WidgetSection {
             id: rightIsland
-            theme: root.theme
-            anchors.right: parent.right
-            anchors.rightMargin: root.theme.sectionPadding
+            bar: root; theme: root.theme; group: "right"
+            anchors.right: parent.right; anchors.rightMargin: root.theme.sectionPadding
             anchors.verticalCenter: parent.verticalCenter
-
-            ApplicationIndicatorsWidget {
-                id: applicationIndicators
-                bar: root
-                theme: root.theme
-            }
-            BarDivider { theme: root.theme; visible: applicationIndicators.hasIndicators }
-
-            BrightnessWidget { bar: root; theme: root.theme; iconOnly: true }
-            AudioWidget { bar: root; theme: root.theme; iconOnly: true }
-            BluetoothWidget { bar: root; theme: root.theme; bluetooth: root.shell.bluetooth; iconOnly: true }
-            NetworkWidget { bar: root; theme: root.theme; wifi: root.shell.wifi; connections: root.shell.connections; iconOnly: true }
-            NotificationWidget { bar: root; theme: root.theme }
-            BatteryWidget { bar: root; theme: root.theme; power: root.shell.power; iconOnly: true }
-            BarDivider { theme: root.theme }
-
-            MemoryWidget {
-                bar: root
-                theme: root.theme
-                iconOnly: root.compact
-            }
-
-            CpuWidget {
-                bar: root
-                theme: root.theme
-                iconOnly: root.compact
-            }
-
-            GpuWidget {
-                bar: root
-                theme: root.theme
-                iconOnly: root.compact
-            }
-
-            PowerWidget { bar: root; theme: root.theme }
         }
     }
 

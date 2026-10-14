@@ -11,7 +11,7 @@ var pages = [
         { title: "Desktop bar", rows: [
             { id: "bar-position", title: "Position", description: "Choose the screen edge on every display.", kind: "choice", options: ["Top", "Bottom"], live: true },
             { id: "bar-visibility", title: "Visibility", description: "Keep the bar visible, hide in fullscreen, or reveal at the edge.", kind: "choice", options: ["Always visible", "Hide in fullscreen", "Auto-hide"], live: true },
-            { id: "widgets", title: "Widgets & order", description: "Choose what appears in your bar.", kind: "action", action: "Customize" }
+            { id: "widgets", title: "Widgets & order", description: "Choose what appears in your bar.", kind: "widgets", live: true }
         ] },
         { title: "Personalization", rows: [
             { id: "wallpaper", title: "Wallpaper", description: "Choose a background and fit for each display.", kind: "wallpaper", live: true },
