@@ -565,3 +565,24 @@ Settings explains this and disables its idle controls without modifying that
 file. To opt back into managed behavior, back up your custom configuration and
 restore the symlink to `~/.local/share/blankweave/hypr/hypridle.conf`, then sign
 out and back in.
+
+### Mouse and touchpad
+
+Settings → Input & Accessibility provides pointer speed, acceleration, natural
+scrolling, left-handed buttons, tap-to-click, and disable-while-typing controls.
+Choose Pointer defaults, Touchpad defaults, or a connected device. Defaults show
+live compositor values; per-device rows show saved Blankweave overrides, because
+Hyprland does not expose every effective per-device option. Personal Hyprland
+overrides still load last and may supersede saved device choices.
+
+Preferences are stored in `~/.config/blankweave/pointer.json`; the helper renders
+`pointer.lua` alongside it and reloads the compositor configuration. Reset removes
+only the selected Blankweave override. Saved device settings follow the device
+name across reconnects; ambiguous names are read-only. Changes capture both the
+name and current device identity, so unplugging or replacing a device does not
+silently apply an edit to another pointer. Configuration failures restore previous
+files and attempt to restore the running configuration.
+
+Keep handwritten settings in `overrides/hyprland.lua` rather than editing the
+generated files. A custom compositor configuration must load Blankweave's
+`hypr/input.lua` before its personal overrides to use these controls.
