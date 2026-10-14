@@ -90,7 +90,7 @@ var pages = [
         ] },
         { title: "Notifications", rows: [
             { id: "dnd", title: "Do not disturb", description: "Pause notifications or create a quiet-hours schedule.", kind: "notifications", live: true },
-            { id: "notifications", title: "Notification preferences", description: "Choose which apps can notify you.", kind: "action", action: "Configure" }
+            { id: "notifications", title: "Notification preferences", description: "Choose which apps can show popups.", kind: "notifications", live: true }
         ] }
     ] },
     { id: "storage", title: "Storage & Backup", icon: "󰋊", description: "Look after your files and the places they live.", groups: [
