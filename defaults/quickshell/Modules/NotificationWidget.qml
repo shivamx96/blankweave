@@ -38,7 +38,9 @@ WidgetFrame {
     }
 
     function runControl(arguments) {
-        root.bar.run(["dunstctl"].concat(arguments))
+        if (arguments[0] === "set-paused")
+            root.bar.run(["python3", root.shellDir + "/notification-settings.py", "toggle"])
+        else root.bar.run(["dunstctl"].concat(arguments))
         refreshTimer.restart()
     }
 

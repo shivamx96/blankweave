@@ -52,6 +52,8 @@ FloatingWindow {
         active: root.visible && !root.minimized && content.page !== null && content.page.id === "power"
     }
 
+    property SettingsTask notifications: SettingsTask { script: "notification-settings.py"; active: root.visible && !root.minimized && content.page !== null && content.page.id === "apps" }
+
     property SettingsDefaultApps defaultApps: SettingsDefaultApps {
         active: root.visible && !root.minimized && content.page !== null && content.page.id === "apps"
     }
@@ -110,6 +112,7 @@ FloatingWindow {
         displays: displaysBackend
         battery: root.battery
         idle: root.idle
+        notifications: root.notifications
         defaultApps: root.defaultApps
         accessibility: root.accessibility
         interfaceSettings: root.interfaceSettings

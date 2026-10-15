@@ -11,6 +11,10 @@ import "Settings"
 ShellRoot {
     id: root
 
+    // Policy persists independently of the Settings window. A fresh process also
+    // picks up clock/timezone changes and retries after Dunst restarts.
+    Timer { interval: 30000; running: true; repeat: true; triggeredOnStart: true; onTriggered: { if (!notificationPolicy.running) notificationPolicy.running = true } }
+    Process { id: notificationPolicy; command: ["python3", Quickshell.env("HOME") + "/.local/share/blankweave/shell/notification-settings.py", "tick"] }
     property Theme theme: Theme { }
     property ShellPreferences preferences: ShellPreferences { }
     property Voxtype voxtype: Voxtype { }

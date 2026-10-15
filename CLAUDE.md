@@ -1129,3 +1129,14 @@ uses a fresh GIO process; higher-priority overrides trigger rollback, preserving
 external changes. Discovery and selection never launch applications. Native
 controls freeze popup identities and revisions, refresh after hidden writes,
 and only poll on the visible Apps page. Real GIO tests use disposable XDG trees.
+
+Notifications in Settings and the bar share `notification-settings.py`. It owns
+`notifications.json` and one Dunst drop-in, leaving personal rules untouched.
+Daily quiet hours use local time and may cross midnight; the shell reconciles
+manual DND OR quiet hours every 30 seconds even while Settings is closed. Until
+preferences exist, reconciliation is inert. Muted app names come from Dunst
+history; new matching notifications skip popups but remain in history. Rules
+honor the configured regex/glob mode. Writes lock, reject stale revisions, and
+restore managed files/pause state after failures. `SettingsTask` is the common
+JSON helper adapter for subsequent Settings pages, with no optimistic updates.
+The temporary Keep awake preview was removed; idle timeouts remain authoritative.
