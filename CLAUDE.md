@@ -1133,8 +1133,12 @@ and only poll on the visible Apps page. Real GIO tests use disposable XDG trees.
 Notifications in Settings and the bar share `notification-settings.py`. It owns
 `notifications.json` and one Dunst drop-in, leaving personal rules untouched.
 Daily quiet hours use local time and may cross midnight; the shell reconciles
-manual DND OR quiet hours every 30 seconds even while Settings is closed. Until
-preferences exist, reconciliation is inert. Muted app names come from Dunst
+quiet-hours boundaries every 30 seconds even while Settings is closed. A session
+ledger in XDG_RUNTIME_DIR tracks schedule-owned pauses: only those are released
+at the end of a window. Manual and observed external changes override the current
+window; the next window starts normal scheduling again. Saved manual DND is
+restored once per login. App-muting edits preserve the actual pause state, and
+the bar toggles that actual state. Until preferences exist, reconciliation is inert. Muted app names come from Dunst
 history; new matching notifications skip popups but remain in history. Rules
 honor the configured regex/glob mode. Writes lock, reject stale revisions, and
 restore managed files/pause state after failures. `SettingsTask` is the common
@@ -1178,3 +1182,8 @@ installed CLI with `doctor --normal --report` (no elevation). A private local
 state file records timestamp, exit code, and plain-text output, including nonzero
 findings. Timeouts keep the previous report. The native view displays and copies
 reports on request; it does not trigger updates, repairs, or rollback.
+
+The right bar keeps three groups: application indicators, device controls, and
+system meters/power. Saved relative order is retained within each group; move
+controls cannot cross group boundaries. Dividers follow visible groups rather
+than specific widgets, avoiding orphan separators when widgets disappear.

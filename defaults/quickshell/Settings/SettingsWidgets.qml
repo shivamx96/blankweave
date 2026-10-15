@@ -11,7 +11,7 @@ ColumnLayout {
     spacing: 10
     Text {
         Layout.fillWidth: true
-        text: "Show or hide widgets and move them within each section. Changes apply to every display. System and power menus remain available."
+        text: "Show or hide widgets and move them within each group. The right side keeps application indicators, device controls, and system meters grouped. Changes apply to every display. System and power menus remain available."
         color: root.theme.textMuted; font.family: root.theme.fontFamily; font.pixelSize: root.theme.smallTextSize; wrapMode: Text.WordWrap
     }
     Repeater {
@@ -39,8 +39,8 @@ ColumnLayout {
                             root.prefs.bar.hiddenWidgets = (hidden.includes(entry.modelData) ? hidden.filter(id => id !== entry.modelData) : hidden.concat([entry.modelData])).join(",")
                         }
                     }
-                    SettingsButton { theme: root.theme; text: "←"; Accessible.name: "Move " + Widgets.labels[entry.modelData] + " left"; enabled: root.writable && entry.index > 0; onClicked: root.prefs.bar[section.modelData + "Order"] = Widgets.move(section.modelData, root.prefs.bar[section.modelData + "Order"], entry.modelData, -1) }
-                    SettingsButton { theme: root.theme; text: "→"; Accessible.name: "Move " + Widgets.labels[entry.modelData] + " right"; enabled: root.writable && entry.index < section.order.length - 1; onClicked: root.prefs.bar[section.modelData + "Order"] = Widgets.move(section.modelData, root.prefs.bar[section.modelData + "Order"], entry.modelData, 1) }
+                    SettingsButton { theme: root.theme; text: "←"; Accessible.name: "Move " + Widgets.labels[entry.modelData] + " left"; enabled: root.writable && Widgets.canMove(section.modelData, section.order, entry.index, -1); onClicked: root.prefs.bar[section.modelData + "Order"] = Widgets.move(section.modelData, root.prefs.bar[section.modelData + "Order"], entry.modelData, -1) }
+                    SettingsButton { theme: root.theme; text: "→"; Accessible.name: "Move " + Widgets.labels[entry.modelData] + " right"; enabled: root.writable && Widgets.canMove(section.modelData, section.order, entry.index, 1); onClicked: root.prefs.bar[section.modelData + "Order"] = Widgets.move(section.modelData, root.prefs.bar[section.modelData + "Order"], entry.modelData, 1) }
                 }
             }
         }

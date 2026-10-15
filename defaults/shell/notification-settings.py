@@ -10,6 +10,7 @@ from settings_support import atomic, check_revision, cli, config_home, digest, l
 
 PATH = config_home() / 'blankweave/notifications.json'
 RULES = config_home() / 'dunst/dunstrc.d/90-blankweave-notifications.conf'
+STATE = Path(os.environ.get('XDG_RUNTIME_DIR', str(config_home() / 'blankweave/runtime'))) / 'blankweave/notifications-state.json'
 DEFAULT = dict(manual=False, schedule=False, start='22:00', end='08:00', blocked=[])
 
 
@@ -65,10 +66,58 @@ def paused():
     return value == 'true'
 
 
+def set_paused(value):
+    if paused() != value: run(['dunstctl', 'set-paused', str(value).lower()])
+    if paused() != value: raise ValueError('Dunst did not accept the pause state.')
+
+
+def observation(actual, period):
+    raw = read(STATE)
+    state = json.loads(raw) if raw else dict(paused=actual, quiet=period, owned=False)
+    if not isinstance(state, dict) or set(state) != {'paused', 'quiet', 'owned'} or any(type(v) is not bool for v in state.values()):
+        raise ValueError('Invalid notification session state.')
+    if state['paused'] != actual:
+        # Another controller owns this decision, even during quiet hours.
+        state['owned'] = False
+    return state
+
+
+def transition(state, actual, period):
+    state = dict(state)
+    wanted = actual
+    if period and not state['quiet'] and not actual:
+        wanted = True
+        state['owned'] = True
+    elif not period and state['quiet'] and state['owned']:
+        wanted = False
+        state['owned'] = False
+    state.update(paused=wanted, quiet=period)
+    return state
+
+
 def reconcile(value):
-    wanted = value['manual'] or quiet(value)
-    if paused() != wanted: run(['dunstctl', 'set-paused', str(wanted).lower()])
-    if paused() != wanted: raise ValueError('Dunst did not accept the pause state.')
+    actual = paused()
+    period = quiet(value)
+    old_state, old_policy = read(STATE), read(PATH)
+    state = observation(actual, False)
+    value = dict(value)
+    if old_state is None:
+        # Restore saved manual DND once per login, never continuously enforce it.
+        actual = actual or value['manual']
+    elif state['paused'] != actual:
+        value['manual'] = actual
+    state = transition(state, actual, period)
+    written_state = json.dumps(state) + '\n'
+    written_policy = json.dumps(value, indent=2) + '\n'
+    original_pause = paused()
+    try:
+        set_paused(state['paused'])
+        if old_policy != written_policy: atomic(PATH, written_policy)
+        if old_state != written_state: atomic(STATE, written_state)
+    except Exception:
+        restore(PATH, old_policy, written_policy); restore(STATE, old_state, written_state)
+        set_paused(original_pause)
+        raise
 
 
 def status():
@@ -77,8 +126,8 @@ def status():
     history = json.loads(run(['dunstctl', 'history']))
     names = [r.get('appname', {}).get('data', '') for r in history.get('data', [[]])[0]]
     apps = sorted(set(a for a in names + value['blocked'] if valid_app(a)), key=str.casefold)
-    return dict(revision=digest([read(PATH), read(RULES), config_files(), actual]), policy=value,
-                paused=actual, quiet=quiet(value), apps=apps, writable=not PATH.is_symlink() and not RULES.is_symlink())
+    return dict(revision=digest([read(PATH), read(RULES), read(STATE), config_files(), actual]), policy=value,
+                paused=actual, quiet=quiet(value), apps=apps, writable=not PATH.is_symlink() and not RULES.is_symlink() and not STATE.is_symlink())
 
 
 def apply(request):
@@ -87,6 +136,12 @@ def apply(request):
         check_revision(request, current)
         if not current['writable']: raise ValueError('Notification preferences are symlinked; edit their source.')
         value = dict(current['policy'])
+        old_state = read(STATE)
+        state = observation(current['paused'], current['quiet'])
+        # Preserve an existing external pause on the first preferences edit.
+        # An observed external change supersedes a previously saved manual value.
+        if old_state is None or state['paused'] != current['paused']:
+            value['manual'] = current['paused']
         action = request.get('action')
         if action == 'manual' and type(request.get('value')) is bool: value['manual'] = request['value']
         elif action == 'schedule':
@@ -102,13 +157,21 @@ def apply(request):
         # policy validation is reusable without reading a candidate from disk.
         validate(value)
         generated = rules(value)
+        if action == 'manual':
+            state.update(paused=value['manual'], quiet=quiet(value), owned=False)
+        elif action == 'schedule':
+            state = transition(state, current['paused'], quiet(value))
+        else:
+            state['paused'] = current['paused']
+        written_state = json.dumps(state) + '\n'
         try:
             atomic(RULES, generated)
             run(['dunstctl', 'reload'])
             atomic(PATH, written)
-            reconcile(value)
+            set_paused(state['paused'])
+            atomic(STATE, written_state)
         except Exception:
-            restore(PATH, old, written); restore(RULES, old_rules, generated)
+            restore(PATH, old, written); restore(RULES, old_rules, generated); restore(STATE, old_state, written_state)
             run(['dunstctl', 'reload'])
             run(['dunstctl', 'set-paused', str(current['paused']).lower()])
             raise
@@ -127,7 +190,7 @@ if __name__ == '__main__':
         try:
             if sys.argv[1] == 'toggle':
                 state = status()
-                apply(dict(revision=state['revision'], action='manual', value=not state['policy']['manual']))
+                apply(dict(revision=state['revision'], action='manual', value=not state['paused']))
             elif PATH.exists():
                 with locked('notifications'): reconcile(policy())
         except Exception as error:

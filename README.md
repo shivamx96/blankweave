@@ -592,8 +592,10 @@ generated files. A custom compositor configuration must load Blankweave's
 - **Notifications:** Settings → Apps controls manual Do Not Disturb, daily quiet
   hours, and popup muting for apps seen in notification history. Quiet hours use
   local time, can cross midnight, and continue while Settings is closed. Manual
-  DND and quiet hours both need to be off to resume notifications. Muted popups
-  remain in history. The bar uses the same persistent DND policy.
+  pause/resume changes, including external Dunst controls, override the current
+  quiet-hours window. Scheduling resumes at the next window; ending a window
+  only releases a pause created by that schedule. Muted popups remain in history.
+  The bar toggles the actual Dunst pause state.
 - **Startup applications:** Enable or disable existing XDG autostart entries for
   the next sign-in. System entries use reversible user overrides; personal
   desktop restrictions and commands are preserved. Core desktop services are
@@ -603,7 +605,9 @@ generated files. A custom compositor configuration must load Blankweave's
   changes and reconnects. Use theme wallpaper removes that display's override.
   The lock screen retains the shared theme/cycle wallpaper.
 - **Bar widgets:** Show, hide, and reorder widgets within the left, center, and
-  right sections. Preferences apply across displays. System and power menus stay
+  right sections. The right side retains separate application, device-control,
+  and system-meter groups; reordering stays within those groups. Preferences
+  apply across displays. System and power menus stay
   available; Restore default widgets resets visibility and order.
 - **Web apps:** Settings → Apps creates named HTTP(S) apps through Helium and
   removes user-created entries after confirmation. Browser logins/data are kept.

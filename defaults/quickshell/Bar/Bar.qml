@@ -5,6 +5,7 @@ import Quickshell.Hyprland
 import Quickshell.Wayland
 import "../Components"
 import "../Modules"
+import "../Services/BarWidgets.js" as Widgets
 
 PanelWindow {
     id: root
@@ -215,11 +216,19 @@ PanelWindow {
             anchors.left: parent.left; anchors.leftMargin: root.theme.sectionPadding
             anchors.verticalCenter: parent.verticalCenter
         }
-        WidgetSection {
+        ClockCenteredLayout {
             id: centerIsland
-            bar: root; theme: root.theme; group: "center"
             anchors.horizontalCenter: parent.horizontalCenter
             anchors.verticalCenter: parent.verticalCenter; z: 2
+            clockVisible: centerClock.visibleIds.includes("clock")
+            weatherFirst: Widgets.order("center", root.preferences.centerOrder)[0] === "weather"
+            clockContent: WidgetSection {
+                id: centerClock
+                bar: root; theme: root.theme; group: "center"; included: ["clock"]
+            }
+            weatherContent: WidgetSection {
+                bar: root; theme: root.theme; group: "center"; included: ["weather"]
+            }
         }
         WidgetSection {
             id: rightIsland
