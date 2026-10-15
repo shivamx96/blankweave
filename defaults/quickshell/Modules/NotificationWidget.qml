@@ -49,8 +49,8 @@ WidgetFrame {
     active: notificationPanel.open
     attention: Number(status.waitingCount || 0) > 0
     tooltip: Boolean(status.paused)
-        ? "Do not disturb · " + Number(status.waitingCount || 0) + " waiting\nRight-click to resume notifications"
-        : Number(status.historyCount || 0) + " archived notifications\nRight-click: do not disturb"
+        ? "Do not disturb · " + Number(status.waitingCount || 0) + " waiting\nRight-click: toggle manual DND"
+        : Number(status.historyCount || 0) + " archived notifications\nRight-click: toggle manual DND"
 
     onPressed: button => {
         if (button === Qt.LeftButton) {

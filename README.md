@@ -586,3 +586,35 @@ files and attempt to restore the running configuration.
 Keep handwritten settings in `overrides/hyprland.lua` rather than editing the
 generated files. A custom compositor configuration must load Blankweave's
 `hypr/input.lua` before its personal overrides to use these controls.
+
+### More native Settings controls
+
+- **Notifications:** Settings → Apps controls manual Do Not Disturb, daily quiet
+  hours, and popup muting for apps seen in notification history. Quiet hours use
+  local time, can cross midnight, and continue while Settings is closed. Manual
+  DND and quiet hours both need to be off to resume notifications. Muted popups
+  remain in history. The bar uses the same persistent DND policy.
+- **Startup applications:** Enable or disable existing XDG autostart entries for
+  the next sign-in. System entries use reversible user overrides; personal
+  desktop restrictions and commands are preserved. Core desktop services are
+  managed separately.
+- **Wallpaper:** Settings → Appearance selects PNG, JPEG, or WebP images and
+  fill, fit, stretch, or center modes per display. Custom choices survive theme
+  changes and reconnects. Use theme wallpaper removes that display's override.
+  The lock screen retains the shared theme/cycle wallpaper.
+- **Bar widgets:** Show, hide, and reorder widgets within the left, center, and
+  right sections. Preferences apply across displays. System and power menus stay
+  available; Restore default widgets resets visibility and order.
+- **Web apps:** Settings → Apps creates named HTTP(S) apps through Helium and
+  removes user-created entries after confirmation. Browser logins/data are kept.
+  Bundled apps remain managed by installation updates.
+- **System:** View hardware/software details and run read-only health checks.
+  Diagnostics uses `blankweave doctor --normal --report`, without elevation, and
+  retains the last report locally for viewing or copying. Protected checks can
+  be skipped; this does not perform repairs or updates.
+
+These preferences survive updates. Notifications use `notifications.json` and
+one Dunst drop-in; wallpapers use `wallpapers.json`; bar widgets use `shell.json`
+under `~/.config/blankweave`. Startup overrides live in `~/.config/autostart` and
+web-app entries in `~/.local/share/applications`. Diagnostics reports are stored
+privately under `~/.local/state/blankweave`.
