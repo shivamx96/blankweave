@@ -1148,3 +1148,12 @@ marked by Blankweave offer reset to the inherited system entry. Personal entries
 keep their other keys, localized names, desktop restrictions, and commands.
 Symlinked user entries and malformed files are read-only. Revisions include
 source contents and the current desktop; settings follow XDG directory precedence.
+
+`wallpaper-settings.py` owns `wallpapers.json`: per-display PNG/JPEG/WebP paths and
+crop/fit/stretch/center modes. Unique monitor descriptions survive connector
+changes; identical descriptions use connector-qualified keys. Writes reject stale
+monitor snapshots, confirm awww image readback, and restore the previous image on
+failure. Theme/cycle/hotplug painting re-applies custom overrides afterward;
+reset follows the active theme. Missing custom files report errors without
+silently deleting preferences. Lock-screen wallpaper still follows the shared
+base theme/cycle source. Native image selection snapshots the target/revision.

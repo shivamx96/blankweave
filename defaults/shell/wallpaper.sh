@@ -181,3 +181,17 @@ case "${1:-random}" in
         exit 1
         ;;
 esac
+
+wallpaper_status=$?
+[ "$wallpaper_status" -eq 0 ] || exit "$wallpaper_status"
+
+# Theme/cycle paint the base first, then restore saved per-display choices.
+# Empty preferences are inert, including during first login and tests.
+wallpaper_settings="$(dirname -- "$0")/wallpaper-settings.py"
+if [ -f "${XDG_CONFIG_HOME:-$HOME/.config}/blankweave/wallpapers.json" ] && [ -f "$wallpaper_settings" ]; then
+    if [ "${1:-}" = restore ]; then
+        python3 "$wallpaper_settings" restore "${2:-}"
+    else
+        python3 "$wallpaper_settings" restore
+    fi
+fi

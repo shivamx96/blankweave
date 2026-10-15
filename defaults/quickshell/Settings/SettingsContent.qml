@@ -14,6 +14,7 @@ Rectangle {
     property var battery: null
     property var idle: null
     property var startup: null
+    property var wallpaper: null
     property var notifications: null
     property var defaultApps: null
     property var accessibility: null
@@ -423,7 +424,8 @@ Rectangle {
                                                     Layout.fillWidth: true
                                                     theme: root.theme
                                                     setting: settingGroup.modelData
-                                                    backend: settingGroup.modelData.kind === "startup" ? root.startup
+                                                    backend: settingGroup.modelData.kind === "wallpaper" ? root.wallpaper
+                                                        : settingGroup.modelData.kind === "startup" ? root.startup
                                                         : settingGroup.modelData.kind === "notifications" ? root.notifications
                                                         : settingGroup.modelData.kind === "default-apps" ? root.defaultApps
                                                         : settingGroup.modelData.kind === "accessibility" ? root.accessibility

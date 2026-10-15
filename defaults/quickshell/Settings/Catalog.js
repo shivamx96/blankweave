@@ -14,7 +14,7 @@ var pages = [
             { id: "widgets", title: "Widgets & order", description: "Choose what appears in your bar.", kind: "action", action: "Customize" }
         ] },
         { title: "Personalization", rows: [
-            { id: "wallpaper", title: "Wallpaper", description: "Choose a background and fit for each display.", kind: "action", action: "Choose image" },
+            { id: "wallpaper", title: "Wallpaper", description: "Choose a background and fit for each display.", kind: "wallpaper", live: true },
             { id: "fonts", title: "Text size", description: "Resize shell text and text in compatible applications.", kind: "interface-size", live: true },
             { id: "cursor", title: "Pointer size", description: "Make the pointer easier to see.", kind: "interface-size", live: true }
         ] }
