@@ -56,6 +56,8 @@ FloatingWindow {
 
     property SettingsTask wallpaper: SettingsTask { script: "wallpaper-settings.py"; active: root.visible && !root.minimized && content.page !== null && content.page.id === "appearance" }
 
+    property SettingsTask webapps: SettingsTask { script: "webapps-settings.py"; active: root.visible && !root.minimized && content.page !== null && content.page.id === "apps" }
+
     property SettingsTask notifications: SettingsTask { script: "notification-settings.py"; active: root.visible && !root.minimized && content.page !== null && content.page.id === "apps" }
 
     property SettingsDefaultApps defaultApps: SettingsDefaultApps {
@@ -118,6 +120,7 @@ FloatingWindow {
         idle: root.idle
         startup: root.startup
         wallpaper: root.wallpaper
+        webapps: root.webapps
         notifications: root.notifications
         defaultApps: root.defaultApps
         accessibility: root.accessibility

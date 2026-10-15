@@ -6,7 +6,7 @@
 # instance, so a web app shares its logins with the browser.
 #
 #   webapp.sh launch <url>
-#   webapp.sh install <name> <url> <icon>   icon: a URL or a file, PNG or SVG
+#   webapp.sh install <name> <url> <icon>   icon: a URL or a file, PNG or SVG; - uses the browser icon
 #   webapp.sh remove <name>
 #   webapp.sh list
 #   webapp.sh sync                          converge the bundled entries
@@ -186,7 +186,11 @@ command_install() {
     local name=$1 url=$2 icon_source=$3 slug icon
     validate_url "$url"
     slug=$(slugify "$name")
-    icon=$(install_icon "$slug" "$icon_source" strict)
+    if [[ "$icon_source" == - ]]; then
+        icon=$FALLBACK_ICON
+    else
+        icon=$(install_icon "$slug" "$icon_source" strict)
+    fi
     write_entry "$name" "$url" "$icon" user
     refresh_database
     printf 'Installed %s -> %s\n' "$name" "$(desktop_file "$slug")"
