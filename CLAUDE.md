@@ -1157,3 +1157,10 @@ failure. Theme/cycle/hotplug painting re-applies custom overrides afterward;
 reset follows the active theme. Missing custom files report errors without
 silently deleting preferences. Lock-screen wallpaper still follows the shared
 base theme/cycle source. Native image selection snapshots the target/revision.
+
+Bar widget visibility and within-section ordering share the existing
+`ShellPreferences` writer (`shell.json`). Normalization drops unknown/duplicate
+IDs, appends newly introduced widgets, and keeps system/power menus available.
+`WidgetSection` loads only enabled widgets and retains compact-window/battery
+availability behavior; all displays use the same preferences. Settings exposes
+left/center/right sections and reset without creating another file writer.
