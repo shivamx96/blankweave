@@ -109,3 +109,21 @@ Blankweave release versions.
 - Explain optional profiles, preview package selections, and allow editing individual sections from the setup review before applying.
 - Save private installation logs and show recovery commands that reuse saved choices.
 - Check basic installation prerequisites early and show numbered stages, elapsed time, and the active stage on failure.
+
+## 0.10.0
+
+- Add persistent idle timeouts to Settings with separate dimming, locking,
+  screen-off, and sleep delays for battery and plugged-in use.
+- Add mouse and touchpad controls, keyboard layouts and switching shortcuts,
+  and an editor for the bundled desktop keyboard shortcuts with conflict checks.
+- Add persistent text and pointer sizes, reduced motion, and high contrast,
+  shared with compatible applications through desktop settings.
+- Choose default applications for links, folders, documents, and media.
+- Manage notifications with do-not-disturb, quiet-hours schedules, and per-app
+  popup muting shared between Settings and the bar.
+- Manage startup applications for the next sign-in and sites that open as web
+  applications.
+- Choose per-display wallpapers and fit modes that survive connector changes.
+- Customize bar widget visibility and order within each section.
+- Show system information and run read-only diagnostics from Settings.
+  The minimum supported configuration rollback release remains `0.1.0`.
