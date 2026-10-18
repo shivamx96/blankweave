@@ -438,6 +438,13 @@ optional providers for storage, printing, scanning, firmware, backups, VPNs,
 Flatpak, and assistive tools; the `communication` profile supplies LocalSend.
 Services such as Samba and CUPS are enabled by explicit setup actions.
 
+Operation forms retain non-secret drafts while you navigate Settings or close
+and reopen its window in the same shell session. Failed or cancelled operations
+keep those inputs for review and retry; successful jobs clear their forms.
+Passwords are cleared after submission and when leaving a page. Drafts are never
+saved to disk and do not survive a shell restart. If the available settings or
+target changes, review the current action before submitting again.
+
 Storage supports directory scans, thumbnail-cache cleanup, removable-drive
 mount/unlock/eject, and SMART health/self-tests. Backups use encrypted restic
 repositories on local storage or SSH/SFTP, with passwords in Secret Service,
