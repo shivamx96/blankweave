@@ -117,6 +117,7 @@ FloatingWindow {
     }
 
     SettingsContent {
+        onCopyRequested: text => Quickshell.clipboardText = text
         id: content
         anchors.fill: parent
         theme: root.theme

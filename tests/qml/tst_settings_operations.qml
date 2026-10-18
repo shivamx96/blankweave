@@ -27,6 +27,7 @@ TestCase {
         property var request: null
         property string stamp: ""
         property string cancelled: ""
+        property string dismissedJobId: ""
         function apply(value, revision) { request = value; stamp = revision }
         function refresh(clear) { error = "" }
         function cancelJob(id) { cancelled = id }

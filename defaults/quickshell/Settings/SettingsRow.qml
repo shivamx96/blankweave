@@ -8,6 +8,7 @@ Item {
     id: root
     required property var theme
     signal settingRequested(string settingId)
+    signal copyRequested(string text)
     required property var setting
     property var backend: null
     readonly property bool live: Boolean(setting.live && backend)
@@ -93,7 +94,7 @@ Item {
 
     Component {
         id: operationsControl
-        SettingsOperations { theme: root.theme; settingId: root.setting.id; backend: root.backend; onSettingRequested: id => root.settingRequested(id) }
+        SettingsOperations { theme: root.theme; settingId: root.setting.id; backend: root.backend; onSettingRequested: id => root.settingRequested(id); onCopyRequested: text => root.copyRequested(text) }
     }
 
     Component {

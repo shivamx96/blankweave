@@ -443,6 +443,13 @@ optional providers for storage, printing, scanning, firmware, backups, VPNs,
 Flatpak, and assistive tools; the `communication` profile supplies LocalSend.
 Services such as Samba and CUPS are enabled by explicit setup actions.
 
+While Settings is open, a task bar tracks running operations across categories
+and keeps their outcomes available until dismissed or the shell restarts. It also
+finds jobs that were already running when the shell started. Reports show status
+and elapsed time when timestamps are available, with expandable details and an
+explicit **Copy report** action. Dismissing a report hides it for this shell
+session without deleting the saved report. Progress percentages are not estimated.
+
 Operation forms retain non-secret drafts while you navigate Settings or close
 and reopen its window in the same shell session. Failed or cancelled operations
 keep those inputs for review and retry; successful jobs clear their forms.

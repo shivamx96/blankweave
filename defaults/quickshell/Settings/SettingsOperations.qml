@@ -9,6 +9,7 @@ ColumnLayout {
     required property string settingId
     required property var backend
     signal settingRequested(string settingId)
+    signal copyRequested(string text)
     readonly property var draft: backend ? backend.draft : null
     readonly property var editing: draft ? draft.editing : null
     readonly property var values: draft ? draft.values : ({})
@@ -211,14 +212,13 @@ ColumnLayout {
             SettingsButton { theme: root.theme; text: "Cancel"; enabled: root.draft && !root.draft.pending; onClicked: root.draft.discard() }
         }
     }
-    TextEdit {
-        selectionColor: root.theme.accentSurface
-        selectedTextColor: root.theme.text
+    SettingsJobReport {
         Layout.fillWidth: true
-        visible: root.job !== null
-        text: root.job ? root.job.label + " · " + root.job.phase + "\n" + root.job.message : ""
-        textFormat: TextEdit.PlainText; readOnly: true; selectByMouse: true; wrapMode: TextEdit.WrapAnywhere
-        color: root.theme.text; font.family: root.theme.fontFamily; font.pixelSize: root.theme.smallTextSize
+        theme: root.theme
+        job: root.job
+        visible: root.job !== null && root.backend.dismissedJobId !== root.job.id
+        onCopyRequested: text => root.copyRequested(text)
+        onDismissRequested: id => root.backend.dismissedJobId = id
     }
     SettingsButton {
         theme: root.theme; text: "Cancel operation"

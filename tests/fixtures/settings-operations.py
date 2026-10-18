@@ -4,6 +4,9 @@ import os
 from pathlib import Path
 import sys
 
+if sys.argv[1:] == ['jobs']:
+    print('[]')
+    sys.exit(0)
 domain, command = sys.argv[1:]
 state = Path(os.environ['SETTINGS_OPERATIONS_LOG'] + '.' + domain)
 with Path(os.environ['SETTINGS_OPERATIONS_LOG']).open('a') as stream:

@@ -114,6 +114,7 @@ def worker(domain, token, request):
         except Exception as error:
             job.update(phase='failed', message=str(error)[:4000])
         job['cancellable'] = False
+        job['finished'] = datetime.datetime.now().astimezone().isoformat(timespec='seconds')
         atomic(job_path(domain), json.dumps(job))
 
 
@@ -124,12 +125,23 @@ def cancel(domain, request):
             raise ValueError('This job cannot be cancelled.')
         if identity(job['pid']) != job['process']: raise ValueError('The worker has already stopped.')
         os.killpg(job['pid'], signal.SIGTERM)
-        job.update(phase='cancelled', cancellable=False, message='Cancelled. Review current state before retrying.')
+        job.update(phase='cancelled', cancellable=False, message='Cancelled. Review current state before retrying.',
+                   finished=datetime.datetime.now().astimezone().isoformat(timespec='seconds'))
         atomic(job_path(domain), json.dumps(job))
 
 
 def main():
     try:
+        if sys.argv[1:] == ['jobs']:
+            reports = []
+            for domain in PROVIDERS:
+                try:
+                    job = read_job(domain)
+                    if job: reports.append(dict(job, domain=domain))
+                except (OSError, ValueError, KeyError, TypeError):
+                    continue  # One damaged report must not hide other running jobs.
+            print(json.dumps(reports))
+            return 0
         domain, command = sys.argv[1:3]
         provider(domain)
         if command == 'status': print(json.dumps(status(domain)))
