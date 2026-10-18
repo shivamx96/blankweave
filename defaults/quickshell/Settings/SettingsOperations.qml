@@ -1,6 +1,7 @@
 pragma ComponentBehavior: Bound
 import QtQuick
 import QtQuick.Layouts
+import "OperationActions.js" as Actions
 
 ColumnLayout {
     id: root
@@ -11,12 +12,23 @@ ColumnLayout {
     readonly property var editing: draft ? draft.editing : null
     readonly property var values: draft ? draft.values : ({})
     readonly property var operations: backend && backend.ready ? backend.data.actions || [] : []
+    readonly property var primaryAction: Actions.primary(settingId, operations)
+    readonly property var secondaryActions: operations.filter(action => !primaryAction || action.key !== primaryAction.key)
+    readonly property bool canOperate: backend && backend.writable && draft && !draft.pending
+    readonly property bool operationBusy: Boolean((backend && (backend.writing || backend.data.writable === false)) || (draft && draft.pending))
+    onOperationBusyChanged: if (operationBusy) actionMenu.close()
     readonly property var job: backend && backend.ready ? backend.data.job || null : null
     spacing: 10
     function begin(operation) { draft.begin(operation) }
     function submit() { draft.submit() }
+    function activate(operation, capturedRevision) {
+        if (!canOperate || editing !== null) return
+        draft.begin(operation)
+        draft.revision = capturedRevision
+        if (!draft.stale && Actions.direct(settingId, operation)) draft.submit()
+    }
     Component.onDestruction: if (draft) draft.clearSecrets()
-    onVisibleChanged: if (!visible && draft) draft.clearSecrets()
+    onVisibleChanged: if (!visible) { actionMenu.close(); if (draft) draft.clearSecrets() }
     Repeater {
         model: root.backend && root.backend.ready ? root.backend.data.details || [] : []
         delegate: Text {
@@ -26,21 +38,45 @@ ColumnLayout {
             color: root.theme.text; font.family: root.theme.fontFamily; font.pixelSize: root.theme.smallTextSize
         }
     }
-    RowLayout {
+    Flow {
         Layout.fillWidth: true
+        spacing: 8
         visible: root.operations.length > 0 && root.editing === null
-        SettingsComboBox {
-            id: operationChoice
-            objectName: "operationChoice"
+        SettingsButton {
+            objectName: "primaryOperation"
             theme: root.theme
-            Layout.fillWidth: true
-            model: root.operations; textRole: "label"
-            Accessible.name: "Operation"
+            text: Actions.label(root.settingId, root.primaryAction)
+            visible: root.primaryAction !== null
+            enabled: root.canOperate
+            width: Math.min(implicitWidth, parent.width)
+            onClicked: root.activate(root.primaryAction, root.backend.data.revision)
         }
         SettingsButton {
-            theme: root.theme; text: "Configure…"
-            enabled: root.backend && root.backend.writable && operationChoice.currentIndex >= 0
-            onClicked: root.begin(root.operations[operationChoice.currentIndex])
+            id: moreButton
+            objectName: "moreOperations"
+            theme: root.theme
+            text: root.primaryAction ? "More actions ▾" : "Actions ▾"
+            Accessible.name: "More actions"
+            visible: root.secondaryActions.length > 0
+            enabled: root.canOperate
+            width: Math.min(implicitWidth, parent.width)
+            onClicked: {
+                actionMenu.entries = root.secondaryActions.map(action => ({
+                    action: JSON.parse(JSON.stringify(action)),
+                    label: Actions.label(root.settingId, action),
+                    revision: root.backend.data.revision
+                }))
+                actionMenu.popup()
+            }
+            SettingsActionMenu {
+                id: actionMenu
+                objectName: "operationActionsMenu"
+                theme: root.theme
+                enabled: root.canOperate
+                width: Math.min(300, root.width)
+                y: moreButton.height + 4
+                onChosen: entry => root.activate(entry.action, entry.revision)
+            }
         }
     }
     ColumnLayout {
