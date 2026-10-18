@@ -134,3 +134,40 @@ function matches(page, query) {
 function search(query) {
     return pages.filter(function(page) { return matches(page, query); });
 }
+
+// Search each setting independently; never combine words from unrelated rows.
+var searchAliases = {
+    "vpn": "vpn tailscale private network tunnel",
+    "datetime": "timezone time zone clock date locale region language ntp",
+    "assistive": "screen reader orca magnifier zoom on screen keyboard accessibility",
+    "backup": "backup backups back up schedule retention restore point restic",
+    "restore": "restore recover recovery backup files",
+    "snapshots": "snapshots snapper system recovery",
+    "disk-usage": "disk space storage usage cleanup free space",
+    "installed": "install uninstall remove software packages applications",
+    "firmware": "firmware bios uefi device update",
+    "printers": "printer scanner print scan",
+    "hibernate": "hibernate hibernation resume swap"
+};
+
+function searchSettings(query) {
+    var normalized = String(query || "").toLowerCase().trim();
+    if (!normalized) return [];
+    var terms = normalized.split(/\s+/);
+    var matches = [];
+    pages.forEach(function(page) {
+        page.groups.forEach(function(group) {
+            group.rows.forEach(function(row) {
+                var title = row.title.toLowerCase();
+                var own = [row.title, row.description, searchAliases[row.id] || ""].join(" ").toLowerCase();
+                var text = [own, page.title, group.title].join(" ").toLowerCase();
+                if (!terms.every(function(term) { return text.indexOf(term) !== -1; })) return;
+                var score = title === normalized ? 0 : title.indexOf(normalized) !== -1 ? 1
+                    : terms.every(function(term) { return own.indexOf(term) !== -1; }) ? 2 : 3;
+                matches.push({id: row.id, pageId: page.id, title: row.title,
+                    description: row.description, breadcrumb: page.title + " › " + group.title, score: score});
+            });
+        });
+    });
+    return matches.sort(function(a, b) { return a.score - b.score; });
+}
