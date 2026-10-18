@@ -4,7 +4,7 @@ import os
 from pathlib import Path
 import shutil
 import subprocess
-from settings_operations import action, choice, field, installed, path_value, privileged, require, run, select, state
+from settings_operations import missing, notice, action, choice, field, installed, path_value, privileged, require, run, select, state
 
 
 def blocks():
@@ -58,7 +58,7 @@ def status(domain):
                       action('preview-cleanup', 'Review thumbnail cleanup', cancellable=True)] +
                      ([action('cleanup', 'Clear thumbnail cache', confirm=f'Delete generated thumbnails in {cache}? Applications will recreate them.')] if cache.exists() else []),
                      [str(cache), stamp])
-    if not installed('lsblk'): return state('Install util-linux to inspect block devices.')
+    if not installed('lsblk'): return state(notices=[missing('util-linux')])
     rows = blocks()
     if domain == 'disk-health':
         disks = health_disks(rows)
@@ -68,7 +68,9 @@ def status(domain):
             target = field('device', 'Drive', options[0]['value'], options)
             actions = [action('health', 'Read drive health', [target]),
                        action('self-test', 'Start short self-test', [target], 'Start a drive self-test. Read health again later to see the result.')]
-        return state('Health telemetry requires smartmontools and administrator authorization. Unsupported telemetry does not mean a drive is healthy.', [p['label'] for p in options], actions, stable(disks))
+        notices = [missing('smartmontools')] if not installed('smartctl') else []
+        if not options: notices.append(notice('no-device', 'No physical drives found', 'Connect a physical drive, then refresh to check available health information.'))
+        return state('Health telemetry requires smartmontools and administrator authorization. Unsupported telemetry does not mean a drive is healthy.', [p['label'] for p in options], actions, stable(disks), notices)
     rows = removable(rows)
     options = [choice(r['path'], r['path'] + ' · ' + str(r.get('fstype') or r['type']) + ' · ' + ', '.join(filter(None, r.get('mountpoints', [])))) for r in rows]
     actions = []
@@ -78,7 +80,9 @@ def status(domain):
                    action('unlock', 'Unlock encrypted volume', [target, field('password', 'Passphrase', secret=True)]),
                    action('lock', 'Lock encrypted volume', [target]),
                    action('eject', 'Safely power off drive', [target], 'Unmount every filesystem on this drive before powering it off.')]
-    return state('Only removable/USB storage is offered here. UDisks handles authorization and busy-device checks. Install udisks2 if controls are unavailable.', [p['label'] for p in options] or ['No removable storage found.'], actions, stable(rows))
+    notices = [missing('udisks2')] if not installed('udisksctl') else []
+    if not options: notices.append(notice('no-device', 'No removable drives connected', 'Connect a USB or removable drive, then refresh this section. Internal system drives are not listed here.'))
+    return state('UDisks handles authorization and checks whether removable drives are in use.', [p['label'] for p in options], actions, stable(rows), notices)
 
 
 def apply(domain, request):

@@ -46,6 +46,14 @@ Rectangle {
     color: theme.canvas
 
     function focusSearch() { search.forceActiveFocus(); search.selectAll() }
+    function openSetting(id) {
+        for (const page of Catalog.pages) {
+            if (page.groups.some(group => group.rows.some(row => row.id === id))) {
+                showResult({id: id, pageId: page.id})
+                return
+            }
+        }
+    }
 
     function showResult(result) {
         if (!result) return
@@ -547,6 +555,7 @@ Rectangle {
                                                     color: root.theme.divider
                                                 }
                                                 SettingsRow {
+                                                    onSettingRequested: id => root.openSetting(id)
                                                     Layout.fillWidth: true
                                                     theme: root.theme
                                                     setting: settingGroup.modelData

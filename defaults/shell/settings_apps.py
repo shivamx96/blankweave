@@ -4,7 +4,7 @@ import os
 from pathlib import Path
 import subprocess
 from settings_support import atomic, config_home, digest, read
-from settings_operations import action, choice, field, installed, privileged, require, run, select, state
+from settings_operations import missing, notice, action, choice, field, installed, privileged, require, run, select, state
 
 PLAN = config_home() / 'blankweave/settings-package-plan.json'
 COMMAND = Path.home() / '.local/bin/blankweave'
@@ -12,7 +12,7 @@ RECOVERY = Path(os.environ.get('XDG_STATE_HOME', Path.home() / '.local/state')) 
 
 
 def flatpaks():
-    return [line.split('\t')[0] for line in run(['flatpak', 'list', '--app', '--columns=application']).splitlines()]
+    return [line.split('\t')[0] for line in run(['flatpak', '--user', 'list', '--app', '--columns=application']).splitlines()]
 
 
 def packages():
@@ -26,7 +26,7 @@ def transaction(kind, package):
 
 def status(domain):
     if domain == 'installed':
-        if not installed('pacman'): return state('Native package management requires pacman.')
+        if not installed('pacman'): return state(notices=[notice('unsupported', 'Native package management is unavailable', 'This computer needs the Arch pacman package manager to manage native packages in Settings.')])
         rows = packages()
         plan = json.loads(read(PLAN) or 'null')
         actions = [action('search', 'Search software', [field('query', 'Search packages')], cancellable=True),
@@ -44,7 +44,7 @@ def status(domain):
             if apps: actions.append(action('flatpak-remove', 'Remove user Flatpak', [field('app', 'Application', apps[0], [choice(a) for a in apps])], 'Uninstall this application from your user installation? Saved application data is retained.'))
         return state('Native installations use existing repository metadata. AUR packages appear in inventory but must be built and reviewed with your AUR helper; Settings does not run unreviewed build scripts.', details, actions, [digest(rows), plan])
     if domain == 'permissions':
-        if not installed('flatpak'): return state('Install Flatpak to inspect sandbox permissions. Native applications do not have centrally revocable filesystem, microphone, or camera permissions.')
+        if not installed('flatpak'): return state('These controls apply to sandboxed Flatpak applications, not native packages.', notices=[missing('flatpak')])
         apps = flatpaks()
         actions = []
         if apps:
@@ -53,7 +53,7 @@ def status(domain):
                        action('revoke', 'Restrict application access', [target, field('scope', 'Permission', 'files', [choice('files', 'Direct host files'), choice('audio', 'Audio playback and microphone'), choice('devices', 'Direct device access'), choice('network', 'Network')])], 'Apply a user override. Restart the application. Existing portal grants are managed separately.'),
                        action('reset', 'Reset overrides', [target], 'Remove this user’s permission overrides and restore application defaults?'),
                        action('portal-reset', 'Reset portal decisions', [target], 'Forget saved portal decisions for this application. It may ask for access again.')]
-        return state('Flatpak controls apply only to sandboxed applications. Audio access includes playback and microphone together. Device restrictions are not a universal camera switch. Native applications remain outside this permission model.', apps, actions, apps)
+        return state('Flatpak controls apply only to sandboxed applications. Audio access includes playback and microphone together. Device restrictions are not a universal camera switch. Native applications remain outside this permission model.', apps, actions, apps, [] if apps else [notice('not-configured', 'No user Flatpak applications installed', 'Open Installed applications to install a user Flatpak. Native packages and system-wide Flatpaks are not managed by these permission controls.', 'installed')])
     if domain == 'updates':
         version = run([str(COMMAND), 'version']) if COMMAND.is_file() else 'Blankweave command is not installed.'
         actions = []
@@ -64,7 +64,9 @@ def status(domain):
         if installed('checkupdates'): actions.append(action('package-check', 'Check repository updates', cancellable=True))
         if installed('pacman', 'ghostty'): actions.append(action('package-update', 'Update system packages', confirm='Open a full pacman system upgrade for transaction review and administrator authorization.'))
         if installed('flatpak'): actions.append(action('flatpak-update', 'Update user Flatpaks', confirm='Update applications and runtimes in your user installation?'))
-        return state('Blankweave configuration rollback does not downgrade Arch packages. Interactive system updates continue in their own terminal when Settings closes.', [version], actions, str(COMMAND))
+        notices = [] if COMMAND.is_file() else [notice('missing-software', 'Blankweave updater is not installed', 'Complete or repair the Blankweave installation, then refresh. Available package-manager actions can still be used.')]
+        if not actions: notices.append(notice('missing-software', 'No update tools are available', 'Install the Blankweave desktop profile to restore its updater and package-management tools.'))
+        return state('Blankweave configuration rollback does not downgrade Arch packages. Interactive system updates continue in their own terminal when Settings closes.', [version], actions, str(COMMAND), notices)
     raise ValueError('Unknown application provider.')
 
 

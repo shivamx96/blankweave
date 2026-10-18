@@ -88,7 +88,76 @@ class Validation(unittest.TestCase):
         for provider, domain in [(apps, 'installed'), (apps, 'permissions'), (backup, 'backup'), (devices, 'firmware'), (devices, 'datetime'), (recovery, 'snapshots')]:
             with self.subTest(domain=domain), patch.object(provider, 'installed', return_value=False):
                 value = provider.status(domain)
-                self.assertFalse(value['actions']); self.assertTrue(value['message'])
+                self.assertFalse(value['actions']); self.assertTrue(value['notices'])
+                self.assertTrue(value['notices'][0]['nextStep'])
+
+
+class CapabilityGuidance(unittest.TestCase):
+    def test_drives_distinguish_missing_software_and_missing_devices(self):
+        with patch.object(storage, 'blocks', return_value=[]), patch.object(storage, 'installed', return_value=True):
+            value = storage.status('drives')
+            self.assertEqual([n['kind'] for n in value['notices']], ['no-device'])
+            self.assertNotIn('Install', value['message'])
+            self.assertFalse(value['actions'])
+        with patch.object(storage, 'blocks', return_value=[]), patch.object(storage, 'installed', side_effect=lambda command: command != 'udisksctl'):
+            self.assertEqual([n['kind'] for n in storage.status('drives')['notices']], ['missing-software', 'no-device'])
+
+    def test_restore_without_configuration_links_to_backup(self):
+        with patch.object(backup, 'installed', return_value=True), patch.object(backup, 'config', return_value=None):
+            value = backup.status('restore')
+            self.assertFalse(value['actions'])
+            self.assertEqual(value['notices'][0]['target'], 'backup')
+            self.assertEqual(value['notices'][0]['kind'], 'not-configured')
+            self.assertIn('configure', backup.status('backup')['actions'][0]['key'])
+
+    def test_backup_lists_only_missing_dependencies(self):
+        with patch.object(backup, 'installed', side_effect=lambda *commands: 'secret-tool' not in commands):
+            message = backup.status('backup')['notices'][0]['nextStep']
+            self.assertIn('libsecret', message)
+            self.assertNotIn('restic', message)
+
+    def test_empty_permissions_and_user_installation_scope(self):
+        with patch.object(apps, 'installed', return_value=True), patch.object(apps, 'run', return_value='') as run:
+            value = apps.status('permissions')
+            self.assertEqual(value['notices'][0]['target'], 'installed')
+            run.assert_called_once_with(['flatpak', '--user', 'list', '--app', '--columns=application'])
+
+    def test_snapshot_guidance_matches_filesystem(self):
+        with patch.object(recovery, 'installed', return_value=True), patch.object(recovery, 'run', return_value='ext4'), patch.object(Path, 'exists', return_value=False):
+            value = recovery.status('snapshots')
+            self.assertEqual(value['notices'][0]['kind'], 'unsupported')
+            self.assertEqual(value['notices'][0]['target'], 'backup')
+            self.assertFalse(value['actions'])
+        with patch.object(recovery, 'installed', return_value=True), patch.object(recovery, 'run', return_value='btrfs'), patch.object(Path, 'exists', return_value=False):
+            value = recovery.status('snapshots')
+            self.assertEqual(value['notices'][0]['kind'], 'not-configured')
+            self.assertEqual(value['actions'][0]['key'], 'setup')
+
+    def test_firmware_no_devices_does_not_claim_up_to_date(self):
+        with patch.object(devices, 'installed', return_value=True), patch.object(devices, 'devices', return_value=[]):
+            value = devices.status('firmware')
+            self.assertEqual(value['notices'][0]['kind'], 'no-device')
+            self.assertIn('does not mean', value['notices'][0]['nextStep'])
+
+    def test_stopped_print_service_is_not_a_missing_package(self):
+        with patch.object(devices, 'installed', return_value=True), patch.object(devices, 'printers', return_value=[]), patch.object(devices, 'run', return_value='scheduler is not running'):
+            self.assertEqual(devices.status('printers')['notices'][0]['kind'], 'service-unavailable')
+
+    def test_no_vpn_profiles_keeps_import_available(self):
+        with patch.object(network, 'installed', side_effect=lambda command: command == 'nmcli'), patch.object(network, 'profiles', return_value=[]), patch.object(network, 'run', return_value=''):
+            value = network.status('vpn')
+            self.assertEqual(value['notices'][0]['kind'], 'not-configured')
+            self.assertEqual(value['actions'][0]['key'], 'import')
+            self.assertNotIn('networkmanager', str(value['notices']))
+
+    def test_zram_only_hibernation_explains_missing_disk_swap(self):
+        def read(path):
+            return {'/sys/power/state':'freeze mem disk', '/sys/power/resume':'0:0',
+                    '/proc/swaps':'Filename Type Size Used Priority\n/dev/zram0 partition 4194304 0 100\n'}.get(str(path))
+        with patch.object(recovery, 'can_hibernate', return_value='na'), patch.object(recovery, 'read', side_effect=read), patch.object(Path, 'exists', return_value=False):
+            value = recovery.status('hibernate')
+            self.assertIn('disk-backed swap', value['notices'][0]['title'])
+            self.assertNotIn('hibernate', [a['key'] for a in value['actions']])
 
 
 class Providers(unittest.TestCase):
@@ -329,7 +398,7 @@ class Jobs(unittest.TestCase):
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory(); self.directory = Path(self.temp.name)
         self.env = {**os.environ, 'HOME': self.temp.name, 'XDG_CONFIG_HOME': str(self.directory / 'config'), 'XDG_STATE_HOME': str(self.directory / 'state'), 'PYTHONDONTWRITEBYTECODE': '1'}
-        for name in ('operations-settings.py', 'settings_support.py'):
+        for name in ('operations-settings.py', 'settings_support.py', 'settings_operations.py'):
             shutil.copy(ROOT / 'defaults/shell' / name, self.directory)
         (self.directory / 'settings_network.py').write_text('''import time
 from pathlib import Path
@@ -369,6 +438,13 @@ def apply(domain, request):
         self.assertEqual(json.loads(result.stdout)['jobId'], current['job']['id'])
         self.assertEqual(current['job']['message'], 'fixture completed')
         self.assertEqual(current['revision'], before['revision'])
+
+    def test_failed_status_has_service_guidance_without_actions(self):
+        (self.directory / 'settings_network.py').write_text('def status(domain):\n    raise ValueError("service offline")\n')
+        value = self.status()
+        self.assertEqual(value['notices'][0]['kind'], 'service-unavailable')
+        self.assertFalse(value['actions'])
+        self.assertIn('service offline', value['message'])
 
     def test_stale_revision_and_missing_confirmation_rejected(self):
         for request in ({'action': 'work', 'revision': 'stale', 'confirmed': True}, {'action': 'work', 'revision': self.status()['revision']}):

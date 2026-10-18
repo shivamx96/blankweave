@@ -14,6 +14,7 @@ import subprocess
 import sys
 import uuid
 from settings_support import atomic, check_revision, digest, locked
+from settings_operations import notice
 
 PROVIDERS = {
     'vpn': 'settings_network', 'sharing': 'settings_network',
@@ -62,7 +63,7 @@ def status(domain):
     try:
         data = provider(domain).status(domain)
     except Exception as error:
-        data = dict(message='Provider unavailable: ' + str(error)[:2000], details=[], actions=[], identity=None)
+        data = dict(message='Provider unavailable: ' + str(error)[:2000], details=[], actions=[], identity=None, notices=[notice('service-unavailable', 'Could not read current state', 'Refresh to try again. If this continues, check the service or connection named in the error below.')])
     data['revision'] = revision(data)
     data['job'] = read_job(domain)
     data['writable'] = not data['job'] or data['job']['phase'] not in ('starting', 'running')
