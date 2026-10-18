@@ -72,7 +72,7 @@ def status(domain):
         actions = [action('configure', 'Save backup settings', [field('repository', 'Repository (local path or sftp:user@host:/path)', data['repository'] if data else ''),
                    field('source', 'Source directory', data['source'] if data else str(Path.home())),
                    field('exclude', 'Excluded paths or patterns (one per line)', '\n'.join(data.get('exclude', [])) if data else '', multiline=True),
-                   field('keep', 'Backups to keep', data['keep'] if data else '14'),
+                   field('keep', 'Backups to keep', data['keep'] if data else '14', input_type='integer', minimum=1, maximum=365, hint='Keep between 1 and 365 backups per source and host. Older backups are removed only when you apply retention.'),
                    field('schedule', 'Schedule', data['schedule'] if data else 'off', [choice('off'), choice('daily'), choice('weekly')]),
                    field('password', 'Repository password (leave blank to keep the saved password)', secret=True)],
                    'Store the repository password in your keyring and save this schedule. Keep a separate copy of the password; backups cannot be decrypted without it.')]

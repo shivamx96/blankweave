@@ -270,6 +270,19 @@ class Providers(unittest.TestCase):
 
 
 class BackupConfiguration(unittest.TestCase):
+    def test_retention_control_bounds_match_backend_validation(self):
+        with patch.object(backup, 'installed', return_value=True), patch.object(backup, 'config', return_value=None):
+            fields = backup.status('backup')['actions'][0]['fields']
+        retention = next(field for field in fields if field['key'] == 'keep')
+        self.assertEqual(retention['inputType'], 'integer')
+        with tempfile.TemporaryDirectory() as tmp:
+            source = Path(tmp) / 'source'; source.mkdir()
+            data = dict(repository=str(Path(tmp) / 'repository'), source=str(source), schedule='off')
+            for keep in (retention['minimum'], retention['maximum']):
+                backup.validate(dict(data, keep=keep))
+            for keep in (retention['minimum'] - 1, retention['maximum'] + 1):
+                with self.assertRaises(ValueError): backup.validate(dict(data, keep=keep))
+
     def test_wrong_replacement_password_preserves_saved_credential(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp); source = root / 'source'; source.mkdir()

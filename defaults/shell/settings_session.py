@@ -46,8 +46,8 @@ def status(domain):
         details.append(label + ': ' + (active if present else 'not installed') + (' · starts at sign-in' if enabled else ''))
         if not present: notices.append(missing('orca' if key == 'reader' else 'wvkbd'))
         if present:
-            actions += [action(key, 'Configure ' + label.lower(), [field('enabled', 'Run tool', 'yes' if active == 'active' else 'no', [choice('yes'), choice('no')]),
-                         field('startup', 'Start at sign-in', 'yes' if enabled else 'no', [choice('yes'), choice('no')])])]
+            actions += [action(key, 'Configure ' + label.lower(), [field('enabled', 'Run tool', 'yes' if active == 'active' else 'no', [choice('yes'), choice('no')], input_type='toggle'),
+                         field('startup', 'Start at sign-in', 'yes' if enabled else 'no', [choice('yes'), choice('no')], input_type='toggle')])]
     if installed('hyprctl') and os.environ.get('HYPRLAND_INSTANCE_SIGNATURE'):
         current_zoom = json.loads(run(['hyprctl', 'getoption', 'cursor.zoom_factor', '-j'])).get('float')
         details.append('Current magnification: ' + str(current_zoom))

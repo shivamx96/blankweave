@@ -12,6 +12,17 @@ QtObject {
     property string error: ""
     property bool secretsCleared: false
     readonly property bool stale: editing !== null && backend.ready && revision !== backend.data.revision
+    readonly property var fieldErrors: {
+        let errors = {}
+        for (const field of editing ? editing.fields : []) {
+            const value = String(values[field.key] ?? "")
+            if (field.inputType === "integer" && (!/^[0-9]+$/.test(value)
+                || !Number.isSafeInteger(Number(value)) || Number(value) < field.minimum || Number(value) > field.maximum))
+                errors[field.key] = "Enter a whole number from " + field.minimum + " to " + field.maximum + "."
+        }
+        return errors
+    }
+    readonly property bool valid: Object.keys(fieldErrors).length === 0
     function begin(operation) {
         if (pending) return
         editing = JSON.parse(JSON.stringify(operation))
@@ -41,9 +52,12 @@ QtObject {
         editing = null; values = ({}); error = ""; jobId = ""; secretsCleared = false
     }
     function submit() {
-        if (!editing || pending || !backend.writable || stale) return
+        if (!editing || pending || !backend.writable || stale || !valid) return
         pending = true; error = ""; jobId = ""
-        backend.apply(Object.assign({}, values, {action: editing.key, confirmed: true}), revision)
+        let submitted = Object.assign({}, values)
+        for (const field of editing.fields)
+            if (field.inputType === "integer") submitted[field.key] = String(Number(values[field.key]))
+        backend.apply(Object.assign(submitted, {action: editing.key, confirmed: true}), revision)
         clearSecrets()
     }
     function review() {

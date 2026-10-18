@@ -19,8 +19,14 @@ def installed(*commands):
     return all(shutil.which(command) for command in commands)
 
 
-def field(key, label, value='', options=None, secret=False, multiline=False):
-    return dict(key=key, label=label, value=str(value), options=options or [], secret=secret, multiline=multiline)
+def field(key, label, value='', options=None, secret=False, multiline=False,
+          input_type='text', minimum=None, maximum=None, hint=''):
+    result = dict(key=key, label=label, value=str(value), options=options or [], secret=secret, multiline=multiline)
+    if input_type != 'text': result['inputType'] = input_type
+    if minimum is not None: result['minimum'] = minimum
+    if maximum is not None: result['maximum'] = maximum
+    if hint: result['hint'] = hint
+    return result
 
 
 def choice(value, label=None):

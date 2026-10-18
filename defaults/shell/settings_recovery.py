@@ -23,7 +23,7 @@ def status(domain):
         if configured:
             actions = [action('list', 'List system snapshots'), action('create', 'Create system snapshot'),
                        action('delete', 'Delete system snapshot', [field('number', 'Snapshot number')], 'Permanently delete the selected snapshot? Keep snapshots needed by your recovery plan.'),
-                       action('schedule', 'Set snapshot schedule', [field('enabled', 'Hourly snapshots', 'no', [choice('yes'), choice('no')])], 'Enable or disable root timeline snapshots. Snapper’s configured retention limits apply.')]
+                       action('schedule', 'Set snapshot schedule', [field('enabled', 'Hourly snapshots', 'no', [choice('yes'), choice('no')], input_type='toggle')], 'Enable or disable root timeline snapshots. Snapper’s configured retention limits apply.')]
         elif filesystem == 'btrfs' and not Path('/.snapshots').exists():
             actions = [action('setup', 'Set up root snapshots', confirm='Create a Snapper root configuration on this Btrfs filesystem. Existing nested subvolumes are excluded from root snapshots. This does not add a boot-menu recovery entry.')]
         notices = []
@@ -40,7 +40,7 @@ def status(domain):
     disk_swaps = [line.split()[0] for line in swaps[1:] if not line.startswith('/dev/zram')]
     policy = read(Path('/etc/systemd/sleep.conf.d/60-blankweave.conf'))
     idle = read(config_home() / 'blankweave/idle-hibernate') == 'yes\n'
-    actions = [action('policy', 'Set hibernation policy', [field('enabled', 'Permit hibernation', 'no' if policy and 'AllowHibernation=no' in policy else 'yes', [choice('yes'), choice('no')])], 'Changing policy does not create swap or configure boot-time resume. Recheck readiness afterward.')]
+    actions = [action('policy', 'Set hibernation policy', [field('enabled', 'Permit hibernation', 'no' if policy and 'AllowHibernation=no' in policy else 'yes', [choice('yes'), choice('no')], input_type='toggle')], 'Changing policy does not create swap or configure boot-time resume. Recheck readiness afterward.')]
     actions.append(action('idle', 'Choose idle sleep mode', [field('enabled', 'Idle sleep', 'yes' if idle else 'no', [choice('no', 'Suspend'), choice('yes', 'Hibernate when supported')])], 'Managed idle sleep will use hibernation when logind supports it, falling back to suspend otherwise. Existing lock-before-sleep protection remains active.'))
     candidates = []
     for device in disk_swaps:

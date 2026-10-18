@@ -457,6 +457,12 @@ Passwords are cleared after submission and when leaving a page. Drafts are never
 saved to disk and do not survive a shell restart. If the available settings or
 target changes, review the current action before submitting again.
 
+Backup retention uses a themed number field with step buttons and Up/Down keys,
+inline range validation, and a 1–365 limit. Simple on/off operation preferences
+use switches; changes remain in the draft until applied. Invalid numbers stay
+visible for correction and cannot be submitted. Descriptive mode choices remain
+menus, including Suspend versus Hibernate.
+
 Each operation section exposes its primary task directly, with secondary tasks
 under **More actions**. An ellipsis indicates that input or review comes next.
 Supported read-only tasks can run immediately, including drive health when only
