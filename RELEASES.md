@@ -127,3 +127,24 @@ Blankweave release versions.
 - Customize bar widget visibility and order within each section.
 - Show system information and run read-only diagnostics from Settings.
   The minimum supported configuration rollback release remains `0.1.0`.
+
+## 0.11.0
+
+- Complete the remaining native Settings sections for VPNs and file sharing,
+  hibernation, assistive tools, installed applications and permissions, storage
+  and backups, updates, firmware, accounts, date and time, and printing/scanning.
+- Explain missing packages, unsupported hardware, unavailable services, and
+  setup requirements with actionable guidance.
+- Search individual settings and navigate directly to the matching control.
+- Preserve non-secret operation drafts across navigation and failed operations,
+  with explicit retry and review when available targets change.
+- Expose primary actions directly and place secondary tasks in themed menus.
+- Track background operations across categories with status, elapsed time,
+  expandable reports, explicit copying, and session-only dismissal.
+- Use consistent themed controls, switches for on/off preferences, and a
+  validated number control for backup retention. Fix Settings launcher startup
+  and unnecessary sidebar scrollbars.
+- Keep protected operations behind authorization and confirmation, with stale
+  target checks and capability-aware behavior. Hardware-specific operations
+  remain dependent on installed tools and supported devices.
+  The minimum supported configuration rollback release remains `0.1.0`.
