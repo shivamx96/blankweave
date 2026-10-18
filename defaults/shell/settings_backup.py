@@ -8,7 +8,7 @@ import re
 import shlex
 import subprocess
 from settings_support import atomic, config_home, locked, read
-from settings_operations import action, choice, field, installed, path_value, require, run, select, state
+from settings_operations import missing, notice, action, choice, field, installed, path_value, require, run, select, state
 
 CONFIG = config_home() / 'blankweave/backup.json'
 UNITS = config_home() / 'systemd/user'
@@ -64,8 +64,9 @@ def schedule(data):
 
 
 def status(domain):
-    if not installed('restic', 'secret-tool'): return state('Install restic and libsecret to use encrypted backups. Passwords are stored in the session keyring.')
+    if not installed('restic', 'secret-tool'): return state('Backup passwords are stored in the session keyring.', notices=[missing(*[package for command, package in [('restic', 'restic'), ('secret-tool', 'libsecret')] if not installed(command)])])
     data = config()
+    notices = [] if data else [notice('not-configured', 'Backups are not set up' if domain == 'backup' else 'Set up backups before restoring files', 'Choose Set up backups to select a source folder, destination, and password.' if domain == 'backup' else 'Open Scheduled file backups to configure or connect an encrypted backup repository.', '' if domain == 'backup' else 'backup')]
     details = [] if not data else ['Repository: ' + data['repository'], 'Source: ' + data['source'], f'Retention: {data["keep"]} backups per source/host', 'Schedule: ' + data['schedule']]
     if domain == 'backup':
         actions = [action('configure', 'Save backup settings', [field('repository', 'Repository (local path or sftp:user@host:/path)', data['repository'] if data else ''),
@@ -85,7 +86,9 @@ def status(domain):
             action('restore', 'Restore files', [field('snapshot', 'Snapshot ID'), field('include', 'File or folder inside snapshot (absolute path; / for all)', '/'),
                                               field('folder', 'Destination parent directory', str(Path.home()))],
                    'Restore into a new separate folder beneath this destination. Existing files will not be overwritten.')]
-    return state('Scheduled backups run while your user manager is active and the keyring is unlocked. Missed timers run at the next opportunity. An unavailable destination or locked keyring causes a reported failure; it never creates an unencrypted fallback.', details, actions, data)
+    if domain == 'restore' and not data:
+        return state(notices=notices)
+    return state('Scheduled backups run while your user manager is active and the keyring is unlocked. Missed timers run at the next opportunity. An unavailable destination or locked keyring causes a reported failure; it never creates an unencrypted fallback.', details, actions, data, notices)
 
 
 def apply(domain, request):

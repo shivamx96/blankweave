@@ -1,7 +1,7 @@
 """Private networking and explicitly enabled user file shares."""
 import json
 from pathlib import Path
-from settings_operations import action, choice, field, installed, path_value, privileged, require, run, select, state
+from settings_operations import missing, notice, action, choice, field, installed, path_value, privileged, require, run, select, state
 
 SHELL = Path(__file__).resolve().parent
 
@@ -19,18 +19,21 @@ def profiles():
 
 def status(domain):
     if domain == 'sharing': return sharing_status()
-    details, actions, identity = [], [], {}
+    details, actions, identity, notices = [], [], {}, []
     if installed('nmcli'):
         rows = profiles(); identity['profiles'] = rows
         active = run(['nmcli', '-t', '-f', 'UUID', 'connection', 'show', '--active']).splitlines()
         details += [p['label'] + (' · connected' if p['value'] in active else ' · disconnected') for p in rows]
         identity['active'] = sorted(active)
         actions.append(action('import', 'Import VPN profile', [field('type', 'VPN type', 'openvpn', [choice('openvpn'), choice('wireguard')]), field('file', 'Profile file (absolute path)')]))
+        if not rows: notices.append(notice('not-configured', 'No VPN profiles saved', 'Choose Import VPN profile and select a configuration supplied by your VPN provider.'))
         if rows:
             target = field('uuid', 'Private network', rows[0]['value'], rows)
             actions += [action('connect', 'Connect VPN', [target, field('password', 'VPN password (optional; not saved)', secret=True)]),
                         action('disconnect', 'Disconnect VPN', [target]),
                         action('remove', 'Remove VPN profile', [target], 'Remove the selected saved VPN profile?')]
+    if not installed('nmcli'): notices.append(missing('networkmanager', 'networkmanager-openvpn'))
+    if not installed('tailscale'): notices.append(missing('tailscale'))
     if installed('tailscale'):
         data = json.loads(run([str(SHELL / 'tailscale-status.sh')]))
         identity['tailscale'] = data.get('backend')
@@ -39,7 +42,7 @@ def status(domain):
             details.append(str(peer.get('name', peer.get('hostname', 'Peer'))))
         actions += [action('tailscale-login', 'Sign in to Tailscale'), action('tailscale-up', 'Connect Tailscale'), action('tailscale-down', 'Disconnect Tailscale'),
                     action('tailscale-logout', 'Sign out of Tailscale', confirm='Remove this device’s Tailscale login?')]
-    return state('VPN imports require the matching NetworkManager plugin. Tailscale login may return a browser authentication URL.' if actions else 'Install NetworkManager and/or Tailscale to manage private networks.', details, actions, identity)
+    return state('VPN imports require the matching NetworkManager plugin. Tailscale login may return a browser authentication URL.' if actions else '', details, actions, identity, notices)
 
 
 def apply(domain, request):
@@ -102,19 +105,22 @@ def shares():
 
 
 def sharing_status():
-    actions, names, message = [], [], ''
+    actions, names, message, notices = [], [], '', []
     if installed('net'):
         try: names = shares()
-        except ValueError as error: message = str(error) + ' '
+        except ValueError as error:
+            message = str(error) + ' '
+            notices.append(notice('service-unavailable', 'Network sharing is not ready', 'Choose Set up authenticated sharing. If already configured, check the Samba service and sign in again to refresh group access.'))
         actions += [action('setup', 'Set up authenticated sharing', [field('password', 'Network sharing password for your account', secret=True)],
                            'Enable Samba network sharing for this computer and set your network password. Other devices on reachable networks can contact Samba. Sign in again after setup to gain usershare access.'),
                     action('share', 'Share a folder', [field('name', 'Share name'), field('folder', 'Folder (absolute path)')],
                            'Allow your authenticated Samba account to read this folder on the network. Folder permissions still apply.')]
+        if not names and not message: notices.append(notice('not-configured', 'No folders are shared', 'Choose Share a folder after authenticated sharing has been set up. Only folders you explicitly select will be shared.'))
         if names: actions.append(action('unshare', 'Stop sharing', [field('name', 'Share', names[0], [choice(n) for n in names])]))
-    else: message += 'Install Samba for network folders. '
+    else: notices.append(missing('samba'))
     if installed('localsend'): actions.append(action('nearby', 'Open nearby transfers'))
-    else: message += 'Install the communication profile for LocalSend nearby transfers. '
-    return state(message + 'Shares grant read access; guest access is disabled. LocalSend asks the recipient to accept each transfer.', names, actions, names)
+    else: notices.append(notice('missing-software', 'Nearby transfers need LocalSend', 'Install the communication profile or LocalSend, then refresh this section.'))
+    return state(message + 'Shares grant read access; guest access is disabled. LocalSend asks the recipient to accept each transfer.', names, actions, names, notices)
 
 
 def sharing_apply(request):

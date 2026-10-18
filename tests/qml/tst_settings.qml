@@ -202,6 +202,16 @@ TestCase {
         compare(Catalog.searchSettings("firmware sign-in").length, 0)
         compare(Catalog.searchSettings("DeSkToP ThEmE")[0].id, "theme")
     }
+    function test_guidance_opens_exact_setting_without_writing() {
+        content.openSetting("backup")
+        compare(content.page.id, "storage")
+        const target = findChild(content, "settingTarget_backup")
+        tryVerify(() => target.activeFocus)
+        compare(content.highlightedSetting, "backup")
+        compare(fakeBackend.writes, 0)
+        content.openSetting("missing-setting")
+        compare(content.page.id, "storage")
+    }
     function test_search_mouse_selection_at_minimum_window_size() {
         const oldWidth = test.width
         const oldHeight = test.height

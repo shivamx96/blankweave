@@ -6,7 +6,7 @@ from pathlib import Path
 import pwd
 import re
 from settings_support import atomic, config_home, read, restore
-from settings_operations import action, choice, field, installed, privileged, require, run, select, state
+from settings_operations import missing, notice, action, choice, field, installed, privileged, require, run, select, state
 
 TOOLS = {'reader': ('orca', 'Screen reader'), 'keyboard': ('wvkbd-mobintl', 'On-screen keyboard')}
 UNITS = config_home() / 'systemd/user'
@@ -35,8 +35,8 @@ def status(domain):
         signin = Path('/etc/blankweave/signin.conf')
         return state('Local accounts are managed with administrator authorization. Blankweave uses tty1/UWSM, not a display manager. New users need their own Blankweave setup.',
                      [p.pw_name + (' · administrator' if p.pw_name in admins else ' · standard') for p in rows] + ['Saved sign-in policy: ' + (read(signin) or 'automatic (installer default)').strip()],
-                     actions, [(p.pw_name, p.pw_uid, p.pw_name in admins) for p in rows] + [read(signin)])
-    details, actions, identities = [], [], []
+                     actions, [(p.pw_name, p.pw_uid, p.pw_name in admins) for p in rows] + [read(signin)], [] if rows else [notice('not-configured', 'No local user accounts found', 'Choose Create local account to add a standard user. Remote and system accounts are not managed here.')])
+    details, actions, identities, notices = [], [], [], []
     for key, (executable, label) in TOOLS.items():
         unit = 'blankweave-' + key + '.service'
         present = installed(executable)
@@ -44,6 +44,7 @@ def status(domain):
         enabled = (UNITS / 'graphical-session.target.wants' / unit).exists()
         identities.append([key, present, active, enabled])
         details.append(label + ': ' + (active if present else 'not installed') + (' · starts at sign-in' if enabled else ''))
+        if not present: notices.append(missing('orca' if key == 'reader' else 'wvkbd'))
         if present:
             actions += [action(key, 'Configure ' + label.lower(), [field('enabled', 'Run tool', 'yes' if active == 'active' else 'no', [choice('yes'), choice('no')]),
                          field('startup', 'Start at sign-in', 'yes' if enabled else 'no', [choice('yes'), choice('no')])])]
@@ -52,7 +53,9 @@ def status(domain):
         details.append('Current magnification: ' + str(current_zoom))
         identities.append(['zoom', current_zoom, os.environ.get('HYPRLAND_INSTANCE_SIGNATURE')])
         actions.append(action('zoom', 'Set magnification', [field('factor', 'Magnification', '1', [choice('1', 'Off'), choice('1.5', '150%'), choice('2', '200%'), choice('3', '300%')])]))
-    return state('Install orca and wvkbd for assistive applications. Magnification is saved for future sessions. Shortcuts can be changed in Keyboard shortcuts: Super+Ctrl+R (reader), Super+Ctrl+K (keyboard), Super+Ctrl+M (reset magnification).', details, actions, [identities, read(ZOOM)])
+    if not installed('hyprctl') or not os.environ.get('HYPRLAND_INSTANCE_SIGNATURE'):
+        notices.append(notice('unsupported', 'Magnification needs a Hyprland session', 'Sign in to the Blankweave Hyprland desktop to configure magnification.'))
+    return state('Magnification is saved for future sessions. Shortcuts can be changed in Keyboard shortcuts: Super+Ctrl+R (reader), Super+Ctrl+K (keyboard), Super+Ctrl+M (reset magnification).', details, actions, [identities, read(ZOOM)], notices)
 
 
 def apply(domain, request):

@@ -32,6 +32,7 @@ TestCase {
         function cancelJob(id) { cancelled = id }
     }
     Component { id: view; SettingsOperations { theme: test.themePalette; settingId: "drives"; backend: fakeBackend } }
+    SignalSpy { id: navigationSpy; signalName: "settingRequested" }
     function button(parent, text) {
         if (parent.text === text && typeof parent.clicked === "function") return parent
         for (const child of parent.children || []) { const found = button(child, text); if (found) return found }
@@ -279,5 +280,21 @@ TestCase {
         button(item, "Eject").clicked()
         compare(fakeBackend.request.action, "eject")
         menu.close()
+    }
+    function test_guidance_navigation_is_not_a_backend_operation() {
+        fakeBackend.data = Object.assign({}, fakeBackend.data, {actions:[],notices:[{
+            kind:"not-configured",title:"Set up backups before restoring files",
+            nextStep:"Open Scheduled file backups to configure a repository.",target:"backup"
+        }]})
+        const item = createTemporaryObject(view, test, {width:550})
+        navigationSpy.target = item; navigationSpy.clear()
+        const next = findChild(item, "capabilityNextStep")
+        verify(next.visible)
+        next.clicked()
+        compare(navigationSpy.count, 1)
+        compare(navigationSpy.signalArguments[0][0], "backup")
+        compare(fakeBackend.request, null)
+        compare(item.editing, null)
+        navigationSpy.target = null
     }
 }

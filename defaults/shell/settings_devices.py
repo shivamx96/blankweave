@@ -4,7 +4,7 @@ import json
 from pathlib import Path
 import re
 import subprocess
-from settings_operations import action, choice, field, installed, path_value, privileged, require, run, select, state
+from settings_operations import missing, notice, action, choice, field, installed, path_value, privileged, require, run, select, state
 
 
 def properties(command):
@@ -21,7 +21,7 @@ def devices():
 
 def status(domain):
     if domain == 'datetime':
-        if not installed('timedatectl', 'localectl'): return state('Install systemd tools to configure date and region.')
+        if not installed('timedatectl', 'localectl'): return state(notices=[missing('systemd')])
         props = properties(['timedatectl', 'show'])
         zones = run(['timedatectl', 'list-timezones']).splitlines()
         zone = props.get('Timezone', '')
@@ -51,16 +51,22 @@ def status(domain):
         if installed('scanimage'):
             actions += [action('scanners', 'Discover scanners', cancellable=True),
                         action('scan', 'Scan a page', [field('device', 'Scanner device identifier (from discovery)'), field('folder', 'Save folder', str(Path.home() / 'Pictures'))], cancellable=True)]
-        return state('Printers use CUPS; scanners use SANE. Install cups and sane for missing functionality. Discovery runs only when requested.', details, actions, names)
+        notices = []
+        if not installed('lpstat', 'lpadmin'): notices.append(missing('cups'))
+        elif 'scheduler is running' not in run(['lpstat', '-r'], codes=(0, 1)):
+            notices.append(notice('service-unavailable', 'The printing service is not running', 'Choose Add IPP printer to enable CUPS while adding a printer. For an existing setup, start the CUPS service and refresh.'))
+        elif not names: notices.append(notice('not-configured', 'No printers configured', 'Choose Add IPP printer and enter the printer address. Turn on the printer and connect it to your network first.'))
+        if not installed('scanimage'): notices.append(missing('sane'))
+        return state('Printers use CUPS; scanners use SANE. Scanner discovery runs only when requested.', details, actions, names, notices)
     if domain == 'firmware':
-        if not installed('fwupdmgr'): return state('Install fwupd to check supported device firmware.')
+        if not installed('fwupdmgr'): return state(notices=[missing('fwupd')])
         rows = devices()
         options = [choice(d['DeviceId'], d.get('Name', d['DeviceId'])) for d in rows if 'DeviceId' in d]
         actions = [action('check', 'Check firmware updates', confirm='Refresh firmware metadata from the configured remotes.')]
         if options: actions.append(action('update', 'Update device firmware', [field('device', 'Device', options[0]['value'], options)], 'Install available firmware for this device. Keep power connected. Flashing cannot be cancelled; a reboot may be required.'))
         return state('Only devices supported by fwupd can be updated. The provider checks device and power requirements before flashing.',
                      [str(d.get('Name', 'Device')) + ': ' + str(d.get('Version', 'Unknown version')) for d in rows], actions,
-                     [(d.get('DeviceId'), d.get('Version')) for d in rows])
+                     [(d.get('DeviceId'), d.get('Version')) for d in rows], [] if options else [notice('no-device', 'No supported firmware devices reported', 'Connect and power on the device, then refresh. Only hardware supported by fwupd appears here; an empty list does not mean all firmware is current.')])
     raise ValueError('Unknown device provider.')
 
 

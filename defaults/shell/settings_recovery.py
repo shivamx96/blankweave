@@ -3,7 +3,7 @@ from pathlib import Path
 import re
 import os
 from settings_support import atomic, config_home, read
-from settings_operations import action, choice, field, installed, privileged, run, select, state
+from settings_operations import missing, notice, action, choice, field, installed, privileged, run, select, state
 
 
 def can_hibernate():
@@ -16,7 +16,7 @@ def can_hibernate():
 
 def status(domain):
     if domain == 'snapshots':
-        if not installed('snapper'): return state('Install snapper to manage system snapshots. File backups are independent of filesystem snapshots.')
+        if not installed('snapper'): return state('File backups are independent of system snapshots.', notices=[missing('snapper')])
         filesystem = run(['findmnt', '-n', '-o', 'FSTYPE', '/'])
         configured = Path('/etc/snapper/configs/root').exists()
         actions = []
@@ -26,8 +26,13 @@ def status(domain):
                        action('schedule', 'Set snapshot schedule', [field('enabled', 'Hourly snapshots', 'no', [choice('yes'), choice('no')])], 'Enable or disable root timeline snapshots. Snapper’s configured retention limits apply.')]
         elif filesystem == 'btrfs' and not Path('/.snapshots').exists():
             actions = [action('setup', 'Set up root snapshots', confirm='Create a Snapper root configuration on this Btrfs filesystem. Existing nested subvolumes are excluded from root snapshots. This does not add a boot-menu recovery entry.')]
+        notices = []
+        if not configured:
+            if filesystem != 'btrfs': notices.append(notice('unsupported', 'System snapshots are unavailable on ' + filesystem, 'Automatic snapshot setup requires a Btrfs root filesystem. Use file backups on this computer; Settings will not reformat your disk.', 'backup'))
+            elif Path('/.snapshots').exists(): notices.append(notice('not-configured', 'An existing snapshots folder needs review', 'Review the existing /.snapshots folder and configure Snapper manually before using these controls. Settings will not replace it.'))
+            else: notices.append(notice('not-configured', 'System snapshots are not set up', 'Choose Set up root snapshots to configure Snapper. Verify a rescue environment before relying on system recovery.'))
         return state('System recovery requires a separately verified rescue/boot environment. Settings never rolls back a running root filesystem. Blankweave updates reuse the root Snapper configuration for paired snapshots.',
-                     ['Root filesystem: ' + filesystem, 'Root Snapper configuration: ' + ('present' if configured else 'not configured')], actions, [filesystem, configured])
+                     ['Root filesystem: ' + filesystem, 'Root Snapper configuration: ' + ('present' if configured else 'not configured')], actions, [filesystem, configured], notices)
     support = can_hibernate()
     modes = (read(Path('/sys/power/state')) or '').strip()
     resume = (read(Path('/sys/power/resume')) or 'unknown').strip()
@@ -49,10 +54,14 @@ def status(domain):
         actions.append(action('prepare', 'Prepare encrypted swap resume', [field('device', 'Existing encrypted swap', candidates[0], [choice(d) for d in candidates])], 'Configure resume for existing encrypted swap, rebuild initramfs images, and refresh Limine. Requires systemd/sd-encrypt hooks, passphrase-unlocked persistent swap, and regular non-UKI BLS entries. Unsupported layouts are rejected before changes. Reboot afterward.'))
     if Path('/var/lib/blankweave/hibernate-settings.json').exists():
         actions.append(action('revert', 'Revert resume preparation', confirm='Restore the command lines saved before Settings prepared resume, then rebuild boot files. Later boot-file changes block automatic revert.'))
+    notices = []
+    if not disk_swaps: notices.append(notice('not-configured', 'Hibernation needs disk-backed swap', 'RAM-backed zram cannot preserve a session after power-off. Configure suitable disk-backed swap and boot-time resume before using hibernation; Suspend remains available.'))
+    elif 'disk' not in modes.split(): notices.append(notice('unsupported', 'The kernel does not offer hibernation', 'Use Suspend, or configure a kernel with hibernation support before checking readiness again.'))
+    elif support not in ('yes', 'challenge'): notices.append(notice('not-configured', 'Hibernation is not ready', 'Review the hibernation policy, swap, and boot-time resume configuration below, then refresh. Enabling the policy alone does not configure resume.'))
     return state('Hibernation needs disk-backed swap, compatible encryption, and verified initramfs/boot resume configuration. Setup supports an existing encrypted swap partition; it does not repartition disks or create swap files. Enabling policy alone does not establish resume readiness.',
                  ['logind support: ' + support, 'Kernel sleep modes: ' + modes, 'Kernel resume device: ' + resume,
                   'Disk-backed swap: ' + (', '.join(disk_swaps) or 'none'),
-                  'A successful real-machine hibernate/resume test is required before relying on this feature.'], actions, [support, resume, disk_swaps, policy, idle])
+                  'A successful real-machine hibernate/resume test is required before relying on this feature.'], actions, [support, resume, disk_swaps, policy, idle], notices)
 
 
 def apply(domain, request):

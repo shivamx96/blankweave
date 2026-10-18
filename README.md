@@ -456,6 +456,13 @@ Supported read-only tasks can run immediately, including drive health when only
 one drive is available; multiple targets still open a chooser. Destructive and
 system-changing actions retain their review step.
 
+Unavailable controls distinguish missing software, disconnected devices,
+incomplete setup, unsupported configurations, and services that cannot be read.
+Each explanation includes a next step. Restore and unsupported system snapshots
+link to file-backup setup; empty Flatpak permission controls link to installed
+applications. These links only navigate Settings and never install software or
+change system configuration automatically.
+
 Storage supports directory scans, thumbnail-cache cleanup, removable-drive
 mount/unlock/eject, and SMART health/self-tests. Backups use encrypted restic
 repositories on local storage or SSH/SFTP, with passwords in Secret Service,

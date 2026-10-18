@@ -8,6 +8,7 @@ ColumnLayout {
     required property var theme
     required property string settingId
     required property var backend
+    signal settingRequested(string settingId)
     readonly property var draft: backend ? backend.draft : null
     readonly property var editing: draft ? draft.editing : null
     readonly property var values: draft ? draft.values : ({})
@@ -29,6 +30,37 @@ ColumnLayout {
     }
     Component.onDestruction: if (draft) draft.clearSecrets()
     onVisibleChanged: if (!visible) { actionMenu.close(); if (draft) draft.clearSecrets() }
+    Repeater {
+        model: root.backend && root.backend.ready ? root.backend.data.notices || [] : []
+        delegate: ColumnLayout {
+            id: guidance
+            required property var modelData
+            Layout.fillWidth: true
+            spacing: 6
+            Text {
+                Layout.fillWidth: true
+                text: guidance.modelData.title
+                textFormat: Text.PlainText; wrapMode: Text.WordWrap
+                color: root.theme.text; font.family: root.theme.fontFamily; font.pixelSize: root.theme.smallTextSize
+                font.weight: Font.DemiBold
+                Accessible.role: Accessible.StaticText
+                Accessible.name: text
+            }
+            Text {
+                Layout.fillWidth: true
+                text: guidance.modelData.nextStep
+                textFormat: Text.PlainText; wrapMode: Text.WordWrap
+                color: root.theme.textMuted; font.family: root.theme.fontFamily; font.pixelSize: root.theme.smallTextSize
+            }
+            SettingsButton {
+                objectName: "capabilityNextStep"
+                theme: root.theme
+                visible: ["backup", "installed"].includes(guidance.modelData.target)
+                text: guidance.modelData.target === "backup" ? "Open Scheduled file backups" : "Open Installed applications"
+                onClicked: root.settingRequested(guidance.modelData.target)
+            }
+        }
+    }
     Repeater {
         model: root.backend && root.backend.ready ? root.backend.data.details || [] : []
         delegate: Text {

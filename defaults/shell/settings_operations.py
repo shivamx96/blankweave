@@ -32,8 +32,17 @@ def action(key, label, fields=(), confirm='', cancellable=False):
                 cancellable=cancellable)
 
 
-def state(message='', details=(), actions=(), identity=None):
-    return dict(message=message, details=list(details), actions=list(actions), identity=identity)
+def notice(kind, title, next_step, target=''):
+    return dict(kind=kind, title=title, nextStep=next_step, target=target)
+
+
+def missing(*packages):
+    return notice('missing-software', 'Additional software is needed',
+                  'Install ' + ', '.join(packages) + ', then refresh this section.')
+
+
+def state(message='', details=(), actions=(), identity=None, notices=()):
+    return dict(message=message, details=list(details), actions=list(actions), identity=identity, notices=list(notices))
 
 
 def require(request, key, pattern=None, maximum=4096):
