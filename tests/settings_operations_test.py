@@ -366,6 +366,7 @@ def apply(domain, request):
             if current['job']['phase'] == 'completed': break
             time.sleep(0.02)
         self.assertEqual(current['job']['phase'], 'completed')
+        self.assertEqual(json.loads(result.stdout)['jobId'], current['job']['id'])
         self.assertEqual(current['job']['message'], 'fixture completed')
         self.assertEqual(current['revision'], before['revision'])
 

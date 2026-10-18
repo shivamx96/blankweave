@@ -6,7 +6,7 @@ test_root=$(mktemp -d)
 trap 'rm -rf -- "$test_root"' EXIT
 mkdir -p "$test_root/Services" "$test_root/home" "$test_root/runtime"
 chmod 700 "$test_root/runtime"
-cp "$repository/defaults/quickshell/Services/"{SettingsTask,SettingsOperationsService}.qml "$test_root/Services/"
+cp "$repository/defaults/quickshell/Services/"{SettingsTask,SettingsOperationTask,SettingsOperationDraft,SettingsOperationsService}.qml "$test_root/Services/"
 cp "$repository/tests/quickshell/settings-operations.qml" "$test_root/shell.qml"
 cp "$repository/tests/fixtures/settings-operations.py" "$test_root/fixture.py"
 if ! HOME="$test_root/home" XDG_CONFIG_HOME="$test_root/home/.config" \

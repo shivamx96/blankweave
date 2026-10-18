@@ -13,6 +13,7 @@ QtObject {
     property string error: ""
     property var data: ({})
     property string request: ""
+    signal applyFinished(bool success, var result)
     readonly property bool busy: writing || status.running || action.running
     readonly property bool writable: ready && !busy && data.writable !== false
     function refresh(clearError = false) {
@@ -50,9 +51,13 @@ QtObject {
         stdinEnabled: true
         onStarted: { write(root.request); root.request = ""; stdinEnabled = false }
         stderr: StdioCollector { id: writeError }
+        stdout: StdioCollector { id: writeResult }
         onExited: (code, exitStatus) => {
             root.writing = false; stdinEnabled = true
             if (code || exitStatus) root.error = writeError.text.trim() || "Could not apply settings."
+            let result = null
+            try { result = JSON.parse(writeResult.text) } catch (_) { }
+            root.applyFinished(!code && !exitStatus, result)
             Qt.callLater(() => root.refresh())
         }
     }

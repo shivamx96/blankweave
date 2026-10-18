@@ -91,6 +91,7 @@ def start(domain, request):
         STATE.mkdir(parents=True, exist_ok=True, mode=0o700)
         atomic(job_path(domain), json.dumps(job))
         child.stdin.write(json.dumps(request)); child.stdin.close()
+        child.settings_job_id = token
         return child
 
 
@@ -134,7 +135,9 @@ def main():
         elif command == 'apply':
             request = json.load(sys.stdin)
             if request.get('action') == 'cancel-job': cancel(domain, request)
-            else: start(domain, request)
+            else:
+                child = start(domain, request)
+                print(json.dumps({'jobId': child.settings_job_id}))
         elif command == 'worker': worker(domain, sys.argv[3], json.load(sys.stdin))
         elif command == 'scheduled' and domain == 'backup':
             data = status(domain)

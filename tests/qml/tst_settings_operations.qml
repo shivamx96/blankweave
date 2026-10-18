@@ -1,5 +1,6 @@
 import QtQuick
 import QtTest
+import "../../defaults/quickshell/Services"
 import "../../defaults/quickshell/Settings"
 import "../../defaults/quickshell/Settings/Catalog.js" as Catalog
 TestCase {
@@ -12,6 +13,9 @@ TestCase {
         warning:"#ffaa33",fontFamily:"sans-serif",textSize:13,smallTextSize:12,widgetRadius:4,reducedMotion:true})
     QtObject {
         id: fakeBackend
+        property bool active: true
+        signal applyFinished(bool success, var result)
+        property SettingsOperationDraft draft: SettingsOperationDraft { backend: fakeBackend }
         property bool ready: true
         property bool writable: true
         property bool busy: false
@@ -32,6 +36,7 @@ TestCase {
         return null
     }
     function init() {
+        fakeBackend.draft.pending = false; fakeBackend.draft.discard(); fakeBackend.error = ""; fakeBackend.active = true
         fakeBackend.ready = true; fakeBackend.writable = true; fakeBackend.busy = false; fakeBackend.request = null; fakeBackend.cancelled = ""
         fakeBackend.data = {revision:"original", details:["Device present"], message:"", job:null, actions:[{
             key:"eject",label:"Eject",confirm:"Eject this device?",cancellable:false,
@@ -83,7 +88,8 @@ TestCase {
         item.begin(fakeBackend.data.actions[0])
         fakeBackend.data = {revision:"new",details:[],actions:[],job:null}
         item.submit()
-        compare(fakeBackend.request.device, "old-device"); compare(fakeBackend.stamp, "original")
+        compare(fakeBackend.request, null); compare(item.draft.revision, "original")
+        verify(item.draft.stale)
     }
     function test_cancel_discards_secret_input() {
         const item = createTemporaryObject(view, test)
@@ -96,6 +102,89 @@ TestCase {
         fakeBackend.writable = false
         const item = createTemporaryObject(view, test)
         verify(!button(item, "Configure…").enabled)
+    }
+    function report(id, phase, message) {
+        fakeBackend.data = Object.assign({}, fakeBackend.data, {job:{id:id,phase:phase,message:message || "",label:"Eject",cancellable:false}})
+    }
+    function test_failed_start_keeps_draft_and_retries() {
+        const item = createTemporaryObject(view, test)
+        item.begin(fakeBackend.data.actions[0])
+        item.submit()
+        verify(item.draft.pending)
+        fakeBackend.error = "Authorization cancelled"
+        fakeBackend.applyFinished(false, null)
+        verify(!item.draft.pending)
+        compare(item.values.device, "old-device")
+        compare(findChild(item, "operationFormError").text, "Authorization cancelled")
+        button(item, "Retry Eject").clicked()
+        verify(item.draft.pending)
+        compare(fakeBackend.request.device, "old-device")
+    }
+    function test_job_failure_and_cancel_keep_inputs_success_clears() {
+        const item = createTemporaryObject(view, test)
+        item.begin(fakeBackend.data.actions[0])
+        for (const phase of ["failed", "cancelled", "interrupted", "completed"]) {
+            item.submit()
+            fakeBackend.applyFinished(true, {jobId:phase})
+            report(phase, "running")
+            verify(item.draft.pending)
+            verify(item.editing !== null)
+            report(phase, phase, "Result: " + phase)
+            verify(!item.draft.pending)
+            if (phase !== "completed") {
+                compare(item.values.device, "old-device")
+                compare(item.draft.error, "Result: " + phase)
+            }
+        }
+        compare(item.editing, null)
+        compare(item.values, {})
+    }
+    function test_navigation_restores_non_secret_draft() {
+        const item = createTemporaryObject(view, test)
+        item.begin({key:"unlock",label:"Unlock",confirm:"",fields:[
+            {key:"folder",label:"Folder",value:"/original",options:[],secret:false},
+            {key:"password",label:"Password",value:"",options:[],secret:true}
+        ]})
+        item.draft.setValue("folder", "/edited")
+        item.draft.setValue("password", "secret")
+        fakeBackend.active = false
+        compare(item.values.password, "")
+        item.destroy()
+        wait(0)
+        fakeBackend.active = true
+        const restored = createTemporaryObject(view, test)
+        compare(restored.values.folder, "/edited")
+        compare(restored.values.password, "")
+        verify(restored.draft.secretsCleared)
+    }
+    function test_submit_clears_password_and_blocks_duplicate_write() {
+        const item = createTemporaryObject(view, test)
+        item.begin({key:"unlock",label:"Unlock",confirm:"",fields:[{key:"password",label:"Password",value:"",options:[],secret:true}]})
+        item.draft.setValue("password", "secret")
+        item.submit()
+        compare(fakeBackend.request.password, "secret")
+        compare(item.values.password, "")
+        compare(findChild(item, "operationField_password").text, "")
+        fakeBackend.request = null
+        item.submit()
+        compare(fakeBackend.request, null)
+    }
+    function test_review_changed_target_requires_explicit_resubmission() {
+        const item = createTemporaryObject(view, test)
+        item.begin(fakeBackend.data.actions[0])
+        const operation = {key:"eject",label:"Eject",confirm:"Review new drive",fields:[
+            {key:"device",label:"Device",value:"new-device",options:[{value:"new-device",label:"New drive"}],secret:false}
+        ]}
+        fakeBackend.data = Object.assign({}, fakeBackend.data, {revision:"new",actions:[operation]})
+        item.submit()
+        compare(fakeBackend.request, null)
+        item.draft.review()
+        compare(fakeBackend.request, null)
+        compare(item.values.device, "new-device")
+        compare(item.editing.confirm, "Review new drive")
+        item.submit()
+        compare(fakeBackend.stamp, "new")
+        compare(fakeBackend.request.device, "new-device")
     }
     function test_job_cancellation_uses_captured_identity() {
         fakeBackend.data = Object.assign({}, fakeBackend.data, {job:{id:"job-1",label:"Scan",phase:"running",message:"",cancellable:true}})
