@@ -435,9 +435,21 @@ def apply(domain, request):
             if current['job']['phase'] == 'completed': break
             time.sleep(0.02)
         self.assertEqual(current['job']['phase'], 'completed')
+        self.assertGreaterEqual(current['job']['finished'], current['job']['started'])
         self.assertEqual(json.loads(result.stdout)['jobId'], current['job']['id'])
         self.assertEqual(current['job']['message'], 'fixture completed')
         self.assertEqual(current['revision'], before['revision'])
+
+    def test_jobs_lists_reports_without_loading_providers_and_skips_corruption(self):
+        directory = self.directory / 'state/blankweave/settings-jobs'
+        directory.mkdir(parents=True)
+        report = dict(id='saved', phase='completed', label='Work', message='Done')
+        (directory / 'vpn.json').write_text(json.dumps(report))
+        (directory / 'sharing.json').write_text('{broken')
+        (self.directory / 'settings_network.py').write_text('raise RuntimeError("must not load provider")')
+        result = subprocess.run(self.command[:-1] + ['jobs'], capture_output=True, text=True, env=self.env, timeout=10)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(json.loads(result.stdout), [dict(report, domain='vpn')])
 
     def test_failed_status_has_service_guidance_without_actions(self):
         (self.directory / 'settings_network.py').write_text('def status(domain):\n    raise ValueError("service offline")\n')
@@ -457,7 +469,9 @@ def apply(domain, request):
         self.assertNotEqual(self.call('apply', request).returncode, 0)
         job = self.status()['job']
         self.assertEqual(self.call('apply', {'action': 'cancel-job', 'id': job['id']}).returncode, 0)
-        self.assertEqual(self.status()['job']['phase'], 'cancelled')
+        cancelled = self.status()['job']
+        self.assertEqual(cancelled['phase'], 'cancelled')
+        self.assertGreaterEqual(cancelled['finished'], cancelled['started'])
 
 
 if __name__ == '__main__': unittest.main()

@@ -41,6 +41,7 @@ Rectangle {
     property bool followSearchTarget: false
     readonly property var page: results.find(entry => entry.id === selectedPage) || results[0] || null
     readonly property bool narrow: width < 800
+    signal copyRequested(string text)
     signal closeRequested
 
     color: theme.canvas
@@ -174,6 +175,14 @@ Rectangle {
         }
 
         Rectangle { Layout.fillWidth: true; implicitHeight: 1; color: root.theme.divider }
+        SettingsJobsBar {
+            Layout.fillWidth: true
+            Layout.leftMargin: 12
+            Layout.rightMargin: 12
+            theme: root.theme
+            service: root.operations
+            onSettingRequested: id => root.openSetting(id)
+        }
 
         RowLayout {
             Layout.fillWidth: true
@@ -556,6 +565,7 @@ Rectangle {
                                                 }
                                                 SettingsRow {
                                                     onSettingRequested: id => root.openSetting(id)
+                                                    onCopyRequested: text => root.copyRequested(text)
                                                     Layout.fillWidth: true
                                                     theme: root.theme
                                                     setting: settingGroup.modelData
