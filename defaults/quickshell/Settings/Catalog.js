@@ -51,9 +51,9 @@ var pages = [
             { id: "airplane", title: "Airplane mode", description: "Turn off wireless radios and restore their previous state.", kind: "airplane", live: true }
         ] },
         { title: "Sharing & remote access", rows: [
-            { id: "vpn", title: "VPN & Tailscale", description: "Manage private networks and imported VPN profiles.", kind: "action", action: "Configure" },
+            { id: "vpn", title: "VPN & Tailscale", description: "Manage private networks and imported VPN profiles.", kind: "operations", live: true },
             { id: "hotspot", title: "Wi-Fi hotspot", description: "Share a connection through a temporary, password-protected Wi-Fi network.", kind: "hotspot", live: true },
-            { id: "sharing", title: "File sharing", description: "Configure nearby sharing and network folders.", kind: "action", action: "Configure" }
+            { id: "sharing", title: "File sharing", description: "Configure nearby sharing and network folders.", kind: "operations", live: true }
         ] }
     ] },
     { id: "power", title: "Power", icon: "󰁹", description: "Balance performance, comfort, and battery life.", groups: [
@@ -64,7 +64,7 @@ var pages = [
         ] },
         { title: "Idle & sleep", rows: [
             { id: "screen-off", title: "Idle timeouts", description: "Choose dimming, locking, screen-off, and sleep delays for battery and plugged-in use.", kind: "idle", live: true },
-            { id: "hibernate", title: "Hibernation", description: "Configure saving your session to disk where supported.", kind: "action", action: "Set up" }
+            { id: "hibernate", title: "Hibernation", description: "Configure saving your session to disk where supported.", kind: "operations", live: true }
         ] }
     ] },
     { id: "input", title: "Input & Accessibility", icon: "󰌌", description: "Make your computer work the way you do.", groups: [
@@ -77,15 +77,15 @@ var pages = [
             { id: "large-text", title: "Text size", description: "The same text-size preference as Appearance.", kind: "interface-size", live: true },
             { id: "contrast", title: "High contrast", description: "Increase shell contrast and request it in compatible applications.", kind: "accessibility", live: true },
             { id: "motion", title: "Reduce motion", description: "Disable desktop transitions and request fewer animations in compatible applications.", kind: "accessibility", live: true },
-            { id: "assistive", title: "Screen reader, magnifier & on-screen keyboard", description: "Set up assistive tools and their shortcuts.", kind: "action", action: "Configure" }
+            { id: "assistive", title: "Screen reader, magnifier & on-screen keyboard", description: "Set up assistive tools and their shortcuts.", kind: "operations", live: true }
         ] }
     ] },
     { id: "apps", title: "Apps", icon: "󰀻", description: "Manage your applications and their access.", groups: [
         { title: "Applications", rows: [
-            { id: "installed", title: "Installed applications", description: "Browse, install, and remove software.", kind: "action", action: "Browse apps" },
+            { id: "installed", title: "Installed applications", description: "Browse, install, and remove software.", kind: "operations", live: true },
             { id: "defaults", title: "Default applications", description: "Choose handlers for web links, email, folders, documents, and media.", kind: "default-apps", live: true },
             { id: "startup", title: "Startup applications", description: "Choose what starts when you sign in.", kind: "startup", live: true },
-            { id: "permissions", title: "Application permissions", description: "Review supported camera, microphone, and file permissions.", kind: "action", action: "Review" },
+            { id: "permissions", title: "Application permissions", description: "Review supported camera, microphone, and file permissions.", kind: "operations", live: true },
             { id: "webapps", title: "Web apps", description: "Add and manage sites that open as applications.", kind: "webapps", live: true }
         ] },
         { title: "Notifications", rows: [
@@ -95,26 +95,26 @@ var pages = [
     ] },
     { id: "storage", title: "Storage & Backup", icon: "󰋊", description: "Look after your files and the places they live.", groups: [
         { title: "Storage", rows: [
-            { id: "disk-usage", title: "Disk usage & cleanup", description: "Review space used by files, applications, and caches.", kind: "action", action: "Review storage" },
-            { id: "drives", title: "Drives & removable media", description: "Mount, unlock, and safely eject external storage.", kind: "action", action: "Manage drives" },
-            { id: "disk-health", title: "Disk health", description: "Review supported drive health information.", kind: "action", action: "View details" }
+            { id: "disk-usage", title: "Disk usage & cleanup", description: "Review space used by files, applications, and caches.", kind: "operations", live: true },
+            { id: "drives", title: "Drives & removable media", description: "Mount, unlock, and safely eject external storage.", kind: "operations", live: true },
+            { id: "disk-health", title: "Disk health", description: "Review supported drive health information.", kind: "operations", live: true }
         ] },
         { title: "Backup & recovery", rows: [
-            { id: "backup", title: "Scheduled file backups", description: "Choose files, destinations, encryption, and retention.", kind: "action", action: "Set up backups" },
-            { id: "restore", title: "Restore files", description: "Browse a backup and recover individual files.", kind: "action", action: "Browse backups" },
-            { id: "snapshots", title: "System snapshots", description: "Configure snapshots and review recovery options.", kind: "action", action: "Configure" }
+            { id: "backup", title: "Scheduled file backups", description: "Choose files, destinations, encryption, and retention.", kind: "operations", live: true },
+            { id: "restore", title: "Restore files", description: "Browse a backup and recover individual files.", kind: "operations", live: true },
+            { id: "snapshots", title: "System snapshots", description: "Configure snapshots and review recovery options.", kind: "operations", live: true }
         ] }
     ] },
     { id: "system", title: "System", icon: "󰒓", description: "Keep your desktop current and running well.", groups: [
         { title: "Maintenance", rows: [
-            { id: "updates", title: "Updates & release notes", description: "Review Blankweave and package updates.", kind: "action", action: "Check updates" },
-            { id: "firmware", title: "Device firmware", description: "Check for supported BIOS and peripheral updates.", kind: "action", action: "Check firmware" },
+            { id: "updates", title: "Updates & release notes", description: "Review Blankweave and package updates.", kind: "operations", live: true },
+            { id: "firmware", title: "Device firmware", description: "Check for supported BIOS and peripheral updates.", kind: "operations", live: true },
             { id: "diagnostics", title: "Diagnostics", description: "Run read-only health checks and copy a local report.", kind: "system-info", live: true }
         ] },
         { title: "This computer", rows: [
-            { id: "accounts", title: "Users & sign-in", description: "Manage accounts, passwords, and sign-in preferences.", kind: "action", action: "Manage" },
-            { id: "datetime", title: "Date, time & region", description: "Choose a timezone, formats, and clock synchronization.", kind: "action", action: "Configure" },
-            { id: "printers", title: "Printers & scanners", description: "Add devices and manage print jobs.", kind: "action", action: "Manage devices" },
+            { id: "accounts", title: "Users & sign-in", description: "Manage accounts, passwords, and sign-in preferences.", kind: "operations", live: true },
+            { id: "datetime", title: "Date, time & region", description: "Choose a timezone, formats, and clock synchronization.", kind: "operations", live: true },
+            { id: "printers", title: "Printers & scanners", description: "Add devices and manage print jobs.", kind: "operations", live: true },
             { id: "about", title: "About this computer", description: "View hardware, software versions, and support information.", kind: "system-info", live: true }
         ] }
     ] }

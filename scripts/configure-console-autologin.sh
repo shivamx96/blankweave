@@ -31,11 +31,19 @@ trap cleanup EXIT HUP INT TERM
 
 mkdir -p "$dropin_dir"
 staged=$(mktemp "$dropin_dir/.autologin.XXXXXX")
+if [[ -f "$system_root/etc/blankweave/signin.conf" ]] && [[ $(cat "$system_root/etc/blankweave/signin.conf") == no ]]; then
+    cat > "$staged" <<'EOF'
+[Service]
+ExecStart=
+ExecStart=-/usr/bin/agetty --noclear - ${TERM}
+EOF
+else
 cat > "$staged" <<EOF
 [Service]
 ExecStart=
 ExecStart=-/usr/bin/agetty --skip-login --nonewline --noissue --autologin $username --noreset --noclear - \${TERM}
 EOF
+fi
 chmod 0644 "$staged"
 mv -f "$staged" "$dropin_file"
 staged=
@@ -65,4 +73,4 @@ if pacman -Q -- sddm &> /dev/null; then
     pacman -R --noconfirm sddm
 fi
 
-printf 'TTY1 automatic login is configured for %s; it takes effect next boot.\n' "$username"
+printf 'TTY1 sign-in policy is configured for %s; it takes effect next boot.\n' "$username"

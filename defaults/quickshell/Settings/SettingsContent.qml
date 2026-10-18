@@ -1,6 +1,6 @@
 pragma ComponentBehavior: Bound
 import QtQuick
-import QtQuick.Controls
+import QtQuick.Controls.Basic
 import QtQuick.Layouts
 import "../Components"
 import "Catalog.js" as Catalog
@@ -16,6 +16,7 @@ Rectangle {
     property var startup: null
     property var wallpaper: null
     property var webapps: null
+    property var operations: null
     property var system: null
     property var notifications: null
     property var defaultApps: null
@@ -89,25 +90,14 @@ Rectangle {
                     font.weight: Font.DemiBold
                 }
                 Item { Layout.fillWidth: true }
-                TextField {
+                SettingsTextField {
+                    theme: root.theme
                     id: search
                     objectName: "settingsSearch"
                     Layout.preferredWidth: Math.min(280, root.width * 0.36)
                     Layout.preferredHeight: 36
                     placeholderText: "Search settings…"
                     Accessible.name: "Search settings"
-                    color: root.theme.text
-                    placeholderTextColor: root.theme.textMuted
-                    selectionColor: root.theme.accentSurface
-                    selectedTextColor: root.theme.text
-                    font.family: root.theme.fontFamily
-                    font.pixelSize: root.theme.textSize
-                    leftPadding: 12
-                    background: Rectangle {
-                        color: root.theme.surface
-                        radius: root.theme.widgetRadius
-                        border.color: search.activeFocus ? root.theme.accentBright : root.theme.outline
-                    }
                     onAccepted: {
                         if (root.results.length) {
                             root.selectedPage = root.results[0].id
@@ -160,7 +150,7 @@ Rectangle {
                         currentIndex: Math.max(0, root.results.findIndex(entry => entry.id === root.selectedPage))
                         keyNavigationEnabled: true
                         boundsBehavior: Flickable.StopAtBounds
-                        ScrollBar.vertical: ScrollBar { }
+                        ScrollBar.vertical: SettingsScrollBar { theme: root.theme }
                         Keys.onReturnPressed: {
                             if (root.results[currentIndex]) root.selectedPage = root.results[currentIndex].id
                         }
@@ -234,6 +224,7 @@ Rectangle {
                 contentWidth: availableWidth
                 clip: true
                 ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
+                ScrollBar.vertical: SettingsScrollBar { theme: root.theme }
 
                 ColumnLayout {
                     width: pageScroll.availableWidth
@@ -279,16 +270,17 @@ Rectangle {
                                     : root.page && root.page.id === "sound" && root.sound
                                     ? "Sound controls are available. Changes apply to the selected device or supported apps."
                                     : root.page && root.page.id === "power" && root.power
-                                    ? "Power profiles, battery controls, and idle timeouts are available. Hibernation remains a preview."
+                                    ? "Power profiles, battery controls, idle timeouts, and hibernation readiness are available."
                                     : root.page && root.page.id === "input" && root.pointer
-                                    ? "Input, text size, reduced motion, and high contrast controls are available. Assistive-tool setup remains a preview."
+                                    ? "Input and accessibility controls apply to this session and supported assistive applications."
                                     : root.page && root.page.id === "apps" && root.defaultApps
-                                    ? "Default applications, startup apps, web apps, and notifications are available. Other application controls remain previews."
+                                    ? "Manage installed software, supported application permissions, defaults, startup apps, and notifications."
                                     : root.page && root.page.id === "system" && root.system
-                                    ? "System information and read-only diagnostics are available. Other system controls remain previews."
+                                    ? "System changes may require administrator authorization. Device support is detected before offering operations."
                                     : root.page && root.page.id === "network" && root.wifi
-                                    ? "Connection, radio, and hotspot controls are available. VPN and file sharing are previews."
-                                    : "Preview — changes aren’t applied. These controls show what’s planned; values are examples, not your device’s status."
+                                    ? "Manage connections, private networks, and supported sharing services."
+                                    : root.page && root.page.id === "storage" ? "Inspect storage, manage removable drives, and configure supported backup providers."
+                                    : "Controls report unavailable services and hardware before changes can be made."
                                 color: root.theme.text
                                 font.family: root.theme.fontFamily
                                 font.pixelSize: root.theme.smallTextSize
@@ -428,7 +420,8 @@ Rectangle {
                                                     Layout.fillWidth: true
                                                     theme: root.theme
                                                     setting: settingGroup.modelData
-                                                    backend: settingGroup.modelData.kind === "system-info" ? root.system
+                                                    backend: settingGroup.modelData.kind === "operations" ? (root.operations ? root.operations.provider(settingGroup.modelData.id) : null)
+                                                        : settingGroup.modelData.kind === "system-info" ? root.system
                                                         : settingGroup.modelData.kind === "webapps" ? root.webapps
                                                         : settingGroup.modelData.kind === "wallpaper" ? root.wallpaper
                                                         : settingGroup.modelData.kind === "startup" ? root.startup

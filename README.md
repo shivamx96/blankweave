@@ -425,11 +425,58 @@ requires confirmation. Internet sharing needs Ethernet or another upstream
 adapter, plus the required `dnsmasq` and `nftables` packages. Hotspots do not
 autoconnect, disappear after disconnect/reboot, and keep their password out of
 process arguments and disk. Stop the hotspot from Settings and reconnect a saved
-Wi-Fi network when finished. VPN and file sharing remain previews.
+Wi-Fi network when finished. VPN controls import OpenVPN/WireGuard profiles and
+manage saved connections. Tailscale sign-in opens its browser authorization
+flow. File sharing configures authenticated, read-only Samba usershares; nearby
+transfers open LocalSend with recipient consent.
 
-Controls awaiting implementation are marked **Preview** and disabled. Their
-example values are not device readings, and they never apply changes. Those pages will
-gain working controls incrementally. Existing bar controls remain available.
+The remaining system controls have native operation forms with observed status,
+explicit confirmation, stale-selection checks, and local job reports. Long
+operations continue when Settings closes. Missing packages and unsupported
+hardware are reported without fabricated state. The `desktop` profile installs
+optional providers for storage, printing, scanning, firmware, backups, VPNs,
+Flatpak, and assistive tools; the `communication` profile supplies LocalSend.
+Services such as Samba and CUPS are enabled by explicit setup actions.
+
+Storage supports directory scans, thumbnail-cache cleanup, removable-drive
+mount/unlock/eject, and SMART health/self-tests. Backups use encrypted restic
+repositories on local storage or SSH/SFTP, with passwords in Secret Service,
+exclusions, retention, and persistent daily/weekly user timers. Timers require
+an active user manager and an unlocked keyring. Restore always creates a new
+folder and verifies restored data; an interrupted restore retains its partial
+folder. Snapper supports existing root configurations and setup on Btrfs roots
+without an existing `/.snapshots` layout. Full-system recovery still requires a
+separately validated rescue environment; Settings does not roll back a mounted
+root filesystem or create a Limine snapshot-boot integration.
+
+Apps provides package inventory/search, reviewed repository installation/removal,
+optional user Flatpak operations, and supported Flatpak permission controls.
+Foreign/AUR packages are identified, but building AUR packages remains the AUR
+helper's responsibility. Native applications have no universal camera,
+microphone, or file permission switch. Blankweave and full system upgrades use
+the existing interactive updater/pacman transaction for review and authorization;
+opening that terminal is not reported as a successful update. Firmware uses
+fwupd and reports unsupported devices and reboot requirements.
+
+Users and sign-in manages local accounts and persists the tty1 password-required
+or automatic-login preference across installer runs. Date/time changes are
+system-wide. Printer setup supports IPP Everywhere devices; scanner discovery
+and PNG capture use SANE. Assistive tools use managed user services for Orca and
+wvkbd, plus persistent compositor magnification. Their shortcuts are editable in
+Keyboard shortcuts (defaults: `Super+Ctrl+R`, `Super+Ctrl+K`, and `Super+Ctrl+M`
+for the screen reader, keyboard, and magnification reset).
+
+Hibernation shows kernel, swap, and logind readiness. Resume preparation supports
+an **existing encrypted swap partition** large enough for memory, persistently
+unlocked with a passphrase through `crypttab.initramfs`, systemd/sd-encrypt
+initramfs hooks, and regular non-UKI BLS entries imported by Limine. It saves the
+original command lines, rebuilds initramfs images, and refreshes Limine. Other
+layouts require manual preparation; Settings never repartitions disks or creates
+swap files. Revert refuses to overwrite later boot-file edits. Reboot and test
+resume on the actual hardware before relying on it. The power menu offers
+hibernation when supported, and managed idle sleep can use it with a suspend
+fallback. Existing lock-before-sleep behavior remains in place.
+
 Use `Ctrl+F` to search, Tab to move between controls, and arrow keys plus Enter
 to navigate the category list. Escape clears a search or closes the window;
 `Ctrl+W` closes it directly.

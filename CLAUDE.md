@@ -794,6 +794,19 @@ row control types when their functionality becomes available. Settings tests
 run through `tests/settings.sh`, using offscreen Qt tests and isolated Quickshell
 processes so validation cannot modify the developer's desktop.
 
+`SettingsOperationsService` owns the remaining system providers for the window;
+`SettingsOperations` is a pure view so standalone Qt tests can inject a backend.
+`operations-settings.py` dispatches only registered domains and actions, validates
+captured revisions, passes requests through stdin, and records detached jobs in
+private XDG state. Never persist credentials in job records or arguments. Only
+safe read operations advertise cancellation. Package/account/storage privilege
+uses the isolated, root-owned `/usr/lib/blankweave/settings-system` helper and
+its administrator polkit action; it must never import user-writable modules.
+Keep its JSON operations strictly allowlisted. Backend tests mock all host
+mutations; the restic round-trip test uses only a temporary local repository.
+Hibernation boot preparation is limited to the layouts documented in README;
+never expand that support without rollback tests and real resume validation.
+
 `Services/SettingsDisplays.qml` reads connected monitors through
 `monitor-layout.sh status` while the Displays page is visible and refreshes
 after every scale, position, or mode command. That helper remains the sole monitor-config writer.

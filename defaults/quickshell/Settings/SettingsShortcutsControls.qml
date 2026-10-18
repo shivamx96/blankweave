@@ -31,18 +31,13 @@ ColumnLayout {
         text: "Change desktop key combinations while keeping their actions. Conflicts with reported desktop bindings are checked before saving; applications may also use the same keys."
         color: root.theme.textMuted; font.family: root.theme.fontFamily; font.pixelSize: root.theme.smallTextSize; wrapMode: Text.WordWrap
     }
-    TextField {
+    SettingsTextField {
+        theme: root.theme
         id: search
         objectName: "shortcutSearch"
         Layout.fillWidth: true
-        implicitHeight: 36
         placeholderText: "Find a shortcut…"
-        color: root.theme.text; placeholderTextColor: root.theme.textMuted
-        selectionColor: root.theme.accentSurface; selectedTextColor: root.theme.text
-        font.family: root.theme.fontFamily; font.pixelSize: root.theme.smallTextSize
-        leftPadding: 10
         Accessible.name: "Find a desktop shortcut"
-        background: Rectangle { color: root.theme.surfaceRaised; radius: root.theme.widgetRadius; border.color: search.activeFocus ? root.theme.accentBright : root.theme.outline }
     }
     SettingsComboBox {
         id: actionChoice

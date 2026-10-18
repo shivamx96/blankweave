@@ -76,3 +76,11 @@ hl.gesture({
     direction = "horizontal",
     action = "workspace",
 })
+
+-- Settings owns this optional magnification preference.
+local magnifier_path = (os.getenv("XDG_CONFIG_HOME") or (os.getenv("HOME") .. "/.config")) .. "/blankweave/magnifier.lua"
+local magnifier_file = io.open(magnifier_path, "r")
+if magnifier_file then
+    magnifier_file:close()
+    dofile(magnifier_path)
+end

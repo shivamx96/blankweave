@@ -54,6 +54,16 @@ if grep -Eq 'systemctl .*--now|systemctl (stop|restart) ' "$command_log"; then
     exit 1
 fi
 
+# A saved password-required policy survives installer convergence.
+mkdir -p "$system_root/etc/blankweave"
+printf 'no\n' > "$system_root/etc/blankweave/signin.conf"
+PATH="$fake_bin:$PATH" BLANKWEAVE_SYSTEM_ROOT="$system_root" BLANKWEAVE_TEST_LOG="$command_log" \
+    "$repository/scripts/configure-console-autologin.sh" blankweave
+if grep -q -- '--autologin' "$dropin"; then
+    printf 'Installer overwrote the saved sign-in preference.\n' >&2
+    exit 1
+fi
+
 # Invalid names cannot reach system configuration or a shell command line.
 if PATH="$fake_bin:$PATH" \
     BLANKWEAVE_SYSTEM_ROOT="$system_root" \

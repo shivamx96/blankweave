@@ -52,6 +52,10 @@ FloatingWindow {
         active: root.visible && !root.minimized && content.page !== null && content.page.id === "power"
     }
 
+    property SettingsOperationsService operations: SettingsOperationsService {
+        page: root.visible && !root.minimized && content.page ? content.page.id : ""
+    }
+
     property SettingsTask startup: SettingsTask { script: "startup-settings.py"; active: root.visible && !root.minimized && content.page !== null && content.page.id === "apps" }
 
     property SettingsTask wallpaper: SettingsTask { script: "wallpaper-settings.py"; active: root.visible && !root.minimized && content.page !== null && content.page.id === "appearance" }
@@ -123,6 +127,7 @@ FloatingWindow {
         startup: root.startup
         wallpaper: root.wallpaper
         webapps: root.webapps
+        operations: root.operations
         system: root.system
         notifications: root.notifications
         defaultApps: root.defaultApps

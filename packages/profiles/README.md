@@ -16,7 +16,9 @@ profile needs no packages of that kind for the detected capability.
 
 Profiles currently available:
 
-- `desktop` — browsers, notes, and personal desktop utilities;
+- `desktop` — browsers, notes, personal desktop utilities, and native Settings
+  providers for storage, backup, printing/scanning, firmware, VPNs, Flatpak,
+  and assistive applications;
 - `development` — editors, containers, language tooling, and coding tools;
 - `communication` — messaging and local sharing applications;
 - `gaming` — Steam, Proton, overlays, and the detected GPU's 32-bit driver;

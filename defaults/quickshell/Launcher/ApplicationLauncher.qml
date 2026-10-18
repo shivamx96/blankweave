@@ -1,5 +1,5 @@
 import QtQuick
-import QtQuick.Controls
+import QtQuick.Controls.Basic
 import QtQuick.Layouts
 import Quickshell
 import Quickshell.Io
@@ -466,6 +466,7 @@ PanelWindow {
                 highlightMoveDuration: 0
 
                 ScrollBar.vertical: ScrollBar {
+                    background: Rectangle { color: "transparent" }
                     policy: ScrollBar.AsNeeded
                     width: 4
 

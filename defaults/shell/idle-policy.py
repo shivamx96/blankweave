@@ -98,6 +98,16 @@ def render(base, row):
     return '\n\n'.join(result) + '\n'
 
 
+def sleep_action(text):
+    """Keep the managed lock-before-sleep sequence while selecting sleep mode."""
+    import shlex
+    config = Path(os.environ.get('XDG_CONFIG_HOME', Path.home() / '.config')) / 'blankweave/idle-hibernate'
+    if config.exists() and config.read_text() == 'yes\n':
+        helper = shlex.quote(str(Path(__file__).with_name('settings_recovery.py')))
+        return text.replace('on-timeout = systemctl suspend', 'on-timeout = python3 ' + helper + ' idle')
+    return text
+
+
 class Policy:
     def __init__(self):
         config = Path(os.environ.get('XDG_CONFIG_HOME', Path.home() / '.config'))
@@ -178,10 +188,10 @@ class Policy:
 
     def desired(self):
         if not self.managed() or not self.config.exists():
-            return normalize(self.entry.read_text()) if self.managed() else self.entry.read_text(), self.revision()
+            return sleep_action(normalize(self.entry.read_text())) if self.managed() else self.entry.read_text(), self.revision()
         settings = self.settings()
         _, mode = supply()
-        return render(self.base.read_text(), settings[mode]), self.revision()
+        return sleep_action(render(self.base.read_text(), settings[mode])), self.revision()
 
     def run(self):
         stop = False

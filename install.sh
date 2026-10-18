@@ -258,6 +258,10 @@ install -D -m 0755 "$REPO_DIR/scripts/doctor.sh" /usr/lib/blankweave/doctor-boot
 install -D -o root -g root -m 0755 "$REPO_DIR/scripts/theme-system.sh" /usr/lib/blankweave/theme-system
 install -D -o root -g root -m 0644 "$REPO_DIR/defaults/polkit/org.blankweave.theme-sync.policy" \
     /usr/share/polkit-1/actions/org.blankweave.theme-sync.policy
+install -D -o root -g root -m 0755 "$REPO_DIR/scripts/settings-system.py" /usr/lib/blankweave/settings-system
+install -D -o root -g root -m 0755 "$REPO_DIR/scripts/configure-console-autologin.sh" /usr/lib/blankweave/configure-console-autologin
+install -D -o root -g root -m 0644 "$REPO_DIR/defaults/polkit/org.blankweave.settings.policy" /usr/share/polkit-1/actions/org.blankweave.settings.policy
+install -D -o root -g root -m 0644 "$REPO_DIR/packages/base.txt" /usr/share/blankweave/settings-protected-packages
 copy_file_atomically "$REPO_DIR/VERSION" "$DOTS_DIR/VERSION"
 copy_file_atomically "$REPO_DIR/MIN_ROLLBACK_VERSION" "$DOTS_DIR/MIN_ROLLBACK_VERSION"
 

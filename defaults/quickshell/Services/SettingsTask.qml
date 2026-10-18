@@ -6,6 +6,7 @@ QtObject {
     id: root
     required property string script
     property string helper: Quickshell.env("HOME") + "/.local/share/blankweave/shell/" + script
+    property var arguments: []
     property bool active: false
     property bool ready: false
     property bool writing: false
@@ -24,10 +25,15 @@ QtObject {
         request = JSON.stringify(Object.assign({}, options, {revision: revision || data.revision}))
         writing = true; error = ""; action.running = true
     }
+    function cancelJob(id) {
+        if (busy) return
+        request = JSON.stringify({action: "cancel-job", id: id})
+        writing = true; error = ""; action.running = true
+    }
     onActiveChanged: if (active) refresh(true)
     property Timer poll: Timer { interval: 5000; repeat: true; running: root.active; onTriggered: root.refresh() }
     property Process status: Process {
-        command: ["python3", root.helper, "status"]
+        command: ["python3", root.helper].concat(root.arguments, ["status"])
         stdout: StdioCollector { id: output }
         stderr: StdioCollector { id: readError }
         onExited: (code, exitStatus) => {
@@ -40,9 +46,9 @@ QtObject {
         }
     }
     property Process action: Process {
-        command: ["python3", root.helper, "apply"]
+        command: ["python3", root.helper].concat(root.arguments, ["apply"])
         stdinEnabled: true
-        onStarted: { write(root.request); stdinEnabled = false }
+        onStarted: { write(root.request); root.request = ""; stdinEnabled = false }
         stderr: StdioCollector { id: writeError }
         onExited: (code, exitStatus) => {
             root.writing = false; stdinEnabled = true
