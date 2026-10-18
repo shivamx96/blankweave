@@ -298,4 +298,75 @@ TestCase {
         compare(item.editing, null)
         navigationSpy.target = null
     }
+    function retentionField() {
+        return {key:"keep",label:"Backups to keep",value:"14",options:[],secret:false,inputType:"integer",minimum:1,maximum:365,hint:"Retention limit"}
+    }
+    function test_number_control_keyboard_limits_and_string_submission() {
+        const item = createTemporaryObject(view, test, {width:260})
+        item.begin(action("configure", [retentionField()]))
+        const number = findChild(item, "operationNumber_keep")
+        verify(number.visible)
+        verify(!findChild(item, "operationField_keep").visible)
+        const input = findChild(number, "numberText")
+        compare(input.theme, test.themePalette)
+        input.forceActiveFocus()
+        keyClick(Qt.Key_Up)
+        compare(item.values.keep, "15")
+        keyClick(Qt.Key_Down)
+        compare(item.values.keep, "14")
+        item.draft.setValue("keep", "365")
+        verify(!findChild(number, "numberIncrease").enabled)
+        keyClick(Qt.Key_Up)
+        compare(item.values.keep, "365")
+        item.draft.setValue("keep", "1")
+        verify(!findChild(number, "numberDecrease").enabled)
+        findChild(number, "numberIncrease").clicked()
+        compare(item.values.keep, "2")
+        item.draft.setValue("keep", "0002")
+        item.submit()
+        compare(fakeBackend.request.keep, "2")
+    }
+    function test_invalid_number_keeps_input_and_blocks_submission_without_clearing_secrets() {
+        const item = createTemporaryObject(view, test, {width:550})
+        item.begin(action("configure", [retentionField(), {key:"password",label:"Password",value:"",options:[],secret:true}]))
+        item.draft.setValue("password", "secret")
+        for (const value of ["", "0", "366", "1.5", "-1", "abc", "1e2"]) {
+            item.draft.setValue("keep", value)
+            verify(!item.draft.valid)
+            verify(findChild(item, "operationFieldError_keep").visible)
+            verify(!button(item, "configure").enabled)
+            item.submit()
+            compare(fakeBackend.request, null)
+            compare(item.values.keep, value)
+            compare(item.values.password, "secret")
+        }
+        const input = findChild(findChild(item, "operationNumber_keep"), "numberText")
+        input.forceActiveFocus()
+        keyClick(Qt.Key_A, Qt.ControlModifier)
+        keyClick(Qt.Key_2)
+        keyClick(Qt.Key_1)
+        compare(item.values.keep, "21")
+        verify(item.draft.valid)
+        verify(!findChild(item, "operationFieldError_keep").visible)
+        item.submit()
+        compare(fakeBackend.request.keep, "21")
+        compare(item.values.password, "")
+    }
+    function test_toggle_changes_only_draft_and_restores_binding() {
+        const item = createTemporaryObject(view, test, {width:550})
+        item.begin(action("policy", [{key:"enabled",label:"Permit hibernation",value:"yes",options:[{value:"yes",label:"yes"},{value:"no",label:"no"}],inputType:"toggle"}]))
+        const toggle = findChild(item, "operationToggle_enabled")
+        verify(toggle.visible)
+        verify(toggle.checked)
+        verify(!findChild(item, "operationFieldChoice").visible)
+        toggle.forceActiveFocus()
+        keyClick(Qt.Key_Space)
+        compare(item.values.enabled, "no")
+        compare(fakeBackend.request, null)
+        item.draft.setValue("enabled", "yes")
+        verify(toggle.checked)
+        item.submit()
+        compare(fakeBackend.request.enabled, "yes")
+    }
+
 }

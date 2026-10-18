@@ -131,11 +131,34 @@ ColumnLayout {
                     objectName: "operationField_" + formField.modelData.key
                     theme: root.theme
                     Layout.fillWidth: true
-                    visible: formField.modelData.options.length === 0 && !formField.modelData.multiline
+                    visible: formField.modelData.options.length === 0 && !formField.modelData.multiline && formField.modelData.inputType !== "integer"
                     text: String(root.values[formField.modelData.key] ?? "")
                     echoMode: formField.modelData.secret ? TextInput.Password : TextInput.Normal
                     Accessible.name: formField.modelData.label
                     onTextEdited: root.draft.setValue(formField.modelData.key, text)
+                }
+                SettingsNumberField {
+                    objectName: "operationNumber_" + formField.modelData.key
+                    theme: root.theme
+                    Layout.fillWidth: true
+                    visible: formField.modelData.inputType === "integer"
+                    value: String(root.values[formField.modelData.key] ?? "")
+                    label: formField.modelData.label
+                    minimum: formField.modelData.minimum ?? 0
+                    maximum: formField.modelData.maximum ?? 0
+                    onEdited: value => root.draft.setValue(formField.modelData.key, value)
+                }
+                SettingsSwitch {
+                    objectName: "operationToggle_" + formField.modelData.key
+                    theme: root.theme
+                    visible: formField.modelData.inputType === "toggle"
+                    checked: root.values[formField.modelData.key] === "yes"
+                    text: checked ? "Enabled" : "Disabled"
+                    Accessible.name: formField.modelData.label
+                    onToggled: {
+                        root.draft.setValue(formField.modelData.key, checked ? "yes" : "no")
+                        checked = Qt.binding(() => root.values[formField.modelData.key] === "yes")
+                    }
                 }
                 SettingsTextArea {
                     theme: root.theme
@@ -151,11 +174,28 @@ ColumnLayout {
                     objectName: "operationFieldChoice"
                     theme: root.theme
                     Layout.fillWidth: true
-                    visible: formField.modelData.options.length > 0
+                    visible: formField.modelData.options.length > 0 && formField.modelData.inputType !== "toggle"
                     model: formField.modelData.options; textRole: "label"; valueRole: "value"
-                    currentIndex: Math.max(0, formField.modelData.options.findIndex(option => option.value === root.values[formField.modelData.key]))
+                    currentIndex: formField.modelData.options.findIndex(option => option.value === root.values[formField.modelData.key])
                     Accessible.name: formField.modelData.label
                     onActivated: root.draft.setValue(formField.modelData.key, currentValue)
+                }
+                Text {
+                    Layout.fillWidth: true
+                    visible: text !== ""
+                    text: formField.modelData.hint || ""
+                    textFormat: Text.PlainText; wrapMode: Text.WordWrap
+                    color: root.theme.textMuted; font.family: root.theme.fontFamily; font.pixelSize: root.theme.smallTextSize
+                }
+                Text {
+                    objectName: "operationFieldError_" + formField.modelData.key
+                    Layout.fillWidth: true
+                    visible: text !== ""
+                    text: root.draft ? root.draft.fieldErrors[formField.modelData.key] || "" : ""
+                    textFormat: Text.PlainText; wrapMode: Text.WordWrap
+                    color: root.theme.warning; font.family: root.theme.fontFamily; font.pixelSize: root.theme.smallTextSize
+                    Accessible.role: Accessible.StaticText
+                    Accessible.name: text
                 }
             }
         }
@@ -200,7 +240,7 @@ ColumnLayout {
             SettingsButton {
                 theme: root.theme
                 text: root.draft && root.draft.pending ? "Working…" : root.editing && root.draft && root.draft.error ? "Retry " + root.editing.label : root.editing ? root.editing.label : "Apply"
-                enabled: root.backend && root.backend.writable && root.draft && !root.draft.pending && !root.draft.stale
+                enabled: root.backend && root.backend.writable && root.draft && !root.draft.pending && !root.draft.stale && root.draft.valid
                 onClicked: root.submit()
             }
             SettingsButton {
