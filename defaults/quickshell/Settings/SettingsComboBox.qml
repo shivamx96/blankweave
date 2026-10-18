@@ -49,7 +49,7 @@ Controls.ComboBox {
         implicitHeight: 38
         leftPadding: 12
         rightPadding: 12
-        text: String(modelData)
+        text: root.textAt(index)
         highlighted: root.highlightedIndex === index
         hoverEnabled: true
         font: root.font

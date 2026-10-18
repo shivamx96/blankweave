@@ -1,6 +1,5 @@
 pragma ComponentBehavior: Bound
 import QtQuick
-import QtQuick.Controls
 import QtQuick.Layouts
 
 ColumnLayout {
@@ -50,42 +49,26 @@ ColumnLayout {
         visible: mode.currentIndex === 2
         Layout.fillWidth: true
         Text { text: "From"; color: root.theme.textMuted; font.family: root.theme.fontFamily }
-        TextField {
+        SettingsTextField {
+            theme: root.theme
             id: start
             objectName: "nightLightStart"
             Layout.fillWidth: true
-            implicitHeight: 36
             enabled: root.writable
             maximumLength: 5
             placeholderText: "21:00"
-            color: root.theme.text
-            placeholderTextColor: root.theme.textMuted
-            selectionColor: root.theme.accentSurface
-            selectedTextColor: root.theme.text
-            font.family: root.theme.fontFamily
-            font.pixelSize: root.theme.textSize
-            leftPadding: 10
             Accessible.name: "Night light start time, 24 hour"
-            background: Rectangle { color: root.theme.surfaceRaised; radius: root.theme.widgetRadius; border.color: start.activeFocus ? root.theme.accentBright : root.theme.outline }
         }
         Text { text: "to"; color: root.theme.textMuted; font.family: root.theme.fontFamily }
-        TextField {
+        SettingsTextField {
+            theme: root.theme
             id: end
             objectName: "nightLightEnd"
             Layout.fillWidth: true
-            implicitHeight: 36
             enabled: root.writable
             maximumLength: 5
             placeholderText: "07:00"
-            color: root.theme.text
-            placeholderTextColor: root.theme.textMuted
-            selectionColor: root.theme.accentSurface
-            selectedTextColor: root.theme.text
-            font.family: root.theme.fontFamily
-            font.pixelSize: root.theme.textSize
-            leftPadding: 10
             Accessible.name: "Night light end time, 24 hour"
-            background: Rectangle { color: root.theme.surfaceRaised; radius: root.theme.widgetRadius; border.color: end.activeFocus ? root.theme.accentBright : root.theme.outline }
         }
     }
     RowLayout {

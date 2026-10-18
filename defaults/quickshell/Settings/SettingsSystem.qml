@@ -38,11 +38,13 @@ ColumnLayout {
             contentWidth: width; contentHeight: reportText.height
             clip: true
             TextEdit {
+                selectionColor: root.theme.accentSurface
+                selectedTextColor: root.theme.text
                 id: reportText
                 width: parent.width
                 text: root.report ? root.report.text : ""
                 readOnly: true; selectByMouse: true; textFormat: TextEdit.PlainText; wrapMode: TextEdit.WrapAnywhere
-                color: root.theme.text; selectionColor: root.theme.accent; font.family: root.theme.fontFamily; font.pixelSize: root.theme.smallTextSize
+                color: root.theme.text; font.family: root.theme.fontFamily; font.pixelSize: root.theme.smallTextSize
             }
         }
     }

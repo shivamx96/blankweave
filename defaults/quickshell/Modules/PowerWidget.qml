@@ -1,11 +1,18 @@
 import QtQuick
 import QtQuick.Layouts
 import "../Components"
+import "../Services"
 
 WidgetFrame {
     id: root
 
     property string pendingAction: ""
+    SettingsTask {
+        id: hibernation
+        script: "operations-settings.py"
+        arguments: ["hibernate"]
+        active: powerPanel.open
+    }
 
     function execute(command) {
         confirmTimer.stop()
@@ -128,6 +135,31 @@ WidgetFrame {
                 attention: root.pendingAction === "shutdown"
                 onPressed: root.requestGuarded("shutdown", ["systemctl", "poweroff"])
             }
+        }
+
+        ControlAction {
+            theme: root.theme
+            icon: "󰒲"
+            label: root.confirmationLabel("hibernate", "Hibernate")
+            visible: hibernation.ready && (hibernation.data.actions || []).some(action => action.key === "hibernate")
+            enabled: hibernation.writable
+            attention: root.pendingAction === "hibernate"
+            onPressed: {
+                if (root.pendingAction === "hibernate") {
+                    hibernation.apply({action: "hibernate", confirmed: true})
+                    root.pendingAction = ""
+                    confirmTimer.stop()
+                } else {
+                    root.pendingAction = "hibernate"
+                    confirmTimer.restart()
+                }
+            }
+        }
+        Text {
+            visible: text !== ""
+            text: hibernation.error || (hibernation.ready && hibernation.data.job && hibernation.data.job.phase === "failed" ? hibernation.data.job.message : ""); textFormat: Text.PlainText
+            Layout.fillWidth: true; wrapMode: Text.WordWrap
+            color: root.theme.warning; font.pixelSize: root.theme.smallTextSize
         }
 
         Text {

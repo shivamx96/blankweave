@@ -1,6 +1,5 @@
 pragma ComponentBehavior: Bound
 import QtQuick
-import QtQuick.Controls
 import QtQuick.Layouts
 
 ColumnLayout {
@@ -13,27 +12,15 @@ ColumnLayout {
 
     RowLayout {
         Layout.fillWidth: true
-        TextField {
+        SettingsTextField {
+            theme: root.theme
             id: nameField
             objectName: "displaySetupName"
             Layout.fillWidth: true
-            implicitHeight: 36
             placeholderText: "Setup name, e.g. Desk"
             maximumLength: 60
             enabled: root.writable
-            color: root.theme.text
-            placeholderTextColor: root.theme.textMuted
-            selectionColor: root.theme.accentSurface
-            selectedTextColor: root.theme.text
-            font.family: root.theme.fontFamily
-            font.pixelSize: root.theme.textSize
-            leftPadding: 10
             Accessible.name: "Setup name"
-            background: Rectangle {
-                color: root.theme.surfaceRaised
-                radius: root.theme.widgetRadius
-                border.color: nameField.activeFocus ? root.theme.accentBright : root.theme.outline
-            }
             onAccepted: if (saveButton.enabled) root.backend.savePreset(text)
         }
         SettingsButton {

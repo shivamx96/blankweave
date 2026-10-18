@@ -383,5 +383,26 @@
     "group": "Workspaces",
     "default": "SUPER + SHIFT + 0",
     "repeat": false
+  },
+  {
+    "id": "assistive-reader",
+    "label": "Toggle screen reader",
+    "group": "Accessibility",
+    "default": "SUPER + CTRL + R",
+    "repeat": false
+  },
+  {
+    "id": "assistive-keyboard",
+    "label": "Toggle on-screen keyboard",
+    "group": "Accessibility",
+    "default": "SUPER + CTRL + K",
+    "repeat": false
+  },
+  {
+    "id": "assistive-zoom-reset",
+    "label": "Reset magnification",
+    "group": "Accessibility",
+    "default": "SUPER + CTRL + M",
+    "repeat": false
   }
 ]

@@ -91,3 +91,8 @@ for workspace = 1, 10 do
     bind("workspace-" .. workspace, main_mod .. " + " .. key, summon_workspace(workspace))
     bind("move-workspace-" .. workspace, main_mod .. " + SHIFT + " .. key, hl.dsp.window.move({ workspace = workspace }))
 end
+
+-- Assistive tool shortcuts are included in the editable shortcut catalog.
+bind("assistive-reader", "SUPER + CTRL + R", hl.dsp.exec_cmd("python3 ~/.local/share/blankweave/shell/settings_session.py reader"))
+bind("assistive-keyboard", "SUPER + CTRL + K", hl.dsp.exec_cmd("python3 ~/.local/share/blankweave/shell/settings_session.py keyboard"))
+bind("assistive-zoom-reset", "SUPER + CTRL + M", hl.dsp.exec_cmd("python3 ~/.local/share/blankweave/shell/settings_session.py zoom"))
