@@ -450,6 +450,12 @@ Passwords are cleared after submission and when leaving a page. Drafts are never
 saved to disk and do not survive a shell restart. If the available settings or
 target changes, review the current action before submitting again.
 
+Each operation section exposes its primary task directly, with secondary tasks
+under **More actions**. An ellipsis indicates that input or review comes next.
+Supported read-only tasks can run immediately, including drive health when only
+one drive is available; multiple targets still open a chooser. Destructive and
+system-changing actions retain their review step.
+
 Storage supports directory scans, thumbnail-cache cleanup, removable-drive
 mount/unlock/eject, and SMART health/self-tests. Backups use encrypted restic
 repositories on local storage or SSH/SFTP, with passwords in Secret Service,

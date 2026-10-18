@@ -1,5 +1,6 @@
 import QtQuick
 import QtTest
+import "../../defaults/quickshell/Settings/OperationActions.js" as Actions
 import "../../defaults/quickshell/Services"
 import "../../defaults/quickshell/Settings"
 import "../../defaults/quickshell/Settings/Catalog.js" as Catalog
@@ -8,6 +9,7 @@ TestCase {
     name: "SettingsOperations"
     width: 600; height: 800
     when: windowShown
+    visible: true
     property var themePalette: ({surface:"#112233",panelSurface:"#112233",surfaceRaised:"#223344",surfaceHover:"#334455",surfacePressed:"#445566",
         text:"#ffffff",textMuted:"#aabbcc",accent:"#77aaff",accentBright:"#77aaff",accentSurface:"#223355",outline:"#445566",
         warning:"#ffaa33",fontFamily:"sans-serif",textSize:13,smallTextSize:12,widgetRadius:4,reducedMotion:true})
@@ -37,7 +39,7 @@ TestCase {
     }
     function init() {
         fakeBackend.draft.pending = false; fakeBackend.draft.discard(); fakeBackend.error = ""; fakeBackend.active = true
-        fakeBackend.ready = true; fakeBackend.writable = true; fakeBackend.busy = false; fakeBackend.request = null; fakeBackend.cancelled = ""
+        fakeBackend.ready = true; fakeBackend.writable = true; fakeBackend.busy = false; fakeBackend.writing = false; fakeBackend.request = null; fakeBackend.cancelled = ""
         fakeBackend.data = {revision:"original", details:["Device present"], message:"", job:null, actions:[{
             key:"eject",label:"Eject",confirm:"Eject this device?",cancellable:false,
             fields:[{key:"device",label:"Device",value:"old-device",options:[{value:"old-device",label:"USB drive"}],secret:false}]
@@ -61,14 +63,6 @@ TestCase {
     }
     function test_styled_choices_display_labels_and_submit_values() {
         const item = createTemporaryObject(view, test, {width: 550})
-        const operation = findChild(item, "operationChoice")
-        compare(operation.theme, test.themePalette)
-        operation.popup.open()
-        tryCompare(operation.popup, "opened", true)
-        tryVerify(() => operation.popup.contentItem.itemAtIndex(0) !== null)
-        compare(operation.popup.contentItem.itemAtIndex(0).text, "Eject")
-        compare(operation.popup.background.color, test.themePalette.panelSurface)
-        operation.popup.close()
         item.begin(fakeBackend.data.actions[0])
         const choice = findChild(item, "operationFieldChoice")
         verify(choice !== null)
@@ -101,7 +95,7 @@ TestCase {
     function test_busy_provider_disables_operation() {
         fakeBackend.writable = false
         const item = createTemporaryObject(view, test)
-        verify(!button(item, "Configure…").enabled)
+        verify(!findChild(item, "moreOperations").enabled)
     }
     function report(id, phase, message) {
         fakeBackend.data = Object.assign({}, fakeBackend.data, {job:{id:id,phase:phase,message:message || "",label:"Eject",cancellable:false}})
@@ -191,5 +185,99 @@ TestCase {
         const item = createTemporaryObject(view, test)
         button(item, "Cancel operation").clicked()
         compare(fakeBackend.cancelled, "job-1")
+    }
+    function actions(rows) { fakeBackend.data = Object.assign({}, fakeBackend.data, {actions:rows}) }
+    function action(key, fields, confirm) { return {key:key,label:key,fields:fields || [],confirm:confirm || "",cancellable:false} }
+    function test_primary_read_runs_directly_but_input_action_opens_form() {
+        actions([action("preview-cleanup"), action("scan", [{key:"folder",label:"Folder",value:"/home",options:[],secret:false}])])
+        const item = createTemporaryObject(view, test, {settingId:"disk-usage",width:550})
+        compare(findChild(item, "primaryOperation").text, "scan…")
+        findChild(item, "primaryOperation").clicked()
+        compare(item.editing.key, "scan")
+        compare(fakeBackend.request, null)
+        item.draft.discard()
+        item.activate(fakeBackend.data.actions[0], "original")
+        compare(fakeBackend.request.action, "preview-cleanup")
+    }
+    function test_one_drive_health_read_skips_picker_multiple_drives_do_not() {
+        const target = {key:"device",label:"Drive",value:"disk-1",options:[{value:"disk-1",label:"Drive one"}],secret:false}
+        actions([action("health", [target])])
+        const item = createTemporaryObject(view, test, {settingId:"disk-health",width:550})
+        findChild(item, "primaryOperation").clicked()
+        compare(fakeBackend.request.device, "disk-1")
+        item.draft.pending = false; item.draft.discard(); fakeBackend.request = null
+        target.options.push({value:"disk-2",label:"Drive two"})
+        actions([action("health", [target])])
+        findChild(item, "primaryOperation").clicked()
+        compare(fakeBackend.request, null)
+        compare(item.editing.key, "health")
+    }
+    function test_mutations_and_unknown_actions_keep_confirmation_step() {
+        verify(!Actions.direct("snapshots", action("create")))
+        verify(!Actions.direct("backup", action("backup")))
+        verify(!Actions.direct("updates", action("update", [], "Install updates?")))
+        verify(!Actions.direct("updates", action("check", [], "Confirm network access")))
+        verify(!Actions.direct("future-provider", action("read")))
+        compare(Actions.primary("drives", [action("eject")]), null)
+    }
+    function test_secondary_menu_freezes_action_and_revision() {
+        actions([action("scan", [{key:"folder",label:"Folder",value:"/home",options:[],secret:false}]), action("preview-cleanup")])
+        const item = createTemporaryObject(view, test, {settingId:"disk-usage",width:550})
+        findChild(item, "moreOperations").clicked()
+        const menu = findChild(item, "operationActionsMenu")
+        tryCompare(menu, "opened", true)
+        compare(menu.count, 1)
+        compare(menu.itemAt(0).text, "preview-cleanup")
+        compare(menu.background.color, test.themePalette.panelSurface)
+        const entry = menu.entries[0]
+        fakeBackend.data = Object.assign({}, fakeBackend.data, {revision:"changed",actions:[action("cleanup", [], "Delete thumbnails?")]})
+        menu.chosen(entry)
+        compare(fakeBackend.request, null)
+        verify(item.draft.stale)
+        compare(item.editing.key, "preview-cleanup")
+        menu.close()
+    }
+    function test_menu_keyboard_activation_and_busy_close() {
+        actions([action("check"), action("release-notes")])
+        const item = createTemporaryObject(view, test, {settingId:"updates",width:550})
+        const more = findChild(item, "moreOperations")
+        more.forceActiveFocus()
+        keyClick(Qt.Key_Space)
+        const menu = findChild(item, "operationActionsMenu")
+        tryCompare(menu, "opened", true)
+        keyClick(Qt.Key_Down)
+        keyClick(Qt.Key_Return)
+        compare(fakeBackend.request.action, "release-notes")
+        tryCompare(menu, "opened", false)
+        item.draft.pending = false; item.draft.discard()
+        more.clicked()
+        tryCompare(menu, "opened", true)
+        fakeBackend.writable = false
+        verify(menu.opened) // A status poll must not dismiss a menu being read.
+        fakeBackend.writing = true
+        tryCompare(menu, "opened", false)
+    }
+    function test_dismissing_menu_never_starts_an_action() {
+        const item = createTemporaryObject(view, test, {width:260})
+        findChild(item, "moreOperations").clicked()
+        const menu = findChild(item, "operationActionsMenu")
+        tryCompare(menu, "opened", true)
+        verify(menu.width <= item.width)
+        keyClick(Qt.Key_Escape)
+        tryCompare(menu, "opened", false)
+        compare(fakeBackend.request, null)
+        compare(item.editing, null)
+    }
+    function test_destructive_menu_action_still_requires_confirmation() {
+        const item = createTemporaryObject(view, test, {width:550})
+        findChild(item, "moreOperations").clicked()
+        const menu = findChild(item, "operationActionsMenu")
+        tryCompare(menu, "opened", true)
+        menu.itemAt(0).triggered()
+        compare(fakeBackend.request, null)
+        compare(item.editing.confirm, "Eject this device?")
+        button(item, "Eject").clicked()
+        compare(fakeBackend.request.action, "eject")
+        menu.close()
     }
 }
