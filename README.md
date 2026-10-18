@@ -333,6 +333,11 @@ blankweave settings
 
 The searchable settings window covers Appearance, Displays, Sound, Network &
 Bluetooth, Power, Input & Accessibility, Apps, Storage & Backup, and System.
+Press `Ctrl+F` to search individual settings. Results show their category and
+section; select a result to jump to its controls with a temporary highlight.
+Use Up/Down and Enter to navigate results, or Escape to clear the search.
+Common terms such as “time zone”, “screen reader”, and “uninstall” are supported.
+
 Appearance's theme, dark/light mode, bar position, and bar visibility controls
 are connected to the existing desktop configuration and apply immediately.
 Changes made from the bar remain reflected in Settings. When folder colors or

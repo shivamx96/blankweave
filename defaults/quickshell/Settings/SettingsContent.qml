@@ -33,7 +33,12 @@ Rectangle {
     property var wifi: null
     property var bluetooth: null
     property string selectedPage: "appearance"
-    readonly property var results: Catalog.search(search.text)
+    readonly property var results: Catalog.pages
+    readonly property bool searching: search.text.trim().length > 0
+    readonly property var searchResults: Catalog.searchSettings(search.text)
+    property string highlightedSetting: ""
+    property int searchIndex: 0
+    property bool followSearchTarget: false
     readonly property var page: results.find(entry => entry.id === selectedPage) || results[0] || null
     readonly property bool narrow: width < 800
     signal closeRequested
@@ -42,7 +47,57 @@ Rectangle {
 
     function focusSearch() { search.forceActiveFocus(); search.selectAll() }
 
-    onPageChanged: pageScroll.contentItem.contentY = 0
+    function showResult(result) {
+        if (!result) return
+        selectedPage = result.pageId
+        search.clear()
+        highlightedSetting = result.id
+        followSearchTarget = true
+        jumpTimer.restart()
+    }
+    function rowForSetting(id) {
+        for (let g = 0; g < groups.count; g++) {
+            const group = groups.itemAt(g)
+            for (let r = 0; r < group.rowRepeater.count; r++) {
+                const row = group.rowRepeater.itemAt(r)
+                if (row.modelData.id === id) return row
+            }
+        }
+        return null
+    }
+    function focusResult(index) {
+        if (!searchResults.length) return
+        searchIndex = Math.max(0, Math.min(index, searchResults.length - 1))
+        const item = searchRows.itemAt(searchIndex)
+        if (item) {
+            item.forceActiveFocus()
+            const y = item.mapToItem(pageColumn, 0, 0).y
+            pageScroll.contentItem.contentY = Math.max(0, Math.min(y - 16,
+                pageScroll.contentItem.contentHeight - pageScroll.contentItem.height))
+        }
+    }
+    Timer {
+        id: jumpTimer
+        interval: 50
+        onTriggered: {
+            const row = root.rowForSetting(root.highlightedSetting)
+            if (!row) return
+            pageScroll.contentItem.contentY = Math.max(0, Math.min(row.mapToItem(pageColumn, 0, 0).y - 16,
+                pageScroll.contentItem.contentHeight - pageScroll.contentItem.height))
+            row.forceActiveFocus()
+            highlightTimer.restart()
+        }
+    }
+    Timer { id: highlightTimer; interval: 3500; onTriggered: { root.highlightedSetting = ""; root.followSearchTarget = false } }
+    onPageChanged: { followSearchTarget = false; jumpTimer.stop(); highlightTimer.stop(); highlightedSetting = ""; pageScroll.contentItem.contentY = 0 }
+    onSearchingChanged: pageScroll.contentItem.contentY = 0
+    Connections {
+        target: pageScroll.contentItem
+        function onContentHeightChanged() {
+            if (root.followSearchTarget && root.highlightedSetting) jumpTimer.restart()
+        }
+        function onMovementStarted() { root.followSearchTarget = false; jumpTimer.stop() }
+    }
     Connections {
         target: root.displays
         function onPreviewPendingChanged() {
@@ -98,13 +153,9 @@ Rectangle {
                     Layout.preferredHeight: 36
                     placeholderText: "Search settings…"
                     Accessible.name: "Search settings"
-                    onAccepted: {
-                        if (root.results.length) {
-                            root.selectedPage = root.results[0].id
-                            categories.forceActiveFocus()
-                        }
-                    }
-                    Keys.onDownPressed: categories.forceActiveFocus()
+                    onTextChanged: { root.followSearchTarget = false; jumpTimer.stop(); highlightTimer.stop(); root.highlightedSetting = ""; root.searchIndex = 0; pageScroll.contentItem.contentY = 0 }
+                    onAccepted: root.showResult(root.searchResults[root.searchIndex])
+                    Keys.onDownPressed: root.searching ? root.focusResult(0) : categories.forceActiveFocus()
                 }
                 SettingsButton {
                     theme: root.theme
@@ -152,10 +203,10 @@ Rectangle {
                         boundsBehavior: Flickable.StopAtBounds
                         ScrollBar.vertical: SettingsScrollBar { theme: root.theme }
                         Keys.onReturnPressed: {
-                            if (root.results[currentIndex]) root.selectedPage = root.results[currentIndex].id
+                            if (root.results[currentIndex]) { search.clear(); root.selectedPage = root.results[currentIndex].id }
                         }
                         Keys.onSpacePressed: {
-                            if (root.results[currentIndex]) root.selectedPage = root.results[currentIndex].id
+                            if (root.results[currentIndex]) { search.clear(); root.selectedPage = root.results[currentIndex].id }
                         }
                         delegate: SettingsButton {
                             id: category
@@ -165,9 +216,9 @@ Rectangle {
                             height: root.narrow ? 60 : 46
                             theme: root.theme
                             text: modelData.title
-                            selected: root.page !== null && root.page.id === modelData.id
+                            selected: !root.searching && root.page !== null && root.page.id === modelData.id
                             Accessible.description: modelData.description
-                            onClicked: root.selectedPage = modelData.id
+                            onClicked: { search.clear(); root.selectedPage = modelData.id }
                             background: Rectangle {
                                 radius: root.theme.widgetRadius
                                 color: category.selected ? root.theme.accentSurface
@@ -227,10 +278,76 @@ Rectangle {
                 ScrollBar.vertical: SettingsScrollBar { theme: root.theme }
 
                 ColumnLayout {
+                    id: pageColumn
                     width: pageScroll.availableWidth
                     spacing: 20
 
                     ColumnLayout {
+                        visible: root.searching
+                        Layout.fillWidth: true
+                        Layout.margins: root.narrow ? 20 : 32
+                        spacing: 12
+                        Text {
+                            Layout.fillWidth: true
+                            text: root.searchResults.length ? "Search results" : "No settings found"
+                            color: root.theme.text; font.family: root.theme.fontFamily
+                            font.pixelSize: Math.round(28 * (root.theme.textScale || 1))
+                            wrapMode: Text.WordWrap
+                        }
+                        Text {
+                            Layout.fillWidth: true
+                            text: root.searchResults.length ? root.searchResults.length + (root.searchResults.length === 1 ? " matching setting" : " matching settings")
+                                : "Try another word, such as keyboard, backups, or theme."
+                            color: root.theme.textMuted; font.family: root.theme.fontFamily; font.pixelSize: root.theme.smallTextSize
+                            wrapMode: Text.WordWrap
+                        }
+                        Repeater {
+                            id: searchRows
+                            model: root.searching ? root.searchResults : []
+                            delegate: SettingsButton {
+                                id: resultButton
+                                required property var modelData
+                                required property int index
+                                objectName: "searchResult_" + modelData.id
+                                Layout.fillWidth: true
+                                implicitHeight: resultLabels.implicitHeight + 24
+                                theme: root.theme
+                                text: modelData.title
+                                padding: 12
+                                Accessible.name: modelData.title + ". " + modelData.breadcrumb
+                                Accessible.description: modelData.description
+                                onClicked: root.showResult(modelData)
+                                Keys.onDownPressed: root.focusResult(index + 1)
+                                Keys.onUpPressed: index === 0 ? search.forceActiveFocus() : root.focusResult(index - 1)
+                                Keys.onReturnPressed: root.showResult(modelData)
+                                contentItem: ColumnLayout {
+                                    id: resultLabels
+                                    spacing: 4
+                                    Text {
+                                        Layout.fillWidth: true
+                                        text: resultButton.modelData.title
+                                        textFormat: Text.PlainText; wrapMode: Text.WordWrap
+                                        color: root.theme.text; font.family: root.theme.fontFamily; font.pixelSize: root.theme.textSize
+                                        font.weight: Font.Medium
+                                    }
+                                    Text {
+                                        Layout.fillWidth: true
+                                        text: resultButton.modelData.breadcrumb
+                                        textFormat: Text.PlainText; wrapMode: Text.WordWrap
+                                        color: root.theme.accentBright; font.family: root.theme.fontFamily; font.pixelSize: root.theme.smallTextSize
+                                    }
+                                    Text {
+                                        Layout.fillWidth: true
+                                        text: resultButton.modelData.description
+                                        textFormat: Text.PlainText; wrapMode: Text.WordWrap
+                                        color: root.theme.textMuted; font.family: root.theme.fontFamily; font.pixelSize: root.theme.smallTextSize
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    ColumnLayout {
+                        visible: !root.searching
                         Layout.fillWidth: true
                         Layout.margins: root.narrow ? 20 : 32
                         spacing: 9
@@ -379,9 +496,11 @@ Rectangle {
                         }
 
                         Repeater {
+                            id: groups
                             model: root.page ? root.page.groups : []
                             delegate: ColumnLayout {
                                 id: group
+                                property alias rowRepeater: settingsRows
                                 required property var modelData
                                 Layout.fillWidth: true
                                 Layout.topMargin: 12
@@ -401,6 +520,7 @@ Rectangle {
                                         width: parent.width
                                         spacing: 0
                                         Repeater {
+                                            id: settingsRows
                                             model: group.modelData.rows
                                             delegate: ColumnLayout {
                                                 id: settingGroup
@@ -408,6 +528,16 @@ Rectangle {
                                                 required property int index
                                                 Layout.fillWidth: true
                                                 spacing: 0
+                                                objectName: "settingTarget_" + modelData.id
+                                                Accessible.name: modelData.title
+                                                Accessible.role: Accessible.Grouping
+                                                Rectangle {
+                                                    Layout.fillWidth: true
+                                                    implicitHeight: 4
+                                                    visible: root.highlightedSetting === settingGroup.modelData.id
+                                                    color: root.theme.accentBright
+                                                    radius: 2
+                                                }
                                                 Rectangle {
                                                     Layout.fillWidth: true
                                                     Layout.leftMargin: 18

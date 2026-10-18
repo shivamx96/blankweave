@@ -148,19 +148,76 @@ TestCase {
         fakeDisplays.previewDecision = -1
         fakeDisplays.presets = []
         fakeDisplays.lastPreset = ""
+        wait(0)
     }
 
     function test_search_and_empty_state() {
         var search = findChild(content, "settingsSearch")
         search.text = "microphone"
-        compare(content.page.id, "sound")
+        compare(content.searchResults[0].pageId, "sound")
         search.text = "backup retention"
-        compare(content.page.id, "storage")
+        compare(content.searchResults[0].id, "backup")
         search.text = "no-match-12345"
-        compare(content.page, null)
-        compare(content.results.length, 0)
+        verify(content.searching)
+        compare(content.searchResults.length, 0)
         search.text = ""
         compare(content.results.length, 9)
+    }
+
+    function test_search_jumps_to_exact_setting() {
+        const search = findChild(content, "settingsSearch")
+        search.text = "backup retention"
+        content.focusSearch()
+        keyClick(Qt.Key_Return)
+        compare(search.text, "")
+        compare(content.page.id, "storage")
+        tryCompare(content, "highlightedSetting", "backup")
+        const target = findChild(content, "settingTarget_backup")
+        verify(target !== null)
+        tryVerify(() => target.activeFocus)
+        const scroll = findChild(content, "settingsPageScroll")
+        verify(scroll.contentItem.contentY > 0)
+        const y = target.mapToItem(scroll, 0, 0).y
+        verify(y >= -1 && y < scroll.height, "Search target should be in view")
+        compare(fakeBackend.writes, 0)
+    }
+    function test_search_keyboard_results_and_escape() {
+        const search = findChild(content, "settingsSearch")
+        search.text = "timezone"
+        content.focusSearch()
+        keyClick(Qt.Key_Down)
+        verify(findChild(content, "searchResult_datetime").activeFocus)
+        keyClick(Qt.Key_Up)
+        verify(search.activeFocus)
+        keyClick(Qt.Key_Down)
+        keyClick(Qt.Key_Return)
+        compare(content.page.id, "system")
+        compare(content.highlightedSetting, "datetime")
+    }
+    function test_search_aliases_and_row_scoping() {
+        compare(Catalog.searchSettings("time zone")[0].id, "datetime")
+        compare(Catalog.searchSettings("screen reader")[0].id, "assistive")
+        compare(Catalog.searchSettings("uninstall")[0].id, "installed")
+        compare(Catalog.searchSettings("   ").length, 0)
+        compare(Catalog.searchSettings("firmware sign-in").length, 0)
+        compare(Catalog.searchSettings("DeSkToP ThEmE")[0].id, "theme")
+    }
+    function test_search_mouse_selection_at_minimum_window_size() {
+        const oldWidth = test.width
+        const oldHeight = test.height
+        try {
+            test.width = 640; test.height = 480
+            findChild(content, "settingsSearch").text = "backup retention"
+            wait(20)
+            mouseClick(findChild(content, "searchResult_backup"))
+            compare(content.page.id, "storage")
+            const target = findChild(content, "settingTarget_backup")
+            tryVerify(() => target.activeFocus)
+            const scroll = findChild(content, "settingsPageScroll")
+            const y = target.mapToItem(scroll, 0, 0).y
+            verify(y >= -1 && y < scroll.height)
+            compare(fakeBackend.writes, 0)
+        } finally { test.width = oldWidth; test.height = oldHeight }
     }
 
     function test_display_controls_route_to_selected_backend() {
@@ -259,7 +316,7 @@ TestCase {
         content.focusSearch()
         verify(search.activeFocus)
         search.text = "firmware"
-        compare(content.page.id, "system")
+        compare(content.searchResults[0].id, "firmware")
         keyClick(Qt.Key_Escape)
         compare(search.text, "")
         compare(closeSpy.count, 0)
