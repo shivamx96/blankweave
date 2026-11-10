@@ -85,7 +85,8 @@ PopupWindow {
 
         // One uniform border, the same as the tooltip and the bar's widgets,
         // rather than accent hairlines that vary along the edges.
-        Rectangle {
+        ThemeSurface {
+            surfaceTheme: root.theme
             anchors.fill: parent
             radius: root.theme.panelRadius
             color: root.theme.panelSurface

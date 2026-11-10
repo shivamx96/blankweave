@@ -57,8 +57,8 @@ def validate_value(group, key, value, default):
     elif key == "easing":
         if value not in ("linear", "outCubic", "inOutCubic"):
             raise ValueError(f"{name} must be linear, outCubic, or inOutCubic")
-    elif not value.strip() or len(value) > 100 or any(ord(c) < 32 for c in value):
-        raise ValueError(f"{name} must be a nonempty font name without control characters (max 100 characters)")
+    elif not value.strip() or len(value) > 100 or not re.fullmatch(r"[\w .-]+", value):
+        raise ValueError(f"{name} must be a nonempty font name using letters, numbers, spaces, dots, underscores, or hyphens (max 100 characters)")
 
 
 def overlay(base, override, defaults):

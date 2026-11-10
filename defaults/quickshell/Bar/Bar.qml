@@ -162,12 +162,13 @@ PanelWindow {
 
         Behavior on y {
             NumberAnimation {
-                duration: root.theme.reducedMotion ? 0 : 190
+                duration: Math.round(root.theme.motionDuration * 190 / 150)
                 easing.type: root.barShown ? Easing.OutCubic : Easing.InCubic
             }
         }
 
-        Rectangle {
+        ThemeSurface {
+            surfaceTheme: root.theme
             anchors.fill: parent
             color: root.theme.barSurface
 

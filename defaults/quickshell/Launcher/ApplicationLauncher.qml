@@ -255,7 +255,8 @@ PanelWindow {
         }
     }
 
-    Rectangle {
+    ThemeSurface {
+        surfaceTheme: root.theme
         id: launcherSurface
 
         anchors.centerIn: parent
@@ -512,7 +513,7 @@ PanelWindow {
                                 ? root.theme.accentBright
                                 : root.theme.divider
 
-                            Behavior on height { NumberAnimation { duration: root.theme.reducedMotion ? 0 : 130 } }
+                            Behavior on height { NumberAnimation { duration: Math.round(root.theme.motionDuration * 130 / 150) } }
                         }
 
                         RowLayout {

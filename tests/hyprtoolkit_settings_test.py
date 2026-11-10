@@ -51,6 +51,42 @@ class ToolkitTests(unittest.TestCase):
         self.assertIn('font_size = 14', text)
         self.assertTrue(toolkit.owned(text))
 
+    def test_theme_typography_and_user_scaling(self):
+        self.theme['design'] = {'typography': {'fontFamily': 'Noto Sans', 'monoFontFamily': 'Noto Sans Mono',
+                                             'textSize': 18, 'headingSize': 28, 'microTextSize': 14}}
+        text = toolkit.render(self.theme, {'text_scale': 1.3}, {'high_contrast': True})
+        self.assertIn('font_family = Noto Sans\n', text)
+        self.assertIn('font_family_monospace = Noto Sans Mono\n', text)
+        self.assertIn(f'font_size = {int(18 * 11 / 13 * 1.3 + .5)}\n', text)
+        self.assertIn(f'h1_size = {int(28 * 19 / 22 * 1.3 + .5)}\n', text)
+        self.assertIn('background = rgba(000000ff)', text)
+
+    def test_theme_rounding_and_invalid_shape(self):
+        self.theme['design'] = {'shape': {'panelRadius': 0, 'controlRadius': 8}}
+        text = toolkit.render(self.theme, {}, {})
+        self.assertIn('rounding_large = 0', text)
+        self.assertIn('rounding_small = 8', text)
+        for value in (None, [], {'panelRadius': -1}, {'controlRadius': True}):
+            self.theme['design']['shape'] = value
+            with self.assertRaises(ValueError):
+                toolkit.render(self.theme, {}, {})
+
+    def test_invalid_typography_never_rewrites_picker(self):
+        gtk_settings.write(toolkit.prepare())
+        original = self.path.read_bytes()
+        for value in ('', 'Font\nsource = /tmp/untrusted', 'Font #comment', '$variable', 'Font{block}',
+                      'Font\\name', 'Font=other', 'Font; other', 'x' * 101):
+            with self.subTest(value=value):
+                self.theme['design'] = {'typography': {'fontFamily': value}}
+                with self.assertRaises(ValueError):
+                    toolkit.prepare(theme=self.theme)
+                self.assertEqual(self.path.read_bytes(), original)
+        for value in (True, -1, 100, float('nan'), '13'):
+            self.theme['design'] = {'typography': {'textSize': value}}
+            with self.assertRaises(ValueError):
+                toolkit.prepare(theme=self.theme)
+        self.assertEqual(self.path.read_bytes(), original)
+
     def test_edited_configs_and_foreign_links_are_never_claimed(self):
         gtk_settings.write(toolkit.prepare())
         text = self.path.read_text() + '# My preference\n'
