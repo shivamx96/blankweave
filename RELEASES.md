@@ -148,3 +148,24 @@ Blankweave release versions.
   target checks and capability-aware behavior. Hardware-specific operations
   remain dependent on installed tools and supported devices.
   The minimum supported configuration rollback release remains `0.1.0`.
+
+## 0.12.0
+
+- Add inherited, validated theme design tokens for spacing, shapes, typography,
+  sizes, motion, and gradient materials. Existing themes retain their defaults;
+  user text scaling, high contrast, and reduced motion take precedence.
+- Add the opt-in Aurora theme with dark and light palettes, subtle gradients,
+  restrained corners, and matching wallpapers. Preserve the selected theme on
+  update.
+- Give Settings quieter category selection and shared geometry. Keep controls
+  usable with larger fonts, custom padding, and borderless themes while retaining
+  visible keyboard focus.
+- Match the managed Hyprtoolkit screen-sharing picker to desktop colors, fonts,
+  sizing, and corner treatment while preserving personal configurations.
+- Keep launcher display placement and search state stable through focus changes
+  and display disconnection. Cancel delayed push-to-talk starts when the key is
+  released before recording begins.
+- Add an independent persistent system-bell control, compositor version and
+  deprecation diagnostics, and syntax checks for saved monitor layouts.
+- Validate generated configurations with the real Hyprland parser in CI.
+  The minimum supported configuration rollback release remains `0.1.0`.
