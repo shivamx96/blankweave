@@ -11,6 +11,7 @@ import subprocess
 import sys
 
 import gtk_settings
+from system_bell import Bell
 
 SCHEMA = "org.gnome.desktop.sound"
 KEYS = {"event-sounds": "gtk-enable-event-sounds", "input-feedback-sounds": "gtk-enable-input-feedback-sounds",
@@ -74,7 +75,7 @@ def status():
             synced = False
     return {"preferences": preferences, "themes": themes(), "gtkSynced": synced,
             "writable": {key: run(["gsettings", "writable", SCHEMA, key]) == "true" for key in KEYS},
-            "previewAvailable": shutil.which("canberra-gtk-play") is not None}
+            "previewAvailable": shutil.which("canberra-gtk-play") is not None, "bell": Bell().status()}
 
 
 def apply(key=None, value=None):
@@ -115,12 +116,14 @@ def main():
         print(json.dumps(status()))
     elif len(arguments) == 3 and arguments[0] == "set":
         apply(arguments[1], arguments[2])
+    elif len(arguments) == 2 and arguments[0] == "set-bell":
+        Bell().apply(json.loads(arguments[1]))
     elif arguments == ["sync"]:
         apply()
     elif arguments == ["preview"]:
         preview()
     else:
-        raise ValueError("Usage: system-sounds.py status | set KEY VALUE | sync | preview")
+        raise ValueError("Usage: system-sounds.py status | set KEY VALUE | set-bell JSON | sync | preview")
 
 
 if __name__ == "__main__":

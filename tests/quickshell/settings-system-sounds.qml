@@ -44,8 +44,17 @@ ShellRoot {
                     test.check(backend.ready && !backend.error, "Refresh did not recover")
                     backend.sync()
                     break
-                default:
+                case 7:
                     test.check(backend.gtkSynced && !backend.error, "GTK sync not confirmed")
+                    test.check(backend.bell.writable && backend.bell.enabled, "Bell capability missing")
+                    backend.applyBell(false)
+                    break
+                case 8:
+                    test.check(!backend.bell.enabled && backend.preferences["event-sounds"], "Bell toggle changed app event sounds")
+                    backend.applyBell(true)
+                    break
+                default:
+                    test.check(backend.bell.enabled && !backend.error, "Bell enable was not confirmed")
                     console.log("SETTINGS_SYSTEM_SOUNDS_PASSED")
                     Qt.quit()
                 }

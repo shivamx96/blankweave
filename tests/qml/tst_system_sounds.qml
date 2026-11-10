@@ -21,9 +21,11 @@ TestCase {
         property var preferences: ({"event-sounds":true,"input-feedback-sounds":false,"theme-name":"default"})
         property var writable: ({"event-sounds":true,"input-feedback-sounds":true,"theme-name":true})
         property var themes: [{id:"default",name:"Default"},{id:"custom",name:"Custom"}]
+        property var bell: ({available:true,writable:true,enabled:true,message:"System bell is separate."})
         property var calls: []
         readonly property bool canPreview: ready && !busy && previewAvailable && preferences["event-sounds"]
         function apply(key,value) { calls=calls.concat([[key,value]]) }
+        function applyBell(value) { calls=calls.concat([["bell",value]]) }
         function preview() { calls=calls.concat([["preview"]]) }
         function sync() { calls=calls.concat([["sync"]]) }
         function refresh(clear) { calls=calls.concat([["refresh",clear]]) }
@@ -35,6 +37,7 @@ TestCase {
         backend.preferences={"event-sounds":true,"input-feedback-sounds":false,"theme-name":"default"}
         backend.writable={"event-sounds":true,"input-feedback-sounds":true,"theme-name":true}
         backend.themes=[{id:"default",name:"Default"},{id:"custom",name:"Custom"}]
+        backend.bell={available:true,writable:true,enabled:true,message:"System bell is separate."}
         backend.calls=[]
         wait(0)
     }
@@ -47,6 +50,19 @@ TestCase {
         compare(toggle.text,"Event sounds: Off")
         verify(!findChild(controls,"inputSoundsToggle").enabled)
         verify(!findChild(controls,"systemSoundPreview").enabled)
+    }
+    function test_bell_is_independent_and_waits_for_confirmed_state() {
+        const toggle=findChild(controls,"systemBellToggle")
+        backend.preferences={"event-sounds":false,"input-feedback-sounds":false,"theme-name":"default"}
+        verify(toggle.enabled)
+        toggle.clicked()
+        compare(backend.calls[0][0],"bell"); compare(backend.calls[0][1],false)
+        compare(toggle.text,"System bell: On")
+        backend.bell={available:true,writable:false,enabled:false,message:"Personal override"}
+        compare(toggle.text,"System bell: Off")
+        verify(!toggle.enabled)
+        backend.bell={available:false,writable:false,enabled:false,message:"Not available"}
+        compare(toggle.text,"System bell: unavailable")
     }
     function test_readonly_unavailable_and_busy_controls() {
         backend.writable={}

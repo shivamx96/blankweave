@@ -416,6 +416,12 @@ apps, with a quiet preview button. Preferences use the desktop settings store;
 that do not pick up changes. Visual theme switches preserve sound preferences
 and unrelated GTK settings. Notification and dictation sounds remain separate.
 
+The separate **System bell** control manages Hyprland's Wayland bell. It keeps
+the compositor's default behavior until you save a choice, then persists it
+across sessions. It does not play a test sound or change GTK event sounds.
+Personal compositor overrides are preserved and must be resolved before Settings
+can change the bell; unavailable compositor capabilities are explained in place.
+
 **Network & Bluetooth → Wi-Fi** shows live nearby networks, radio state, and
 connection progress. Connect to open or personal-password networks, reuse saved
 connections, or disconnect. Saved profiles include networks that are out of
