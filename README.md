@@ -565,11 +565,19 @@ command line finishes with a sudo prompt. After a switch from the bar, open
 Settings → Appearance and choose **Apply system appearance…**, or run
 `blankweave theme sync` in a terminal.
 
-Two themes are bundled: `obsidian` (Obsidian dark / Porcelain light, blue) and
-`moss` (Moss dark / Sage light, green). To make your own, copy
+Three themes are bundled: `obsidian` (Obsidian dark / Porcelain light, blue),
+`moss` (Moss dark / Sage light, green), and `aurora` (violet, sky, and rose
+gradients in dark and light modes). To make your own, copy
 `defaults/themes/obsidian/` to `~/.config/blankweave/themes/<id>/`, edit
 `theme.json`, and run `blankweave theme set <id>`; a personal theme with the same
 id as a bundled one takes precedence.
+
+Themes can override shared spacing, shapes, typography, transition timing, and
+gradient materials through a partial `design` object. Unspecified values inherit
+the existing defaults; navigation and behavior stay shared. See
+[the design token reference](docs/theme-design.md) for the schema, precedence,
+validation, and toolkit boundaries. Aurora is opt-in with `blankweave theme set
+aurora`; updates preserve the active theme.
 
 The Hyprtoolkit screen-sharing picker follows the selected palette, text size,
 and high-contrast preference through `~/.config/hypr/hyprtoolkit.conf`. Blankweave

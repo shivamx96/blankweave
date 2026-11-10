@@ -1,0 +1,131 @@
+{
+  "name": "Aurora",
+  "description": "Violet, sky, and rose gradients around calm, precise working surfaces.",
+  "folderColor": "violet",
+  "plymouth": {
+    "logo": "../obsidian/plymouth/logo.png",
+    "progressBar": "../obsidian/plymouth/progress_bar.png"
+  },
+  "modes": {
+    "dark": {
+      "label": "Aurora Night",
+      "wallpaper": "aurora-dark.png",
+      "ghostty": "Catppuccin Mocha",
+      "iconTheme": "Papirus-Dark",
+      "cursorTheme": "Bibata-Modern-Ice",
+      "colors": {
+        "canvas": "#17121f",
+        "barSurface": "#21182ff2",
+        "barHighlight": "#d6b9ff25",
+        "panelSurface": "#211a2bf5",
+        "surface": "#1b1624",
+        "surfaceRaised": "#30253e",
+        "surfaceHover": "#3c2f4b",
+        "surfacePressed": "#49395b",
+        "scrim": "#100b1cc0",
+        "text": "#f5eefb",
+        "textMuted": "#b9abc7",
+        "accent": "#ac88d4",
+        "accentBright": "#c9a7ed",
+        "accentSurface": "#ac88d425",
+        "outline": "#493b57",
+        "outlineStrong": "#69517f",
+        "divider": "#493b57",
+        "success": "#8bd5b0",
+        "warning": "#edc58c",
+        "critical": "#f49cae"
+      },
+      "lock": {
+        "panelSurface": "#211a2bf5",
+        "panelBorder": "#69517f",
+        "panelShadow": "#00000080",
+        "hairline": "#493b57",
+        "inputSurface": "#30253e",
+        "placeholder": "#b9abc7",
+        "text": "#f5eefb",
+        "textMuted": "#b9abc7",
+        "textShadow": "#00000099",
+        "accent": "#ac88d4",
+        "accentBright": "#c9a7ed",
+        "contrast": 0.98,
+        "brightness": 0.82,
+        "vibrancy": 0.14
+      },
+      "design": {
+        "materials": {
+          "gradientStart": "#9566c340",
+          "gradientEnd": "#db8f9e24"
+        }
+      }
+    },
+    "light": {
+      "label": "Aurora Day",
+      "wallpaper": "aurora-light.png",
+      "ghostty": "Catppuccin Latte",
+      "iconTheme": "Papirus-Light",
+      "cursorTheme": "Bibata-Modern-Classic",
+      "colors": {
+        "canvas": "#f3eef8",
+        "barSurface": "#f4ecfaf2",
+        "barHighlight": "#ffffff80",
+        "panelSurface": "#fcf8fff5",
+        "surface": "#fffbff",
+        "surfaceRaised": "#eee5f5",
+        "surfaceHover": "#e9ddef",
+        "surfacePressed": "#ddcce7",
+        "scrim": "#30223d65",
+        "text": "#32253f",
+        "textMuted": "#756280",
+        "accent": "#7952a2",
+        "accentBright": "#704494",
+        "accentSurface": "#7952a21f",
+        "outline": "#d8c8e1",
+        "outlineStrong": "#ac90be",
+        "divider": "#d8c8e1",
+        "success": "#26704f",
+        "warning": "#865a15",
+        "critical": "#ae3455"
+      },
+      "lock": {
+        "panelSurface": "#fcf8fff5",
+        "panelBorder": "#ac90be",
+        "panelShadow": "#49688838",
+        "hairline": "#d8c8e1",
+        "inputSurface": "#eee5f5",
+        "placeholder": "#756280",
+        "text": "#32253f",
+        "textMuted": "#756280",
+        "textShadow": "#ffffffcc",
+        "accent": "#7952a2",
+        "accentBright": "#704494",
+        "contrast": 1.0,
+        "brightness": 1.0,
+        "vibrancy": 0.1
+      },
+      "design": {
+        "materials": {
+          "gradientStart": "#b58ae540",
+          "gradientEnd": "#e5a6b12e"
+        }
+      }
+    }
+  },
+  "design": {
+    "shape": {
+      "controlRadius": 5,
+      "panelRadius": 8
+    },
+    "spacing": {
+      "panel": 16,
+      "content": 28,
+      "section": 12
+    },
+    "motion": {
+      "duration": 140
+    },
+    "materials": {
+      "gradientEnabled": true,
+      "gradientDirection": "horizontal"
+    }
+  }
+}
