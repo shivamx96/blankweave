@@ -1,0 +1,29 @@
+{
+  "spacing": {
+    "xxs": 2, "xs": 4, "sm": 6, "md": 8, "lg": 10, "xl": 12,
+    "section": 14, "panel": 18, "content": 32,
+    "widgetPadding": 6, "sectionPadding": 7, "widgetContentGap": 4,
+    "barItemGap": 0, "dividerMargin": 5,
+    "labelGap": 5, "descriptionGap": 9, "group": 16, "page": 20,
+    "controlInset": 24, "rowInset": 28
+  },
+  "shape": {"controlRadius": 4, "panelRadius": 14, "borderWidth": 1},
+  "typography": {
+    "fontFamily": "Atkinson Hyperlegible Next",
+    "monoFontFamily": "JetBrainsMono Nerd Font",
+    "iconFontFamily": "JetBrainsMono Nerd Font",
+    "textSize": 13, "smallTextSize": 12, "microTextSize": 11, "headingSize": 22,
+    "textWeight": 400, "headingWeight": 600
+  },
+  "sizes": {
+    "icon": 15, "barIcon": 18, "controlIcon": 17, "heroIcon": 21,
+    "barHeight": 40, "widgetHeight": 30, "metricLabelWidth": 32
+  },
+  "motion": {"duration": 150, "easing": "outCubic"},
+  "materials": {
+    "gradientEnabled": false,
+    "gradientStart": "#00000000",
+    "gradientEnd": "#00000000",
+    "gradientDirection": "vertical"
+  }
+}

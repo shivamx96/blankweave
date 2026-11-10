@@ -133,11 +133,13 @@ load_selection() {
 }
 
 resolve_theme() {
-    local id=$1 mode=$2 dir required
+    local id=$1 mode=$2 dir required design
 
     dir=$(theme_dir "$id") || die "unknown theme: $id"
+    design=$(python3 "$DOTS_DIR/shell/theme-design.py" \
+        "$DOTS_DIR/themes/design-defaults.json" "$dir/theme.json" "$mode") || return 1
     required=$(printf '%s\n' "${REQUIRED_COLORS[@]}" | jq -R . | jq -s .)
-    jq -e --arg id "$id" --arg mode "$mode" --arg dir "$dir" --argjson required "$required" '
+    jq -e --arg id "$id" --arg mode "$mode" --arg dir "$dir" --argjson required "$required" --argjson design "$design" '
         .modes[$mode] as $variant
         | if $variant == null then error("theme \($id) has no \($mode) mode") else . end
         | ($required - (($variant.colors // {}) | keys)) as $missing
@@ -154,6 +156,7 @@ resolve_theme() {
         $variant + {
             theme: $id,
             mode: $mode,
+            design: $design,
             name: .name,
             wallpaper: ($variant.wallpaper | path_in_theme),
             folderColor: (.folderColor // null),
@@ -366,6 +369,10 @@ list_themes() {
             valid_theme_id "$id" || continue
             [[ -n ${seen[$id]:-} ]] && continue
             seen[$id]=1
+            if ! resolve_theme "$id" dark >/dev/null 2>&1 || ! resolve_theme "$id" light >/dev/null 2>&1; then
+                entries+=("$(jq -nc --arg id "$id" --arg source "$source" '{id:$id,name:$id,source:$source,invalid:true}')")
+                continue
+            fi
             entries+=("$(jq -c --arg id "$id" --arg source "$source" '{
                 id: $id,
                 name: (.name // $id),
