@@ -254,6 +254,11 @@ test -f ~/.local/share/voxtype/models/ggml-small.en.bin
 - `Super + F` – file manager (Thunar)
 - `Super + Space` – native application launcher
 
+The launcher stays on the display where it was opened, even when pointer focus
+moves elsewhere. If that display disconnects, it moves to a remaining display
+without clearing the search or selection. Application and clipboard modes share
+this behavior; closing and reopening starts a fresh search.
+
 ### Window Management
 - `Super + Arrow Keys` – focus windows
 - `Super + Q` – close window

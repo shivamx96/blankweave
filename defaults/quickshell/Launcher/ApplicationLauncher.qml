@@ -10,15 +10,14 @@ import "../Components"
 PanelWindow {
     id: root
 
-    required property var modelData
+    required property LauncherSession session
+    readonly property var targetScreen: session.targetScreen
     required property var theme
-    property bool open: false
+    readonly property bool open: session.open
     // "applications" or "clipboard". The two views are peers: applications come
     // from DesktopEntries and are always current, while the clipboard is read
     // from cliphist once per open, so they refresh independently.
-    property string mode: "applications"
-    property string searchText: ""
-    property int selectedIndex: 0
+    readonly property string mode: session.mode
     property var clipboardEntries: []
     property bool clipboardAvailable: true
     readonly property var applicationEntries: DesktopEntries.applications
@@ -30,14 +29,14 @@ PanelWindow {
         { "id": "clipboard", "label": "CLIPBOARD" }
     ]
     readonly property var results: root.clipboardMode
-        ? root.filterClipboard(root.searchText)
-        : root.rankApplications(root.searchText)
+        ? root.filterClipboard(root.session.searchText)
+        : root.rankApplications(root.session.searchText)
 
     signal dismissed
     signal modeRequested(string mode)
 
-    screen: modelData
-    visible: open
+    screen: targetScreen
+    visible: open && targetScreen !== null
     color: "transparent"
     exclusiveZone: 0
     surfaceFormat.opaque: false
@@ -171,9 +170,9 @@ PanelWindow {
     }
 
     function moveSelection(offset) {
-        root.selectedIndex = root.clampSelection(root.selectedIndex + offset)
+        root.session.selectedIndex = root.clampSelection(root.session.selectedIndex + offset)
         Qt.callLater(() => resultList.positionViewAtIndex(
-            root.selectedIndex,
+            root.session.selectedIndex,
             ListView.Contain
         ))
     }
@@ -211,20 +210,23 @@ PanelWindow {
         root.selectMode(root.modes[(index + offset + count) % count].id)
     }
 
-    // Reads root.mode rather than clipboardMode because this also runs from
-    // onModeChanged, where the derived binding may not have re-evaluated yet.
+    // The session signal can precede re-evaluation of this window's bindings.
+    // Read the authoritative mode directly when starting a clipboard query.
     function refresh() {
-        searchText = ""
-        selectedIndex = 0
-        if (root.mode === "clipboard" && !clipboardQuery.running) {
+        if (root.session.mode === "clipboard" && !clipboardQuery.running) {
             root.clipboardEntries = []
             clipboardQuery.running = true
         }
         Qt.callLater(() => searchField.forceActiveFocus())
     }
 
-    onOpenChanged: if (open) root.refresh()
-    onModeChanged: if (open) root.refresh()
+    Connections {
+        target: root.session
+        function onRefreshRequested() { root.refresh() }
+    }
+    // Changing a PanelWindow's screen can recreate its native surface. Keep
+    // the QML search state and restore focus without starting a new query.
+    onTargetScreenChanged: if (open && targetScreen !== null) Qt.callLater(() => searchField.forceActiveFocus())
 
     Process {
         id: clipboardQuery
@@ -319,7 +321,7 @@ PanelWindow {
 
                     Text {
                         text: {
-                            if (root.searchText.trim() !== "")
+                            if (root.session.searchText.trim() !== "")
                                 return root.results.length + (root.clipboardMode
                                     ? " matching entries"
                                     : " matching applications")
@@ -365,7 +367,7 @@ PanelWindow {
                 placeholderText: root.clipboardMode
                     ? "Search clipboard history"
                     : "Search applications"
-                text: root.searchText
+                text: root.session.searchText
                 color: root.theme.text
                 placeholderTextColor: root.theme.textMuted
                 selectionColor: root.theme.accent
@@ -375,13 +377,13 @@ PanelWindow {
                 renderType: Text.NativeRendering
 
                 onTextEdited: {
-                    root.searchText = text
-                    root.selectedIndex = 0
+                    root.session.searchText = text
+                    root.session.selectedIndex = 0
                 }
 
                 onAccepted: {
                     if (root.results.length > 0)
-                        root.activate(root.results[root.selectedIndex])
+                        root.activate(root.results[root.session.selectedIndex])
                 }
 
                 Keys.onPressed: event => {
@@ -437,7 +439,7 @@ PanelWindow {
             Text {
                 Layout.fillWidth: true
                 text: {
-                    if (root.searchText.trim() !== "")
+                    if (root.session.searchText.trim() !== "")
                         return root.results.length + " RESULTS"
                     return root.clipboardMode
                         ? "CLIPBOARD HISTORY · NEWEST FIRST"
@@ -458,7 +460,7 @@ PanelWindow {
                 Layout.fillWidth: true
                 Layout.fillHeight: true
                 model: root.results
-                currentIndex: root.selectedIndex
+                currentIndex: root.session.selectedIndex
                 clip: true
                 spacing: 5
                 boundsBehavior: Flickable.StopAtBounds
@@ -483,7 +485,7 @@ PanelWindow {
 
                         required property int index
                         required property var modelData
-                        readonly property bool selected: index === root.selectedIndex
+                        readonly property bool selected: index === root.session.selectedIndex
 
                         width: resultList.width - 10
                         height: 50
@@ -592,7 +594,7 @@ PanelWindow {
                             anchors.fill: parent
                             hoverEnabled: true
                             cursorShape: Qt.PointingHandCursor
-                            onEntered: root.selectedIndex = resultCard.index
+                            onEntered: root.session.selectedIndex = resultCard.index
                             onClicked: root.activate(resultCard.modelData)
                         }
                 }
@@ -623,7 +625,7 @@ PanelWindow {
                             return "No matching applications"
                         if (!root.clipboardAvailable)
                             return "Clipboard history unavailable"
-                        return root.searchText.trim() === ""
+                        return root.session.searchText.trim() === ""
                             ? "Clipboard history is empty"
                             : "No matching entries"
                     }
