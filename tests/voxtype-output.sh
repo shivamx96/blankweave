@@ -101,3 +101,4 @@ printf '{"address":"0x123","pid":42,"class":"com.mitchellh.ghostty"}\n' \
     | python3 "$repository/defaults/shell/voxtype-focus.py"
 
 printf 'VoxType output routing tests passed.\n'
+PYTHONDONTWRITEBYTECODE=1 python3 "$repository/tests/voxtype_record_test.py"
