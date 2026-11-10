@@ -16,7 +16,7 @@ jobs:
 
     steps:
       - name: Install validation tools
-        run: pacman -Syu --noconfirm git jq diffutils shellcheck lua qt6-declarative quickshell python-gobject at-spi2-core lcms2 xkeyboard-config restic
+        run: pacman -Syu --noconfirm git jq diffutils shellcheck lua hyprland qt6-declarative quickshell python-gobject at-spi2-core lcms2 xkeyboard-config restic
 
       - name: Check out repository
         uses: actions/checkout@v5
@@ -43,6 +43,11 @@ jobs:
           for test_script in tests/*.sh; do
             "$test_script"
           done
+
+      - name: Validate generated Hyprland configuration (0.57.1 or newer)
+        run: |
+          useradd --system --no-create-home blankweave-parser
+          runuser -u blankweave-parser -- python3 tests/hyprland_parser_test.py
 
       - name: Check QML
         shell: bash
