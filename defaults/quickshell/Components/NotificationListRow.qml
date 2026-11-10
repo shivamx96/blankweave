@@ -51,14 +51,14 @@ Item {
         height: root.critical ? 26 : 14
         color: root.indicatorColor
 
-        Behavior on height { NumberAnimation { duration: root.theme.reducedMotion ? 0 : 140 } }
+        Behavior on height { NumberAnimation { duration: Math.round(root.theme.motionDuration * 140 / 150) } }
     }
 
     RowLayout {
         anchors.fill: parent
-        anchors.leftMargin: 12
-        anchors.rightMargin: 4
-        spacing: 8
+        anchors.leftMargin: root.theme.spacing("xl")
+        anchors.rightMargin: root.theme.spacing("xs")
+        spacing: root.theme.spacing("md")
 
         Item {
             Layout.preferredWidth: 26
@@ -84,11 +84,11 @@ Item {
 
         ColumnLayout {
             Layout.fillWidth: true
-            spacing: 2
+            spacing: root.theme.spacing("xxs")
 
             RowLayout {
                 Layout.fillWidth: true
-                spacing: 8
+                spacing: root.theme.spacing("md")
 
                 Text {
                     Layout.fillWidth: true
@@ -163,7 +163,7 @@ Item {
                             ? root.theme.critical
                             : root.theme.accentBright
 
-                        Behavior on width { NumberAnimation { duration: root.theme.reducedMotion ? 0 : 120 } }
+                        Behavior on width { NumberAnimation { duration: Math.round(root.theme.motionDuration * 120 / 150) } }
                     }
 
                     MouseArea {

@@ -12,7 +12,7 @@ RowLayout {
     signal selected(string tabId)
 
     Layout.fillWidth: true
-    spacing: 2
+    spacing: root.theme.spacing("xxs")
 
     Repeater {
         model: root.tabs
@@ -26,7 +26,7 @@ RowLayout {
             readonly property int badge: Number(modelData.badge || 0)
 
             Layout.fillWidth: true
-            Layout.preferredHeight: 30
+            Layout.preferredHeight: Math.max(30, tabContent.implicitHeight + root.theme.spacing("xs") * 2)
 
             Rectangle {
                 anchors.fill: parent
@@ -36,8 +36,9 @@ RowLayout {
             }
 
             RowLayout {
+                id: tabContent
                 anchors.centerIn: parent
-                spacing: 6
+                spacing: root.theme.spacing("sm")
 
                 Text {
                     text: String(tab.modelData.label || "")
@@ -53,7 +54,7 @@ RowLayout {
                     visible: tab.badge > 0
                     Layout.preferredWidth: Math.max(16, badgeLabel.implicitWidth + 8)
                     Layout.preferredHeight: 16
-                    radius: 8
+                    radius: height / 2
                     color: tab.current ? root.theme.accentBright : root.theme.divider
 
                     Text {
@@ -77,7 +78,7 @@ RowLayout {
                 color: root.theme.accentBright
 
                 Behavior on width {
-                    NumberAnimation { duration: root.theme.reducedMotion ? 0 : 150; easing.type: Easing.OutCubic }
+                    NumberAnimation { duration: root.theme.motionDuration; easing.type: root.theme.motionEasing }
                 }
             }
 

@@ -40,13 +40,13 @@ Item {
         height: root.active ? 24 : 12
         color: root.active ? root.theme.accentBright : root.theme.divider
 
-        Behavior on height { NumberAnimation { duration: root.theme.reducedMotion ? 0 : 140 } }
+        Behavior on height { NumberAnimation { duration: Math.round(root.theme.motionDuration * 140 / 150) } }
     }
 
     RowLayout {
         anchors.fill: parent
-        anchors.leftMargin: 12
-        spacing: 10
+        anchors.leftMargin: root.theme.spacing("xl")
+        spacing: root.theme.spacing("lg")
 
         Text {
             visible: root.icon !== ""
@@ -151,7 +151,7 @@ Item {
                             ? root.theme.critical
                             : root.theme.accentBright
 
-                        Behavior on width { NumberAnimation { duration: root.theme.reducedMotion ? 0 : 120 } }
+                        Behavior on width { NumberAnimation { duration: Math.round(root.theme.motionDuration * 120 / 150) } }
                     }
 
                     MouseArea {

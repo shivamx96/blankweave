@@ -11,7 +11,7 @@ ColumnLayout {
 
     Layout.fillWidth: true
     Layout.preferredHeight: 92
-    spacing: 4
+    spacing: root.theme.spacing("xs")
 
     Text {
         Layout.alignment: Qt.AlignHCenter

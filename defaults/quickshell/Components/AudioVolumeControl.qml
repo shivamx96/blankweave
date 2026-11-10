@@ -9,7 +9,7 @@ RowLayout {
     property string sliderName: "soundOutputVolume"
     property string volumeLabel: "Output volume"
     property int dragGeneration: -1
-    spacing: 10
+    spacing: root.theme.spacing("lg")
     Layout.fillWidth: true
 
     ControlSlider {

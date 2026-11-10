@@ -18,7 +18,7 @@ ColumnLayout {
     readonly property color activeColor: attention ? theme.critical : theme.accentBright
 
     Layout.fillWidth: true
-    spacing: 6
+    spacing: root.theme.spacing("sm")
 
     RowLayout {
         Layout.fillWidth: true
@@ -57,7 +57,7 @@ ColumnLayout {
     RowLayout {
         Layout.fillWidth: true
         Layout.preferredHeight: 7
-        spacing: 2
+        spacing: root.theme.spacing("xxs")
 
         Repeater {
             model: root.segments
@@ -72,8 +72,8 @@ ColumnLayout {
                     : root.theme.outline
                 opacity: index < Math.ceil(root.progress * root.segments) ? 1 : 0.48
 
-                Behavior on color { ColorAnimation { duration: root.theme.reducedMotion ? 0 : 140 } }
-                Behavior on opacity { NumberAnimation { duration: root.theme.reducedMotion ? 0 : 140 } }
+                Behavior on color { ColorAnimation { duration: Math.round(root.theme.motionDuration * 140 / 150) } }
+                Behavior on opacity { NumberAnimation { duration: Math.round(root.theme.motionDuration * 140 / 150) } }
             }
         }
     }

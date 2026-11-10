@@ -7,7 +7,10 @@ import "Modules"
 
 ShellRoot {
     id: test
-    property var palette: ({surfaceRaised:"#182334",surfaceHover:"#263955",surfacePressed:"#304563",
+    property var palette: ({
+        borderWidth: 1, headingSize: 22, textWeight: 400, headingWeight: 600, motionDuration: 0, motionEasing: Easing.OutCubic,
+        spacing: function(name) { return ({xxs:2,xs:4,sm:6,md:8,lg:10,xl:12,section:14,panel:18,content:32,labelGap:5,descriptionGap:9,group:16,page:20,controlInset:24,rowInset:28})[name] },
+        designValue: function(group, name, fallback) { return fallback },surfaceRaised:"#182334",surfaceHover:"#263955",surfacePressed:"#304563",
         text:"#e7edf7",textMuted:"#a1aec4",accentBright:"#67a6ff",accentSurface:"#1e3556",
         outline:"#33476a",divider:"#23314a",critical:"#ff8080",accent:"#67a6ff",fontFamily:"sans-serif",
         smallTextSize:12,textSize:13,widgetRadius:4})

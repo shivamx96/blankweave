@@ -14,30 +14,30 @@ Item {
 
     signal pressed
 
-    implicitWidth: content.implicitWidth + 14
-    implicitHeight: 28
+    implicitWidth: content.implicitWidth + root.theme.spacing("section")
+    implicitHeight: Math.max(28, content.implicitHeight + root.theme.spacing("xs") * 2)
     Layout.preferredHeight: implicitHeight
     opacity: enabled ? 1 : 0.45
 
     Rectangle {
         anchors.fill: parent
         color: root.selected ? root.theme.accentSurface : "transparent"
-        border.width: root.selected || choiceMouse.containsMouse ? 1 : 0
+        border.width: root.selected || choiceMouse.containsMouse ? root.theme.borderWidth : 0
         border.color: root.selected ? root.theme.accentBright : root.theme.outlineStrong
     }
 
     RowLayout {
         id: content
         anchors.centerIn: parent
-        spacing: 6
+        spacing: root.theme.spacing("sm")
 
         Rectangle {
             visible: root.swatch !== null && !root.busy
             Layout.preferredWidth: 8
             Layout.preferredHeight: 8
-            radius: 4
+            radius: height / 2
             color: root.swatch !== null ? root.swatch : "transparent"
-            border.width: 1
+            border.width: root.theme.borderWidth
             border.color: root.theme.outlineStrong
         }
 
@@ -60,7 +60,7 @@ Item {
         color: root.theme.accentBright
 
         Behavior on width {
-            NumberAnimation { duration: root.theme.reducedMotion ? 0 : 140; easing.type: Easing.OutCubic }
+            NumberAnimation { duration: Math.round(root.theme.motionDuration * 140 / 150); easing.type: root.theme.motionEasing }
         }
     }
 

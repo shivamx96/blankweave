@@ -26,7 +26,7 @@ RowLayout {
                 visible: metric.index > 0
                 Layout.preferredWidth: 1
                 Layout.preferredHeight: 30
-                Layout.rightMargin: 12
+                Layout.rightMargin: root.theme.spacing("xl")
                 color: root.theme.divider
             }
 

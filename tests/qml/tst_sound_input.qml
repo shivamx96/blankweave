@@ -11,6 +11,9 @@ TestCase {
     width: 640
     height: 420
     property var themePalette: ({
+        borderWidth: 1, headingSize: 22, textWeight: 400, headingWeight: 600, motionDuration: 0, motionEasing: Easing.OutCubic,
+        spacing: function(name) { return ({xxs:2,xs:4,sm:6,md:8,lg:10,xl:12,section:14,panel:18,content:32,labelGap:5,descriptionGap:9,group:16,page:20,controlInset:24,rowInset:28})[name] },
+        designValue: function(group, name, fallback) { return fallback },
         surfaceRaised:"#1c2940", surfaceHover:"#263955", surfacePressed:"#304563", panelSurface:"#111a2a",
         text:"#e7edf7", textMuted:"#a1aec4", accentBright:"#67a6ff", accentSurface:"#1e3556",
         outline:"#33476a", divider:"#23314a", accent:"#67a6ff", warning:"#ffaa33", fontFamily:"sans-serif",
