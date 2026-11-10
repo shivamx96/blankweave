@@ -90,6 +90,13 @@ entries, UEFI boot order, and systemd-boot recovery path. Add `--report` to
 either mode for package and system versions with usernames, hostnames, network
 addresses, disk identifiers, and hardware serial numbers deliberately omitted.
 
+In an active Hyprland session, doctor also compares the running and installed
+compositor versions and reports deprecated options when the compositor supports
+that query. Shareable reports include only the deprecation count; inspect
+`hyprctl deprecated-config` locally for details. Saved monitor Lua is checked
+for syntax errors separately because startup deliberately tolerates a broken
+saved layout. These checks do not reload or change the desktop.
+
 Limine is installed as `Blankweave Boot Manager` and placed first in UEFI
 `BootOrder` only after its executable and configuration have been staged. Limine
 shows its menu on every boot: for three seconds on Linux-only systems and five

@@ -76,9 +76,36 @@ printf '%s\n' \
 printf 'NAME=Arch Linux\nPRETTY_NAME="Arch Linux"\n' > "$system_root/etc/os-release"
 git -C "$repository" rev-parse HEAD > "$state/blankweave/installed-revision"
 
-for executable in blankweave-doctor-fixture hyprland intel_gpu_top; do
+for executable in blankweave-doctor-fixture intel_gpu_top; do
     ln -s /usr/bin/true "$fake_bin/$executable"
 done
+
+cat > "$fake_bin/hyprland" <<'EOF'
+#!/usr/bin/env bash
+if [[ ${1:-} == --version ]]; then
+    printf 'Hyprland %s built from fixture\n' "${BLANKWEAVE_TEST_INSTALLED_HYPRLAND:-0.57.1}"
+fi
+EOF
+cat > "$fake_bin/hyprctl" <<'EOF'
+#!/usr/bin/env bash
+case ${1:-} in
+    version)
+        [[ ${BLANKWEAVE_TEST_HYPRLAND_MODE:-current} != offline ]] || exit 1
+        printf '{"version":"%s"}\n' "${BLANKWEAVE_TEST_RUNNING_HYPRLAND:-0.57.1}"
+        ;;
+    deprecated-config)
+        case ${BLANKWEAVE_TEST_HYPRLAND_MODE:-current} in
+            old) exit 1 ;;
+            unsupported) printf 'unknown request\n' ;;
+            malformed) printf '{"unexpected":true}\n' ;;
+            deprecated) printf '["misc:layers_hog_keyboard_focus: use layers:layers_hog_keyboard_focus", "private fixture detail\\nflattened"]\n' ;;
+            *) printf '[]\n' ;;
+        esac
+        ;;
+    *) exit 1 ;;
+esac
+EOF
+chmod +x "$fake_bin/hyprland" "$fake_bin/hyprctl"
 
 cat > "$fake_bin/getcap" <<'EOF'
 #!/usr/bin/env bash
@@ -130,6 +157,7 @@ run_doctor() {
         XDG_STATE_HOME="$state" \
         XDG_SESSION_TYPE=wayland \
         XDG_CURRENT_DESKTOP=Hyprland \
+        HYPRLAND_INSTANCE_SIGNATURE="${BLANKWEAVE_TEST_HYPRLAND_SESSION-fixture}" \
         BLANKWEAVE_USER_HOME="$home" \
         BLANKWEAVE_SYSTEM_ROOT="$system_root" \
         BLANKWEAVE_SYSFS_ROOT="$system_root/sys" \
@@ -157,6 +185,47 @@ grep -Fq 'PASS  UEFI boot order' <<< "$output"
 grep -Fq 'PASS  bootloader recovery' <<< "$output"
 grep -Fq 'PASS  CPU microcode package' <<< "$output"
 grep -Fq '0 failures' <<< "$output"
+grep -Fq 'running and installed 0.57.1' <<< "$output"
+grep -Eq '^PASS +Hyprland deprecations +none reported' <<< "$output"
+
+different_version=$(BLANKWEAVE_TEST_RUNNING_HYPRLAND=0.56.0 run_doctor)
+grep -Eq '^WARN +Hyprland runtime +running 0.56.0; installed 0.57.1' <<< "$different_version"
+for mode in old unsupported malformed; do
+    unavailable=$(BLANKWEAVE_TEST_HYPRLAND_MODE=$mode run_doctor)
+    grep -Eq '^SKIP +Hyprland deprecations' <<< "$unavailable"
+    grep -Fq '0 failures' <<< "$unavailable"
+done
+offline=$(BLANKWEAVE_TEST_HYPRLAND_MODE=offline run_doctor)
+grep -Eq '^SKIP +Hyprland runtime +running compositor version unavailable' <<< "$offline"
+no_session=$(BLANKWEAVE_TEST_HYPRLAND_SESSION='' run_doctor)
+grep -Eq '^SKIP +Hyprland runtime +graphical session or IPC tools unavailable' <<< "$no_session"
+deprecated=$(BLANKWEAVE_TEST_HYPRLAND_MODE=deprecated run_doctor)
+grep -Eq '^WARN +Hyprland deprecations +2 deprecated options' <<< "$deprecated"
+grep -Fq 'use layers:layers_hog_keyboard_focus' <<< "$deprecated"
+grep -Fq 'private fixture detail flattened' <<< "$deprecated"
+private_report=$(BLANKWEAVE_TEST_HYPRLAND_MODE=deprecated run_doctor --report)
+grep -Fq '2 deprecated options' <<< "$private_report"
+if grep -Fq 'private fixture detail' <<< "$private_report"; then
+    printf 'Doctor report leaked a deprecation notice\n' >&2
+    exit 1
+fi
+
+mkdir -p "$home/.config/blankweave"
+saved_rules=$home/.config/blankweave/monitors.lua
+# Syntax checking must never execute saved rules.
+printf 'error("must not execute")\n' > "$saved_rules"
+valid_layout=$(run_doctor)
+grep -Eq '^PASS +saved monitor rules +Lua syntax valid' <<< "$valid_layout"
+printf 'hl.monitor({ broken =\n' > "$saved_rules"
+cp "$saved_rules" "$test_root/invalid-monitor.lua"
+invalid_layout=$(run_doctor)
+grep -Eq '^WARN +saved monitor rules +monitors.lua has invalid Lua syntax' <<< "$invalid_layout"
+cmp "$saved_rules" "$test_root/invalid-monitor.lua"
+rm "$saved_rules"
+ln -s "$test_root/missing-layout" "$saved_rules"
+unreadable_layout=$(run_doctor)
+grep -Eq '^WARN +saved monitor rules +monitors.lua is unreadable' <<< "$unreadable_layout"
+rm "$saved_rules"
 
 intel_gpu='00:02.0 VGA compatible controller: Intel Corporation Meteor Lake-P [Intel Arc Graphics]'
 gpu_output=$(BLANKWEAVE_TEST_LSPCI_OUTPUT="$intel_gpu" run_doctor)
