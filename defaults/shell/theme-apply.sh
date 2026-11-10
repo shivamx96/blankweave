@@ -451,8 +451,10 @@ main() {
 
     [[ $MODE == dark || $MODE == light ]] || die "mode must be dark or light: $MODE"
     RESOLVED=$(resolve_theme "$THEME" "$MODE")
+    python3 "$DOTS_DIR/shell/hyprtoolkit_settings.py" --check-theme <<< "$RESOLVED"
     render_all
     write_state
+    python3 "$DOTS_DIR/shell/hyprtoolkit_settings.py"
     apply_desktop_preferences
     apply_wallpaper
     reload_services

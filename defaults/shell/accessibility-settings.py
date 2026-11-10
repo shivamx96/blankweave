@@ -12,6 +12,7 @@ import sys
 import tempfile
 import time
 import gtk_settings
+import hyprtoolkit_settings
 
 DEFAULTS = {'version': 1, 'reduced_motion': False, 'high_contrast': False}
 SCHEMA = 'org.gnome.desktop.interface'
@@ -96,7 +97,7 @@ class Accessibility:
     def status(self):
         saved = self.settings()
         marker = self.marker()
-        return {'saved': saved, 'desktop': self.desktop(), 'revision': revision(saved), 'session': self.session,
+        return {'toolkitMessage': hyprtoolkit_settings.ownership_message(), 'saved': saved, 'desktop': self.desktop(), 'revision': revision(saved), 'session': self.session,
                 'installed': marker != 'missing',
                 'synced': marker == (revision(saved) if self.config.exists() else 'defaults')}
 
@@ -136,6 +137,7 @@ class Accessibility:
             if run('gsettings', 'writable', schema, gkey) != 'true':
                 raise ValueError('This desktop setting is read-only.')
             prepared = gtk_settings.prepare({'gtk-enable-animations': str(not updated[key]).lower()}) if key == 'reduced_motion' else []
+            prepared += hyprtoolkit_settings.prepare(accessibility=updated)
             writes = [(self.rules, render(updated)), (self.config, json.dumps(updated, sort_keys=True) + '\n')]
             snapshots = [(path, path.read_text() if path.exists() else None, text) for path, text in writes + prepared]
             changed_desktop = False
