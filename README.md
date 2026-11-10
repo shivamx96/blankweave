@@ -131,6 +131,13 @@ For development, a local checkout can still be applied with `./install.sh`.
 That path installs the same command and records the checkout as the active
 Blankweave source.
 
+For configuration development, `python3 tests/hyprland_parser_test.py` checks
+installer-generated Lua with a real Hyprland 0.57.1-or-newer parser. It uses a
+temporary home and runtime directory, disconnected session buses, and no live
+display connection. CI runs it as an unprivileged user against the current Arch
+package, including saved preferences and deliberately invalid configurations.
+This verifies configuration compatibility, not rendered desktop behavior.
+
 The hardware inventory stores motherboard, display, and DIMM model/specification
 fields, but excludes hardware serial numbers and machine UUIDs. Refresh it after
 changing RAM or displays without reinstalling:
