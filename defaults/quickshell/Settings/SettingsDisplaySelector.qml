@@ -5,7 +5,7 @@ ColumnLayout {
     id: root
     required property var theme
     required property var backend
-    spacing: 10
+    spacing: root.theme.spacing("lg")
 
     RowLayout {
         Layout.fillWidth: true
@@ -44,7 +44,7 @@ ColumnLayout {
     ColumnLayout {
         Layout.fillWidth: true
         visible: root.backend.previewPending === true
-        spacing: 8
+        spacing: root.theme.spacing("md")
         Text {
             Layout.fillWidth: true
             text: root.backend.previewMessage || ""

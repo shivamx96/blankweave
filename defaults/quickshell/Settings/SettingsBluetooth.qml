@@ -9,12 +9,12 @@ ColumnLayout {
     required property var backend
     property string confirmKey: ""
     readonly property bool active: backend !== null && backend.settingsActive
-    spacing: 12
+    spacing: root.theme.spacing("xl")
     onActiveChanged: if (!active) { confirmKey = ""; if (backend) backend.cancelForOwner(root) }
     Component.onDestruction: if (backend) backend.cancelForOwner(root)
     Flow {
         Layout.fillWidth: true
-        spacing: 8
+        spacing: root.theme.spacing("md")
         SettingsButton {
             objectName: "bluetoothPower"
             theme: root.theme
@@ -90,7 +90,7 @@ ColumnLayout {
             }
             Flow {
                 Layout.fillWidth: true
-                spacing: 8
+                spacing: root.theme.spacing("md")
                 SettingsButton {
                     objectName: "bluetoothConnect:" + deviceRow.device.key
                     theme: root.theme

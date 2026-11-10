@@ -12,7 +12,7 @@ ColumnLayout {
     property string passwordKey: ""
     property string confirmUuid: ""
     readonly property var passwordRow: backend ? backend.wifiRows.find(row => row.key === passwordKey) || null : null
-    spacing: 12
+    spacing: root.theme.spacing("xl")
 
     function clearPassword() { passwordKey = ""; password.text = "" }
     function requestConnect(row) {
@@ -44,7 +44,7 @@ ColumnLayout {
 
     Flow {
         Layout.fillWidth: true
-        spacing: 8
+        spacing: root.theme.spacing("md")
         SettingsButton {
             objectName: "wifiPower"
             theme: root.theme

@@ -13,7 +13,7 @@ RowLayout {
     readonly property bool valid: /^[0-9]+$/.test(value) && Number.isSafeInteger(Number(value))
         && Number(value) >= minimum && Number(value) <= maximum
     signal edited(string value)
-    spacing: 8
+    spacing: root.theme.spacing("md")
     function step(delta) {
         if (valid && Number(value) + delta >= minimum && Number(value) + delta <= maximum)
             edited(String(Number(value) + delta))

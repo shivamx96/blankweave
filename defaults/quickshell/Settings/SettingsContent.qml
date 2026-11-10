@@ -131,13 +131,14 @@ Rectangle {
 
         Rectangle {
             Layout.fillWidth: true
-            Layout.preferredHeight: 72
+            Layout.preferredHeight: Math.max(72, headerContent.implicitHeight + 2 * root.theme.spacing("panel"))
             color: root.theme.panelSurface
 
             RowLayout {
+                id: headerContent
                 anchors.fill: parent
-                anchors.margins: 18
-                spacing: 14
+                anchors.margins: root.theme.spacing("panel")
+                spacing: root.theme.spacing("section")
                 VectorMark {
                     mark: "blankweave"
                     markColor: root.theme.text
@@ -151,7 +152,7 @@ Rectangle {
                     color: root.theme.text
                     font.family: root.theme.fontFamily
                     font.pixelSize: Math.round(20 * (root.theme.textScale || 1))
-                    font.weight: Font.DemiBold
+                    font.weight: root.theme.headingWeight
                 }
                 Item { Layout.fillWidth: true }
                 SettingsTextField {
@@ -159,7 +160,7 @@ Rectangle {
                     id: search
                     objectName: "settingsSearch"
                     Layout.preferredWidth: Math.min(280, root.width * 0.36)
-                    Layout.preferredHeight: 36
+                    Layout.preferredHeight: search.implicitHeight
                     placeholderText: "Search settings…"
                     Accessible.name: "Search settings"
                     onTextChanged: { root.followSearchTarget = false; jumpTimer.stop(); highlightTimer.stop(); root.highlightedSetting = ""; root.searchIndex = 0; pageScroll.contentItem.contentY = 0 }
@@ -177,8 +178,8 @@ Rectangle {
         Rectangle { Layout.fillWidth: true; implicitHeight: 1; color: root.theme.divider }
         SettingsJobsBar {
             Layout.fillWidth: true
-            Layout.leftMargin: 12
-            Layout.rightMargin: 12
+            Layout.leftMargin: root.theme.spacing("xl")
+            Layout.rightMargin: root.theme.spacing("xl")
             theme: root.theme
             service: root.operations
             onSettingRequested: id => root.openSetting(id)
@@ -196,16 +197,16 @@ Rectangle {
 
                 ColumnLayout {
                     anchors.fill: parent
-                    anchors.margins: 12
-                    spacing: 16
+                    anchors.margins: root.theme.spacing("xl")
+                    spacing: root.theme.spacing("group")
                     Text {
-                        Layout.topMargin: 12
-                        Layout.leftMargin: 12
-                        text: "YOUR DESKTOP"
+                        Layout.topMargin: root.theme.spacing("xl")
+                        Layout.leftMargin: root.theme.spacing("xl")
+                        text: "Preferences"
                         color: root.theme.textMuted
                         font.family: root.theme.fontFamily
                         font.pixelSize: root.theme.microTextSize
-                        font.letterSpacing: 1.5
+                        font.weight: Font.Medium
                     }
                     ListView {
                         id: categories
@@ -213,7 +214,7 @@ Rectangle {
                         Layout.fillWidth: true
                         Layout.fillHeight: true
                         model: root.results
-                        spacing: 5
+                        spacing: root.theme.spacing("labelGap")
                         clip: true
                         currentIndex: Math.max(0, root.results.findIndex(entry => entry.id === root.selectedPage))
                         keyNavigationEnabled: true
@@ -230,7 +231,7 @@ Rectangle {
                             required property var modelData
                             required property int index
                             width: categories.width
-                            height: root.narrow ? 60 : 46
+                            height: Math.max(40, categoryTitle.implicitHeight + 2 * root.theme.spacing("xl"))
                             theme: root.theme
                             text: modelData.title
                             selected: !root.searching && root.page !== null && root.page.id === modelData.id
@@ -238,30 +239,21 @@ Rectangle {
                             onClicked: { search.clear(); root.selectedPage = modelData.id }
                             background: Rectangle {
                                 radius: root.theme.widgetRadius
-                                color: category.selected ? root.theme.accentSurface
+                                color: category.selected ? root.theme.surfaceRaised
                                     : category.hovered ? root.theme.surfaceHover : "transparent"
-                                border.width: category.activeFocus || (categories.activeFocus && category.index === categories.currentIndex) ? 1 : 0
+                                border.width: category.activeFocus || (categories.activeFocus && category.index === categories.currentIndex) ? Math.max(1, root.theme.borderWidth) : 0
                                 border.color: root.theme.accentBright
                             }
                             contentItem: RowLayout {
-                                spacing: 12
-                                Text {
-                                    Layout.leftMargin: 8
-                                    Layout.preferredWidth: 20
-                                    Layout.minimumWidth: 20
-                                    Layout.maximumWidth: 20
-                                    Layout.alignment: Qt.AlignVCenter
-                                    horizontalAlignment: Text.AlignHCenter
-                                    text: category.modelData.icon
-                                    color: category.selected ? root.theme.accentBright : root.theme.textMuted
-                                    font.family: root.theme.iconFontFamily
-                                    font.pixelSize: 18
-                                }
+                                spacing: root.theme.spacing("xl")
                                 Text {
                                     Layout.fillWidth: true
                                     Layout.alignment: Qt.AlignVCenter
+                                    id: categoryTitle
+                                    Layout.leftMargin: root.theme.spacing("md")
+                                    Layout.rightMargin: root.theme.spacing("md")
                                     text: category.text
-                                    color: category.selected ? root.theme.accentBright : root.theme.text
+                                    color: category.selected ? root.theme.text : root.theme.textMuted
                                     font.family: root.theme.fontFamily
                                     font.pixelSize: root.theme.textSize
                                     font.weight: category.selected ? Font.DemiBold : Font.Normal
@@ -272,8 +264,8 @@ Rectangle {
                     }
                     Text {
                         Layout.fillWidth: true
-                        Layout.margins: 12
-                        text: "Blankweave\nA little more your own."
+                        Layout.margins: root.theme.spacing("xl")
+                        text: "Blankweave"
                         color: root.theme.textMuted
                         font.family: root.theme.fontFamily
                         font.pixelSize: root.theme.smallTextSize
@@ -297,18 +289,19 @@ Rectangle {
                 ColumnLayout {
                     id: pageColumn
                     width: pageScroll.availableWidth
-                    spacing: 20
+                    spacing: root.theme.spacing("page")
 
                     ColumnLayout {
                         visible: root.searching
                         Layout.fillWidth: true
-                        Layout.margins: root.narrow ? 20 : 32
-                        spacing: 12
+                        Layout.margins: root.narrow ? root.theme.spacing("page") : root.theme.spacing("content")
+                        spacing: root.theme.spacing("xl")
                         Text {
                             Layout.fillWidth: true
                             text: root.searchResults.length ? "Search results" : "No settings found"
                             color: root.theme.text; font.family: root.theme.fontFamily
-                            font.pixelSize: Math.round(28 * (root.theme.textScale || 1))
+                            font.pixelSize: root.theme.headingSize
+                            font.weight: root.theme.headingWeight
                             wrapMode: Text.WordWrap
                         }
                         Text {
@@ -327,10 +320,10 @@ Rectangle {
                                 required property int index
                                 objectName: "searchResult_" + modelData.id
                                 Layout.fillWidth: true
-                                implicitHeight: resultLabels.implicitHeight + 24
+                                implicitHeight: resultLabels.implicitHeight + 2 * root.theme.spacing("xl")
                                 theme: root.theme
                                 text: modelData.title
-                                padding: 12
+                                padding: root.theme.spacing("xl")
                                 Accessible.name: modelData.title + ". " + modelData.breadcrumb
                                 Accessible.description: modelData.description
                                 onClicked: root.showResult(modelData)
@@ -339,7 +332,7 @@ Rectangle {
                                 Keys.onReturnPressed: root.showResult(modelData)
                                 contentItem: ColumnLayout {
                                     id: resultLabels
-                                    spacing: 4
+                                    spacing: root.theme.spacing("xs")
                                     Text {
                                         Layout.fillWidth: true
                                         text: resultButton.modelData.title
@@ -366,16 +359,16 @@ Rectangle {
                     ColumnLayout {
                         visible: !root.searching
                         Layout.fillWidth: true
-                        Layout.margins: root.narrow ? 20 : 32
-                        spacing: 9
+                        Layout.margins: root.narrow ? root.theme.spacing("page") : root.theme.spacing("content")
+                        spacing: root.theme.spacing("descriptionGap")
 
                         Text {
                             Layout.fillWidth: true
                             text: root.page ? root.page.title : "No settings found"
                             color: root.theme.text
                             font.family: root.theme.fontFamily
-                            font.pixelSize: Math.round(28 * (root.theme.textScale || 1))
-                            font.weight: Font.DemiBold
+                            font.pixelSize: root.theme.headingSize
+                            font.weight: root.theme.headingWeight
                             wrapMode: Text.WordWrap
                         }
                         Text {
@@ -389,14 +382,14 @@ Rectangle {
 
                         Rectangle {
                             Layout.fillWidth: true
-                            Layout.topMargin: 12
-                            implicitHeight: notice.implicitHeight + 28
+                            Layout.topMargin: root.theme.spacing("xl")
+                            implicitHeight: notice.implicitHeight + 2 * root.theme.spacing("section")
                             visible: root.page !== null
                             color: root.theme.accentSurface
                             radius: root.theme.widgetRadius
                             Text {
                                 id: notice
-                                anchors { fill: parent; margins: 14 }
+                                anchors { fill: parent; margins: root.theme.spacing("section") }
                                 text: root.page && root.page.id === "appearance"
                                     ? "Theme, color mode, bar widgets, wallpaper, text, and pointer sizes are available."
                                     : root.page && root.page.id === "displays" && root.displays
@@ -425,7 +418,7 @@ Rectangle {
                         ColumnLayout {
                             visible: root.page !== null && root.page.id === "appearance"
                             Layout.fillWidth: true
-                            spacing: 10
+                            spacing: root.theme.spacing("lg")
 
                             RowLayout {
                                 Layout.fillWidth: true
@@ -449,15 +442,16 @@ Rectangle {
                             Rectangle {
                                 Layout.fillWidth: true
                                 visible: root.appearance.systemPending || root.appearance.syncMessage !== ""
-                                implicitHeight: systemAppearance.implicitHeight + 28
+                                implicitHeight: systemAppearance.implicitHeight + 2 * root.theme.spacing("section")
                                 color: root.theme.panelSurface
                                 radius: root.theme.widgetRadius
+                                border.width: root.theme.borderWidth
                                 border.color: root.theme.outline
 
                                 ColumnLayout {
                                     id: systemAppearance
-                                    anchors { left: parent.left; right: parent.right; top: parent.top; margins: 14 }
-                                    spacing: 10
+                                    anchors { left: parent.left; right: parent.right; top: parent.top; margins: root.theme.spacing("section") }
+                                    spacing: root.theme.spacing("lg")
                                     Text {
                                         text: "System appearance"
                                         color: root.theme.text
@@ -520,8 +514,8 @@ Rectangle {
                                 property alias rowRepeater: settingsRows
                                 required property var modelData
                                 Layout.fillWidth: true
-                                Layout.topMargin: 12
-                                spacing: 10
+                                Layout.topMargin: root.theme.spacing("xl")
+                                spacing: root.theme.spacing("lg")
                                 ControlSectionLabel {
                                     theme: root.theme
                                     text: group.modelData.title.toUpperCase()
@@ -530,7 +524,8 @@ Rectangle {
                                     Layout.fillWidth: true
                                     implicitHeight: rows.implicitHeight
                                     color: root.theme.panelSurface
-                                    radius: root.theme.panelRadius
+                                    radius: root.theme.widgetRadius
+                                    border.width: root.theme.borderWidth
                                     border.color: root.theme.outline
                                     ColumnLayout {
                                         id: rows
@@ -557,8 +552,8 @@ Rectangle {
                                                 }
                                                 Rectangle {
                                                     Layout.fillWidth: true
-                                                    Layout.leftMargin: 18
-                                                    Layout.rightMargin: 18
+                                                    Layout.leftMargin: root.theme.spacing("panel")
+                                                    Layout.rightMargin: root.theme.spacing("panel")
                                                     visible: settingGroup.index > 0
                                                     implicitHeight: 1
                                                     color: root.theme.divider

@@ -6,10 +6,11 @@ Button {
     required property var theme
     property bool selected: false
 
-    implicitHeight: 36
-    implicitWidth: label.implicitWidth + 28
+    implicitHeight: Math.max(36, implicitContentHeight + topPadding + bottomPadding)
+    implicitWidth: label.implicitWidth + 2 * root.theme.spacing("section")
     hoverEnabled: true
     font.family: theme.fontFamily
+    font.weight: theme.textWeight
     font.pixelSize: theme.textSize
     Accessible.name: text
 
@@ -28,7 +29,7 @@ Button {
         color: root.down ? root.theme.surfacePressed
             : root.selected ? root.theme.accentSurface
             : root.hovered ? root.theme.surfaceHover : root.theme.surfaceRaised
-        border.width: 1
+        border.width: root.activeFocus ? Math.max(1, root.theme.borderWidth) : root.theme.borderWidth
         border.color: root.activeFocus ? root.theme.accentBright : root.theme.outline
         opacity: root.enabled ? 1 : 0.55
     }

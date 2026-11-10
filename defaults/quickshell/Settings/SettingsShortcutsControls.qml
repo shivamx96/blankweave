@@ -25,7 +25,7 @@ ColumnLayout {
     function otherChord(row) {
         return ["SUPER", "CTRL", "ALT", "SHIFT"].filter((m, i) => row.modmask & [64, 4, 8, 1][i]).concat([row.key || "keycode " + row.keycode]).join(" + ")
     }
-    spacing: 10
+    spacing: root.theme.spacing("lg")
     Text {
         Layout.fillWidth: true
         text: "Change desktop key combinations while keeping their actions. Conflicts with reported desktop bindings are checked before saving; applications may also use the same keys."

@@ -10,7 +10,7 @@ ColumnLayout {
     property string selectedId: "browser"
     readonly property var selected: ready ? backend.rows.find(r => r.id === selectedId) || null : null
     readonly property string currentId: selected && selected.current.length && selected.current.every(a => a.id === selected.current[0].id) ? selected.current[0].id : ""
-    spacing: 10
+    spacing: root.theme.spacing("lg")
     SettingsComboBox {
         id: category
         objectName: "defaultAppCategory"

@@ -8,13 +8,14 @@ Controls.Menu {
     property var entries: []
     signal chosen(var entry)
     width: 280
-    padding: 4
-    topMargin: 8
-    bottomMargin: 8
+    padding: root.theme.spacing("xs")
+    topMargin: root.theme.spacing("md")
+    bottomMargin: root.theme.spacing("md")
     popupType: Controls.Popup.Item
     background: Rectangle {
         color: root.theme.panelSurface
         radius: root.theme.widgetRadius
+        border.width: root.theme.borderWidth
         border.color: root.theme.outline
     }
     contentItem: ListView {
@@ -33,8 +34,8 @@ Controls.Menu {
             objectName: "operationMenu_" + modelData.action.key
             text: modelData.label
             implicitHeight: title.implicitHeight + 20
-            leftPadding: 12
-            rightPadding: 12
+            leftPadding: root.theme.spacing("xl")
+            rightPadding: root.theme.spacing("xl")
             hoverEnabled: true
             Accessible.name: text
             contentItem: Text {
@@ -49,7 +50,7 @@ Controls.Menu {
             background: Rectangle {
                 color: entry.down ? root.theme.surfacePressed : entry.highlighted ? root.theme.accentSurface : "transparent"
                 radius: root.theme.widgetRadius
-                border.width: entry.visualFocus ? 1 : 0
+                border.width: entry.visualFocus ? Math.max(1, root.theme.borderWidth) : 0
                 border.color: root.theme.accentBright
             }
             onTriggered: root.chosen(modelData)

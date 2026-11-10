@@ -17,7 +17,7 @@ ColumnLayout {
     function beginEdit() {
         if (!draftRevision && selected) { draftRevision = backend.data.revision; draftId = selected.id; draftPath = selected.path; draftFit = selected.fit }
     }
-    spacing: 10
+    spacing: root.theme.spacing("lg")
     SettingsComboBox {
         id: displayChoice
         property var menuRows: []

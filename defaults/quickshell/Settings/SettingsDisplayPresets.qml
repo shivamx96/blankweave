@@ -8,7 +8,7 @@ ColumnLayout {
     required property var backend
     readonly property bool writable: backend && backend.ready && !backend.busy && typeof backend.canApply === "function" && backend.canApply("display-presets")
     property string deletingId: ""
-    spacing: 12
+    spacing: root.theme.spacing("xl")
 
     RowLayout {
         Layout.fillWidth: true
@@ -47,7 +47,7 @@ ColumnLayout {
             id: preset
             required property var modelData
             Layout.fillWidth: true
-            spacing: 6
+            spacing: root.theme.spacing("sm")
             Text {
                 Layout.fillWidth: true
                 text: preset.modelData.name

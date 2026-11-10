@@ -11,7 +11,7 @@ ColumnLayout {
     function label(key) {
         return {dim: "Dim screen after", lock: "Lock automatically after", screen: "Turn off screen after", suspend: "Suspend after"}[key]
     }
-    spacing: 12
+    spacing: root.theme.spacing("xl")
 
     Repeater {
         model: root.ready && root.backend.battery ? ["ac", "battery"] : ["ac"]

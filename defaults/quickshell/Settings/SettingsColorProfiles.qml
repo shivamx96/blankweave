@@ -12,7 +12,7 @@ ColumnLayout {
     readonly property string assigned: backend && backend.monitor ? backend.monitor.colorProfile || "" : ""
     readonly property int assignedIndex: assigned ? profiles.findIndex(row => row.path === assigned) + 1 : 0
     property string deletingId: ""
-    spacing: 12
+    spacing: root.theme.spacing("xl")
     RowLayout {
         Layout.fillWidth: true
         SettingsComboBox {

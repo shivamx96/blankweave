@@ -22,18 +22,18 @@ Item {
     readonly property int selection: live && backend && typeof backend.selection === "function" ? backend.selection(setting.id) : 0
     readonly property bool expandedControl: ["operations", "system-info", "webapps", "widgets", "wallpaper", "startup", "notifications", "default-apps", "accessibility", "interface-size", "shortcuts", "keyboard", "pointer", "idle", "battery-health", "automatic-power", "power-profile", "presets", "night-light", "color-profile", "sound-output", "sound-input", "dictation", "system-sounds", "wifi", "bluetooth", "network", "airplane", "hotspot"].includes(setting.kind)
     readonly property bool compact: width < 510
-    implicitHeight: content.implicitHeight + 28
+    implicitHeight: content.implicitHeight + 2 * root.theme.spacing("section")
 
     GridLayout {
         id: content
-        anchors { left: parent.left; right: parent.right; verticalCenter: parent.verticalCenter; margins: 18 }
+        anchors { left: parent.left; right: parent.right; verticalCenter: parent.verticalCenter; margins: root.theme.spacing("panel") }
         columns: root.compact || root.expandedControl ? 1 : 2
-        rowSpacing: 12
-        columnSpacing: 20
+        rowSpacing: root.theme.spacing("xl")
+        columnSpacing: root.theme.spacing("page")
 
         ColumnLayout {
             Layout.fillWidth: true
-            spacing: 5
+            spacing: root.theme.spacing("labelGap")
             Text {
                 Layout.fillWidth: true
                 text: root.setting.title
@@ -57,7 +57,7 @@ Item {
         Loader {
             Layout.fillWidth: root.expandedControl
             Layout.preferredWidth: root.expandedControl ? content.width : root.compact ? Math.min(240, content.width) : 190
-            Layout.preferredHeight: root.expandedControl && item ? (item as Item).implicitHeight : 36
+            Layout.preferredHeight: item ? Math.max(root.expandedControl ? 0 : 36, (item as Item).implicitHeight) : 36
             sourceComponent: root.setting.kind === "operations" ? operationsControl
                 : root.setting.kind === "system-info" ? systemControl
                 : root.setting.kind === "webapps" ? webappsControl
@@ -251,7 +251,7 @@ Item {
     Component {
         id: sliderControl
         RowLayout {
-            spacing: 10
+            spacing: root.theme.spacing("lg")
             ControlSlider {
                 id: slider
                 objectName: "settingsSlider_" + root.setting.id

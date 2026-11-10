@@ -16,7 +16,7 @@ ColumnLayout {
     signal copyRequested(string text)
     signal dismissRequested(string jobId)
     onJobIdChanged: { expanded = false; copied = false }
-    spacing: 8
+    spacing: root.theme.spacing("md")
     Timer { interval: 1000; repeat: true; running: root.visible && root.running; onTriggered: root.now = Date.now() }
     Text {
         objectName: "jobSummary"
@@ -39,7 +39,7 @@ ColumnLayout {
     }
     Flow {
         Layout.fillWidth: true
-        spacing: 8
+        spacing: root.theme.spacing("md")
         SettingsButton {
             theme: root.theme
             text: root.expanded ? "Hide details" : "View details"

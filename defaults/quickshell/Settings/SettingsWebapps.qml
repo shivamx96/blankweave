@@ -9,7 +9,7 @@ ColumnLayout {
     property string removeId: ""
     property string removeRevision: ""
     property string removeName: ""
-    spacing: 10
+    spacing: root.theme.spacing("lg")
     ControlTextField { id: name; theme: root.theme; Layout.fillWidth: true; placeholderText: "Application name"; Accessible.name: "Web app name" }
     ControlTextField { id: url; theme: root.theme; Layout.fillWidth: true; placeholderText: "https://example.com"; Accessible.name: "Web app URL" }
     SettingsButton { theme: root.theme; text: "Add web app"; enabled: root.backend && root.backend.writable && root.backend.data.browser && name.text.trim() !== "" && url.text.trim() !== ""; onClicked: root.backend.apply({action: "create", name: name.text, url: url.text.trim()}) }

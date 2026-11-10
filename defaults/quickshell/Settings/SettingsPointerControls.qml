@@ -20,7 +20,7 @@ ColumnLayout {
         return {sensitivity: "Pointer speed", accel_profile: "Acceleration", natural_scroll: "Natural scrolling",
             left_handed: "Left-handed buttons", tap_to_click: "Tap to click", disable_while_typing: "Disable touchpad while typing"}[key]
     }
-    spacing: 12
+    spacing: root.theme.spacing("xl")
 
     SettingsComboBox {
         id: deviceChoice

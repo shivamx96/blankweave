@@ -12,7 +12,7 @@ ColumnLayout {
     readonly property var values: cursor ? [24, 32, 48] : [1, 1.15, 1.3]
     readonly property bool ready: backend !== null && backend.ready
     property var snapshot: null
-    spacing: 10
+    spacing: root.theme.spacing("lg")
     SettingsComboBox {
         id: sizeChoice
         objectName: "interfaceSize_" + root.key

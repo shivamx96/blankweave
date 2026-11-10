@@ -4,10 +4,11 @@ import QtQuick.Controls.Basic
 Switch {
     id: root
     required property var theme
-    implicitHeight: 36
+    implicitHeight: Math.max(36, implicitContentHeight + topPadding + bottomPadding)
     implicitWidth: 52 + label.implicitWidth
-    spacing: 10
+    spacing: root.theme.spacing("lg")
     font.family: theme.fontFamily
+    font.weight: theme.textWeight
     font.pixelSize: theme.smallTextSize
     indicator: Rectangle {
         x: root.leftPadding
@@ -16,6 +17,7 @@ Switch {
         height: 20
         radius: 10
         color: root.checked ? root.theme.accentSurface : root.theme.surfaceRaised
+        border.width: root.activeFocus ? Math.max(1, root.theme.borderWidth) : root.theme.borderWidth
         border.color: root.activeFocus ? root.theme.accentBright : root.theme.outline
         opacity: root.enabled ? 1 : 0.55
         Rectangle {

@@ -16,7 +16,7 @@ ColumnLayout {
     property var editing: null
     property string provider: "Automatic"
     readonly property bool stale: editing !== null && (!selected || !backend.matches(editing, selected))
-    spacing: 12
+    spacing: root.theme.spacing("xl")
 
     function beginEdit() {
         if (!selected) return
@@ -83,7 +83,7 @@ ColumnLayout {
             }
             Flow {
                 Layout.fillWidth: true
-                spacing: 8
+                spacing: root.theme.spacing("md")
                 SettingsComboBox {
                     id: profileChoice
                     property var menuProfiles: []

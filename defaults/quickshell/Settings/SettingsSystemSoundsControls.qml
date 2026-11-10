@@ -14,7 +14,7 @@ ColumnLayout {
     property bool selecting: false
     readonly property var choices: selecting ? menuThemes : themes
     readonly property int selectedIndex: ready ? choices.findIndex(row => row.id === backend.preferences["theme-name"]) : -1
-    spacing: 12
+    spacing: root.theme.spacing("xl")
 
     GridLayout {
         columns: root.width < 440 ? 1 : 2

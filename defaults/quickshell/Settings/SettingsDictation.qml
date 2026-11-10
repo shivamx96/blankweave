@@ -7,7 +7,7 @@ ColumnLayout {
     required property var theme
     required property var backend
     readonly property bool featureEnabled: backend !== null && Boolean(backend.featureEnabled)
-    spacing: 12
+    spacing: root.theme.spacing("xl")
 
     Text {
         Layout.fillWidth: true
@@ -45,8 +45,8 @@ ColumnLayout {
         visible: root.featureEnabled
         Layout.fillWidth: true
         columns: root.width < 550 ? 1 : 3
-        columnSpacing: 10
-        rowSpacing: 10
+        columnSpacing: root.theme.spacing("lg")
+        rowSpacing: root.theme.spacing("lg")
         SettingsButton {
             objectName: "dictationRecord"
             Layout.fillWidth: true

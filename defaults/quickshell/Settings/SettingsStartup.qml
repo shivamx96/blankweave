@@ -5,7 +5,7 @@ ColumnLayout {
     id: root
     required property var theme
     required property var backend
-    spacing: 10
+    spacing: root.theme.spacing("lg")
     Repeater {
         model: root.backend && root.backend.ready ? root.backend.data.rows : []
         delegate: ColumnLayout {
