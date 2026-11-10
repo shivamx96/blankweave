@@ -168,6 +168,63 @@ check_user_configuration() {
     else
         skip 'Hyprland configuration' 'validator or configuration unavailable'
     fi
+
+    # The entry point deliberately pcall-loads this optional file so broken
+    # saved layouts cannot prevent login. Check its syntax without executing it.
+    local saved_monitors=$CONFIG_HOME/blankweave/monitors.lua
+    if [[ ! -e $saved_monitors && ! -L $saved_monitors ]]; then
+        skip 'saved monitor rules' 'no saved layout'
+    elif [[ ! -r $saved_monitors ]]; then
+        warn 'saved monitor rules' 'monitors.lua is unreadable; inspect the saved layout before applying display changes'
+    elif ! command -v luac > /dev/null 2>&1; then
+        skip 'saved monitor rules' 'Lua syntax checker unavailable'
+    elif luac -p "$saved_monitors" > /dev/null 2>&1; then
+        pass 'saved monitor rules' 'Lua syntax valid'
+    else
+        warn 'saved monitor rules' 'monitors.lua has invalid Lua syntax; startup may ignore this layout. Inspect monitors.lua and monitors.json before reapplying the saved layout in Settings'
+    fi
+}
+
+check_hyprland_runtime() {
+    local running installed version_output notices count notice
+
+    if [[ -z ${HYPRLAND_INSTANCE_SIGNATURE:-} ]] || ! command -v hyprctl > /dev/null 2>&1 \
+        || ! command -v jq > /dev/null 2>&1; then
+        skip 'Hyprland runtime' 'graphical session or IPC tools unavailable'
+        return
+    fi
+    if ! version_output=$(timeout 5 hyprctl version -j 2>/dev/null) \
+        || ! running=$(jq -er '.version | select(type == "string") | select(test("^[0-9]+\\.[0-9]+\\.[0-9]+$"))' <<< "$version_output" 2>/dev/null); then
+        skip 'Hyprland runtime' 'running compositor version unavailable'
+        return
+    fi
+    installed=$(timeout 5 hyprland --version 2>/dev/null | sed -nE 's/^Hyprland ([0-9]+\.[0-9]+\.[0-9]+)( .*)?$/\1/p' | head -n 1)
+    if [[ -z $installed ]]; then
+        pass 'Hyprland runtime' "running $running; installed version unavailable"
+    elif [[ $running == "$installed" ]]; then
+        pass 'Hyprland runtime' "running and installed $running"
+    else
+        warn 'Hyprland runtime' "running $running; installed $installed. Restart the graphical session when ready to use the installed version"
+    fi
+
+    # Probe the command, not just a version number: older compositors do not
+    # expose this channel and development builds may backport it.
+    if ! notices=$(timeout 5 hyprctl deprecated-config -j 2>/dev/null); then
+        skip 'Hyprland deprecations' 'command unavailable in this session'
+    elif ! count=$(jq -er 'select(type == "array") | select(all(.[]; type == "string")) | length' <<< "$notices" 2>/dev/null); then
+        skip 'Hyprland deprecations' 'command returned an unsupported response'
+    elif (( count == 0 )); then
+        pass 'Hyprland deprecations' 'none reported'
+    else
+        warn 'Hyprland deprecations' "$count deprecated options; run hyprctl deprecated-config for migration guidance"
+        # Plugin notices can contain arbitrary user data. Keep the shareable
+        # report limited to the count; bound and flatten normal terminal output.
+        if [[ $REPORT == false ]]; then
+            while IFS= read -r notice; do
+                emit INFO 'deprecated option' "$notice"
+            done < <(jq -r '.[:10][] | gsub("[\u0000-\u001f\u007f]"; " ") | .[:500]' <<< "$notices")
+        fi
+    fi
 }
 
 check_console_session() {
@@ -690,6 +747,7 @@ main() {
     check_repository "$repository"
     check_commands
     check_user_configuration
+    check_hyprland_runtime
     check_console_session
     check_keyring
     check_plymouth
