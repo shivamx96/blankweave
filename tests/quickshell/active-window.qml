@@ -60,6 +60,7 @@ ShellRoot {
             bar: fakeBar
             theme: ({
                 barIconSize: 16, widgetPadding: 8, widgetHeight: 28,
+                motionDuration: 0, motionEasing: Easing.OutCubic,
                 widgetContentGap: 6, critical: "red", accentBright: "cyan",
                 text: "white", fontFamily: "sans-serif", iconFontFamily: "sans-serif", textSize: 13
             })

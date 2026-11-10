@@ -18,7 +18,7 @@ RowLayout {
     signal valueCommitted(real value)
 
     Layout.fillWidth: true
-    spacing: 10
+    spacing: root.theme.spacing("lg")
 
     Text {
         visible: root.icon !== ""

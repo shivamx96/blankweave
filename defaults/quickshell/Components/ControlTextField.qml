@@ -7,9 +7,9 @@ TextField {
     required property var theme
     property bool secret: false
 
-    implicitHeight: 32
-    leftPadding: 10
-    rightPadding: 10
+    implicitHeight: Math.max(32, contentHeight + topPadding + bottomPadding)
+    leftPadding: root.theme.spacing("lg")
+    rightPadding: root.theme.spacing("lg")
     color: theme.text
     placeholderTextColor: theme.textMuted
     selectionColor: theme.accent
@@ -21,11 +21,11 @@ TextField {
 
     background: Rectangle {
         color: root.activeFocus ? root.theme.accentSurface : "transparent"
-        border.width: 1
+        border.width: root.activeFocus ? Math.max(1, root.theme.borderWidth) : root.theme.borderWidth
         border.color: root.activeFocus ? root.theme.accentBright : root.theme.outline
 
         Behavior on border.color {
-            ColorAnimation { duration: root.theme.reducedMotion ? 0 : 120 }
+            ColorAnimation { duration: Math.round(root.theme.motionDuration * 120 / 150) }
         }
     }
 }

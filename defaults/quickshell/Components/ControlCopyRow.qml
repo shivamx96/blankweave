@@ -13,7 +13,7 @@ RowLayout {
 
     Layout.fillWidth: true
     Layout.preferredHeight: 25
-    spacing: 8
+    spacing: root.theme.spacing("md")
 
     Text {
         Layout.preferredWidth: 82
@@ -57,7 +57,7 @@ RowLayout {
             height: 1
             color: root.theme.accentBright
 
-            Behavior on width { NumberAnimation { duration: root.theme.reducedMotion ? 0 : 120 } }
+            Behavior on width { NumberAnimation { duration: Math.round(root.theme.motionDuration * 120 / 150) } }
         }
 
         MouseArea {

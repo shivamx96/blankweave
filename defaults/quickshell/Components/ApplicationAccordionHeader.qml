@@ -22,7 +22,7 @@ Item {
         anchors.fill: parent
         color: headerMouse.containsMouse ? root.theme.accentSurface : "transparent"
 
-        Behavior on color { ColorAnimation { duration: root.theme.reducedMotion ? 0 : 120 } }
+        Behavior on color { ColorAnimation { duration: Math.round(root.theme.motionDuration * 120 / 150) } }
     }
 
     Rectangle {
@@ -32,13 +32,13 @@ Item {
         height: root.expanded ? 26 : 14
         color: root.active ? root.theme.accentBright : root.theme.divider
 
-        Behavior on height { NumberAnimation { duration: root.theme.reducedMotion ? 0 : 140 } }
+        Behavior on height { NumberAnimation { duration: Math.round(root.theme.motionDuration * 140 / 150) } }
     }
 
     RowLayout {
         anchors.fill: parent
-        anchors.leftMargin: 12
-        anchors.rightMargin: 6
+        anchors.leftMargin: root.theme.spacing("xl")
+        anchors.rightMargin: root.theme.spacing("sm")
         spacing: 9
 
         Text {

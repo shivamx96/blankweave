@@ -13,10 +13,11 @@ Item {
     signal pressed
 
     Layout.fillWidth: true
-    Layout.preferredHeight: 30
+    Layout.preferredHeight: Math.max(30, content.implicitHeight + root.theme.spacing("xs") * 2)
     opacity: enabled ? 1 : 0.45
 
     RowLayout {
+        id: content
         anchors.centerIn: parent
         spacing: 7
 
@@ -49,7 +50,7 @@ Item {
         color: root.attention ? root.theme.critical : root.theme.accentBright
 
         Behavior on width {
-            NumberAnimation { duration: root.theme.reducedMotion ? 0 : 150; easing.type: Easing.OutCubic }
+            NumberAnimation { duration: root.theme.motionDuration; easing.type: root.theme.motionEasing }
         }
     }
 

@@ -14,7 +14,7 @@ RowLayout {
     signal actionPressed(string actionId)
 
     Layout.fillWidth: true
-    spacing: 10
+    spacing: root.theme.spacing("lg")
 
     VectorMark {
         mark: root.iconMark
@@ -33,7 +33,7 @@ RowLayout {
 
     ColumnLayout {
         Layout.fillWidth: true
-        spacing: 2
+        spacing: root.theme.spacing("xxs")
 
         Text {
             Layout.fillWidth: true
@@ -61,7 +61,7 @@ RowLayout {
 
     RowLayout {
         visible: root.actions.length > 0
-        spacing: 2
+        spacing: root.theme.spacing("xxs")
         Layout.preferredHeight: 28
 
         Repeater {
@@ -94,7 +94,7 @@ RowLayout {
                     color: actionItem.modelData.attention ? root.theme.critical : root.theme.accentBright
 
                     Behavior on width {
-                        NumberAnimation { duration: root.theme.reducedMotion ? 0 : 140; easing.type: Easing.OutCubic }
+                        NumberAnimation { duration: Math.round(root.theme.motionDuration * 140 / 150); easing.type: root.theme.motionEasing }
                     }
                 }
 

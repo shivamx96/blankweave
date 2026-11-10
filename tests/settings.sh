@@ -6,6 +6,8 @@ trap 'rm -rf -- "$test_root"' EXIT
 
 mkdir -p "$test_root/bin" "$test_root/home" "$test_root/runtime"
 chmod 700 "$test_root/runtime"
+mkdir -p "$test_root/home/.local/share/blankweave/themes"
+cp "$repository/defaults/themes/design-defaults.json" "$test_root/home/.local/share/blankweave/themes/"
 cat > "$test_root/bin/qs" <<'EOF'
 #!/usr/bin/env bash
 printf '%s\n' "$@" > "$SETTINGS_TEST_LOG"

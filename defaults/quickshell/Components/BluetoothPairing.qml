@@ -10,7 +10,7 @@ ColumnLayout {
     required property var owner
     readonly property var request: backend ? backend.prompt : null
     visible: request !== null && backend.actionOwner === owner
-    spacing: 8
+    spacing: root.theme.spacing("md")
     onRequestChanged: code.text = ""
     Text {
         Layout.fillWidth: true
@@ -49,7 +49,7 @@ ColumnLayout {
     }
     Flow {
         Layout.fillWidth: true
-        spacing: 8
+        spacing: root.theme.spacing("md")
         SettingsButton {
             id: submit
             objectName: "bluetoothPairingConfirm"

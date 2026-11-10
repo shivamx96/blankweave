@@ -9,7 +9,10 @@ TestCase {
     when: windowShown
     visible: true
     width: 500; height: 400
-    property var colors: ({text:"#eeeeee",textMuted:"#aaaaaa",surfaceRaised:"#223344",
+    property var colors: ({
+        borderWidth: 1, headingSize: 22, textWeight: 400, headingWeight: 600, motionDuration: 0, motionEasing: Easing.OutCubic,
+        spacing: function(name) { return ({xxs:2,xs:4,sm:6,md:8,lg:10,xl:12,section:14,panel:18,content:32,labelGap:5,descriptionGap:9,group:16,page:20,controlInset:24,rowInset:28})[name] },
+        designValue: function(group, name, fallback) { return fallback },text:"#eeeeee",textMuted:"#aaaaaa",surfaceRaised:"#223344",
         accentSurface:"#334455",accentBright:"#77aaff",outline:"#445566",
         fontFamily:"sans-serif",smallTextSize:12,widgetRadius:4,reducedMotion:true})
     Component { id: fieldFactory; SettingsTextField { theme: test.colors; width: 300 } }

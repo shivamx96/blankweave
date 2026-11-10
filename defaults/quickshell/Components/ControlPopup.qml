@@ -23,7 +23,7 @@ PopupWindow {
     grabFocus: true
     color: "transparent"
     implicitWidth: panelWidth
-    implicitHeight: panelContent.implicitHeight + 28
+    implicitHeight: panelContent.implicitHeight + root.theme.spacing("section") * 2
 
     onClosed: {
         if (preserveNextClose) {
@@ -89,15 +89,15 @@ PopupWindow {
             anchors.fill: parent
             radius: root.theme.panelRadius
             color: root.theme.panelSurface
-            border.width: 1
+            border.width: root.theme.borderWidth
             border.color: root.theme.outlineStrong
         }
 
         ColumnLayout {
             id: panelContent
             anchors.fill: parent
-            anchors.margins: 14
-            spacing: 10
+            anchors.margins: root.theme.spacing("section")
+            spacing: root.theme.spacing("lg")
         }
     }
 }
