@@ -5,6 +5,7 @@ require(config_dir .. "keybindings")
 require(config_dir .. "windowrules")
 require(config_dir .. "input")
 require(config_dir .. "animations")
+require(config_dir .. "system-bell")
 require(config_dir .. "autostart")
 
 -- Window border colours come from the active theme: theme-apply.sh renders

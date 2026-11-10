@@ -8,6 +8,7 @@ ColumnLayout {
     required property var backend
     readonly property bool ready: backend !== null && Boolean(backend.ready)
     readonly property bool writable: ready && !backend.busy
+    readonly property var bell: ready && backend.bell ? backend.bell : ({available: false, writable: false, enabled: false, message: "System bell controls unavailable."})
     readonly property var themes: ready ? backend.themes : []
     property var menuThemes: []
     property bool selecting: false
@@ -35,6 +36,24 @@ ColumnLayout {
             selected: root.ready && root.backend.preferences["input-feedback-sounds"] === true
             onClicked: root.backend.apply("input-feedback-sounds", !root.backend.preferences["input-feedback-sounds"])
         }
+    }
+    SettingsButton {
+        objectName: "systemBellToggle"
+        theme: root.theme
+        text: !root.ready || !root.bell.available ? "System bell: unavailable"
+            : root.bell.enabled ? "System bell: On" : "System bell: Off"
+        enabled: root.writable && root.bell.writable
+        selected: root.ready && root.bell.enabled
+        onClicked: root.backend.applyBell(!root.bell.enabled)
+    }
+    Text {
+        Layout.fillWidth: true
+        text: root.ready ? root.bell.message : "Reading system bell state…"
+        textFormat: Text.PlainText
+        color: root.theme.textMuted
+        font.family: root.theme.fontFamily
+        font.pixelSize: root.theme.smallTextSize
+        wrapMode: Text.WordWrap
     }
     SettingsComboBox {
         id: soundTheme

@@ -40,7 +40,7 @@ var pages = [
         ] },
         { title: "Voice & feedback", rows: [
             { id: "dictation", title: "Local voice dictation", description: "Check dictation status, record speech, and recover your latest transcript.", kind: "dictation", live: true },
-            { id: "sound-alerts", title: "System sounds", description: "Choose a sound theme and enable event or input feedback in supported apps.", kind: "system-sounds", live: true }
+            { id: "sound-alerts", title: "System sounds", description: "Choose app event sounds and control the desktop system bell.", kind: "system-sounds", live: true }
         ] }
     ] },
     { id: "network", title: "Network & Bluetooth", icon: "󰖩", description: "Connect to networks and nearby devices.", groups: [
@@ -137,6 +137,7 @@ function search(query) {
 
 // Search each setting independently; never combine words from unrelated rows.
 var searchAliases = {
+    "sound-alerts": "system bell beep alert event sounds",
     "vpn": "vpn tailscale private network tunnel",
     "datetime": "timezone time zone clock date locale region language ntp",
     "assistive": "screen reader orca magnifier zoom on screen keyboard accessibility",

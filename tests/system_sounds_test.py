@@ -23,7 +23,7 @@ class SoundSettings(unittest.TestCase):
         self.state.write_text(json.dumps({'event-sounds': True, 'input-feedback-sounds': False, 'theme-name': 'freedesktop'}))
         self.env = dict(os.environ, HOME=str(self.root), XDG_CONFIG_HOME=str(self.root / 'config'),
                         XDG_DATA_HOME=str(self.root / 'data'), XDG_DATA_DIRS=str(self.root / 'system'),
-                        DBUS_SESSION_BUS_ADDRESS='unix:path=' + str(self.root / 'no-bus'),
+                        DBUS_SESSION_BUS_ADDRESS='unix:path=' + str(self.root / 'no-bus'), HYPRLAND_INSTANCE_SIGNATURE='',
                         SOUND_STATE=str(self.state), SOUND_LOG=str(self.root / 'calls'), PATH=str(self.bin) + ':' + os.environ['PATH'])
         self.script('gsettings', '''import ast,json,os,sys
 from pathlib import Path

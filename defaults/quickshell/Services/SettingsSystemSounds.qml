@@ -9,6 +9,7 @@ QtObject {
     property bool ready: false
     property var preferences: ({})
     property var writable: ({})
+    property var bell: ({available: false, writable: false, enabled: false, message: "System bell controls unavailable."})
     property var themes: []
     property bool gtkSynced: false
     property bool previewAvailable: false
@@ -26,6 +27,10 @@ QtObject {
         if (!ready || busy || writable[key] !== true) return
         if (key === "theme-name" && !themes.some(row => row.id === value)) return
         execute(["set", key, String(value)])
+    }
+    function applyBell(enabled) {
+        if (!ready || busy || !bell.writable) return
+        execute(["set-bell", JSON.stringify({enabled: enabled, revision: bell.revision, session: bell.session, current: bell.current})])
     }
     function sync() { if (ready && !busy) execute(["sync"]) }
     function preview() { if (canPreview) execute(["preview"]) }
@@ -49,6 +54,11 @@ QtObject {
                     || typeof data.preferences["theme-name"] !== "string" || !Array.isArray(data.themes)
                     || !data.writable || typeof data.gtkSynced !== "boolean" || typeof data.previewAvailable !== "boolean")
                     throw new Error("Invalid sound settings response.")
+                if (data.bell && (typeof data.bell.available !== "boolean" || typeof data.bell.writable !== "boolean"
+                    || typeof data.bell.enabled !== "boolean" || typeof data.bell.message !== "string"
+                    || (data.bell.writable && ["revision", "session", "current"].some(k => typeof data.bell[k] !== "string"))))
+                    throw new Error("Invalid system bell response.")
+                root.bell = data.bell || {available: false, writable: false, enabled: false, message: "Update the desktop helper to manage the system bell."}
                 root.preferences = data.preferences
                 root.writable = data.writable
                 root.themes = data.themes.filter(row => typeof row.id === "string" && typeof row.name === "string")
