@@ -129,7 +129,8 @@ Rectangle {
         anchors.fill: parent
         spacing: 0
 
-        Rectangle {
+        ThemeSurface {
+            surfaceTheme: root.theme
             Layout.fillWidth: true
             Layout.preferredHeight: Math.max(72, headerContent.implicitHeight + 2 * root.theme.spacing("panel"))
             color: root.theme.panelSurface
@@ -190,7 +191,8 @@ Rectangle {
             Layout.fillHeight: true
             spacing: 0
 
-            Rectangle {
+            ThemeSurface {
+                surfaceTheme: root.theme
                 Layout.preferredWidth: root.narrow ? 190 : 238
                 Layout.fillHeight: true
                 color: root.theme.panelSurface
