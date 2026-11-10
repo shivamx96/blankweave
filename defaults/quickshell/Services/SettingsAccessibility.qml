@@ -55,7 +55,7 @@ QtObject {
                 root.desktop = data.desktop
                 root.installed = data.installed
                 root.synced = data.synced
-                root.message = data.synced ? "" : "Reload or update the desktop to load saved accessibility settings."
+                root.message = data.synced ? String(data.toolkitMessage || "") : "Reload or update the desktop to load saved accessibility settings."
                 root.revision = data.revision
                 root.session = data.session
                 root.ready = true

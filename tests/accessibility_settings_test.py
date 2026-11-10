@@ -47,6 +47,19 @@ class AccessibilityTests(unittest.TestCase):
     def request(self,key='reduced_motion',value=True):
         return dict(revision=m.revision(self.helper.settings()),session='session',desktop=dict(self.desktop),key=key,value=value)
 
+    def test_toolkit_preferences_roll_back_with_failed_desktop_write(self):
+        theme=json.loads((REPO/'defaults/themes/obsidian/theme.json').read_text())['modes']['dark']
+        theme['mode']='dark'
+        (self.helper.directory/'theme.json').write_text(json.dumps(theme))
+        m.gtk_settings.write(m.hyprtoolkit_settings.prepare())
+        path=Path(self.temp.name)/'hypr/hyprtoolkit.conf'
+        previous=path.read_text()
+        self.reject_setting=True
+        with self.assertRaisesRegex(ValueError,'restored'): self.helper.apply(self.request('high_contrast',True))
+        self.assertEqual(path.read_text(),previous)
+        self.helper.apply(self.request('high_contrast',True))
+        self.assertNotEqual(path.read_text(),previous)
+
     def test_motion_and_restore(self):
         self.helper.apply(self.request());self.assertTrue(self.desktop['reduced_motion']);self.assertTrue(self.desktop['compositor_motion'])
         for version in ('gtk-3.0','gtk-4.0'):

@@ -565,6 +565,13 @@ Two themes are bundled: `obsidian` (Obsidian dark / Porcelain light, blue) and
 `theme.json`, and run `blankweave theme set <id>`; a personal theme with the same
 id as a bundled one takes precedence.
 
+The Hyprtoolkit screen-sharing picker follows the selected palette, text size,
+and high-contrast preference through `~/.config/hypr/hyprtoolkit.conf`. Blankweave
+updates this regular file only while its generated content checksum matches.
+Editing it takes ownership; existing personal files and symlinks are preserved,
+and Settings reports that the picker uses personal configuration. Reopen the
+picker after changing appearance if it does not refresh immediately.
+
 ## Web apps
 
 A web app is a site opened as its own window, Omarchy-style, through

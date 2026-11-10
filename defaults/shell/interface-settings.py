@@ -13,6 +13,7 @@ import sys
 import tempfile
 import time
 import gtk_settings
+import hyprtoolkit_settings
 
 DEFAULTS = {'version': 1, 'text_scale': 1.0, 'cursor_size': 24}
 SCALES = (1.0, 1.15, 1.3)
@@ -100,7 +101,7 @@ class Interface:
     def status(self):
         saved = self.settings()
         marker = self.marker()
-        return {'saved': saved, 'desktop': self.desktop(), 'revision': revision(saved), 'session': self.session,
+        return {'toolkitMessage': hyprtoolkit_settings.ownership_message(), 'saved': saved, 'desktop': self.desktop(), 'revision': revision(saved), 'session': self.session,
                 'theme': self.cursor_theme(), 'installed': marker != 'missing',
                 'synced': marker == (revision(saved) if self.config.exists() else 'defaults')}
 
@@ -139,6 +140,7 @@ class Interface:
             if run('gsettings', 'writable', SCHEMA, gkey) != 'true':
                 raise ValueError('This desktop setting is read-only.')
             prepared = gtk_settings.prepare({'gtk-cursor-theme-size': str(updated[key])}) if key == 'cursor_size' else []
+            prepared += hyprtoolkit_settings.prepare(interface=updated)
             writes = [(self.rules, render(updated)), (self.config, json.dumps(updated, sort_keys=True) + '\n')]
             snapshots = [(path, path.read_text() if path.exists() else None, text) for path, text in writes + prepared]
             changed_desktop = False

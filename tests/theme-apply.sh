@@ -78,6 +78,8 @@ assert_rendered() {
         grep -Fxq 'gtk-sound-theme-name=custom' "$XDG_CONFIG_HOME/$version/settings.ini"
         grep -Fxq 'gtk-font-name=Custom 12' "$XDG_CONFIG_HOME/$version/settings.ini"
     done
+    [[ -f "$XDG_CONFIG_HOME/hypr/hyprtoolkit.conf" && ! -L "$XDG_CONFIG_HOME/hypr/hyprtoolkit.conf" ]]
+    grep -Fxq 'font_family = Atkinson Hyperlegible Next' "$XDG_CONFIG_HOME/hypr/hyprtoolkit.conf"
     for file in "$dunstrc" "$ghostty" "$hyprlock" "$hypr_theme" "$plymouth" "$voxtype"; do
         [[ -f $file ]]
         if grep -q '{{' "$file"; then
@@ -311,6 +313,17 @@ jq -e '.text_scale == 1.3 and .cursor_size == 48' "$XDG_CONFIG_HOME/blankweave/i
 printf '{"version":1,"text_scale":1.3,"cursor_size":-1}\n' > "$XDG_CONFIG_HOME/blankweave/interface.json"
 expect_failure "$script" mode light
 rm "$XDG_CONFIG_HOME/blankweave/interface.json"
+
+# Invalid toolkit preferences fail before any resolved theme outputs change.
+cp "$state" "$test_root/state-before-invalid.json"
+cp "$dunstrc" "$test_root/dunst-before-invalid"
+cp "$XDG_CONFIG_HOME/hypr/hyprtoolkit.conf" "$test_root/toolkit-before-invalid"
+printf '{broken\n' > "$XDG_CONFIG_HOME/blankweave/accessibility.json"
+expect_failure "$script" mode light
+cmp "$state" "$test_root/state-before-invalid.json"
+cmp "$dunstrc" "$test_root/dunst-before-invalid"
+cmp "$XDG_CONFIG_HOME/hypr/hyprtoolkit.conf" "$test_root/toolkit-before-invalid"
+rm "$XDG_CONFIG_HOME/blankweave/accessibility.json"
 
 # An unknown placeholder in a template aborts the render and leaves no
 # staged output behind the previously rendered file.

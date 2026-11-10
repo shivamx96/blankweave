@@ -57,7 +57,7 @@ QtObject {
                 root.cursorTheme = data.theme
                 root.installed = data.installed
                 root.synced = data.synced
-                root.message = data.synced ? "" : "Reload or update the desktop to load saved interface settings."
+                root.message = data.synced ? String(data.toolkitMessage || "") : "Reload or update the desktop to load saved interface settings."
                 root.revision = data.revision
                 root.session = data.session
                 root.ready = true
