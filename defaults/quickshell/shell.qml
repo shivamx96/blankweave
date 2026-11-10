@@ -26,8 +26,11 @@ ShellRoot {
     property NetworkWifi wifi: NetworkWifi { }
     property BluetoothService bluetooth: BluetoothService { }
     property AgentUsage agentUsage: AgentUsage { }
-    property bool launcherOpen: false
-    property string launcherMode: "applications"
+    LauncherSession {
+        id: launcherSession
+        screens: Quickshell.screens
+        focusedScreenName: Hyprland.focusedMonitor ? Hyprland.focusedMonitor.name : ""
+    }
 
     function openSettings() {
         root.closeLauncher()
@@ -47,21 +50,12 @@ ShellRoot {
         bluetooth: root.bluetooth
     }
 
-    // The mode lives here rather than in the surface because Variants gives
-    // every screen its own launcher; a keybinding for the other view should
-    // switch the open one, not close it.
     function toggleLauncher(mode) {
-        const next = mode || "applications"
-        if (root.launcherOpen && root.launcherMode === next) {
-            root.launcherOpen = false
-            return
-        }
-        root.launcherMode = next
-        root.launcherOpen = true
+        launcherSession.toggle(mode || "applications")
     }
 
     function closeLauncher() {
-        root.launcherOpen = false
+        launcherSession.dismiss()
     }
 
     Variants {
@@ -83,18 +77,11 @@ ShellRoot {
         }
     }
 
-    Variants {
-        model: Quickshell.screens
-
-        delegate: ApplicationLauncher {
-            theme: root.theme
-            mode: root.launcherMode
-            open: root.launcherOpen
-                && (!Hyprland.focusedMonitor
-                    || modelData.name === Hyprland.focusedMonitor.name)
-            onDismissed: root.closeLauncher()
-            onModeRequested: next => root.launcherMode = next
-        }
+    ApplicationLauncher {
+        theme: root.theme
+        session: launcherSession
+        onDismissed: root.closeLauncher()
+        onModeRequested: next => launcherSession.mode = next
     }
 
     IpcHandler {
