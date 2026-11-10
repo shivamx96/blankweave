@@ -92,9 +92,47 @@ QtObject {
     readonly property color warning: token("warning")
     readonly property color critical: token("critical")
 
-    readonly property string fontFamily: "Atkinson Hyperlegible Next"
-    readonly property string monoFontFamily: "JetBrainsMono Nerd Font"
-    readonly property string iconFontFamily: "JetBrainsMono Nerd Font"
+    // Resolved theme overrides inherit the installed design defaults. Old saved
+    // palettes remain usable until the next theme apply adds their design block.
+    property var designDefaults: ({})
+    readonly property var design: resolved && resolved.design ? resolved.design : ({})
+    function designValue(group, key, compatibilityDefault) {
+        const overrides = design[group]
+        if (overrides && overrides[key] !== undefined) return overrides[key]
+        const defaults = designDefaults[group]
+        return defaults && defaults[key] !== undefined ? defaults[key] : compatibilityDefault
+    }
+    // Emergency geometry for an old or incomplete install and the first load.
+    readonly property var compatibilitySpacing: ({"xxs": 2, "xs": 4, "sm": 6, "md": 8, "lg": 10, "xl": 12, "section": 14, "panel": 18, "content": 32, "widgetPadding": 6, "sectionPadding": 7, "widgetContentGap": 4, "barItemGap": 0, "dividerMargin": 5, "labelGap": 5, "descriptionGap": 9, "group": 16, "page": 20, "controlInset": 24, "rowInset": 28})
+    function spacing(name) {
+        return designValue("spacing", name, compatibilitySpacing[name] || 0)
+    }
+    property FileView designFile: FileView {
+        path: Quickshell.env("HOME") + "/.local/share/blankweave/themes/design-defaults.json"
+        watchChanges: true
+        printErrors: false
+        onLoaded: {
+            const next = root.parse(text())
+            if (next && next.spacing && next.shape) root.designDefaults = next
+        }
+        onFileChanged: reload()
+    }
+    readonly property string fontFamily: designValue("typography", "fontFamily", "Atkinson Hyperlegible Next")
+    readonly property string monoFontFamily: designValue("typography", "monoFontFamily", "JetBrainsMono Nerd Font")
+    readonly property string iconFontFamily: designValue("typography", "iconFontFamily", "JetBrainsMono Nerd Font")
+    readonly property int textWeight: designValue("typography", "textWeight", 400)
+    readonly property int headingWeight: designValue("typography", "headingWeight", 600)
+    readonly property int headingSize: Math.round(designValue("typography", "headingSize", 22) * textScale)
+    readonly property real borderWidth: Math.max(highContrast ? 1 : 0, designValue("shape", "borderWidth", 1))
+    readonly property int motionDuration: reducedMotion ? 0 : designValue("motion", "duration", 150)
+    readonly property int motionEasing: {
+        const name = designValue("motion", "easing", "outCubic")
+        return name === "linear" ? Easing.Linear : name === "inOutCubic" ? Easing.InOutCubic : Easing.OutCubic
+    }
+    readonly property bool gradientEnabled: !highContrast && designValue("materials", "gradientEnabled", false)
+    readonly property color gradientStart: cssColor(designValue("materials", "gradientStart", "#00000000"))
+    readonly property color gradientEnd: cssColor(designValue("materials", "gradientEnd", "#00000000"))
+    readonly property bool gradientHorizontal: designValue("materials", "gradientDirection", "vertical") === "horizontal"
 
     property real textScale: 1.0
     property FileView interfaceFile: FileView {
@@ -110,30 +148,30 @@ QtObject {
         onFileChanged: reload()
     }
 
-    readonly property int textSize: Math.round(13 * textScale)
-    readonly property int smallTextSize: Math.round(12 * textScale)
-    readonly property int microTextSize: Math.round(11 * textScale)
-    readonly property int iconSize: 15
+    readonly property int textSize: Math.round(designValue("typography", "textSize", 13) * textScale)
+    readonly property int smallTextSize: Math.round(designValue("typography", "smallTextSize", 12) * textScale)
+    readonly property int microTextSize: Math.round(designValue("typography", "microTextSize", 11) * textScale)
+    readonly property int iconSize: designValue("sizes", "icon", 15)
     // The bar's optical target: a Nerd Font glyph fills roughly 7/8 of its em
     // box and a vector mark 5/6 of its keyline, so 18 here and 19 for a mark
     // both land on ~15.8px of ink. Widgets whose glyph deviates from that fill
     // correct with iconPixelSize rather than moving this.
-    readonly property int barIconSize: 18
-    readonly property int controlIconSize: 17
-    readonly property int heroIconSize: 21
+    readonly property int barIconSize: designValue("sizes", "barIcon", 18)
+    readonly property int controlIconSize: designValue("sizes", "controlIcon", 17)
+    readonly property int heroIconSize: designValue("sizes", "heroIcon", 21)
 
-    readonly property int barHeight: 40
-    readonly property int widgetHeight: 30
-    readonly property int widgetRadius: 4
+    readonly property int barHeight: designValue("sizes", "barHeight", 40)
+    readonly property int widgetHeight: designValue("sizes", "widgetHeight", 30)
+    readonly property int widgetRadius: designValue("shape", "controlRadius", 4)
     // Panels hang below the bar as separate surfaces, so they take the same
     // gentle curve as the compositor's windows rather than the bar's tighter one.
-    readonly property int panelRadius: 14
-    readonly property int sectionPadding: 7
-    readonly property int widgetPadding: 6
-    readonly property int metricLabelWidth: 32
-    readonly property int widgetContentGap: 4
-    readonly property int barItemGap: 0
-    readonly property int dividerMargin: 5
+    readonly property int panelRadius: designValue("shape", "panelRadius", 14)
+    readonly property int sectionPadding: designValue("spacing", "sectionPadding", 7)
+    readonly property int widgetPadding: designValue("spacing", "widgetPadding", 6)
+    readonly property int metricLabelWidth: designValue("sizes", "metricLabelWidth", 32)
+    readonly property int widgetContentGap: designValue("spacing", "widgetContentGap", 4)
+    readonly property int barItemGap: designValue("spacing", "barItemGap", 0)
+    readonly property int dividerMargin: designValue("spacing", "dividerMargin", 5)
 
     function parse(text) {
         try {
