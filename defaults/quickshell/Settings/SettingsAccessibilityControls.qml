@@ -10,7 +10,7 @@ ColumnLayout {
     readonly property string key: settingId === "motion" ? "reduced_motion" : "high_contrast"
     readonly property bool ready: backend !== null && backend.ready
     property var snapshot: null
-    spacing: 10
+    spacing: root.theme.spacing("lg")
     SettingsComboBox {
         id: choice
         objectName: "accessibility_" + root.key

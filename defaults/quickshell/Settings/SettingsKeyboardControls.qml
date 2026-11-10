@@ -36,7 +36,7 @@ ColumnLayout {
     function move(index) {
         const rows = draft.slice(); const previous = rows[index - 1]; rows[index - 1] = rows[index]; rows[index] = previous; draft = rows
     }
-    spacing: 10
+    spacing: root.theme.spacing("lg")
     Text {
         Layout.fillWidth: true
         text: "Keyboard defaults apply to connected keyboards unless personally overridden. The first layout is the startup default. Input methods are configured separately."

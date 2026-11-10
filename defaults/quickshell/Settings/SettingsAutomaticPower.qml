@@ -17,7 +17,7 @@ ColumnLayout {
         if (open) next.push(id)
         openMenus = next
     }
-    spacing: 12
+    spacing: root.theme.spacing("xl")
     Binding { target: root.backend; property: "automaticMenuOpen"; value: root.openMenus.length > 0; when: root.backend !== null }
 
     SettingsButton {
@@ -38,7 +38,7 @@ ColumnLayout {
             readonly property var choices: selecting ? capturedProfiles : root.profiles
             readonly property int selectedIndex: root.ready ? choices.findIndex(row => row.id === root.policy.settings[modelData.id]) : -1
             Layout.fillWidth: true
-            spacing: 12
+            spacing: root.theme.spacing("xl")
             Text {
                 Layout.preferredWidth: 100
                 text: mode.modelData.title
@@ -80,7 +80,7 @@ ColumnLayout {
     }
     RowLayout {
         Layout.fillWidth: true
-        spacing: 12
+        spacing: root.theme.spacing("xl")
         Text {
             Layout.preferredWidth: 100
             text: "Low battery at"

@@ -8,7 +8,7 @@ ColumnLayout {
     required property var backend
     required property string settingId
     readonly property var policy: backend && backend.ready ? backend.data.policy : ({manual: false, schedule: false, start: "22:00", end: "08:00", blocked: []})
-    spacing: 10
+    spacing: root.theme.spacing("lg")
     Text {
         Layout.fillWidth: true
         text: root.settingId === "dnd" ? ((root.backend && root.backend.data.paused) ? "Notifications are paused." : "Notifications are enabled.") + ((root.backend && root.backend.data.quiet) ? " Quiet hours are active." : "") : "Apps seen in notification history. Muted popups remain in history; changes apply to new notifications."

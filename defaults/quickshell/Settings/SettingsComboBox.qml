@@ -8,12 +8,13 @@ Controls.ComboBox {
     id: root
     required property var theme
 
-    implicitHeight: 36
+    implicitHeight: Math.max(36, implicitContentHeight + topPadding + bottomPadding)
     implicitWidth: 190
-    leftPadding: 12
-    rightPadding: 32
+    leftPadding: root.theme.spacing("xl")
+    rightPadding: root.theme.spacing("content")
     hoverEnabled: true
     font.family: theme.fontFamily
+    font.weight: theme.textWeight
     font.pixelSize: theme.smallTextSize
 
     contentItem: Text {
@@ -37,6 +38,7 @@ Controls.ComboBox {
         radius: root.theme.widgetRadius
         color: root.down ? root.theme.surfacePressed
             : root.hovered && root.enabled ? root.theme.surfaceHover : root.theme.surfaceRaised
+        border.width: root.activeFocus ? Math.max(1, root.theme.borderWidth) : root.theme.borderWidth
         border.color: root.activeFocus ? root.theme.accentBright : root.theme.outline
         opacity: root.enabled ? 1 : 0.55
     }
@@ -45,10 +47,10 @@ Controls.ComboBox {
         id: option
         required property int index
         required property var modelData
-        width: root.width - 8
-        implicitHeight: 38
-        leftPadding: 12
-        rightPadding: 12
+        width: menu.width
+        implicitHeight: Math.max(38, implicitContentHeight + topPadding + bottomPadding)
+        leftPadding: root.theme.spacing("xl")
+        rightPadding: root.theme.spacing("xl")
         text: root.textAt(index)
         highlighted: root.highlightedIndex === index
         hoverEnabled: true
@@ -69,7 +71,7 @@ Controls.ComboBox {
             color: option.down ? root.theme.surfacePressed
                 : option.highlighted ? root.theme.accentSurface
                 : option.hovered ? root.theme.surfaceHover : "transparent"
-            border.width: option.visualFocus ? 1 : 0
+            border.width: option.visualFocus ? Math.max(1, root.theme.borderWidth) : 0
             border.color: root.theme.accentBright
         }
     }
@@ -77,9 +79,9 @@ Controls.ComboBox {
     popup: Controls.Popup {
         y: root.height + 4
         width: root.width
-        padding: 4
-        topMargin: 8
-        bottomMargin: 8
+        padding: root.theme.spacing("xs")
+        topMargin: root.theme.spacing("md")
+        bottomMargin: root.theme.spacing("md")
         height: Math.min(menu.contentHeight + padding * 2, 320)
         popupType: Controls.Popup.Item
 
@@ -103,6 +105,7 @@ Controls.ComboBox {
         background: Rectangle {
             radius: root.theme.widgetRadius
             color: root.theme.panelSurface
+            border.width: root.theme.borderWidth
             border.color: root.theme.outline
         }
     }

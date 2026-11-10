@@ -26,7 +26,7 @@ ColumnLayout {
     readonly property bool canStart: selected !== null && selected.managed && selected.apCapable && !selected.hotspot
         && [30, 100, 120].includes(selected.state) && backend.network && backend.network.wifiEnabled
         && backend.network.hardwareEnabled && backend.network.sharingAvailable && !backend.airplaneRequested
-    spacing: 12
+    spacing: root.theme.spacing("xl")
 
     function clearSecret() { password.text = ""; confirmation = null }
     function start() {
@@ -50,7 +50,7 @@ ColumnLayout {
     Flow {
         visible: !root.hotspot
         Layout.fillWidth: true
-        spacing: 8
+        spacing: root.theme.spacing("md")
         SettingsButton {
             objectName: "airplaneToggle"
             theme: root.theme
@@ -160,7 +160,7 @@ ColumnLayout {
         }
         Flow {
             Layout.fillWidth: true
-            spacing: 8
+            spacing: root.theme.spacing("md")
             SettingsButton {
                 objectName: "hotspotStart"
                 theme: root.theme

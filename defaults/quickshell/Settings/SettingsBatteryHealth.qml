@@ -7,7 +7,7 @@ ColumnLayout {
     required property var theme
     required property var backend
     readonly property bool ready: backend !== null && backend.ready
-    spacing: 12
+    spacing: root.theme.spacing("xl")
     function percent(value) { return value === null ? "Unknown" : Math.round(value) + "%" }
     function energy(value) { return value === null ? "Unknown" : value.toFixed(1) + " Wh" }
     function limitDescription(row) {
@@ -27,7 +27,7 @@ ColumnLayout {
             required property var modelData
             required property int index
             Layout.fillWidth: true
-            spacing: 10
+            spacing: root.theme.spacing("lg")
             Rectangle {
                 visible: battery.index > 0
                 Layout.fillWidth: true

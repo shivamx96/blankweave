@@ -12,7 +12,7 @@ ColumnLayout {
     readonly property var jobs: service ? service.backgroundJobs || [] : []
     signal settingRequested(string settingId)
     visible: jobs.length > 0 || Boolean(service && service.jobsError)
-    spacing: 4
+    spacing: root.theme.spacing("xs")
     SettingsButton {
         theme: root.theme
         visible: root.jobs.length > 0

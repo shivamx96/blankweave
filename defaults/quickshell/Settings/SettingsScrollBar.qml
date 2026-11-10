@@ -6,7 +6,7 @@ ScrollBar {
     required property var theme
     policy: ScrollBar.AsNeeded
     visible: policy === ScrollBar.AlwaysOn || (policy === ScrollBar.AsNeeded && size < 1)
-    padding: 2
+    padding: root.theme.spacing("xxs")
     implicitWidth: 10
     minimumSize: 0.05
     contentItem: Rectangle {

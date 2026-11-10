@@ -14,7 +14,7 @@ ColumnLayout {
     property bool selectingFromMenu: false
     readonly property var choices: selectingFromMenu ? menuOutputs : outputs
     readonly property int selectedIndex: backend ? choices.findIndex(row => row.key === backend.outputKey) : -1
-    spacing: 12
+    spacing: root.theme.spacing("xl")
 
     SettingsComboBox {
         id: device

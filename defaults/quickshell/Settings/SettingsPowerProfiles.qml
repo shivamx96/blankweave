@@ -14,7 +14,7 @@ ColumnLayout {
     property bool selecting: false
     readonly property var choices: selecting ? menuProfiles : profiles
     readonly property int selectedIndex: ready ? choices.findIndex(row => row.id === backend.profile) : -1
-    spacing: 12
+    spacing: root.theme.spacing("xl")
     Binding { target: root.backend; property: "menuOpen"; value: selector.popup.visible; when: root.backend !== null }
 
     SettingsComboBox {

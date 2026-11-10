@@ -9,7 +9,7 @@ ColumnLayout {
     readonly property bool writable: backend && backend.ready && !backend.busy
     readonly property var modes: ["off", "always", "schedule"]
     readonly property var temperatures: [2500, 3000, 3500, 4000, 4500, 5000, 5500, 6000, 6500]
-    spacing: 12
+    spacing: root.theme.spacing("xl")
     function load() {
         if (!backend) return
         mode.currentIndex = modes.indexOf(backend.preferences.mode)

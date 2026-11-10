@@ -7,7 +7,7 @@ ColumnLayout {
     required property var backend
     required property string settingId
     readonly property var report: backend && backend.ready ? backend.data.report : null
-    spacing: 10
+    spacing: root.theme.spacing("lg")
     Repeater {
         model: root.settingId === "about" && root.backend && root.backend.ready ? root.backend.data.details : []
         delegate: Text {
@@ -32,9 +32,9 @@ ColumnLayout {
     Rectangle {
         visible: root.settingId === "diagnostics" && root.report !== null
         Layout.fillWidth: true; Layout.preferredHeight: 360
-        color: root.theme.surface; border.color: root.theme.outline
+        color: root.theme.surface; border.width: root.theme.borderWidth; border.color: root.theme.outline
         Flickable {
-            anchors.fill: parent; anchors.margins: 12
+            anchors.fill: parent; anchors.margins: root.theme.spacing("xl")
             contentWidth: width; contentHeight: reportText.height
             clip: true
             TextEdit {

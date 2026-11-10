@@ -8,7 +8,7 @@ ColumnLayout {
     required property var backend
     readonly property var prefs: backend && backend.preferences ? backend.preferences : null
     readonly property bool writable: prefs !== null && prefs.ready
-    spacing: 10
+    spacing: root.theme.spacing("lg")
     Text {
         Layout.fillWidth: true
         text: "Show or hide widgets and move them within each group. The right side keeps application indicators, device controls, and system meters grouped. Changes apply to every display. System and power menus remain available."
