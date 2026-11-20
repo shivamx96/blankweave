@@ -1,4 +1,5 @@
 """Small shared primitives for Settings helpers; no commands are run on import."""
+from runtime_paths import runtime_path
 from contextlib import contextmanager
 import fcntl
 import hashlib
@@ -28,7 +29,7 @@ def run(args, timeout=15):
 def atomic(path, text):
     path = Path(path)
     if path.is_symlink():
-        raise ValueError(f'{path.name} is a symlink; edit its source instead.')
+        raise file_refusal('This file is a symlink; edit its source instead.', path)
     path.parent.mkdir(parents=True, exist_ok=True)
     fd, temporary = tempfile.mkstemp(prefix='.settings-', dir=path.parent)
     try:
@@ -54,7 +55,7 @@ def restore(path, old, written):
 
 @contextmanager
 def locked(name):
-    path = config_home() / 'blankweave' / (name + '.lock')
+    path = runtime_path(name + '.lock')
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open('a') as stream:
         try: fcntl.flock(stream, fcntl.LOCK_EX | fcntl.LOCK_NB)
@@ -68,10 +69,74 @@ def check_revision(request, state):
 
 
 def cli(status, apply):
+    request = {}
     try:
         if sys.argv[1:] == ['status']: print(json.dumps(status()))
-        elif sys.argv[1:] == ['apply']: apply(json.load(sys.stdin))
+        elif sys.argv[1:] == ['apply']:
+            request = json.load(sys.stdin)
+            apply(request)
         else: raise ValueError('Usage: status|apply')
     except (OSError, ValueError, KeyError, TypeError, subprocess.SubprocessError) as error:
-        print(str(error), file=sys.stderr)
+        secrets = [v for k, v in request.items() if any(word in k.lower() for word in ("password", "secret", "token", "credential"))] if isinstance(request, dict) else []
+        print(json.dumps({"error": error_result(error, secrets)}))
+        print(safe_detail(error, secrets), file=sys.stderr)
         sys.exit(1)
+
+
+class SettingsError(ValueError):
+    """A user sentence with optional diagnostic context and a field identity."""
+    def __init__(self, message, detail='', field=None, cancelled=False):
+        super().__init__(message)
+        self.message, self.detail, self.field, self.cancelled = message, detail, field, cancelled
+
+
+def safe_detail(text, secrets=()):
+    import re
+    text = str(text).replace(str(Path.home()), "~")
+    for secret in secrets:
+        if secret: text = text.replace(str(secret), '[redacted]')
+    text = re.sub(r'/home/[^\s/]+(?:/[^\s\"\']*)?|/root(?:/[^\s\"\']*)?', '~', text)
+    text = re.sub(r'(?i)(password|passwd|token|secret|psk|credential)(\s*[=:]\s*)[^\s,;]+', r'\1\2[redacted]', text)
+    if 'Traceback (most recent call last)' in text: text = text.splitlines()[-1]
+    return text[:4000]
+
+
+class FileRefusal(SettingsError):
+    """Session-only explanation naming a user file; never persist its path."""
+
+
+def display_path(path):
+    path = Path(path)
+    try: return '~/' + str(path.relative_to(Path.home()))
+    except ValueError: return str(path)
+
+
+def file_refusal(message, *paths):
+    return FileRefusal(message + ' File: ' + ', '.join(display_path(p) for p in paths))
+
+
+def error_result(error, secrets=(), shareable=False):
+    if shareable and isinstance(error, FileRefusal):
+        return dict(message='A personal configuration file prevents this change.', detail='')
+    raw = str(error)
+    lower = raw.lower()
+    cancelled = isinstance(error, SettingsError) and error.cancelled
+    if isinstance(error, SettingsError): message = error.message
+    elif any(x in lower for x in ('cancelled', 'canceled', 'dismissed', 'not authorized to perform operation')):
+        message = 'Cancelled'; cancelled = True
+    elif any(x in lower for x in ('secrets were required', 'wrong password', 'incorrect password', 'authentication failed', 'password was not accepted')):
+        message = 'The password was not accepted.'
+    elif any(x in lower for x in ('no longer in range', 'access point not found', 'no network with ssid')):
+        message = 'That network is no longer in range.'
+    elif 'networkmanager' in lower and any(x in lower for x in ('unavailable', 'reach', 'not running', 'failed', 'serviceunknown')):
+        message = 'Could not reach NetworkManager.'
+    elif isinstance(error, subprocess.TimeoutExpired): message = 'The service took too long to respond. Try again.'
+    elif isinstance(error, PermissionError): message = 'You do not have permission to make this change.'
+    elif isinstance(error, FileNotFoundError): message = 'A required file or program is unavailable.'
+    elif raw.startswith(('Enter a valid ', 'Settings changed.', 'Another change is in progress.', 'Passwords do not match.', 'Review and confirm ')):
+        message = raw
+    else: message = 'Could not apply this change. Try again.'
+    result = dict(message=safe_detail(message, secrets), detail=safe_detail(getattr(error, 'detail', '') or raw, secrets))
+    if getattr(error, 'field', None): result['field'] = error.field
+    if cancelled: result.update(cancelled=True, detail='')
+    return result

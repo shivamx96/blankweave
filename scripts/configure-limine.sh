@@ -11,6 +11,7 @@ BOOTCTL=${BLANKWEAVE_BOOTCTL:-bootctl}
 EFIBOOTMGR=${BLANKWEAVE_EFIBOOTMGR:-efibootmgr}
 FINDMNT=${BLANKWEAVE_FINDMNT:-findmnt}
 LSBLK=${BLANKWEAVE_LSBLK:-lsblk}
+CHECK_ONLY=false
 TEST_MODE=${BLANKWEAVE_LIMINE_TEST:-false}
 
 declare -a ENTRY_FILES=()
@@ -67,9 +68,9 @@ resolve_esp() {
 validate_esp() {
     local esp=$1 filesystem
 
-    [[ -w $esp ]] || die "EFI System Partition is not writable: $esp"
+    [[ $CHECK_ONLY == true || -w $esp ]] || die "EFI System Partition is not writable: $esp"
     if [[ $TEST_MODE != true ]]; then
-        [[ $EUID -eq 0 ]] || die 'run as root'
+        [[ $CHECK_ONLY == true || $EUID -eq 0 ]] || die 'run as root'
         [[ -d /sys/firmware/efi ]] || die 'Limine migration requires UEFI firmware'
         mountpoint -q "$esp" || die "EFI System Partition is not mounted: $esp"
         filesystem=$($FINDMNT -n -o FSTYPE --target "$esp" 2>/dev/null || true)
@@ -226,7 +227,7 @@ discover_linux_entries() {
         fi
     done < <(find "$entries_dir" -maxdepth 1 -type f -name '*.conf' -print0 \
         | LC_ALL=C sort -z)
-    (( ${#ENTRY_FILES[@]} > 0 )) || die 'no direct Linux boot entries were found'
+    (( ${#ENTRY_FILES[@]} > 0 )) || die 'no direct Linux boot entries were found (UKI-only, GRUB and other layouts are unsupported; requires direct Linux BLS entries on a FAT ESP)'
 
     default_id=$(default_bls_id "$entries_dir")
     for file in "${ENTRY_FILES[@]}"; do
@@ -484,14 +485,28 @@ register_limine() {
 main() {
     local esp entries_dir target_dir firmware
 
+    case "${1:-}" in
+        --check) CHECK_ONLY=true ;;
+        '') ;;
+        *) die 'usage: configure-limine.sh [--check]' ;;
+    esac
     esp=$(resolve_esp)
     validate_esp "$esp"
     entries_dir=${BLANKWEAVE_BLS_ENTRIES_DIR:-$esp/loader/entries}
     target_dir=${BLANKWEAVE_LIMINE_DIR:-$esp/EFI/blankweave}
 
     discover_linux_entries "$esp" "$entries_dir"
-    firmware=$(firmware_output)
-    discover_firmware_entries "$firmware"
+    if [[ $CHECK_ONLY == true ]] && ! command -v "$EFIBOOTMGR" >/dev/null 2>&1; then
+        printf 'UEFI entry inspection deferred until efibootmgr is installed.\n'
+        firmware=
+    else
+        firmware=$(firmware_output)
+        discover_firmware_entries "$firmware"
+    fi
+    if [[ $CHECK_ONLY == true ]]; then
+        printf 'Supported boot layout: direct Linux BLS entries on a FAT ESP (systemd-boot/Limine).\n'
+        return 0
+    fi
     install_efi_binary "$target_dir/limine-x64.efi"
     write_config "$target_dir/limine.conf" "$firmware"
     register_limine "$esp" "$firmware"

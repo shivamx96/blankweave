@@ -1,5 +1,6 @@
 pragma ComponentBehavior: Bound
 import QtQuick
+import "LegacyErrors.js" as Errors
 import QtQuick.Layouts
 
 ColumnLayout {
@@ -83,7 +84,7 @@ ColumnLayout {
         SettingsButton {
             theme: root.theme
             text: "Retry"
-            visible: root.backend !== null && Boolean(root.backend.error)
+            visible: root.backend !== null && Boolean(Errors.message(root.backend.error))
             enabled: root.backend !== null && !root.backend.busy
             onClicked: root.backend.retry()
         }

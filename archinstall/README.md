@@ -8,10 +8,11 @@ The committed configuration intentionally excludes:
 - disk device paths and partition object IDs;
 - disk encryption passwords;
 - user and root password hashes;
-- the hostname, which should distinguish the laptop and desktop.
+- hostname, username, timezone, locale, keyboard layout and installer language;
+- mirror region (choose mirrors appropriate to the installation location).
 
 Those values are machine-specific, sensitive, or destructive when reused on the
-wrong device. Archinstall should collect them interactively on every install.
+wrong device. Review and set them in Archinstall on every install.
 
 ## Start from the live USB
 
@@ -30,7 +31,7 @@ disk, encryption, authentication, and hostname choices must be reviewed by a
 human on the target machine.
 
 The file preselects the stable system choices: a minimal profile, Linux kernel,
-systemd-boot, NetworkManager, PipeWire, Bluetooth, zram, locale, timezone, and the
+systemd-boot, NetworkManager, PipeWire, Bluetooth, zram, and the
 small package set required to clone and run this repository after first boot.
 Systemd-boot is the intentionally conservative first-boot loader. The
 Blankweave stage installs Limine as primary only after it can import and validate
@@ -40,18 +41,18 @@ these working entries, and preserves systemd-boot for firmware-menu recovery.
 
 Before selecting **Install**, review the full summary and explicitly configure:
 
-1. **Hostname** — use a unique name such as `blankweave-laptop` or `blankweave-pc`.
+1. **Hostname** — choose a unique name for this computer.
 2. **Disk configuration** — select the intended target disk. Prefer the
-   best-effort Btrfs layout for a dedicated Arch disk. Never select the Windows
-   disk on the desktop.
+   best-effort Btrfs layout for a dedicated Arch disk. Preserve disks containing other operating systems or data.
 3. **Disk encryption** — choose LUKS, enter a strong passphrase, and select the
    Linux root partition. Leave the EFI system partition unencrypted.
-4. **Authentication** — create the normal user with sudo access. A separate root
+4. **Region** — explicitly choose timezone, locale, keyboard layout, installer language and mirror region in the menu; omitted fields may have Archinstall defaults.
+5. **Authentication** — create the normal user with sudo access. A separate root
    password is optional and may remain disabled.
 
 The final Archinstall summary must visibly show disk encryption and the selected
 root partition. Stop if it does not. Disk operations are destructive and a saved
-layout from one device must never be reused blindly on the other.
+layout from one device must never be reused blindly on another device.
 
 Do not place `user_credentials.json`, encryption passwords, password hashes, or
 local disk-layout exports in Git. Matching patterns are ignored by the repository.
@@ -92,7 +93,7 @@ timeout, choose `Blankweave recovery (systemd-boot)`, edit the Linux entry with
 
 ## Encryption policy
 
-Use a LUKS2 passphrase at boot on both machines. Hyprlock remains necessary for
+Use a LUKS2 passphrase at boot. Hyprlock remains necessary for
 protecting an active session, but it cannot protect an unencrypted SSD when the
 machine is powered off or booted from external media.
 
@@ -102,8 +103,10 @@ stolen. A future UKI + Secure Boot + TPM2-with-PIN setup can improve boot
 integrity and convenience, but should be introduced and recovery-tested as a
 separate change.
 
-Blankweave assumes this encrypted-root baseline and uses the LUKS prompt as its
-boot-time authentication boundary. TTY1 logs in the installed user
+Blankweave recommends this encrypted-root baseline and uses the LUKS prompt as its
+boot-time authentication boundary with automatic sign-in. If root encryption
+cannot be confirmed, setup defaults to password sign-in; automatic sign-in is
+an explicit choice. With automatic sign-in, TTY1 logs in the installed user
 automatically and starts Hyprland through UWSM, without SDDM or a second
 graphical-startup Hyprlock prompt. Hyprlock remains enabled for manual locking,
 idle timeout, suspend, and resume. The tty1 login banner and console cursor are
@@ -111,3 +114,5 @@ suppressed during the Plymouth-to-Hyprland handoff; tty2 remains an ordinary
 recovery login. Plymouth retains its final boot framebuffer until Hyprland
 replaces it, and tty1's hidden text buffer is cleared under the running
 compositor so the shutdown splash receives the same clean handoff.
+
+The baseline omits optional regional fields rather than supplying placeholder strings. Always review the interactive summary; omission is not a guarantee that Archinstall will ask again. No hostname, username or mirror region is stored.

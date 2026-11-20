@@ -13,7 +13,6 @@
       ]
     }
   },
-  "archinstall-language": "English",
   "bootloader_config": {
     "bootloader": "Systemd-boot",
     "removable": false,
@@ -22,11 +21,6 @@
   "kernels": [
     "linux"
   ],
-  "locale_config": {
-    "kb_layout": "us",
-    "sys_enc": "UTF-8",
-    "sys_lang": "en_US"
-  },
   "network_config": {
     "type": "nm"
   },
@@ -36,7 +30,8 @@
     "git",
     "networkmanager",
     "openssh",
-    "sudo"
+    "sudo",
+    "python"
   ],
   "pacman_config": {
     "color": true,
@@ -58,6 +53,5 @@
   "swap": {
     "algorithm": "zstd",
     "enabled": true
-  },
-  "timezone": "Asia/Kolkata"
+  }
 }

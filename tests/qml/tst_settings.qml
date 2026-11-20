@@ -1,7 +1,11 @@
 import QtQuick
 import QtTest
+import QtQuick.Controls.Basic
+import "../../defaults/quickshell/Components"
 import "../../defaults/quickshell/Settings"
+import "../../defaults/quickshell/Services"
 import "../../defaults/quickshell/Settings/Catalog.js" as Catalog
+import "../../defaults/quickshell/Components/PanelSettings.js" as PanelSettings
 
 TestCase {
     id: test
@@ -18,9 +22,9 @@ TestCase {
         canvas: "#0b111c", panelSurface: "#111a2a", surface: "#162033",
         surfaceRaised: "#1c2940", surfaceHover: "#263955", surfacePressed: "#304563",
         text: "#e7edf7", textMuted: "#a1aec4", accentBright: "#67a6ff",
-        accentSurface: "#1e3556", outline: "#33476a", divider: "#23314a",
+        accentSurface: "#1e3556", outline: "#33476a", outlineStrong: "#4f75ad", divider: "#23314a",
         warning: "#eab875", critical: "#ff7777", accent: "#67a6ff", fontFamily: "sans-serif", iconFontFamily: "sans-serif",
-        textSize: 13, smallTextSize: 12, microTextSize: 11, widgetRadius: 4, panelRadius: 14
+        textSize: 13, smallTextSize: 12, microTextSize: 11, iconSize: 16, widgetRadius: 4, panelRadius: 14
     })
     QtObject {
         id: fakeBackend
@@ -154,6 +158,211 @@ TestCase {
         wait(0)
     }
 
+    Component {
+        id: escapeFieldFactory
+        ControlTextField {
+            theme: test.palette
+            property int cancellations: 0
+            Keys.onEscapePressed: event => { cancellations++; clear(); event.accepted = true }
+        }
+    }
+    Component {
+        id: plainFieldFactory
+        SettingsTextField { theme: test.palette }
+    }
+    Component {
+        id: numberFactory
+        SettingsNumberField { theme: test.palette; value: "42"; label: "Test"; minimum: 1; maximum: 100 }
+    }
+    Component { id: areaFactory; SettingsTextArea { theme: test.palette } }
+    function test_deep_link_navigation() {
+        content.openSetting("displays")
+        compare(content.selectedPage, "displays")
+        compare(content.highlightedSetting, "")
+        content.openSetting("shortcuts")
+        compare(content.selectedPage, "input")
+        compare(content.highlightedSetting, "shortcuts")
+        tryVerify(() => content.rowForSetting("shortcuts") !== null)
+        tryVerify(() => content.rowForSetting("shortcuts").activeFocus)
+        content.openSetting("sound/input")
+        compare(content.selectedPage, "sound")
+        compare(content.highlightedSetting, "input")
+        content.openSetting("input")
+        compare(content.selectedPage, "input")
+        content.openSetting("unknown-target")
+        compare(content.selectedPage, "appearance")
+        compare(content.highlightedSetting, "")
+        verify(!content.searching)
+        content.openSetting("")
+        compare(content.selectedPage, "appearance")
+    }
+
+    QtObject {
+        id: linkShell
+        property string target: ""
+        function openSettings(id) { target = id }
+    }
+    QtObject { id: linkBar; property var shell: linkShell }
+    QtObject { id: linkPanel; property bool open: false }
+    PanelSettingsAction {
+        id: panelLink
+        visible: false
+        theme: test.palette
+        panelKey: "AudioWidget"
+        bar: linkBar
+        panel: linkPanel
+    }
+    function test_panel_link_closes_and_navigates() {
+        linkPanel.open = true
+        linkShell.target = ""
+        panelLink.pressed()
+        verify(!linkPanel.open)
+        compare(linkShell.target, "sound")
+        compare(panelLink.label, "Sound settings")
+    }
+
+    function test_panel_destinations_exist() {
+        const ids = []
+        Catalog.pages.forEach(page => {
+            ids.push(page.id)
+            page.groups.forEach(group => group.rows.forEach(row => ids.push(row.id)))
+        })
+        for (const key of Object.keys(PanelSettings.destinations)) {
+            verify(ids.includes(PanelSettings.destinations[key].id), key)
+            verify(PanelSettings.destinations[key].label.length > 0, key)
+        }
+    }
+
+    function test_cache_search_aliases() {
+        for (const alias of ["cache", "disk space", "clean up", "paccache"])
+            verify(Catalog.searchSettings(alias).some(row => row.id === "disk-usage"))
+    }
+
+    function test_escape_reaches_inner_password_handler() {
+        const field = createTemporaryObject(escapeFieldFactory, content)
+        field.text = "half typed password"
+        field.forceActiveFocus()
+        keyClick(Qt.Key_Escape)
+        compare(field.cancellations, 1)
+        compare(field.text, "")
+        compare(closeSpy.count, 0)
+    }
+    function test_escape_plain_and_numeric_fields() {
+        for (const factory of [plainFieldFactory, numberFactory, areaFactory]) {
+            const editor = createTemporaryObject(factory, content)
+            const field = factory === numberFactory ? findChild(editor, "numberText") : editor
+            field.text = "42"
+            field.forceActiveFocus()
+            keyClick(Qt.Key_Escape)
+            compare(field.text, "")
+            compare(closeSpy.count, 0)
+            keyClick(Qt.Key_Escape)
+            verify(!field.activeFocus)
+            compare(closeSpy.count, 0)
+            keyClick(Qt.Key_Escape)
+            compare(closeSpy.count, 1)
+            closeSpy.clear()
+            editor.destroy()
+        }
+    }
+    function test_escape_popup_first() {
+        const choice = findChild(content, "settingsChoice_theme")
+        choice.forceActiveFocus()
+        choice.popup.open()
+        tryCompare(choice.popup, "visible", true)
+        keyClick(Qt.Key_Escape)
+        tryCompare(choice.popup, "visible", false)
+        compare(closeSpy.count, 0)
+    }
+
+    QtObject {
+        id: wifiBackend
+        signal credentialsRequired(string key)
+        property bool profilesActive: true
+        property bool available: true
+        property bool busy: false
+        property bool enabled: true
+        property bool hardwareEnabled: true
+        property bool managed: true
+        property bool hosting: false
+        property bool profilesBusy: false
+        property bool profilesReady: true
+        property bool usable: true
+        property var wifiDevice: ({})
+        property var connectedWifiNetwork: null
+        property var wifiRows: [{key:"test", ssid:"Test", known:false, security:"wpa2", connected:false, stateChanging:false, strength:80}]
+        property var profiles: []
+        property string profilesError: ""
+        property string failureReason: ""
+        property string actionKey: ""
+        function requiresCredentials(security) { return true }
+        function supportsPassword(security) { return true }
+    }
+    Component { id: wifiFactory; SettingsWifi { theme: test.palette; backend: wifiBackend; width: 600 } }
+    function test_escape_real_wifi_password_form() {
+        const form = createTemporaryObject(wifiFactory, content)
+        form.requestConnect(wifiBackend.wifiRows[0])
+        const password = findChild(form, "wifiPassword")
+        password.text = "half typed password"
+        verify(password.activeFocus)
+        keyClick(Qt.Key_Escape)
+        compare(form.passwordKey, "")
+        compare(password.text, "")
+        compare(closeSpy.count, 0)
+    }
+    QtObject {
+        id: operationBackend
+        signal applyFinished(bool success, var result)
+        property bool ready: true
+        property bool writable: true
+        property bool busy: false
+        property bool writing: false
+        property bool active: true
+        property string error: ""
+        property var data: ({revision:"test", actions:[], details:[], message:"", job:null})
+        property SettingsOperationDraft draft: SettingsOperationDraft { backend: operationBackend }
+    }
+    Component { id: operationFactory; SettingsOperations { theme: test.palette; settingId: "accounts"; backend: operationBackend; width: 600 } }
+    function test_escape_real_account_form() {
+        const form = createTemporaryObject(operationFactory, content)
+        form.begin({key:"account", label:"Account", confirm:"", fields:[{key:"password", label:"Password", value:"", options:[], secret:true}]})
+        wait(0)
+        const field = findChild(form, "operationField_password")
+        verify(field !== null)
+        field.forceActiveFocus()
+        keyClick(Qt.Key_P)
+        keyClick(Qt.Key_A)
+        keyClick(Qt.Key_S)
+        verify(operationBackend.draft.values.password.length > 0)
+        keyClick(Qt.Key_Escape)
+        compare(field.text, "")
+        compare(operationBackend.draft.values.password, "")
+        compare(closeSpy.count, 0)
+        keyClick(Qt.Key_Escape)
+        verify(!field.activeFocus)
+        keyClick(Qt.Key_Escape)
+        compare(form.editing, null)
+        compare(closeSpy.count, 0)
+    }
+
+    function test_hardware_deep_links_and_text_link() {
+        content.capabilities = []
+        content.openSetting("wifi")
+        compare(content.selectedPage, "network")
+        compare(content.highlightedSetting, "")
+        content.capabilities = null
+        content.openSetting("wifi")
+        compare(content.highlightedSetting, "wifi")
+        content.openSetting("notifications")
+        compare(content.selectedPage, "alerts")
+        compare(content.highlightedSetting, "notifications")
+        content.openSetting("large-text")
+        compare(content.selectedPage, "input")
+        content.openSetting("fonts")
+        compare(content.selectedPage, "appearance")
+        compare(content.highlightedSetting, "fonts")
+    }
+
     function test_search_and_empty_state() {
         var search = findChild(content, "settingsSearch")
         search.text = "microphone"
@@ -164,7 +373,7 @@ TestCase {
         verify(content.searching)
         compare(content.searchResults.length, 0)
         search.text = ""
-        compare(content.results.length, 9)
+        compare(content.results.length, 10)
     }
 
     function test_search_jumps_to_exact_setting() {
@@ -197,6 +406,49 @@ TestCase {
         compare(content.page.id, "system")
         compare(content.highlightedSetting, "datetime")
     }
+    function test_search_vocabulary_data() {
+        return [
+            {query:"repeat delay", row:"layouts"}, {query:"caps", row:"layouts"},
+            {query:"compose", row:"layouts"}, {query:"secondary click", row:"pointer"},
+            {query:"wifi", row:"wifi"}, {query:"trackpad", row:"pointer"},
+            {query:"dnd", row:"dnd"}, {query:"browser", row:"defaults"},
+            {query:"font", row:"fonts"}, {query:"cursor", row:"cursor"},
+            {query:"suspend", row:"screen-off"}, {query:"autostart", row:"startup"},
+            {query:"night shift", row:"night-light"}, {query:"scale", row:"scale"},
+            {query:"Wi-Fi", row:"wifi"}, {query:"  WI  FI! ", row:"wifi"},
+            {query:"nightlight", row:"night-light"}, {query:"night light", row:"night-light"},
+            {query:"blue light", row:"night-light"}, {query:"backup retention", row:"backup"},
+            {query:"default apps", row:"defaults"}, {query:"login items", row:"startup"},
+            {query:"typeface", row:"fonts"}, {query:"sleep", row:"screen-off"},
+            {query:"hidpi", row:"scale"}, {query:"dark mode", row:"mode"},
+            {query:"background", row:"wallpaper"}, {query:"speaker", row:"output"},
+            {query:"microphone", row:"input"}, {query:"bluetooth", row:"bluetooth"},
+            {query:"vpn", row:"vpn"}, {query:"tethering", row:"hotspot"},
+            {query:"charge limit", row:"battery-health"}, {query:"hotkeys", row:"shortcuts"},
+            {query:"upgrade", row:"updates"}, {query:"accounts", row:"accounts"},
+            {query:"zzxqv nonsense", row:null}, {query:"ailscale", row:"vpn"}
+        ].map(entry => ({tag:entry.query, query:entry.query, row:entry.row}))
+    }
+    function test_search_vocabulary(data) {
+        const results = Catalog.searchSettings(data.query)
+        if (data.row === null) compare(results.length, 0)
+        else { verify(results.length > 0); compare(results[0].id, data.row) }
+    }
+    function test_every_row_has_aliases() {
+        for (const page of Catalog.pages)
+            for (const group of page.groups)
+                for (const row of group.rows) verify(row.aliases.length > 0, row.id)
+        verify(!Catalog.searchSettings("scale").some(row => row.id === "vpn"))
+        const first = Catalog.searchSettings("text size").map(row => row.id).join(",")
+        compare(Catalog.searchSettings("text size").map(row => row.id).join(","), first)
+    }
+    function test_display_confirmation_helper() {
+        content.selectedPage = "displays"
+        wait(0)
+        for (const id of ["resolution", "mirroring", "display-presets"])
+            verify(findChild(content, "settingsHelper_" + id).text.includes("20 seconds"))
+    }
+
     function test_search_aliases_and_row_scoping() {
         compare(Catalog.searchSettings("time zone")[0].id, "datetime")
         compare(Catalog.searchSettings("screen reader")[0].id, "assistive")
@@ -213,7 +465,7 @@ TestCase {
         compare(content.highlightedSetting, "backup")
         compare(fakeBackend.writes, 0)
         content.openSetting("missing-setting")
-        compare(content.page.id, "storage")
+        compare(content.page.id, "appearance")
     }
     function test_search_mouse_selection_at_minimum_window_size() {
         const oldWidth = test.width
@@ -333,6 +585,8 @@ TestCase {
         keyClick(Qt.Key_Escape)
         compare(search.text, "")
         compare(closeSpy.count, 0)
+        // The search field is the window's resting focus: once it is empty,
+        // the next Escape closes the window rather than only blurring it.
         keyClick(Qt.Key_Escape)
         compare(closeSpy.count, 1)
     }
@@ -346,9 +600,9 @@ TestCase {
         }
     }
 
-    function test_preview_never_writes() {
+    function test_missing_service_never_writes() {
         var row = createTemporaryObject(rowFactory, test, {
-            setting: { id: "profile", title: "Power profile", description: "Preview", kind: "choice", options: ["Balanced", "Saver"] }
+            setting: { id: "profile", title: "Power profile", description: "Unavailable", kind: "choice" }
         })
         verify(row !== null)
         compare(row.live, false)
@@ -454,7 +708,7 @@ TestCase {
         verify(!restore.enabled && remove.enabled)
         remove.clicked()
         compare(fakeDisplays.lastPreset, "save:Desk")
-        compare(remove.text, "Confirm delete")
+        compare(remove.text, "Delete “Desk”")
         remove.clicked()
         compare(fakeDisplays.lastPreset, "delete:desk")
         fakeDisplays.presets = [{id:"desk",name:"Desk",available:true,reason:"",summary:"2 displays"}]

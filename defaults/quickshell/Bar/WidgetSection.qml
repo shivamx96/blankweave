@@ -37,6 +37,7 @@ BarSection {
             BarDivider { theme: root.theme; visible: Widgets.dividerBefore(root.group, root.visibleIds, entry.modelData) }
             Loader {
                 id: widget
+                readonly property bool barHitBoundary: true
                 active: !Widgets.hidden(root.prefs.hiddenWidgets).includes(entry.modelData)
                     && (entry.modelData !== "window" || !root.bar.veryCompact)
                 Layout.preferredWidth: item ? (item as Item).implicitWidth : 0

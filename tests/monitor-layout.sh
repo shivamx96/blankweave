@@ -25,6 +25,8 @@ cat > "$monitors" <<'JSON'
 JSON
 
 export XDG_CONFIG_HOME=$test_root/config
+export XDG_RUNTIME_DIR=$test_root/runtime
+mkdir -p "$XDG_RUNTIME_DIR"
 export FAKE_HYPRCTL_MONITORS=$monitors
 export FAKE_HYPRCTL_LOG=$test_root/eval.log
 export PATH=$fake_bin:$PATH
@@ -162,3 +164,5 @@ printf 'not json' > "$config"
 [[ $(jq -r '.monitors[1].position' <<< "$("$script" status)") == auto ]]
 
 printf 'Monitor layout script tests passed.\n'
+
+PYTHONDONTWRITEBYTECODE=1 python3 "$repository/tests/monitor_lid_test.py" LidTests.test_docked_and_undocked LidTests.test_hotplug_and_session LidTests.test_startup_closed_and_no_lid LidTests.test_ignored_disable_recovers LidTests.test_reload_reasserts_runtime_overlay

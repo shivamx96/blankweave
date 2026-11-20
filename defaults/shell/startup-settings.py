@@ -5,7 +5,7 @@ import os
 from pathlib import Path
 import re
 import shutil
-from settings_support import atomic, check_revision, cli, config_home, digest, locked, read
+from settings_support import display_path, file_refusal, atomic, check_revision, cli, config_home, digest, locked, read
 
 MARKER = 'X-Blankweave-Startup-Override'
 
@@ -62,7 +62,7 @@ def status():
                              reason=reason, source='User' if user else 'System', writable=not (user and path.is_symlink()),
                              reset=user and data.get(MARKER) == 'true', command=data.get('Exec', '')))
         except (ValueError, configparser.Error):
-            rows.append(dict(id=identifier, name=identifier, enabled=False, reason='Invalid desktop entry; edit its source.', source=str(path), writable=False, reset=False, command=''))
+            rows.append(dict(id=identifier, name=identifier, enabled=False, reason='Invalid desktop entry; edit ' + display_path(path), source=str(path), writable=False, reset=False, command=''))
     return dict(rows=rows, revision=digest([fingerprints, sorted(desktops)]), message='Changes take effect at the next sign-in. Desktop-specific restrictions are preserved. Core compositor services are managed separately.')
 
 
@@ -74,7 +74,7 @@ def apply(request):
         source = entries()[row['id']]
         target = config_home() / 'autostart' / row['id']
         if request.get('action') == 'reset' and row['reset']:
-            if target.is_symlink(): raise ValueError('Entry changed to a symlink.')
+            if target.is_symlink(): raise file_refusal('Entry changed to a symlink.', target)
             target.unlink()
         elif request.get('action') == 'enable' and type(request.get('enabled')) is bool:
             text = set_key(source.read_text(), 'Hidden', str(not request['enabled']).lower())

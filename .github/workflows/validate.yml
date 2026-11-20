@@ -16,7 +16,7 @@ jobs:
 
     steps:
       - name: Install validation tools
-        run: pacman -Syu --noconfirm git jq diffutils shellcheck lua hyprland qt6-declarative quickshell python-gobject at-spi2-core lcms2 xkeyboard-config restic
+        run: pacman -Syu --noconfirm git jq diffutils shellcheck zsh lua hyprland qt6-declarative quickshell python-gobject at-spi2-core lcms2 xkeyboard-config restic
 
       - name: Check out repository
         uses: actions/checkout@v5

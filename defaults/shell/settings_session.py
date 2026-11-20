@@ -5,7 +5,7 @@ import os
 from pathlib import Path
 import pwd
 import re
-from settings_support import atomic, config_home, read, restore
+from settings_support import file_refusal, atomic, config_home, read, restore
 from settings_operations import missing, notice, action, choice, field, installed, privileged, require, run, select, state
 
 TOOLS = {'reader': ('orca', 'Screen reader'), 'keyboard': ('wvkbd-mobintl', 'On-screen keyboard')}
@@ -25,10 +25,10 @@ def status(domain):
         rows = accounts()
         admins = set(grp.getgrnam('wheel').gr_mem) if any(g.gr_name == 'wheel' for g in grp.getgrall()) else set()
         options = [choice(p.pw_name) for p in rows]
-        actions = [action('create', 'Create local account', [field('name', 'Username'), field('password', 'Initial password', secret=True)], 'Create a standard local account with its own home directory.')]
+        actions = [action('create', 'Create local account', [field('name', 'Username'), field('password', 'Initial password', secret=True, confirm=True)], 'Create a standard local account with its own home directory.')]
         if options:
             target = field('name', 'Account', options[0]['value'], options)
-            actions += [action('password', 'Change password', [target, field('password', 'New password', secret=True)], 'Change this local account’s password?'),
+            actions += [action('password', 'Change password', [target, field('password', 'New password', secret=True, confirm=True)], 'Change this local account’s password?'),
                         action('role', 'Change account type', [target, field('role', 'Account type', 'standard', [choice('standard'), choice('admin')])], 'Change membership of the administrator group?'),
                         action('delete', 'Remove account', [target], 'Remove this account. Its home directory is retained. Current and last administrator accounts cannot be removed.'),
                         action('signin', 'Set automatic sign-in', [field('enabled', 'Sign-in', 'no', [choice('no', 'Require account password'), choice('yes', 'Automatic sign-in')])], 'Change tty1 sign-in for the current account at next boot. Disk encryption and screen locking are unchanged.')]
@@ -78,7 +78,7 @@ def apply(domain, request):
         unit = 'blankweave-' + command + '.service'
         target = UNITS / unit
         old = read(target)
-        if old is not None and not old.startswith('# Blankweave assistive tool\n'): raise ValueError('A custom service exists; edit it at its source.')
+        if old is not None and not old.startswith('# Blankweave assistive tool\n'): raise file_refusal('A custom service exists; edit it at its source.', target)
         text = '# Blankweave assistive tool\n[Unit]\nDescription=' + label + '\nPartOf=graphical-session.target\nAfter=graphical-session-pre.target\n\n[Service]\nExecStart=/usr/bin/' + executable + '\nRestart=on-failure\n\n[Install]\nWantedBy=graphical-session.target\n'
         atomic(target, text)
         run(['systemctl', '--user', 'daemon-reload'])
@@ -117,5 +117,10 @@ def shortcut(tool):
 
 if __name__ == '__main__':
     import sys
+    if sys.argv[1] in TOOLS and not installed(TOOLS[sys.argv[1]][0]):
+        import subprocess
+        subprocess.run([str(Path(__file__).with_name('open-default.sh')), 'missing',
+                        TOOLS[sys.argv[1]][0], 'assistive'], check=False)
+        sys.exit(1)
     try: shortcut(sys.argv[1])
     except (ValueError, OSError) as error: print(str(error), file=sys.stderr); sys.exit(1)

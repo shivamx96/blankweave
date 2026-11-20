@@ -1,10 +1,12 @@
 pragma ComponentBehavior: Bound
 import QtQuick
+import "LegacyErrors.js" as Errors
 import QtQuick.Layouts
 
 ColumnLayout {
     id: root
     required property var theme
+    property string supply: ""
     required property var backend
     readonly property bool ready: backend !== null && backend.ready
     readonly property bool writable: ready && backend.managed && backend.running && !backend.busy
@@ -14,7 +16,7 @@ ColumnLayout {
     spacing: root.theme.spacing("xl")
 
     Repeater {
-        model: root.ready && root.backend.battery ? ["ac", "battery"] : ["ac"]
+        model: root.supply ? [root.supply] : root.ready && root.backend.battery ? ["ac", "battery"] : ["ac"]
         delegate: ColumnLayout {
             id: supplyRow
             required property string modelData
@@ -66,7 +68,7 @@ ColumnLayout {
     Text {
         Layout.fillWidth: true
         visible: root.ready && root.backend.managed
-        text: "Changes restart idle timers. Dimming and locking may happen earlier to precede screen-off or sleep. Never disables only that idle action; manual locking and lock-before-suspend remain available. Lid behavior is managed by the system."
+        text: "Changes restart idle timers. Dimming and locking may happen earlier to precede screen-off or sleep. Never disables only that idle action; manual locking and lock-before-suspend remain available. While locked, the screen turns off after about 45 seconds without input, including after manual locking. Lid behavior is managed by the system."
         color: root.theme.textMuted
         font.family: root.theme.fontFamily
         font.pixelSize: root.theme.smallTextSize
@@ -75,9 +77,9 @@ ColumnLayout {
     Text {
         objectName: "idleStatus"
         Layout.fillWidth: true
-        text: root.backend === null ? "Idle settings unavailable." : root.backend.error
+        text: root.backend === null ? "Idle settings unavailable." : Errors.message(root.backend.error)
             || (!root.ready ? "Loading idle settings…" : root.backend.message)
-        color: root.backend && root.backend.error ? root.theme.warning : root.theme.textMuted
+        color: root.backend && Errors.message(root.backend.error) ? root.theme.critical : root.theme.textMuted
         font.family: root.theme.fontFamily
         font.pixelSize: root.theme.smallTextSize
         wrapMode: Text.WordWrap

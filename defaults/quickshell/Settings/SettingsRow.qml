@@ -1,5 +1,6 @@
 pragma ComponentBehavior: Bound
 import QtQuick
+import "LegacyErrors.js" as Errors
 import QtQuick.Controls.Basic
 import QtQuick.Layouts
 import "../Components"
@@ -10,7 +11,9 @@ Item {
     signal settingRequested(string settingId)
     signal copyRequested(string text)
     required property var setting
+    property string timeFormat: "24h"
     property var backend: null
+    property var fileAccess: null
     readonly property bool live: Boolean(setting.live && backend)
     readonly property bool writable: live && backend && Boolean(backend.ready) && !backend.busy
         && (typeof backend.canApply !== "function" || backend.canApply(setting.id))
@@ -18,7 +21,7 @@ Item {
     readonly property real sliderValue: live && backend && typeof backend.value === "function" ? backend.value(setting.id) : -1
     readonly property string description: live && backend && typeof backend.description === "function"
         ? backend.description(setting.id) || setting.description : setting.description
-    readonly property var choices: live && backend && typeof backend.choices === "function" ? backend.choices(setting.id) : (setting.options || [])
+    readonly property var choices: live && backend && typeof backend.choices === "function" ? backend.choices(setting.id) : []
     readonly property int selection: live && backend && typeof backend.selection === "function" ? backend.selection(setting.id) : 0
     readonly property bool expandedControl: ["operations", "system-info", "webapps", "widgets", "wallpaper", "startup", "notifications", "default-apps", "accessibility", "interface-size", "shortcuts", "keyboard", "pointer", "idle", "battery-health", "automatic-power", "power-profile", "presets", "night-light", "color-profile", "sound-output", "sound-input", "dictation", "system-sounds", "wifi", "bluetooth", "network", "airplane", "hotspot"].includes(setting.kind)
     readonly property bool compact: width < 510
@@ -46,7 +49,24 @@ Item {
             Text {
                 Layout.fillWidth: true
                 objectName: "settingsDescription_" + root.setting.id
-                text: root.description + (root.live ? "" : "  ·  Preview")
+                text: root.description
+                color: root.theme.textMuted
+                font.family: root.theme.fontFamily
+                font.pixelSize: root.theme.smallTextSize
+                wrapMode: Text.WordWrap
+            }
+            SettingsStorageLine {
+                Layout.fillWidth: true
+                theme: root.theme
+                setting: root.setting
+                access: root.fileAccess
+                onCopyRequested: text => root.copyRequested(text)
+            }
+            Text {
+                objectName: "settingsHelper_" + root.setting.id
+                Layout.fillWidth: true
+                visible: ["resolution", "mirroring", "display-presets"].includes(root.setting.id)
+                text: "Confirm display changes within 20 seconds to keep them; otherwise the previous setup is restored."
                 color: root.theme.textMuted
                 font.family: root.theme.fontFamily
                 font.pixelSize: root.theme.smallTextSize
@@ -58,7 +78,8 @@ Item {
             Layout.fillWidth: root.expandedControl
             Layout.preferredWidth: root.expandedControl ? content.width : root.compact ? Math.min(240, content.width) : 190
             Layout.preferredHeight: item ? Math.max(root.expandedControl ? 0 : 36, (item as Item).implicitHeight) : 36
-            sourceComponent: root.setting.kind === "operations" ? operationsControl
+            sourceComponent: root.setting.kind === "link" ? linkControl
+                : root.setting.kind === "operations" ? operationsControl
                 : root.setting.kind === "system-info" ? systemControl
                 : root.setting.kind === "webapps" ? webappsControl
                 : root.setting.kind === "widgets" ? widgetsControl
@@ -86,15 +107,20 @@ Item {
                 : root.setting.kind === "system-sounds" ? systemSoundsControl
                 : root.setting.kind === "wifi" ? wifiControl
                 : root.setting.kind === "bluetooth" ? bluetoothControl
+                : root.setting.kind === "switch" ? switchControl
                 : root.setting.kind === "choice" ? choiceControl
                 : root.setting.kind === "slider" ? sliderControl
-                : root.setting.kind === "toggle" ? toggleControl : actionControl
+                : null
         }
     }
 
     Component {
+        id: linkControl
+        SettingsButton { theme: root.theme; text: "Open Text size"; onClicked: root.settingRequested(root.setting.target) }
+    }
+    Component {
         id: operationsControl
-        SettingsOperations { theme: root.theme; settingId: root.setting.id; backend: root.backend; onSettingRequested: id => root.settingRequested(id); onCopyRequested: text => root.copyRequested(text) }
+        SettingsOperations { timeFormat: root.timeFormat; theme: root.theme; settingId: root.setting.id; backend: root.backend; onSettingRequested: id => root.settingRequested(id); onCopyRequested: text => root.copyRequested(text) }
     }
 
     Component {
@@ -158,7 +184,7 @@ Item {
     }
     Component {
         id: idleControl
-        SettingsIdleControls { theme: root.theme; backend: root.backend }
+        SettingsIdleControls { supply: root.setting.supply || ""; theme: root.theme; backend: root.backend }
     }
     Component {
         id: batteryControl
@@ -230,8 +256,22 @@ Item {
         }
     }
     Component {
+        id: switchControl
+        SettingsSwitchRow {
+            theme: root.theme
+            text: root.setting.title
+            checked: root.live && root.selection === 0
+            enabled: root.writable
+            busy: Boolean(root.backend && root.backend.busy)
+            error: root.backend ? Errors.message(root.backend.error) : ""
+            detail: root.backend ? Errors.detail(root.backend.error) : ""
+            onClicked: root.backend.apply(root.setting.id, checked ? 1 : 0)
+        }
+    }
+    Component {
         id: choiceControl
         SettingsComboBox {
+            optionEnabled: function(index) { return root.setting.id !== "theme" || !root.backend || !root.backend.themes || !root.backend.themes[index] || !root.backend.themes[index].invalid }
             id: choice
             theme: root.theme
             objectName: "settingsChoice_" + root.setting.id
@@ -290,26 +330,6 @@ Item {
                 font.pixelSize: root.theme.smallTextSize
                 horizontalAlignment: Text.AlignRight
             }
-        }
-    }
-    Component {
-        id: toggleControl
-        SettingsSwitch {
-            theme: root.theme
-            enabled: false
-            checked: false
-            text: "Preview"
-            Accessible.name: root.setting.title + " (preview)"
-            font.family: root.theme.fontFamily
-        }
-    }
-    Component {
-        id: actionControl
-        SettingsButton {
-            theme: root.theme
-            text: root.setting.action || "Configure"
-            enabled: false
-            Accessible.name: root.setting.title + " (preview)"
         }
     }
 }

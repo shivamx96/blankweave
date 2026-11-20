@@ -56,7 +56,9 @@ QtObject {
     }
 
     function choices(id) {
-        if (id === "theme") return themes.map(row => row.name)
+        if (id === "time-format") return ["Automatic (locale)", "12 hour", "24 hour"]
+        if (id === "temperature-unit") return ["Automatic (locale)", "Celsius", "Fahrenheit"]
+        if (id === "theme") return themes.map(row => row.name + (row.invalid ? " — " + row.reason : ""))
         if (id === "mode") return ["Dark", "Light"]
         if (id === "bar-position") return ["Top", "Bottom"]
         if (id === "bar-visibility") return ["Always visible", "Hide in fullscreen", "Auto-hide"]
@@ -64,6 +66,8 @@ QtObject {
     }
 
     function selection(id) {
+        if (id === "time-format") return ["auto", "12h", "24h"].indexOf(preferences.timeFormat)
+        if (id === "temperature-unit") return ["auto", "celsius", "fahrenheit"].indexOf(preferences.temperatureUnit)
         if (id === "theme") return themes.findIndex(row => row.id === theme.themeId)
         if (id === "mode") return theme.mode === "light" ? 1 : 0
         if (id === "bar-position") return preferences.bar.position === "bottom" ? 1 : 0
@@ -72,11 +76,14 @@ QtObject {
     }
 
     function apply(id, index) {
+        if (id === "theme" && themes[index] && themes[index].invalid) return
         if (!ready || busy || index < 0 || index >= choices(id).length) return
         operationError = ""
         syncState = "idle"
         syncMessage = ""
-        if (id === "bar-position") preferences.bar.position = ["top", "bottom"][index]
+        if (id === "time-format") preferences.timeFormat = ["auto", "12h", "24h"][index]
+        else if (id === "temperature-unit") preferences.temperatureUnit = ["auto", "celsius", "fahrenheit"][index]
+        else if (id === "bar-position") preferences.bar.position = ["top", "bottom"][index]
         else if (id === "bar-visibility") preferences.bar.visibilityMode = ["always", "fullscreen", "auto-hide"][index]
         else if (id === "theme" || id === "mode") {
             action.command = id === "theme" ? ["bash", helper, "set", themes[index].id]
@@ -92,8 +99,8 @@ QtObject {
                 try {
                     const entries = JSON.parse(text)
                     if (!Array.isArray(entries)) throw new Error("Invalid theme list")
-                    root.themes = entries.filter(row => !row.invalid && row.id)
-                        .map(row => ({ id: String(row.id), name: String(row.name || row.id) }))
+                    root.themes = entries.filter(row => row.id)
+                        .map(row => ({ id: String(row.id), name: String(row.name || row.id), invalid: Boolean(row.invalid), reason: String(row.reason || "") }))
                 } catch (error) {
                     root.themes = []
                     root.operationError = "Could not read available themes. Check your installation and retry."

@@ -57,8 +57,12 @@ finds nothing at them.
 
 ### Install and update lifecycle
 
-1. `bootstrap.sh` clones the trusted `main` branch to
-   `~/.local/share/blankweave/repository` and hands off to `blankweave setup`.
+1. `bootstrap.sh` clones the trusted `main` branch with full history to
+   `~/.local/share/blankweave/repository`, selects the newest release (the
+   highest-SemVer annotated `vMAJOR.MINOR.PATCH` tag reachable from
+   `origin/main` whose commit's `VERSION` matches), leaves the checkout
+   exactly at that release, and hands off to `blankweave setup`. With no
+   valid release it stops with a clear message.
 2. Guided setup reviews profiles, theme, optional Git identity, and local SSH
    key generation before saving strict data configs and invoking `install.sh`,
    which deploys the public command to
@@ -69,18 +73,47 @@ finds nothing at them.
    Managed Quickshell and shell-helper trees are staged beside their destination
    and atomically exchanged by `scripts/deploy-tree.sh`; never delete the live
    Quickshell tree before replacement because its watcher reloads immediately.
-4. `blankweave update` validates the origin, branch, clean worktree, target
-   ancestry, matching annotated `v<VERSION>` release tag, installer config, and
-   package manifests before applying a fast-forward-only update. The target
-   version must advance and its rollback floor must include the current release.
-   `--check` only fetches and reports; `--dry-run` also validates and prints the
-   target install plan.
+4. `blankweave update` selects the newest release by the same rule
+   (`scripts/release-version.sh`), so unreleased commits on `main` never
+   block an install or an update; `--check` mentions them in one neutral
+   line. It then validates the origin, branch, clean worktree, target
+   ancestry, matching annotated release tag, installer config, and package
+   manifests, and fast-forwards only to the selected release commit. The
+   target version must advance and its rollback floor must include the
+   current release. `--check` only fetches and reports; `--dry-run` also
+   validates and prints the target install plan. `--to vMAJOR.MINOR.PATCH`
+   picks a specific newer release under the same checks and cannot be
+   combined with `--reapply`; going back is what rollback is for.
 5. A real update writes the previous/target revisions and private diagnostic
    logs under `~/.local/state/blankweave/recovery/`. Recovery metadata pairs
    each revision with its SemVer release and enforces `MIN_ROLLBACK_VERSION`.
    An existing root Snapper
    configuration receives paired pre/post snapshots. The postflight doctor
    must pass before the recovery state is marked complete.
+
+First installation is defensive. `bootstrap.sh` hands an existing checkout
+with no recorded installed revision to `setup` rather than `update`, and a
+cancelled setup prints the command that resumes it. Preflight runs before
+any system change: it removes a stale temporary sudoers file, checks root
+block-device ancestry for encryption, and calls the read-only `--check`
+modes of the boot configuration helpers so an unsupported boot layout stops
+there. On an unencrypted or unrecognised root, setup defaults to
+password-required sign-in and skips the passwordless keyring unless the user
+explicitly chooses automatic sign-in; the review always states that the disk
+passphrase is the login. An existing installation keeps its sign-in policy.
+The temporary installer sudo rule is limited to `/usr/bin/pacman`. Doctor
+warns when automatic sign-in is active without confirmed root encryption
+and fails on a leftover installer sudo rule, without naming devices.
+
+A first install ends on one plain block and nothing technical after it:
+the restart command, what sign-in will ask for under the chosen policy,
+five keys, and `blankweave doctor`. Only a first install writes the
+user-state `welcome-eligible` marker; with it and the `welcomeShown`
+preference unset, the shell shows a one-time welcome card on the focused
+monitor (`Modules/WelcomeCard.qml`), which never takes focus from an active
+application, yields to the low-battery warning, and is completed by
+dismissal or by opening the launcher or Settings. An update never shows it.
+`blankweave welcome` and the About page show it again.
 
 `blankweave doctor` delegates to `scripts/doctor.sh` and is strictly read-only:
 checks may report warnings or failures but must not repair files, restart
@@ -94,12 +127,68 @@ do not. `--report` may include versions and session types, but must not expose
 usernames, home paths, hostnames, network addresses, disk identifiers, UUIDs,
 or hardware serial numbers.
 
+Doctor checks the system against the saved sign-in policy rather than
+assuming automatic sign-in: automatic expects the tty1 autologin drop-in and
+the passwordless default keyring, password sign-in expects no drop-in and no
+passwordless keyring, and a missing policy keeps the automatic expectations.
+Every warning and failure ends with a short `remedy:`. A validator's own
+message is shown, bounded and indented, in normal output and omitted from
+`--report`, because it cannot be made reliably private.
+
+`blankweave uninstall` previews the footprint and changes nothing;
+`--apply` needs a terminal confirmation or `--yes`. The installer records
+before-and-after ownership of what it writes under
+`/var/lib/blankweave/uninstall/` (`scripts/uninstall-footprint.py`, shared
+with the uninstaller so the two cannot drift). Removal needs proof of
+ownership, meaning matching deployed content or an exact symlink target;
+recorded originals are restored, and modified or unproven files stay and
+are reported. Packages are never removed, personal configuration needs
+`--purge-config`, and boot cleanup removes only tokens the installer added.
+Test it only against sandbox roots. Every command answers `help <command>`,
+`--help`, and `-h` without naming internal scripts, an unknown command
+suggests the closest one, and bare `blankweave theme` prints status rather
+than applying. Zsh and bash completions install under
+`~/.local/share/zsh/site-functions` and
+`~/.local/share/bash-completion/completions`; `tests/readme.sh` fails when
+the README or the completion disagrees with the commands, flags, keys, or
+paths that exist. The GCR SSH agent socket is a seeded-once default, and
+the managed profile exports it only when `SSH_AUTH_SOCK` is unset. Doctor
+lists non-loopback listening ports when no firewall is active and never
+changes firewall state. The Archinstall baseline carries no personal
+regional defaults.
+
 `blankweave rollback` is deliberately a Blankweave configuration rollback. It
 resets only the already-validated, clean managed checkout to the recorded
 previous commit and runs that revision's installer to converge managed files.
 It does not downgrade packages, delete user data, or automatically restore a
 Snapper snapshot. Applied migrations remain forward-only and are not removed
 from their ledger. Keep this boundary explicit in help and failure messages.
+
+Rollback performs no system upgrade and no database refresh: `bin/blankweave`
+passes `BLANKWEAVE_PACKAGE_POLICY=missing-only` to the installer, which then
+installs only manifest packages that are absent, from the local databases and
+cache, and stops before deploying anything if that would change an installed
+package or cannot be resolved offline. An update keeps the full `-Syu`
+(partial upgrades are unsupported on Arch). A recovery release whose installer
+predates the policy cannot honour it, so rollback to one says that it will
+also upgrade the system and proceeds only after a yes on a terminal or with
+`--allow-upgrade`; never make that path refuse outright, because rollback is
+the recovery tool.
+
+A real update prints the release transition and the upgrades already known
+to the local pacman databases, with kernel, GPU driver, Hyprland, and
+Quickshell called out, then asks for confirmation when stdin is a terminal;
+`--yes` skips the question and a script without a terminal applies as before.
+`blankweave update --reapply` converges the current release again without
+advancing it, with the same summary, confirmation, and system upgrade; it is
+the repair command that doctor remedies and the "already up to date" message
+name. Its recovery records live under `recovery/reapply/` so a repair never
+replaces the previous-release rollback point. Every apply runs under
+`systemd-inhibit --what=shutdown:sleep:idle` when available. When the running
+kernel's module directory is gone afterwards, the CLI says a restart is
+required and writes `$XDG_RUNTIME_DIR/blankweave/restart-required`; the power
+panel shows "Restart to finish updating" while that marker exists, and
+Settings › Updates offers a confirmed Restart; no bar indicator does.
 
 `VERSION` is a stable `MAJOR.MINOR.PATCH` declaration, not a config schema. A
 commit becomes a release only when the matching annotated
@@ -111,6 +200,17 @@ Do not add a public `blankweave install` command. First installation is the
 bootstrap plus `blankweave setup`; subsequent convergence is `blankweave
 update`. `setup --non-interactive` requires both saved configs and is the
 repeatable-provisioning path.
+
+`install.sh` distinguishes requirements from first-run defaults.
+NetworkManager, Bluetooth when detected, the package-cache timer, and the GPU
+access groups are asserted on every apply. Tailscale, Docker, docker group
+membership, and the zsh login shell are seeded once, each recorded as a
+marker under `~/.local/state/blankweave/defaults-seeded/`; an installation
+that predates the markers is treated as already seeded, so an update never
+re-enables something the user turned off, while a profile selected later
+still seeds its service once. Ownership repair covers only the trees and
+files the installer deployed, without following symlinks; never recursively
+`chown` `~/.config`, `~/.cache`, `~/.local`, or the managed checkout.
 
 ### Login and graphical session
 
@@ -130,9 +230,57 @@ The profile sends the small UWSM controller's stdout/stderr to
 `~/.local/state/blankweave/uwsm-session.log`; compositor and application units
 still log normally through the user journal.
 
+The profile is POSIX-compatible (it is sourced by `.zprofile`) and supervises
+UWSM instead of `exec`ing it. It rotates the controller log to
+`uwsm-session.log.1`, and after the session ends it leaves the login shell
+silently so getty restarts the desktop under automatic sign-in or returns to
+the password prompt, exactly as the former `exec` did. Only a failed start is
+held: a non-zero exit within the first minute, or a zero exit in under ten
+seconds unless `wayland-wm@hyprland.desktop.service` reports
+`Result=success` with an activation from this attempt. A session that ran for
+a minute or more always restarts, whatever its status, so a late compositor
+crash or a controller that reports its stop signal never strands the user at
+a prompt. On a failed start the profile restores the VT cursor, clears the
+screen, prints the last controller-log lines with the recovery commands
+(`journalctl --user -b -p warning`, `blankweave doctor`, `blankweave
+rollback`, `start_desktop`, Ctrl+Alt+F2), and leaves a working shell. A
+boot-scoped marker under `$XDG_RUNTIME_DIR` stops later tty1 logins from
+looping back into the failure; they print a one-line reminder instead, and
+`start_desktop` clears the marker and logs in again. The healthy path prints
+nothing, because any character on tty1 would flash during the Plymouth
+handoff. `tests/session-profile.sh` drives all of this with a stubbed UWSM
+under sh, bash, and zsh; never exercise the developer's live login path.
+
+The session start does not depend on the login shell.
+`scripts/configure-session-profile.sh` installs the root-owned
+`/etc/profile.d/blankweave-session.sh`, which sources the current account's
+managed profile when it exists, so sh, bash, and zsh logins all reach it and
+other accounts see nothing; fish does not read `profile.d`. Because
+`/etc/profile` runs before the user's own startup files, the hook steps
+aside for a zsh login whose `.zprofile` still sources the managed profile:
+that session keeps starting from `.zprofile`, after the user's exports. A
+shell-local guard makes a second source of the profile a no-op.
+
 Do not restore a graphical-startup Hyprlock. The LUKS prompt is the boot-time
 authentication boundary. Hyprlock remains in manual keybindings and in
 Hypridle for idle, suspend, and resume protection.
+
+Every managed Hyprlock launch goes through `shell/lock.sh`, which returns
+immediately and serializes startup so repeated requests never create a second
+client. Manual locking (the key and the power panel) calls it directly and
+must work without Hypridle; the managed Hypridle configs use it as `lock_cmd`
+behind their `loginctl lock-session` idle and before-sleep paths. The lock
+shortcut and the hardware media controls carry `locked = true` (`lock`,
+`volume-up`, `volume-down`, `volume-mute`, `mic-mute`, `media-play`,
+`media-pause`, `media-next`, `media-previous`, `media-stop`, `brightness-up`,
+`brightness-down`) and nothing else does: the launcher and session exit stay
+unavailable while locked. With `misc.allow_session_lock_restore`, pressing
+the lock shortcut on Hyprland's "lock screen died" page starts a fresh
+Hyprlock instead of forcing a trip to tty2. Keep that exact set consistent
+between the Lua, the shortcut catalog, Settings verification, and the parser
+test.
+`misc.key_press_enables_dpms` and
+`misc.mouse_move_enables_dpms` wake a display that idle turned off.
 
 ### Config deployment flow
 
@@ -193,6 +341,70 @@ may be adopted. Unknown regular files, directories, and foreign symlinks
 (including dangling links) stay untouched. Hyprland's generated root entry and
 capability-selected configs now live under the managed `hypr/` directory;
 the matching paths under `~/.config/hypr/` link to them on fresh installs.
+
+A config the application rewrites itself is seeded as a regular copy with
+`user_config_seed`, never linked: Thunar's custom actions
+(`~/.config/Thunar/uca.xml`, so "Open Terminal Here" runs Ghostty) are copied
+only when missing or byte-identical to the packaged default passed as a
+comparison file. Thunar stamps its own copy on first run, so the
+`thunar-terminal-action` migration repoints only the exact stock exo command
+for profiles that already opened it. Trash, removable drives, and thumbnails
+come from `gvfs`, `udisks2`, and `tumbler` in the required manifest; without
+`gvfs`, Thunar's Delete is permanent.
+
+Fontconfig is linked as `~/.config/fontconfig/conf.d/50-blankweave.conf`:
+fontconfig loads only `conf.d` names that start with a digit, so the former
+`local.conf` was never read. The file maps the toolkit aliases (`system-ui`,
+`ui-sans-serif`, `ui-monospace`) onto the generics and prefers the rice's
+typefaces with `binding="strong"`; a weak alias loses to the system defaults
+for sans-serif. Check any change with `tests/fontconfig.sh`, which runs
+`fc-match` in a sandboxed config tree. GTK applications ignore the generic
+alias for their interface font, so `theme-apply.sh` also writes the resolved
+`design.typography` families to GSettings `font-name` and
+`monospace-font-name` and merges `gtk-font-name` through `gtk_settings.py`.
+Only the family follows the theme; the size stays at GTK's 11 pt and text
+scale remains with `interface-settings.py`.
+
+Core keys never name an optional application. `shell/open-default.sh
+<role>` delegates to `default-apps.py`, which shares the Settings resolver:
+`Super+B` opens the effective handler for `https`, `Super+E` the handler
+for folders, and the terminal stays Ghostty. The bar's URL and folder
+actions go through the same helper, and every direct bar or key command
+checks that its tool exists; a missing one produces a single transient
+notification naming it, whose default action opens the relevant Settings
+row. A base install with no browser is supported. `tests/action-manifests.sh`
+audits every command a default binding or bar action runs against the
+required manifests or that degradation path. `default-apps.py seed` also
+gives web links and folders a default where the user has none: Zen, then
+Firefox, then Helium, then any other registered browser, and Thunar for
+folders.
+
+The managed zshrc never downloads code. The prompt and plugins come from
+packages (powerlevel10k, fzf-tab, and the Oh My Zsh git snippets from the
+AUR manifest; autosuggestions, syntax highlighting, completions, and
+history search from the repositories) and are sourced from their packaged
+paths only when readable, so a missing one degrades to a plain prompt.
+Completion initialises first, fzf-tab before autosuggestions, syntax
+highlighting last, then `zsh-keys.zsh`, then personal overrides and the
+preserved custom tail. The powerlevel10k wizard is disabled: a user's
+`~/.p10k.zsh` wins over the managed lean default in `shell/p10k.zsh`, and
+`p10k configure` still works. `tests/zsh-startup.sh` starts an interactive
+shell with failing `git`/`curl`/`wget` stubs to prove startup stays offline.
+The managed profile defaults `EDITOR` to nano (required), `VISUAL` to
+`EDITOR`, and `BROWSER` to the effective-browser helper, never replacing a
+value already set. `wireless-regdb` is required with the Wi-Fi capability.
+
+Ghostty sends the standard Home and End sequences; never remap keys in the
+terminal to work around the shell, because the remap reaches every program
+(Home incremented numbers in vim). Line-editor bindings for Home, End,
+Delete, Ctrl+arrows, and Ctrl+Backspace/Delete live in `shell/zsh-keys.zsh`,
+sourced by the managed `.zshrc` after plugins and before personal overrides,
+and tested without plugins by `tests/zsh-keys.sh`.
+
+`default-apps.py seed` runs as the user on every apply and gives video and
+audio to mpv, images to Loupe, and PDF to Papers only where the user has no
+explicit default; it uses the Settings helper's lock and atomic writer and
+skips symlinked or malformed preference files.
 
 Seed `~/.config/blankweave/overrides/` from `defaults/overrides/` only for missing
 files. Its Lua settings load after all compositor defaults, including voice
@@ -293,8 +505,11 @@ The other non-secret guided choices live in
 Keep this separate from `install.conf` because setup selections such as the
 initial theme are not ongoing package convergence policy. Setup seeds the chosen
 theme once; ordinary updates must not force it back after the user switches
-themes. Git keys are generated locally only when explicitly selected and are
-never uploaded.
+themes. Setup itself follows the same rule: it passes a theme and mode to the
+apply only when `theme.json` is absent or the choice was changed in that
+interactive run, so `setup --non-interactive` preserves the current selection.
+Git keys are generated locally only when explicitly selected and are never
+uploaded.
 
 ### Shell scripts
 
@@ -348,6 +563,96 @@ per-theme image file or build an image source by hand. Because marks now honour
 genuinely transient — a steady-state condition such as "the daemon is running"
 would leave the mark permanently accented.
 
+A bar entry's `attention` (critical red) is reserved for faults and
+conditions that need the user: low battery, thermal or memory pressure, an
+enabled service that is unavailable, required sign-in, queued notifications,
+low agent allowance. A state the user chose — muted, radio off, VPN
+disconnected, Do Not Disturb — is carried by its glyph or mark and never by
+`attention`; charging and "a device is connected" never set `active`; waiting
+pull-request reviews are the count beside the Git mark. The one deliberate
+exception is dictation: a live microphone stays red while recording.
+
+Widget input areas are larger than what is painted: each reaches the screen
+edge the bar sits on and splits the gap with its neighbours without overlap,
+and the first and last entries own the corners, so a throw to the edge always
+lands on a widget (`Components/BarHitGeometry.js`). Painted geometry and
+popup and tooltip anchors are unchanged, and the areas travel with a
+concealed bar so the two-pixel reveal strip keeps working. `WidgetFrame`
+turns wheel input into signed steps: it accumulates vertical `angleDelta`
+to 120 units, carries the remainder, honours `inverted`, ignores
+horizontal-only events, and resets on pointer exit or after 250 ms, so a
+touchpad and a wheel move a value at the same rate and a sideways swipe does
+nothing. Bar volume moves in 5% steps to a 100% maximum, slider included,
+matching the media keys; a level another tool set above 100% is shown
+truthfully, cannot be raised from the bar, and lowers normally.
+
+Volume, mute, microphone mute, and brightness have one implementation: the
+keys call the `blankweave` IPC methods `volume(action)`, `micMute()`, and
+`brightness(action)`, which go through `AudioService` and the focused
+monitor's `DisplayBrightness` with the same step and cap as the bar. Each
+binding keeps a silent shell fallback (`... || wpctl ...`, `... ||
+brightness.sh ...`) so a key still works when the shell is down.
+`Services/OsdService.qml` owns the feedback for those intents and is driven
+by intent only: a key or a bar scroll shows it, a change made by another
+application does not, and an open bar panel of the same kind suppresses it
+because the slider is the feedback. Raising the volume unmutes.
+`BrightnessRouter` reuses the focused screen's registered
+`DisplayBrightness` instance and otherwise caches one without steady
+polling; the requested level shows immediately while the coalesced write and
+readback complete. `OsdToast` is a pointer-transparent, unfocused overlay at
+bottom centre whose 1.5-second lifetime restarts on each step. Only one
+transient toast shows at a time, in the order battery warning, dictation,
+OSD; a suppressed OSD intent is dropped, never replayed. Volume and
+brightness feedback never goes through Dunst.
+
+Every bar panel opens and works from the keyboard. Widgets declare a stable
+`ControlPopup.panelId` and register with one `Launcher/PanelSession.qml` on
+`ShellRoot` (focused-output selection and hotplug fallback as for the
+launcher); the `panel(id)` IPC method toggles one, closes any other panel
+and the launcher, and reveals a concealed bar, and an unknown or unavailable
+id is a no-op. `power()` routes through the same session. `Super+Ctrl+A`,
+`N`, `B`, `I`, and `D` open audio, network, Bluetooth, notifications, and
+display; the rest are reachable by IPC, and none is `locked`. Inside a panel
+the shared `PanelNavigation.js` and `ControlMouseArea.qml` give every
+primitive focus, a pressed state, and Enter/Space activation: Tab and
+Shift+Tab walk the controls, Up/Down move between rows, Home/End jump to the
+ends, Left/Right adjust a slider, switch tabs, or move between adjacent
+controls, text fields keep their editing keys, and Escape closes an inline
+editor before the panel. A keyboard open focuses the first control; a mouse
+open shows no ring until a key is pressed. Scanned rows keep focus by their
+snapshot identity and refuse an activation if the item changed under the
+key. `Components/FocusRing.qml` is the one focus indicator for the bar and
+the Settings controls: an inset outline with corner marks in
+`Theme.focusIndicator`, never colour alone and never animated, held to 3:1
+by `tests/theme_contrast.py`.
+
+Every `ControlPanelHeader.actions` entry needs an `id` and a human `label`,
+shown as its hover and keyboard-focus tooltip and exposed as its accessible
+name; `tests/header_actions_test.py` scans the modules for unlabelled
+actions. A control that turns the feature itself on or off (Wi-Fi,
+Bluetooth, Tailscale, Do Not Disturb) is `kind: "switch"` with a
+backend-owned `checked`, drawn with the `SettingsSwitch` look, and bound to
+the widget's `pending` state so it cannot be activated twice. A close or X
+glyph only ever closes something. Bar widgets declare their gestures through
+`WidgetFrame.rightClickHint` and `scrollHint`, and the tooltip ends with one
+generated line (`Right-click: mute · Scroll: adjust volume`) that is omitted
+when neither applies, so a tooltip never misstates what a gesture does.
+
+A panel never outgrows the screen: `ControlPopup` caps its height at the
+screen height minus the bar and a margin and scrolls its content in
+`PanelViewport` with a visible scrollbar, and keyboard focus scrolls into
+view; a panel that fits is unchanged. The display panel stays available
+when brightness cannot be read, because it also owns the theme toggle and
+the layout controls: that screen's row says so in place of its slider, the
+bar shows a level-free mark, and scrolling does nothing. Display names come
+from the EDID; never special-case a model. The six system controls in the
+right section (display, audio, Bluetooth, network, notifications, battery)
+are vector marks with one per state; keep the body of a mark the same size
+across its states so the icon does not jump when the level changes.
+Explicit animations take their duration from `theme.motionDuration`, label
+widths follow the text scale, and palette literals live only in
+`Theme.qml`; `tests/quickshell-style.sh` scans for all three.
+
 `Components/ControlPopup.qml` provides the anchored, keyboard-dismissible panel
 surface used by interactive status widgets. `ControlSlider.qml` provides the
 shared angular slider treatment. Interactive panels compose
@@ -395,9 +700,42 @@ file and its own script instead, the way the weather location lives in
 every file has exactly one writer. A persisted preference is still a
 steady state, so it changes a widget's form, never its `active` accent.
 
+`ShellPreferences` also declares `timeFormat` (`auto`, `12h`, `24h`) and
+`temperatureUnit` (`auto`, `celsius`, `fahrenheit`). `auto` resolves once
+from the session locale. Every time of day and temperature the shell shows
+goes through its `formatTime` and `temperature` methods
+(`Components/LocaleFormats.js`), so the bar clock, its tooltip and panel, and
+the weather views cannot disagree; weather data stays Celsius and ISO and is
+converted only for display. Hyprlock follows the same preference: its
+clock is the built-in `$TIME` or `$TIME12`, chosen when `theme-apply.sh`
+renders `hyprlock-theme.conf` from a read-only look at `shell.json`
+(`shell/lock-format.py`), with `auto` resolved by the same Qt locale rule.
+The lock theme is re-rendered at shell startup, after a preference save, and
+on theme apply; a lock screen that is already up keeps its format until the
+next lock. Its font families come from the resolved typography tokens.
+Hyprlock 0.9 has no date or Caps Lock variable, so the date label polls
+`date` once a minute and the "Caps Lock is on" label polls
+`shell/lock-caps.sh` every two seconds; keep both to a single light command,
+because they run on every monitor for as long as the screen is locked.
+
 The rightmost power control is a native panel. Lock and suspend are immediate;
 logout, reboot, and shutdown require a second confirmation click and must clear
-their armed state whenever the panel closes.
+their armed state whenever the panel closes. `Super+Escape` and the power key
+(`XF86PowerOff`) toggle it through the `power` IPC method; nothing binds a key
+straight to `uwsm stop`, because under tty1 automatic sign-in that restarts
+the session empty and discards unsaved work. The invocation state is a second
+`LauncherSession` on `ShellRoot` (`powerMenu`), so the panel opens on the
+focused monitor and follows the same hotplug fallback; a bar click routes
+through that state too. Arrows and Tab move between actions, Enter activates,
+Escape closes. The session-exit action reads `/etc/blankweave/signin.conf` and
+is labelled "Restart session" unless the saved policy is password sign-in.
+
+`scripts/configure-logind-power-key.sh` owns only
+`/etc/systemd/logind.conf.d/50-blankweave.conf` (`HandlePowerKey=ignore`,
+`HandlePowerKeyLongPress=poweroff`) so a brushed power key reaches the
+compositor instead of shutting down. It signals logind with SIGHUP when the
+file changes and never restarts it, which could end the graphical session.
+Doctor warns, without elevation, when the merged policy is not `ignore`.
 
 Brightness is also runtime-selected: internal eDP/LVDS/DSI panels use
 `brightnessctl`, while external displays use DDC/CI VCP `0x10`. Pass the
@@ -530,12 +868,59 @@ monitor with focus following, so repeated presses cycle a workspace through
 the displays; the keybinding is a Lua function (`summon_workspace` in
 `keybindings.lua`) and the bar mirrors that logic in `activateWorkspace`,
 so keep the two in step. Each bar's
-`WorkspacesWidget` therefore lists only the workspaces on its own monitor
-(the 1–5 placeholders plus anything else living there, minus anything shown on
-another monitor). Under the Lua config, `hyprctl dispatch` takes Lua and the
+`WorkspacesWidget` starts with the 1–5 placeholders and adds existing ids 6–10
+on its monitor (or with no monitor name), omitting any workspace assigned to
+another monitor whether visible or not, and all ids outside 1–10. Under the Lua
+config, `hyprctl dispatch` takes Lua and the
 Hyprlang dispatcher names are rejected; the Lua option table is not validated,
 so confirm a new option behaviourally (a headless output plus
 `hyprctl workspaces -j`) rather than trusting an "ok".
+
+Compositor animations use one non-overshooting `easeOut` curve at 200–250 ms
+with a 96% window pop-in; `animations.lua` also sets
+`ecosystem.no_update_news` and `no_donation_nag`. Every Blankweave layer
+namespace has an exact, anchored `no_anim` rule, so shell surfaces animate
+only through QML and `design.motion`; `tests/hyprland-motion.py` derives the
+namespace list from the QML, so a new layer surface without a rule fails.
+Saved accessibility preferences still load after these defaults.
+
+`monitor-layout.sh lid closed|open|startup|reconcile` handles a docked
+laptop under the monitor writer lock. Closing the lid disables the internal
+panel (eDP/LVDS/DSI) only while an external output is enabled; opening it
+restores mode, scale, position, rotation, mirroring, and colour assignment
+from a snapshot. Lid state and that snapshot are runtime-only, under
+`$XDG_RUNTIME_DIR`, and never reach `monitors.json`, saved setups, or
+`monitors.lua`. The session must never be left with no output: unplugging
+the last external display while closed re-enables the panel through hotplug
+reconciliation. A pending mode preview defers lid changes until keep or
+revert, and layout edits and setup saves refuse while the panel is hidden.
+The locked lid-switch bindings exist only with the internal-display
+capability; startup reads the ACPI lid state. Test with the isolated
+compositor fixture (`tests/monitor_lid_test.py`), never real outputs.
+
+Window controls: `Super+F` fullscreen, `Super+Shift+F` maximize (keeps the
+bar), `Super+Shift+arrows` move the window and cross to the neighbouring
+monitor at an edge, `Super+Alt+arrows` resize and repeat, `Super+E` opens
+files. `Super+left drag` moves and `Super+right drag` or `Super+Shift+left
+drag` resizes; those pointer gestures carry stable descriptions but stay
+outside the shortcut catalog, because the Settings editor accepts keyboard
+keysyms only. `windowrules.lua` floats and centres utility windows
+(pavucontrol, Blueman, the portal file choosers, the polkit agent, and the
+Blankweave Settings window, matched by class and title) so they never
+re-tile the workspace, and floats Picture-in-Picture pinned in a corner
+without initial focus. The Lua option table is not validated, so a parser
+pass does not prove behaviour: when the live compositor may not be touched,
+record each new binding and rule as a manual check instead.
+
+`shell/screenshot.sh screen|region|window` owns captures. It writes the PNG
+under the Pictures directory's `Screenshots` folder first and only then
+copies it as `image/png`, so a cancelled selection or failed capture leaves
+both the folder and the clipboard untouched; never pipe `grim` into
+`wl-copy`. `screen` takes the focused output only, and `region` seeds
+`slurp` with the visible windows so one gesture drags a region or clicks a
+window. Its notification is transient, carries the image, opens the file as
+the default action, offers Annotate (`satty`), and waits for an action for a
+bounded time. `tests/screenshot.sh` stubs every capture tool.
 
 Monitor arrangement and scaling are display-panel choices, persisted by
 `defaults/shell/monitor-layout.sh`, the sole writer of
@@ -579,6 +964,20 @@ are compared as strings, not JavaScript numbers. `tests/active-window.sh`
 covers widget recreation, shell initialization, and startup/event races without
 contacting the running compositor.
 
+Process-backed data is collected once per shell, not once per bar: widgets
+hold a process-free `SharedPoller` subscription to `bar.shell.pollers`, and
+the single `PollerService` in `shell.qml` runs one `ScriptPoller` per data
+key at the fastest interval any requesting view asks for, stopping when the
+last view goes away. Keep panel-open demand and the Git widget's search
+budget when adding one. `ScriptPoller` runs `bash -c`, never a login shell
+(a profile that prints would corrupt the JSON), with the session `PATH` plus
+`~/.local/bin` and `BASH_ENV` disabled, and bounds every run with `timeout`
+on the process group; give a helper that legitimately samples for longer an
+explicit timeout. A run that times out, fails, or returns unparsable output
+marks the data `stale`: the last value stays, drawn in muted text with a
+"Last updated" tooltip line, never in `attention`, and the next good result
+restores it. Widgets declare what they read in `WidgetFrame.dataSources`.
+
 Process-backed modules (CPU, GPU, memory, network) use scripts that output JSON:
 
 ```json
@@ -602,8 +1001,46 @@ history, read from `cliphist list` once per open. `Ctrl+Tab` cycles the views
 from the keyboard, so the tab strip is never the only way to reach one; plain
 `Tab` still steps the selection. The bar has no launcher
 button — `Super+Space` and `Super+Shift+V` are the entry points, and both go
-through the `blankweave` IPC handler (`launcher`, `clipboard`) rather than
+through the `blankweave` IPC handler (`launcher`, `clipboard`; `power` and
+`settings` live beside them) rather than
 spawning anything.
+
+A desktop entry marked `runInTerminal` is launched detached in Ghostty with
+`-e` (`Launcher/Launch.js`), using `DesktopEntry.command`, Quickshell's parsed
+argument vector, and the entry's working directory; `execute()` runs such an
+entry with no terminal attached, so it would do nothing visible. Never
+rebuild a shell string from `execString`. Other entries keep `execute()`.
+
+Both clipboard watchers store through `shell/clipboard-store.sh`, which
+skips anything the source marked sensitive (`CLIPBOARD_STATE=sensitive` or
+the `x-kde-passwordManagerHint` type with value `secret`) and otherwise
+hands stdin straight to `cliphist store` without reading, writing, or
+logging it. In the clipboard view, Delete or Shift+Delete removes the
+selected entry, only while the query cursor sits at the end with nothing
+selected, and Clear history arms first and names the entry count. Both pass
+ids as arguments and update from the completed command, and a reload keeps
+the previous list on screen until the new one arrives.
+
+With a query, the applications view also lists matching Settings rows after
+the applications, then matching system actions: Lock, Suspend, Restart, Shut
+down, the session exit with the power panel's truthful label, Toggle dark
+mode, and Toggle Do Not Disturb. An empty query shows applications only.
+Restart, Shut down, and session exit need a second Enter on an armed row,
+which disarms when the selection, query, view, or open state changes. The
+commands come from `Services/PowerActions.js` and the existing theme and
+notification paths, never a second implementation. That is the whole of the
+launcher's scope beyond applications and clipboard.
+
+Rows select on pointer movement, never on hover alone: a list that scrolls,
+re-ranks, or opens under a resting pointer must not change what Enter
+launches. The empty-query order comes from use, not a fixed list:
+`Services/LauncherUsage.qml`, one instance on `ShellRoot`, is the sole
+writer of `~/.local/state/blankweave/launcher-usage.json` (desktop-entry
+ids, counts, and last-launch times only; atomic, bounded, tolerant of a
+missing or corrupt file) and ranks by `log2(1 + count) * 2^(-ageDays / 30)`
+against a shell-start reference time, so consecutive opens never reshuffle.
+With no history it falls back to installed categories (terminal, browser,
+files, Settings), then name. It records nothing else.
 
 Because the surface is per-screen, the open state and the active view live on
 `ShellRoot`, not on the launcher: `toggleLauncher(mode)` switches views when
@@ -615,12 +1052,13 @@ it into the command string, because a preview is arbitrary clipboard content.
 ### Theme system
 
 A theme is a directory holding `theme.json` with two modes, `dark` and
-`light`. `Super+D` flips the mode of the active theme and never changes the
+`light`. `Super+T` flips the mode of the active theme and never changes the
 theme itself. Bundled themes live in `defaults/themes/<id>/` (mirrored to
 `~/.local/share/blankweave/themes/`), and a user theme in
 `~/.config/blankweave/themes/<id>/` shadows a bundled one with the same id. The
 default is `obsidian`: Obsidian in dark mode, Porcelain in light; `moss` is
-the bundled green counterpart (Moss and Sage).
+the bundled green counterpart (Moss and Sage), and `aurora` pairs Aurora Night
+with Aurora Day.
 
 Each mode carries:
 
@@ -639,8 +1077,17 @@ Each mode carries:
   the bundled themes pair Bibata Modern Ice with dark and Modern Classic with
   light), and `label` (the mode's display name).
 
-Two things belong to the theme rather than a mode: `folderColor`, a Papirus
-folder colour name applied to every installed Papirus variant, and
+An optional `design` block can appear at the theme root and in each mode.
+`theme-apply.sh` validates and merges `defaults/themes/design-defaults.json`,
+the root overrides, then the active mode's overrides. Only the defaults' known
+tokens are accepted: `spacing`, `shape` (shell, window, notification, and
+lock-field radii and border widths), `typography` (families, sizes, weights),
+`sizes` (bar, widget, and icon dimensions), `motion` (duration and easing), and
+`materials` (gradient enablement, colours, and direction). Aurora uses root
+shape, spacing, motion, and gradient settings with per-mode gradient colours.
+
+Two system treatments belong to the theme rather than a mode: `folderColor`,
+a Papirus folder colour name applied to every installed Papirus variant, and
 `plymouth`, the `logo` and `progressBar` PNGs (relative to the theme
 directory) for the boot splash, which always uses the dark mode's canvas and
 accent because the firmware and console around it are dark. Both need root,
@@ -716,14 +1163,57 @@ after Ghostty's own file-watch reload, so the script activates Ghostty's
 activatable and a bare call would launch a terminal. GTK3 apps (Thunar) still
 only pick a change up on restart.
 
+A theme is validated by value before anything is written
+(`shell/theme-validation.py`): colours must be six- or eight-digit hex, lock
+numbers finite and in range, and wallpaper and artwork paths relative and
+inside the theme directory. `folderColor` and `plymouth` are optional: a
+personal theme without them leaves the folder colour and the installed
+splash alone. A wallpaper file that does not exist, an unknown key, and an
+icon or cursor theme that is not installed are warnings, not failures. The apply is two-phase: every template,
+artwork copy, and toolkit output is rendered into staging, the rename loop
+is the commit point, `theme.json` is written in place last, and only then do
+the desktop side effects run, so a bad theme leaves the previous one fully
+in effect. `blankweave theme lint [id]` runs the same validation plus the
+shared `theme_contrast.py` assertions over bundled and personal themes,
+read-only. `list` marks an invalid theme with its reason, and both theme
+menus show it disabled.
+
 `blankweave theme list|status|set <id>|mode dark|light|toggle|sync` is the
 public entry point and delegates to the deployed script, adding the sudo
 step after `set`. The display panel hosts the same choice: its theme row is
 built from `theme-apply.sh list` (whose entries carry each mode's accent for
 the swatch), runs `theme-apply.sh set <id>`, and shows a hint while `status`
-reports `system.pending`. Fonts, geometry, translucency, animations, and the
-cursor size are deliberately not part of a theme; they are the rice's
-identity and stay in `Theme.qml`, `hyprland.lua`, and `env.lua`.
+reports `system.pending`. Shell fonts, geometry, and motion come from `design`
+tokens through `Theme.qml`; palette alpha controls surface translucency and
+`design.materials` controls optional gradients. User text scale, cursor size,
+and accessibility preferences stay outside the theme (`interface.json` and
+`accessibility.json`); high contrast and reduced motion take precedence over
+theme values. Compositor gaps, opacity, and animations remain in the
+Hyprland configs, not in `design`.
+
+Shape reaches every surface through tokens, so a theme's corners are one
+decision. `panelRadius`, `controlRadius`, and `borderWidth` drive the shell,
+the Hyprlock panel and its borders, and Dunst's frame; `windowRadius` and
+`windowBorderWidth` drive Hyprland windows, `notificationRadius` Dunst's
+corners, and `lockFieldRadius` the Hyprlock input. Their defaults are the
+values Obsidian and Moss have always rendered (windows 10 and 2,
+notifications square, lock field 10), and `tests/theme_render_checks.py`
+asserts those stay put; Aurora sets its own. The rendered `theme.lua` also
+carries a per-mode window shadow (a low-alpha canvas tint in dark mode, a
+much lighter neutral in light mode), because Hyprland's default shadow draws
+a black keyline around every light-mode window; `hyprland.lua` keeps its
+`pcall` and per-field fallbacks.
+
+Colour roles the shell relies on: secondary text is `textMuted` with no
+extra opacity (stacking opacity on it fell below 2:1 in light mode); accent
+text and text selection use `accentBright`; `divider` is only a decorative
+grouping line and never a foreground; slider tracks, bar separators, and
+small inactive marks use `outlineStrong`; a slider's filled range and handle
+stay `accent`. `tests/theme-apply.sh` runs `tests/theme_contrast.py` over
+every bundled theme and mode with alpha compositing: text, secondary,
+status, lock, notification, and accent text need 4.5:1; slider track and
+fill against their surface, bar separators, and active bar marks need 3:1;
+decorative dividers 1.5:1. A new or retuned theme has to pass it.
 
 ### Web apps
 
@@ -783,16 +1273,98 @@ unavailable; it must never derive utilization from the requested clock ratio.
 The native Settings window lives in `defaults/quickshell/Settings/` and is
 instantiated once in `shell.qml`. Open it through `blankweave settings`, the
 `settings` shell IPC method, or the system overview action. `Catalog.js` owns
-category and setting IDs, descriptions, and preview controls; it must never
-execute commands or write configuration. `SettingsContent.qml` is the view,
+category and setting IDs, descriptions, search aliases, and control kinds; it
+must never execute commands or write configuration. `SettingsContent.qml` is the view,
 and `Services/SettingsAppearance.qml` adapts the existing theme helper and the
 single shared `ShellPreferences` instance. Do not introduce another writer for
 `shell.json` or theme selection. Only controls backed by implemented services
-may be enabled; preview values must remain clearly labeled and never imply
-observed hardware state. Add later page backends independently, and extend the
+may be enabled; an unavailable control stays disabled and never implies
+observed hardware state. Escape is layered and there is no window-level
+`Shortcut` for it, because a shortcut would take the key before a field's own
+handler: a popup or inline editor closes first, a text field clears and then
+releases focus, the search field clears and then closes the window, and only
+an unfocused view closes directly. Search normalises case, hyphens, and
+spacing, requires every query word, prefers word-start matches, and ranks
+title above alias above description; every catalog row carries the aliases
+people type ("wifi", "trackpad", "dnd"), so add them with any new row and
+cover the query in `tst_settings.qml`. Pages carry no status banner; guidance
+the user must act on sits as helper text beside its control. Add later page backends independently, and extend the
 row control types when their functionality becomes available. Settings tests
 run through `tests/settings.sh`, using offscreen Qt tests and isolated Quickshell
 processes so validation cannot modify the developer's desktop.
+
+Settings is addressable. `openSettings(target)` takes a page id, an
+unambiguous row id, or a qualified `page/row`; a page id wins a collision
+(`input` is the page, `sound/input` the microphone row), an unknown target
+opens the default page, and a row link reuses search-result scrolling and
+highlighting. Quickshell IPC needs exact argument counts, so `settings()`
+stays for existing callers beside `settingsTarget(target)`, and
+`blankweave settings [<id>|--list]` dispatches between them; `--list`
+parses the deployed `Catalog.js` read-only. Every bar panel with a Settings
+counterpart ends in one footer action from `Components/PanelSettings.js`
+(the single panel → Catalog table, checked against the Catalog by a test);
+a gear always means Settings and the audio mixer keeps a mixer glyph.
+`Super+/` opens the Keyboard shortcuts row.
+
+Settings has one control per job. A binary setting is a `SettingsSwitchRow`:
+activating it shows the requested position as pending, refuses a second
+activation, and settles only on the backend's readback, returning to the
+actual state with an error underneath when the write fails. Anything with
+more than two states stays a menu. A destructive or disruptive action is a
+`SettingsConfirmButton` on the power panel's model: the first activation
+arms it in place with a label that says exactly what will happen, the second
+performs it, and it disarms on timeout, focus loss, Escape, a changed
+target, or the page or window closing. Actions that need typed input keep
+their inline form, whose labelled submit is the confirmation, and the
+display mode preview keeps its 20-second keep-or-revert watchdog. Helper
+failures are structured (`message`, `detail`, optional `field`): the main
+line is a plain sentence in `critical`, the raw text sits behind "Show
+details" with home paths and secrets redacted, validation names the field's
+label rather than its key, a cancelled authorization is a quiet
+"Cancelled", advisories stay `warning`, and progress text is muted.
+
+Settings says where each setting lives. A Catalog row (or its page) carries
+`file`, the path of the file that stores it, or `store` for a system store
+such as NetworkManager profiles or the desktop settings database, with
+`relatedFiles` for generated companions; take the value from the code that
+writes it, and `tests/settings_files_test.py` checks every path against the
+writers and against the README's Files list. The row shows "Stored in …"
+with Copy path and Open folder, names a personal override that takes
+precedence when one exists, and is findable by file name. A refusal names
+the file it is about through `file_refusal` in on-screen messages only;
+durable job records use `error_result(..., shareable=True)` and doctor
+reports keep their redaction.
+
+`~/.config/blankweave` holds configuration only. Locks and transient
+scratch go through `shell/runtime_paths.py` (`runtime-paths.sh` for bash):
+`$XDG_RUNTIME_DIR/blankweave/`, mode 0700. A caller that lost the variable
+but runs with the account's real home, which is how the installer runs
+helpers through sudo, resolves the same `/run/user/<uid>` so it shares locks
+with the live session; only a caller with no session at all falls back to
+`~/.local/state/blankweave/locks/`. Every holder of a lock must use the
+helper, never a literal path, or two writers stop excluding each other.
+Preferences, ledgers, revisions, jobs, and recovery snapshots are durable
+and stay where they are; atomic-replace staging stays beside its target.
+
+`Services/SettingsCapabilities.qml` reads `hardware-capabilities.json` once.
+A Catalog row with `requires` (battery, `display-brightness`, bluetooth,
+`wifi`) is left out of its page, search, and row deep links when the
+capability is absent, a link to a hidden row opens its page, and a missing
+or malformed file shows everything. That is the only reason a row is ever
+hidden. `SettingsComboBox` gains a type-to-filter field at twelve or more
+options (typing filters, Up/Down move, Enter selects, Escape clears the
+filter and then closes) and is unchanged for short menus. Date and time are
+separate controls that follow the shell's time format and are disabled
+while network time is on. Each removable drive has Mount, Unmount, and
+Eject through user-scoped UDisks with identity rechecked before the action
+and state read back after it; a whole disk is read-only if any part of it
+backs `/`, `/boot`, `/home`, the EFI partition, or swap, and serial numbers
+are never shown. Updates has one detached, cancellable check that shows the
+installed and newest release with the `RELEASES.md` sections in between
+(annotated-tag messages as fallback), and applying opens Ghostty on
+`blankweave update`, because it needs sudo and a confirmed plan.
+Notifications is its own page with its row ids unchanged, and the
+Accessibility text-size row links to the canonical one on Appearance.
 
 `SettingsOperationsService` owns the remaining system providers for the window;
 `SettingsOperations` is a pure view so standalone Qt tests can inject a backend.
@@ -804,6 +1376,20 @@ uses the isolated, root-owned `/usr/lib/blankweave/settings-system` helper and
 its administrator polkit action; it must never import user-writable modules.
 Keep its JSON operations strictly allowlisted. Backend tests mock all host
 mutations; the restic round-trip test uses only a temporary local repository.
+A field that sets a new secret which cannot be read back (account, sharing,
+and backup-repository passwords) declares `confirm=True`; fields that enter an
+existing secret to authenticate do not. The confirmation value stays in the
+view: Settings disables submit until both match, and the dispatcher rejects a
+mismatched `<key>_confirm` companion and strips it before any worker runs.
+`pacman-contrib` is required and the apply enables the packaged
+`paccache.timer` (three versions kept per package); doctor warns when it is
+off. Storage offers two confirmed cleanups: the allowlisted
+`package-cache-clean` system operation, which takes only `{}` and runs
+`paccache -rk3` then `paccache -ruk1`, and a user-scoped Paru cleanup that
+removes only `~/.cache/paru/clone`, refuses a symlinked or foreign-owned
+path, and never touches the network. Never empty the pacman cache: rollback
+and offline repair install from it. Cache sizes are read only while Storage
+is visible, within a time and entry bound, and say so when the bound is hit.
 Hibernation boot preparation is limited to the layouts documented in README;
 never expand that support without rollback tests and real resume validation.
 
@@ -908,6 +1494,20 @@ manual profile changes release holds according to the daemon's own policy.
 All mutation tests use an injected helper or fake bus; never switch the host's
 power profile during validation. This control does not change idle or lock policy.
 
+`PowerService` also owns the low-battery warning (`LowBatteryWatcher`), fed by
+the native UPower aggregate battery and independent of bar visibility and
+automatic profiles. Fixed 20%, 10%, and 5% thresholds fire once per discharge;
+a charging or full state, or a five-point recovery, re-arms them. Empty and
+pending-discharge states count as on battery; unknown, invalid, absent, or
+non-system-battery data never triggers a warning or implies AC. Startup below a
+threshold and jumps across several show only the most severe. The warning is a
+per-screen overlay toast on the focused monitor (`LowBatteryToast`), drawn by
+the shell so fullscreen and Do Not Disturb cannot hide it, never through Dunst
+and never taking keyboard focus. 20% and 10% expire after eight seconds; 5%
+stays until dismissed, charging, or its Suspend action, which shares
+`PowerActions.js` with the power panel. Tests inject the battery device and
+power actions and never read the host battery.
+
 `power_policy.py` owns opt-in automatic profiles in `power-profiles.json`, with
 atomic writes and a shared lock for preference changes, manual choices, and ticks.
 The shell runs ticks every ten seconds while enabled, including with Settings
@@ -942,7 +1542,13 @@ mutation tests use fake buses/helpers; never change host charging limits in test
 `idle-policy.py`. Preferences are strict, atomic, compare-and-swap JSON in
 `idle.json`. The Hyprland autostart wrapper supervises only its own Hypridle
 child, persists across Settings closing, and switches generated runtime configs
-on power-source changes. Until the first edit, retain the installed policy.
+on power-source changes. Without a saved `idle.json` the defaults differ by
+power source: on mains the screen dims at 300 seconds and locks at 600 with
+no automatic suspend, on battery it keeps 150/300/360/1800 seconds, and a
+machine with no battery uses the mains policy. A saved policy is never
+migrated. Managed configs also turn the displays off after about 45 seconds
+of no input while the session is locked, including after a manual lock,
+through a conditional listener in the same Hypridle child.
 Never overwrite custom Hypridle entry files or foreign symlinks; those make the
 Settings controls unavailable. Preserve manual locking and lock-before-sleep. Each idle action can be Never;
 short screen-off/suspend delays move enabled locking/dimming earlier.
@@ -990,7 +1596,10 @@ never mutate host input settings from automated tests.
 1. Copy `defaults/themes/obsidian/` to `defaults/themes/<id>/`, or to
    `~/.config/blankweave/themes/<id>/` for a personal theme, and edit
    `theme.json`. Both modes and every palette token are required; wallpaper
-   paths are relative to the theme directory.
+   paths are relative to the theme directory. Optionally add root and/or
+   per-mode `design` overrides using the tokens in
+   `defaults/themes/design-defaults.json`; omitted tokens inherit defaults,
+   and mode overrides win over root overrides.
 2. Render the wallpapers with `scripts/render-wallpaper.py <theme.json>
    <dark|light> <output>` (runs under `uv`, needs no install). The
    composition is fixed — a tilted field with a luminous ribbon and fine
@@ -1042,15 +1651,16 @@ never mutate host input settings from automated tests.
   `#rrggbb`), `plymouth` (`r, g, b` as 0–1 floats for
   `Window.SetBackground*Color`). Hyprlock needs `##` before a Pango hex colour, so that template
   writes `#{{lock.placeholder:rgb}}`
-- Quickshell colours come from the resolved theme through `Theme.qml`;
-  geometry and fonts stay in `Theme.qml`
+- Quickshell colours and design tokens come from the resolved theme through
+  `Theme.qml`; geometry, fonts, motion, and gradients inherit shared defaults
+  with root and per-mode overrides, subject to user sizing and accessibility
 - GTK3 apps (Thunar) don't react to live gsettings changes on Hyprland — only libadwaita apps do
 - Never switch `gtk-theme` between `Adwaita` and `Adwaita-dark` to express the
   mode. Chromium, and so every Electron app, derives the colour scheme it
   gives the page from the window background of the GTK theme it has loaded
   and recomputes it on every `gtk-theme-name` change; `Adwaita-dark`
   evaluates light there and overrides the portal's `color-scheme`, so
-  Obsidian and T3 Code followed the first `Super+D` after launch and ignored
+  Obsidian and T3 Code followed the first `Super+T` after launch and ignored
   every later one. The name stays `Adwaita` and the portal's `SetDarkTheme`
   flips GTK's prefer-dark-theme itself. GTK 3 never restyled on the name
   flip anyway. Verify Electron behaviour by launching the app with
@@ -1074,6 +1684,16 @@ overrides. Writes use atomic replacement, reload/readback, and rollback on failu
 Per-device layout switching checks name, address, layout list, and session before
 switching; it does not persist device overrides. Input-method installation is out
 of scope. Tests use `tests/fixtures/settings-keyboard.py`, never real input devices.
+
+Keyboard Settings also owns repeat delay (100–2000 ms) and rate (1–100 per
+second), a Caps Lock behaviour menu, and a compose-key menu, all through
+`keyboard-settings.py` with the layout editor's guarantees. The XKB options
+are validated against the installed rules and merged without disturbing
+unrelated options or the group-switch option; compose on Caps Lock needs the
+default Caps Lock behaviour, and choosing another clears it. Pointer
+Settings offers "Secondary click" for touchpads through
+`clickfinger_behavior`, globally and as a saved per-device override: off
+keeps button areas, on makes a two-finger press the secondary click.
 
 `Services/SettingsShortcuts.qml` exposes the bundled desktop actions through
 `shortcuts-settings.py` and `shortcut-catalog.json`. Stable IDs in
@@ -1157,6 +1777,19 @@ honor the configured regex/glob mode. Writes lock, reject stale revisions, and
 restore managed files/pause state after failures. `SettingsTask` is the common
 JSON helper adapter for subsequent Settings pages, with no optimistic updates.
 The temporary Keep awake preview was removed; idle timeouts remain authoritative.
+
+The themed `dunstrc` owns click and placement behaviour. Left and middle
+click run the notification's default or sole action and then close it; right
+click dismisses without acting; no binding may depend on the `context` menu,
+which needs a dmenu the rice does not install. `follow = keyboard` overrides
+`monitor`, and on native Wayland the compositor picks the output.
+`idle_threshold = 120s` keeps a non-transient notification on screen until
+the user returns. Manual Do Not Disturb and quiet hours pause Dunst at level
+100, and critical urgency carries `override_pause_level = 100` so a failed
+backup still appears; app muting uses `skip_display` and still hides critical
+popups from a muted app. Keep that override in the template so the later
+user snippet can change it, and say "critical alerts still appear" wherever
+the interface describes Do Not Disturb.
 
 `startup-settings.py` manages existing XDG autostart desktop entries for the next
 sign-in, never launches/stops processes, and leaves core Hyprland services alone.

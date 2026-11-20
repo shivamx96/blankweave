@@ -6,7 +6,10 @@ test_root=$(mktemp -d)
 trap 'rm -rf -- "$test_root"' EXIT
 mkdir -p "$test_root/Services" "$test_root/home" "$test_root/runtime"
 chmod 700 "$test_root/runtime"
+mkdir -p "$test_root/Launcher"
+cp "$repository/defaults/quickshell/Launcher/Launch.js" "$test_root/Launcher/"
 cp "$repository/defaults/quickshell/Services/"{SettingsTask,SettingsOperationTask,SettingsOperationDraft,SettingsOperationsService}.qml "$test_root/Services/"
+cp "$repository/defaults/quickshell/Services/SettingsOutcome.js" "$test_root/Services/"
 cp "$repository/tests/quickshell/settings-operations.qml" "$test_root/shell.qml"
 cp "$repository/tests/fixtures/settings-operations.py" "$test_root/fixture.py"
 if ! HOME="$test_root/home" XDG_CONFIG_HOME="$test_root/home/.config" \
@@ -22,3 +25,21 @@ if ! grep -q SETTINGS_OPERATIONS_PASSED "$test_root/output" \
     exit 1
 fi
 grep -Fxq 'vpn apply' "$test_root/commands"
+
+# Cache measurement is gated by Storage visibility; cleanup uses the confirmed schema.
+grep -Fq 'BLANKWEAVE_STORAGE_VISIBLE=' "$repository/defaults/quickshell/Services/SettingsOperationTask.qml"
+grep -Fq 'arguments[0] === "disk-usage"'  "$repository/defaults/quickshell/Services/SettingsOperationTask.qml"
+
+# Hardware detection is read once; missing and malformed files fail open.
+cp "$repository/defaults/quickshell/Services/SettingsCapabilities.qml" "$test_root/Services/"
+cp "$repository/tests/quickshell/settings-capabilities.qml" "$test_root/shell.qml"
+printf '{"capabilities":["battery","wifi"]}\n' > "$test_root/valid.json"
+printf '{broken\n' > "$test_root/broken.json"
+if ! HOME="$test_root/home" XDG_CONFIG_HOME="$test_root/home/.config" \
+    XDG_RUNTIME_DIR="$test_root/runtime" CAPABILITIES_TEST_ROOT="$test_root" \
+    QT_QPA_PLATFORM=offscreen QT_QUICK_BACKEND=software timeout 10 qs \
+    -p "$test_root" > "$test_root/capabilities.log" 2>&1; then
+    cat "$test_root/capabilities.log"
+    exit 1
+fi
+grep -q SETTINGS_CAPABILITIES_PASSED "$test_root/capabilities.log" || { cat "$test_root/capabilities.log"; exit 1; }

@@ -120,9 +120,16 @@ run_configure() {
     BLANKWEAVE_EFIBOOTMGR="$fake_bin/efibootmgr" \
     BLANKWEAVE_FINDMNT="$fake_bin/findmnt" \
     BLANKWEAVE_LSBLK="$fake_bin/lsblk" \
-        "$repository/scripts/configure-limine.sh"
+        "$repository/scripts/configure-limine.sh" "$@"
 }
 
+run_configure --check > "$test_root/check.log"
+[[ ! -e $esp/EFI/blankweave && ! -e $efi_log ]]
+grep -q 'Supported boot layout' "$test_root/check.log"
+mv "$entries" "$esp/saved-entries"
+if run_configure --check > "$test_root/unsupported.log" 2>&1; then exit 1; fi
+[[ ! -e $esp/EFI/blankweave && ! -e $efi_log ]]
+mv "$esp/saved-entries" "$entries"
 systemd_checksum=$(sha256sum "$entries"/*.conf)
 run_configure > "$test_root/first-run.log"
 config=$esp/EFI/blankweave/limine.conf

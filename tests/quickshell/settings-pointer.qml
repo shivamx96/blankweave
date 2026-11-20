@@ -32,6 +32,8 @@ ShellRoot {
                     break
                 case 1:
                     test.check(backend.ready && controls.writable, "Controls unavailable")
+                    test.check(!backend.fields({scope: "global"}).includes("clickfinger_behavior"), "Secondary click on mouse")
+                    test.check(backend.fields({scope: "touchpad"}).includes("clickfinger_behavior"), "Secondary click missing on touchpad")
                     test.find(controls, "pointer_sensitivity").activated(5)
                     test.check(backend.busy && backend.values.global.sensitivity === 0, "Optimistic pointer value")
                     backend.active = false

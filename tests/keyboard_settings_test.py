@@ -10,10 +10,13 @@ import unittest
 from unittest.mock import patch
 
 REPO = Path(__file__).resolve().parents[1]
+import sys
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'defaults/shell'))
+
 SPEC = importlib.util.spec_from_file_location('keyboard', REPO / 'defaults/shell/keyboard-settings.py')
 m = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(m)
-DEFAULTS = dict(kb_layout='us', kb_variant='', kb_options='caps:escape', kb_file='', kb_rules='', kb_model='')
+DEFAULTS = dict(kb_layout='us', kb_variant='', kb_options='caps:escape', kb_file='', kb_rules='', kb_model='', repeat_delay=600, repeat_rate=25)
 
 class KeyboardTests(unittest.TestCase):
     def setUp(self):
@@ -30,7 +33,7 @@ class KeyboardTests(unittest.TestCase):
         if args[0] == 'repl': return self.marker
         if args[0] == 'configerrors': return json.dumps(self.errors)
         if args[0] == 'devices': return json.dumps({'keyboards': self.rows})
-        if args[0] == '-j': return '\n\n'.join(json.dumps({'option':'input.'+k, 'str':v}) for k,v in self.live.items())
+        if args[0] == '-j': return '\n\n'.join(json.dumps({'option':'input.'+k, ('int' if k in m.REPEAT else 'str'):v}) for k,v in self.live.items())
         if args[0] == 'reload':
             if self.reject:
                 self.reject = False
@@ -56,9 +59,30 @@ class KeyboardTests(unittest.TestCase):
         r=self.request();r['values']={};self.keyboard.apply(r)
         self.assertEqual(self.live, DEFAULTS)
 
+    def test_repeat_bounds_and_readback(self):
+        for key, (low, high) in m.REPEAT.items():
+            for value in (low - 1, high + 1, True, 2.5):
+                r = self.request(); r['values'][key] = value
+                with self.assertRaises(ValueError): self.keyboard.apply(r)
+            for value in (low, high):
+                r = self.request(); r['values'][key] = value
+                self.keyboard.apply(r)
+                self.assertEqual(self.live[key], value)
+
+    def test_managed_options(self):
+        for caps in ('', *m.MANAGED['caps:']):
+            for compose in ('', *m.MANAGED['compose:']):
+                old = 'terminate:ctrl_alt_bksp,grp:alt_shift_toggle'
+                new = old + (',' + caps if caps else '') + (',' + compose if compose else '')
+                if caps and compose == 'compose:caps':
+                    with self.assertRaisesRegex(ValueError, 'requires default'): m.validate_options(old, new)
+                else:
+                    m.validate_options(old, new)
+
     def test_rollback(self):
         self.reject=True
-        with self.assertRaisesRegex(ValueError,'restored'): self.keyboard.apply(self.request())
+        r = self.request(); r['values'].update(repeat_delay=300, repeat_rate=40)
+        with self.assertRaisesRegex(ValueError,'restored'): self.keyboard.apply(r)
         self.assertFalse(self.keyboard.config.exists());self.assertFalse(self.keyboard.rules.exists())
 
     def test_override_rollback(self):
@@ -78,8 +102,8 @@ class KeyboardTests(unittest.TestCase):
             with self.assertRaises(ValueError): self.keyboard.apply(r)
 
     def test_preserve_options(self):
-        r=self.request();r['values']['kb_options']='grp:alt_shift_toggle'
-        with self.assertRaisesRegex(ValueError,'unrelated'):self.keyboard.apply(r)
+        r=self.request();r['values']['kb_options']='unrelated:option,grp:alt_shift_toggle'
+        with self.assertRaisesRegex(ValueError,'[Uu]nrelated'):self.keyboard.apply(r)
 
     def test_custom_shortcut_preserved(self):
         self.live['kb_options']='caps:escape,grp:rctrl_toggle'

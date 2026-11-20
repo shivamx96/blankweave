@@ -14,6 +14,8 @@ trap cleanup EXIT HUP INT TERM
 
 export HOME=$test_root/home
 export XDG_STATE_HOME=$test_root/state
+export XDG_RUNTIME_DIR=$test_root/runtime
+mkdir -p "$XDG_RUNTIME_DIR"
 mkdir -p "$HOME"
 
 # Sourcing exposes the recovery primitives without running the CLI dispatcher.
@@ -29,7 +31,7 @@ git -C "$fixture" config user.email 'ci@blankweave.invalid'
 mkdir -p "$fixture/bin" "$fixture/scripts"
 cat > "$fixture/install.sh" <<'EOF'
 #!/usr/bin/env bash
-printf 'fixture apply\n'
+printf 'fixture apply policy=%s\n' "${BLANKWEAVE_PACKAGE_POLICY:-upgrade}"
 [[ "${BLANKWEAVE_FIXTURE_FAIL:-}" != 1 ]]
 EOF
 cat > "$fixture/bin/blankweave" <<'EOF'
@@ -39,8 +41,18 @@ EOF
 cat > "$fixture/scripts/doctor.sh" <<'EOF'
 #!/usr/bin/env bash
 [[ ${2:-} == --normal && ${3:-} == --report ]]
-printf 'fixture doctor\n'
+# Use the production sign-in checks for update preflight and postflight.
+# shellcheck disable=SC1090
+source <(sed '/^main "\$@"$/d' "$BLANKWEAVE_FIXTURE_DOCTOR_SOURCE")
+REPORT=true
+check_console_session
+check_keyring
+(( FAILED == 0 ))
 EOF
+export BLANKWEAVE_FIXTURE_DOCTOR_SOURCE=$repository/scripts/doctor.sh
+export BLANKWEAVE_SYSTEM_ROOT=$test_root/system-root
+mkdir -p "$BLANKWEAVE_SYSTEM_ROOT/etc/blankweave"
+printf 'no\n' > "$BLANKWEAVE_SYSTEM_ROOT/etc/blankweave/signin.conf"
 cp "$repository/scripts/release-version.sh" "$fixture/scripts/release-version.sh"
 chmod +x "$fixture/install.sh" "$fixture/bin/blankweave" "$fixture/scripts/doctor.sh"
 printf '0.1.0\n' > "$fixture/VERSION"
@@ -123,6 +135,9 @@ fi
 origin=$test_root/origin.git
 git init --bare --quiet "$origin"
 git -C "$fixture" remote add origin "$origin"
+printf 'unreleased\n' > "$fixture/value"
+git -C "$fixture" commit --quiet -am 'unreleased main work'
+main_tip=$(git -C "$fixture" rev-parse HEAD)
 git -C "$fixture" push --quiet -u origin HEAD:main
 git -C "$fixture" push --quiet --tags origin
 git -C "$fixture" reset --hard "$previous" > /dev/null
@@ -145,23 +160,68 @@ sudo() {
     :
 }
 
-check_output=$(command_update --check)
+# Never acquire a real host inhibitor or inspect host package state.
+systemd-inhibit() {
+    [[ $1 == --what=shutdown:sleep:idle && $2 == --who=Blankweave ]]
+    shift 4
+    "$@"
+}
+pacman() { printf 'linux 1 -> 2\nmesa 1 -> 2\nhyprland 1 -> 2\nquickshell 1 -> 2\n'; }
+export -f systemd-inhibit
+for flags in '--to v0.2.0 --reapply' '--to v99.0.0' '--to' '--to v0.1.0' '--check --dry-run'; do
+    # Intentional word splitting exercises CLI argument combinations.
+    # shellcheck disable=SC2086
+    if (command_update $flags) > "$test_root/invalid-option" 2>&1; then exit 1; fi
+done
+check_output=$(command_update --check --to v0.2.0 --yes)
+grep -Fq 'main has unreleased commits; the newest release is v0.2.0' <<< "$check_output"
 grep -Fq '1 update(s) available' <<< "$check_output"
 grep -Fq '0.1.0' <<< "$check_output"
 grep -Fq '0.2.0' <<< "$check_output"
 [[ $(git -C "$fixture" rev-parse HEAD) == "$previous" ]]
 
-dry_output=$(command_update --dry-run)
+dry_output=$(command_update --dry-run --to v0.2.0 --yes)
 grep -Fq 'Install plan: fixture' <<< "$dry_output"
 grep -Fq 'Dry run complete' <<< "$dry_output"
 [[ $(git -C "$fixture" rev-parse HEAD) == "$previous" ]]
 
-apply_output=$(command_update)
+apply_output=$(command_update --to v0.2.0 --yes)
 grep -Fq 'Blankweave v0.2.0 update complete' <<< "$apply_output"
 [[ $(git -C "$fixture" rev-parse HEAD) == "$target" ]]
 [[ $(recovery_read status) == complete ]]
+grep -Eq '^PASS +tty1 sign-in' "$RECOVERY_DIR/postflight-report.txt"
+grep -Eq '^PASS +default keyring' "$RECOVERY_DIR/postflight-report.txt"
+
+[[ $(git -C "$fixture" rev-parse origin/main) == "$main_tip" ]]
+grep -Fq 'already up to date' <<< "$(command_update --check)"
+if (command_update --to v0.1.0) > "$test_root/downgrade" 2>&1; then exit 1; fi
+grep -Fq 'rollback' "$test_root/downgrade"
+reapply_output=$(command_update --reapply --yes)
+grep -Fq 'fixture apply policy=upgrade' <<< "$reapply_output"
+[[ $(recovery_read previous_revision) == "$previous" ]]
+grep -Fq '[KERNEL]' <<< "$reapply_output"
+grep -Fq '[GPU/mesa]' <<< "$reapply_output"
+grep -Fq '[HYPRLAND]' <<< "$reapply_output"
+grep -Fq '[QUICKSHELL]' <<< "$reapply_output"
+grep -Fq -- '--reapply' <<< "$(command_update)"
+
+# A recovery release from before the package policy would upgrade the system:
+# without a terminal that needs explicit consent, and nothing changes without it.
+git() {
+    if [[ " $* " == *' show '* && $* == *:install.sh ]]; then return 0; fi
+    command git "$@"
+}
+if (command_rollback) < /dev/null > "$test_root/legacy-rollback.log" 2>&1; then
+    printf 'Rollback to a legacy installer proceeded without consent.\n' >&2
+    exit 1
+fi
+grep -Fq 'rerun with --allow-upgrade' "$test_root/legacy-rollback.log"
+[[ $(command git -C "$fixture" rev-parse HEAD) == "$target" ]]
+[[ $(recovery_read status) == complete ]]
+unset -f git
 
 rollback_output=$(command_rollback)
+grep -Fq 'fixture apply policy=missing-only' <<< "$rollback_output"
 grep -Fq 'Managed configuration is restored to 0.1.0' <<< "$rollback_output"
 grep -Fq 'Arch packages and completed one-time migrations were not reversed.' <<< "$rollback_output"
 [[ $(git -C "$fixture" rev-parse HEAD) == "$previous" ]]
@@ -186,4 +246,55 @@ grep -Fq 'no rollback point is recorded' "$test_root/empty-recovery.log"
 grep -Fq 'The next tagged update will create one before applying changes' \
     "$test_root/empty-recovery.log"
 
+# Missing inhibitor falls back to a direct apply with a useful warning.
+(
+    # Invoked indirectly by apply_repository.
+    # shellcheck disable=SC2329
+    command() {
+        if [[ $1 == -v && $2 == systemd-inhibit ]]; then return 1; fi
+        builtin command "$@"
+    }
+    apply_repository "$fixture"
+) > "$test_root/no-inhibitor" 2>&1
+grep -q 'systemd-inhibit unavailable' "$test_root/no-inhibitor"
+grep -q 'fixture apply policy=upgrade' "$test_root/no-inhibitor"
+
+# PTY confirmation is tested independently of Git: decline, accept, --yes.
+export -f confirm_update
+printf 'n\n' | script -qec 'bash -c "confirm_update false"' /dev/null > "$test_root/prompt" && exit 1
+grep -q 'Apply this update?' "$test_root/prompt"
+printf 'yes\n' | script -qec 'bash -c "confirm_update false"' /dev/null >/dev/null
+script -qec 'bash -c "confirm_update true"' /dev/null > "$test_root/yes"
+if grep -q 'Apply this update?' "$test_root/yes"; then exit 1; fi
+confirm_update false </dev/null
+
+# The modules directory and uname are the host-dependent seams for the restart
+# marker; a container may have no /usr/lib/modules at all.
+KERNEL_MODULES_DIR=$test_root/modules
+mkdir -p "$KERNEL_MODULES_DIR/blankweave-fixture-kernel"
+uname() { printf 'blankweave-fixture-missing-kernel\n'; }
+export XDG_RUNTIME_DIR=$test_root/runtime
+mkdir -p "$XDG_RUNTIME_DIR"
+record_restart_required > "$test_root/restart"
+grep -q 'Restart required' "$test_root/restart"
+[[ -s $XDG_RUNTIME_DIR/blankweave/restart-required ]]
+uname() { printf 'blankweave-fixture-kernel\n'; }
+rm "$XDG_RUNTIME_DIR/blankweave/restart-required"
+record_restart_required
+[[ ! -e $XDG_RUNTIME_DIR/blankweave/restart-required ]]
+
+# An explicit intermediate release remains selectable when the newest release
+# would exclude the installed release from its rollback floor.
+git -C "$fixture" reset --hard "$main_tip" >/dev/null
+printf '0.3.0\n' > "$fixture/VERSION"
+printf '0.3.0\n' > "$fixture/MIN_ROLLBACK_VERSION"
+git -C "$fixture" commit --quiet -am 'newer release with raised floor'
+git -C "$fixture" tag -a v0.3.0 -m release
+git -C "$fixture" push --quiet origin main --tags
+git -C "$fixture" reset --hard "$previous" >/dev/null
+if (command_update --check) > "$test_root/floor-rejection" 2>&1; then exit 1; fi
+grep -Fq 'target requires rollback floor 0.3.0' "$test_root/floor-rejection"
+intermediate=$(command_update --check --to v0.2.0 --yes)
+grep -Fq 'v0.2.0' <<< "$intermediate"
+[[ $(git -C "$fixture" rev-parse HEAD) == "$previous" ]]
 printf 'Update recovery tests passed.\n'

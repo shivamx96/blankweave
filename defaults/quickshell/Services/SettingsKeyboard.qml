@@ -11,6 +11,7 @@ QtObject {
     property bool synced: false
     property bool writing: false
     property string error: ""
+    property string control: ""
     property string message: ""
     property string revision: ""
     property string session: ""
@@ -39,9 +40,19 @@ QtObject {
     }
     function apply(layouts, options, expected, token, desktop) {
         if (!writable) return
+        control = "layouts"
         run("apply", {revision: token, session: desktop, expected: expected,
             values: layouts === null ? {} : {kb_layout: layouts.map(r => r.layout).join(","),
+                repeat_delay: expected.repeat_delay, repeat_rate: expected.repeat_rate,
                 kb_variant: layouts.map(r => r.variant).join(","), kb_options: options}})
+    }
+    function change(key, value, expected, token, desktop, controlKey = key) {
+        if (!writable) return
+        control = controlKey
+        const next = {kb_layout: expected.kb_layout, kb_variant: expected.kb_variant,
+            kb_options: expected.kb_options, repeat_delay: expected.repeat_delay, repeat_rate: expected.repeat_rate}
+        next[key] = value
+        run("apply", {revision: token, session: desktop, expected: expected, values: next})
     }
     function switchLayout(device, index) {
         run("switch", {session: session, device: device.name, address: device.address,
@@ -61,6 +72,7 @@ QtObject {
                     || !Array.isArray(data.catalog) || typeof data.revision !== "string" || typeof data.session !== "string"
                     || typeof data.installed !== "boolean" || typeof data.synced !== "boolean" || typeof data.message !== "string"
                     || ["kb_layout", "kb_variant", "kb_options", "kb_file", "kb_rules", "kb_model"].some(k => typeof data.values[k] !== "string")
+                    || ["repeat_delay", "repeat_rate"].some(k => !Number.isInteger(data.values[k]))
                     || data.devices.some(d => ["name", "address", "layout", "variant", "active_keymap"].some(k => typeof d[k] !== "string"))
                     || data.catalog.some(d => ["layout", "variant", "label"].some(k => typeof d[k] !== "string")))
                     throw new Error("Invalid keyboard settings response.")

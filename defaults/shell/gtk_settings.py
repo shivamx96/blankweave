@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Merge Blankweave's GTK settings without discarding unrelated preferences."""
+from runtime_paths import runtime_path
 import configparser
 import contextlib
 import fcntl
@@ -19,7 +20,7 @@ def config_root():
 def locked():
     directory = config_root() / "blankweave"
     directory.mkdir(parents=True, exist_ok=True)
-    with (directory / "gtk-settings.lock").open("a") as lock:
+    with (runtime_path("gtk-settings.lock")).open("a") as lock:
         fcntl.flock(lock, fcntl.LOCK_EX)
         yield
 
@@ -83,7 +84,7 @@ if __name__ == "__main__":
     try:
         updates = dict(argument.split("=", 1) for argument in sys.argv[1:])
         allowed = {"gtk-application-prefer-dark-theme", "gtk-theme-name", "gtk-icon-theme-name",
-                   "gtk-cursor-theme-name", "gtk-cursor-theme-size"}
+                   "gtk-cursor-theme-name", "gtk-cursor-theme-size", "gtk-font-name"}
         if not updates or set(updates) - allowed or any("\n" in value or "\r" in value for value in updates.values()):
             raise ValueError("Invalid GTK appearance settings")
         with locked():

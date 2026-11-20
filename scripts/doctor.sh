@@ -30,6 +30,34 @@ a normal scan and never elevates.
 EOF
 }
 
+# Keep status prefixes stable for CLI and Settings consumers.
+remedy() {
+    case "$1" in
+        firewall) printf 'review listening services and configure a firewall suited to Docker, hotspot and VPN use (ArchWiki: Simple stateful firewall)' ;;
+        repository) printf 'inspect the managed checkout and restore missing trusted release files' ;;
+        'repository state') printf 'inspect and save local checkout changes before updating' ;;
+        'tty1 automatic login'|'tty1 sign-in'|'sign-in policy'|'default keyring'|'root encryption') printf 'review Settings > Accounts > Sign-in; run blankweave update --reapply' ;;
+        'Hyprland configuration'|'saved monitor rules') printf 'inspect Hyprland overrides and Settings > Displays' ;;
+        'Hyprland runtime'|'UWSM session') printf 'restart the graphical session when ready' ;;
+        'Hyprland deprecations') printf 'run hyprctl deprecated-config for migration guidance' ;;
+        'temporary installer sudo rule') printf 'sudo rm -f /etc/sudoers.d/blankweave-install' ;;
+        'power key policy') printf 'inspect systemd/logind.conf drop-ins; run blankweave update --reapply' ;;
+        'privileged boot scan') printf 'run blankweave doctor --full and inspect the boot-helper installation' ;;
+        'UEFI boot order'|'bootloader recovery') printf 'inspect firmware boot entries and the Limine menu' ;;
+        *) printf 'run blankweave update --reapply' ;;
+    esac
+}
+
+# Validator messages may contain arbitrary identifiers, not just recognizable
+# paths or addresses. Omit raw details entirely in shareable reports.
+validator_detail() {
+    if [[ $REPORT == true ]]; then
+        printf '      validator details omitted for privacy; run blankweave doctor --normal locally\n'
+    else
+        printf '%s\n' "$1" | head -n 4 | LC_ALL=C tr -d '\000-\010\013-\037\177' | cut -c1-300 | sed 's/^/      /'
+    fi
+}
+
 emit() {
     local level="$1"
     local label="$2"
@@ -49,12 +77,12 @@ pass() {
 
 warn() {
     WARNED=$((WARNED + 1))
-    emit WARN "$1" "${2:-}"
+    emit WARN "$1" "${2:-}; remedy: $(remedy "$1")"
 }
 
 fail() {
     FAILED=$((FAILED + 1))
-    emit FAIL "$1" "${2:-}"
+    emit FAIL "$1" "${2:-}; remedy: $(remedy "$1")"
 }
 
 skip() {
@@ -107,7 +135,7 @@ check_repository() {
     fi
 
     if [[ ! -r "$installed_file" ]]; then
-        warn 'installed revision' 'not recorded; run blankweave update'
+        warn 'installed revision' 'not recorded; run blankweave update --reapply'
         return
     fi
 
@@ -138,7 +166,7 @@ check_commands() {
 }
 
 check_user_configuration() {
-    local file
+    local file validation
     local -a required=(
         "$CONFIG_HOME/hypr/hyprland.lua"
         "$CONFIG_HOME/hypr/env.lua"
@@ -160,10 +188,11 @@ check_user_configuration() {
     fi
 
     if command -v hyprland > /dev/null 2>&1 && [[ -r "$CONFIG_HOME/hypr/hyprland.lua" ]]; then
-        if hyprland --verify-config --config "$CONFIG_HOME/hypr/hyprland.lua" > /dev/null 2>&1; then
+        if validation=$(hyprland --verify-config --config "$CONFIG_HOME/hypr/hyprland.lua" 2>&1); then
             pass 'Hyprland configuration' 'valid'
         else
             fail 'Hyprland configuration' 'validation failed'
+            validator_detail "$validation"
         fi
     else
         skip 'Hyprland configuration' 'validator or configuration unavailable'
@@ -178,10 +207,11 @@ check_user_configuration() {
         warn 'saved monitor rules' 'monitors.lua is unreadable; inspect the saved layout before applying display changes'
     elif ! command -v luac > /dev/null 2>&1; then
         skip 'saved monitor rules' 'Lua syntax checker unavailable'
-    elif luac -p "$saved_monitors" > /dev/null 2>&1; then
+    elif validation=$(luac -p "$saved_monitors" 2>&1); then
         pass 'saved monitor rules' 'Lua syntax valid'
     else
         warn 'saved monitor rules' 'monitors.lua has invalid Lua syntax; startup may ignore this layout. Inspect monitors.lua and monitors.json before reapplying the saved layout in Settings'
+        validator_detail "$validation"
     fi
 }
 
@@ -193,9 +223,10 @@ check_hyprland_runtime() {
         skip 'Hyprland runtime' 'graphical session or IPC tools unavailable'
         return
     fi
-    if ! version_output=$(timeout 5 hyprctl version -j 2>/dev/null) \
-        || ! running=$(jq -er '.version | select(type == "string") | select(test("^[0-9]+\\.[0-9]+\\.[0-9]+$"))' <<< "$version_output" 2>/dev/null); then
+    if ! version_output=$(timeout 5 hyprctl version -j 2>&1) \
+        || ! running=$(jq -er '.version | select(type == "string") | select(test("^[0-9]+\\.[0-9]+\\.[0-9]+$"))' <<< "$version_output" 2>&1); then
         skip 'Hyprland runtime' 'running compositor version unavailable'
+        validator_detail "${running:-$version_output}"
         return
     fi
     installed=$(timeout 5 hyprland --version 2>/dev/null | sed -nE 's/^Hyprland ([0-9]+\.[0-9]+\.[0-9]+)( .*)?$/\1/p' | head -n 1)
@@ -211,8 +242,9 @@ check_hyprland_runtime() {
     # expose this channel and development builds may backport it.
     if ! notices=$(timeout 5 hyprctl deprecated-config -j 2>/dev/null); then
         skip 'Hyprland deprecations' 'command unavailable in this session'
-    elif ! count=$(jq -er 'select(type == "array") | select(all(.[]; type == "string")) | length' <<< "$notices" 2>/dev/null); then
+    elif ! count=$(jq -er 'select(type == "array") | select(all(.[]; type == "string")) | length' <<< "$notices" 2>&1); then
         skip 'Hyprland deprecations' 'command returned an unsupported response'
+        validator_detail "$count"
     elif (( count == 0 )); then
         pass 'Hyprland deprecations' 'none reported'
     else
@@ -227,15 +259,62 @@ check_hyprland_runtime() {
     fi
 }
 
+check_logind_power_key() {
+    local config value
+    local -a args=()
+    [[ -z "$SYSTEM_ROOT" ]] || args+=("--root=$SYSTEM_ROOT")
+    if ! config=$(systemd-analyze "${args[@]}" cat-config systemd/logind.conf 2>/dev/null); then
+        warn 'power key policy' 'could not read logind configuration'
+        return
+    fi
+    # cat-config applies drop-in precedence; the last assignment in [Login]
+    # wins. Do not print arbitrary config values in privacy-safe reports.
+    value=$(awk '
+        BEGIN { section=""; value="poweroff" }
+        /^[[:space:]]*[#;]/ { next }
+        /^[[:space:]]*\[/ { section=$0; gsub(/[[:space:]]/, "", section); next }
+        section == "[Login]" && /^[[:space:]]*HandlePowerKey[[:space:]]*=/ {
+            sub(/^[^=]*=[[:space:]]*/, ""); sub(/[[:space:]]*$/, ""); value=$0
+        }
+        END { print value }
+    ' <<< "$config")
+    if [[ "$value" == ignore ]]; then
+        pass 'power key policy' 'short press is handled by the power menu'
+    else
+        warn 'power key policy' 'logind short press is not configured to ignore; it may bypass confirmation'
+    fi
+}
+
+signin_policy() {
+    local policy_file
+    policy_file=$(root_path /etc/blankweave/signin.conf)
+    # Older installations used automatic sign-in before saving a policy.
+    if [[ ! -e $policy_file ]]; then printf 'yes\n'; else cat "$policy_file"; fi
+}
+
 check_console_session() {
-    local autologin cursor_issue legacy_pam
+    local autologin cursor_issue legacy_pam policy
 
     autologin=$(root_path /etc/systemd/system/getty@tty1.service.d/autologin.conf)
     cursor_issue=$(root_path /etc/issue.d/blankweave-cursor.issue)
     legacy_pam=$(root_path /etc/pam.d/blankweave-lock)
 
-    if [[ -r "$autologin" ]] && grep -Fq -- '--autologin' "$autologin"; then
+    policy=$(signin_policy)
+    if [[ $policy == no ]]; then
+        if [[ -e $autologin || -L $autologin ]]; then
+            fail 'tty1 sign-in' 'password policy conflicts with the getty override'
+        else
+            pass 'tty1 sign-in' 'account password required'
+        fi
+    elif [[ $policy != yes ]]; then
+        fail 'sign-in policy' 'saved policy is invalid'
+    elif [[ -r "$autologin" ]] && grep -Fq -- '--autologin' "$autologin"; then
         pass 'tty1 automatic login' 'configured'
+        # shellcheck source=scripts/root-encryption.sh
+        source "$(dirname "${BASH_SOURCE[0]}")/root-encryption.sh"
+        if ! root_is_encrypted; then
+            warn 'root encryption' 'automatic sign-in is active but root encryption could not be confirmed; select password sign-in in Settings'
+        fi
     else
         fail 'tty1 automatic login' 'getty override is missing or invalid'
     fi
@@ -254,6 +333,10 @@ check_console_session() {
 }
 
 check_keyring() {
+    if [[ $(signin_policy) == no ]]; then
+        pass 'default keyring' 'password sign-in selected; passwordless collection is not required'
+        return
+    fi
     local default_file=$USER_HOME/.local/share/keyrings/default
     local default_name=
     local keyring_file
@@ -350,7 +433,9 @@ consume_check_output() {
             WARN) WARNED=$((WARNED + 1)) ;;
             FAIL) FAILED=$((FAILED + 1)) ;;
             SKIP) SKIPPED=$((SKIPPED + 1)) ;;
-            *) continue ;;
+            *)
+                [[ $line != '      '* ]] || printf '%s\n' "$line"
+                continue ;;
         esac
         seen=true
         printf '%s\n' "$line"
@@ -361,10 +446,11 @@ consume_check_output() {
 
 run_privileged_boot_checks() {
     local output status
-    local -a sudo_args=()
+    local -a sudo_args=() boot_args=(--boot-only)
 
     if [[ ! -x $BOOT_HELPER ]]; then
-        fail 'privileged boot scan' 'helper is not installed; run blankweave update'
+        fail 'privileged boot scan' 'helper is not installed; run blankweave update --reapply'
+        check_install_sudoers
         check_kernel_command_line
         check_bootloader
         return
@@ -373,7 +459,8 @@ run_privileged_boot_checks() {
         sudo_args+=(--non-interactive)
     fi
 
-    output=$("$SUDO_COMMAND" "${sudo_args[@]}" "$BOOT_HELPER" --boot-only)
+    [[ $REPORT != true ]] || boot_args+=(--report)
+    output=$("$SUDO_COMMAND" "${sudo_args[@]}" "$BOOT_HELPER" "${boot_args[@]}")
     status=$?
     if [[ -n $output ]] && consume_check_output "$output"; then
         return
@@ -423,6 +510,7 @@ choose_scan_mode() {
 
 run_boot_checks() {
     if boot_files_inspectable || [[ $SCAN_MODE == normal ]]; then
+        check_install_sudoers
         check_kernel_command_line
         check_bootloader
     else
@@ -506,8 +594,9 @@ check_bootloader() {
         fail 'UEFI boot order' 'efibootmgr is unavailable'
         return
     fi
-    if ! output=$(efibootmgr -v 2>/dev/null); then
+    if ! output=$(efibootmgr -v 2>&1); then
         fail 'UEFI boot order' 'firmware entries are unreadable'
+        validator_detail "$output"
         return
     fi
     order=$(sed -n 's/^BootOrder:[[:space:]]*//p' <<< "$output" | head -n 1)
@@ -537,7 +626,11 @@ check_bootloader() {
 
     if (( ${#limine_ids[@]} == 1 )) && [[ ${limine_ids[0]} == "${first^^}" ]] \
         && [[ $limine_path_valid == true ]]; then
-        pass 'UEFI boot order' "Blankweave Limine is first (Boot${limine_ids[0]})"
+        if [[ $REPORT == true ]]; then
+            pass 'UEFI boot order' 'Blankweave Limine is first'
+        else
+            pass 'UEFI boot order' "Blankweave Limine is first (Boot${limine_ids[0]})"
+        fi
     elif (( ${#limine_ids[@]} == 1 )); then
         fail 'UEFI boot order' 'Blankweave Limine is not first or points to the wrong loader'
     else
@@ -610,13 +703,13 @@ check_intel_gpu_monitoring() {
     if [[ $capabilities =~ cap_perfmon[=+][a-z]*e[a-z]* ]]; then
         pass 'Intel GPU telemetry' 'CAP_PERFMON is configured'
     else
-        warn 'Intel GPU telemetry' 'CAP_PERFMON is missing; run blankweave update'
+        warn 'Intel GPU telemetry' 'CAP_PERFMON is missing; run blankweave update --reapply'
     fi
 }
 
 check_services() {
-    local repository=$1 unit
-    local -a system_units=(NetworkManager.service)
+    local repository=$1 unit validation
+    local -a system_units=(NetworkManager.service paccache.timer)
 
     # shellcheck source=scripts/hardware-capabilities.sh
     source "$repository/scripts/hardware-capabilities.sh"
@@ -631,17 +724,19 @@ check_services() {
     fi
 
     for unit in "${system_units[@]}"; do
-        if systemctl is-enabled --quiet "$unit" 2>/dev/null; then
+        if validation=$(systemctl is-enabled "$unit" 2>&1); then
             pass "$unit" 'enabled'
         else
             warn "$unit" 'not enabled'
+            validator_detail "$validation"
         fi
     done
 
-    if systemctl --user is-active --quiet wayland-session@hyprland.desktop.target 2>/dev/null; then
+    if validation=$(systemctl --user is-active wayland-session@hyprland.desktop.target 2>&1); then
         pass 'UWSM session' 'active'
     elif [[ "${XDG_SESSION_TYPE:-}" == wayland ]]; then
         warn 'UWSM session' 'Wayland is active but the UWSM target is not'
+        validator_detail "$validation"
     else
         skip 'UWSM session' 'not currently in the graphical session'
     fi
@@ -689,16 +784,56 @@ print_report() {
     printf '  privacy: usernames, hostnames, network addresses, disk identifiers, and serial numbers omitted\n'
 }
 
+check_install_sudoers() {
+    if [[ -e $(root_path /etc/sudoers.d/blankweave-install) || -L $(root_path /etc/sudoers.d/blankweave-install) ]]; then
+        fail 'temporary installer sudo rule' 'remove with: sudo rm -f /etc/sudoers.d/blankweave-install'
+    else
+        pass 'temporary installer sudo rule' 'absent'
+    fi
+}
+
+check_firewall() {
+    local ports rules
+    command -v ss >/dev/null 2>&1 || { skip 'firewall' 'ss unavailable'; return; }
+    # An active firewall manager is sufficient. Never elevate to inspect rules.
+    if systemctl is-active --quiet firewalld.service || systemctl is-active --quiet ufw.service || systemctl is-active --quiet nftables.service; then
+        pass 'firewall' 'firewall service active'
+        return
+    fi
+    # Unknown rules are not evidence that no firewall exists.
+    if command -v nft >/dev/null 2>&1; then
+        if ! rules=$(nft list ruleset 2>/dev/null); then
+            skip 'firewall' 'rules inaccessible; firewall state unknown'
+            return
+        fi
+        if [[ $rules == *'hook input'* || $rules == *'hook ingress'* ]]; then
+            pass 'firewall' 'input rules present'
+            return
+        fi
+    else
+        skip 'firewall' 'rules tool unavailable; firewall state unknown'
+        return
+    fi
+    ports=$(ss -H -lntu 2>/dev/null | python3 "$(dirname -- "${BASH_SOURCE[0]}")/doctor-firewall.py")
+    if [[ -n $ports ]]; then
+        warn 'firewall' "no input firewall detected; listening ports: $ports"
+    else
+        pass 'firewall' 'no non-loopback listeners detected'
+    fi
+}
+
 main() {
     local repository
 
     if [[ ${1:-} == --boot-only ]]; then
         shift
+        if [[ ${1:-} == --report ]]; then REPORT=true; shift; fi
         (( $# == 0 )) || return 2
         if (( EUID != 0 )) && [[ ${BLANKWEAVE_TEST_ALLOW_BOOT_HELPER:-false} != true ]]; then
             printf '%s doctor: privileged boot helper must run as root\n' "$PROGRAM_NAME" >&2
             return 2
         fi
+        check_install_sudoers
         check_kernel_command_line
         check_bootloader
         (( FAILED == 0 ))
@@ -749,12 +884,14 @@ main() {
     check_user_configuration
     check_hyprland_runtime
     check_console_session
+    check_logind_power_key
     check_keyring
     check_plymouth
     run_boot_checks
     check_cpu_microcode "$repository"
     check_intel_gpu_monitoring "$repository"
     check_services "$repository"
+    check_firewall
 
     printf '\nSummary: %d passed, %d warnings, %d failures, %d skipped\n' \
         "$PASSED" "$WARNED" "$FAILED" "$SKIPPED"

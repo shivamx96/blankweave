@@ -11,6 +11,15 @@ Item {
 
     required property var screen
     property bool active: true
+    property bool polling: true
+    property int pendingSteps: 0
+    signal stepRequested(int value)
+    function step(amount) {
+        if (!active || !connector || !Number.isFinite(amount) || !amount) return
+        if (!available) { pendingSteps += amount; refresh(); return }
+        queuePercentage(percentage + amount)
+        stepRequested(percentage)
+    }
     property int interval: 10000
     // Set by the slider that edits this display while it is being dragged,
     // so a poll that lands mid-drag cannot snap the handle back.
@@ -24,9 +33,7 @@ Item {
     readonly property bool internal: /^(eDP|LVDS|DSI)-/.test(connector)
     readonly property string displayName: internal
         ? "Built-in display"
-        : (reportedModel === "LG HDR 4K"
-            ? "LG UltraFine 27UL850"
-            : (reportedModel || connector || "Display"))
+        : (reportedModel || connector || "Display")
     readonly property string backendName: backend === "ddc" ? "DDC/CI" : "Hardware backlight"
     readonly property bool available: confirmedPercentage >= 0
 
@@ -54,6 +61,7 @@ Item {
 
     function resetDisplay() {
         generation++
+        pendingSteps = 0
         applyTimer.stop()
         settleTimer.stop()
         pendingPercentage = -1
@@ -110,6 +118,7 @@ Item {
         if (!initialized) return
         if (active) refresh()
         else {
+            pendingSteps = 0
             // Leave an already running command tied to its captured connector,
             // but discard a drag that has not yet reached the hardware.
             applyTimer.stop()
@@ -122,7 +131,7 @@ Item {
 
     Timer {
         interval: root.interval
-        running: root.active && root.connector !== ""
+        running: root.polling && root.active && root.connector !== ""
         repeat: true
         onTriggered: root.refresh()
     }
@@ -148,6 +157,9 @@ Item {
                     root.backend = status.backend
                     root.readError = ""
                     if (!root.held && root.pendingPercentage < 0) root.percentage = root.confirmedPercentage
+                    if (root.pendingSteps) {
+                        const steps = root.pendingSteps; root.pendingSteps = 0; root.step(steps)
+                    }
                     if (root.verificationTarget >= 0 && root.pendingPercentage < 0) {
                         if (Math.abs(root.confirmedPercentage - root.verificationTarget) > 1)
                             root.operationError = "The display reports " + root.confirmedPercentage
@@ -155,6 +167,7 @@ Item {
                         root.verificationTarget = -1
                     }
                 } catch (error) {
+                    root.pendingSteps = 0
                     root.pendingPercentage = -1
                     root.verificationTarget = -1
                     applyTimer.stop()

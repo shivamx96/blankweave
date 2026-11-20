@@ -5,6 +5,8 @@ test_root=$(mktemp -d)
 trap 'rm -rf -- "$test_root"' EXIT
 mkdir -p "$test_root/bin"
 export XDG_CONFIG_HOME=$test_root/config
+export XDG_RUNTIME_DIR=$test_root/runtime
+mkdir -p "$XDG_RUNTIME_DIR"
 export LAYOUT_TEST_STATE=$test_root/monitors.json
 export LAYOUT_TEST_LOG=$test_root/commands
 export PATH=$test_root/bin:$PATH
@@ -17,7 +19,7 @@ cat > "$LAYOUT_TEST_STATE" <<'JSON'
 JSON
 cp "$LAYOUT_TEST_STATE" "$test_root/original"
 script=$repository/defaults/shell/monitor-layout.sh
-pending=$XDG_CONFIG_HOME/blankweave/.monitor-mode-preview.json
+pending=$XDG_RUNTIME_DIR/blankweave/.monitor-mode-preview.json
 store=$XDG_CONFIG_HOME/blankweave/monitor-setups.json
 config=$XDG_CONFIG_HOME/blankweave/monitors.json
 token() { jq -r .token "$pending"; }
@@ -110,3 +112,5 @@ printf 'bad json' > "$store"
 if "$script" preset-save Recover 2>/dev/null; then exit 1; fi
 [[ $(cat "$store") == 'bad json' ]]
 printf 'Display mirroring and saved setup tests passed.\n'
+
+PYTHONDONTWRITEBYTECODE=1 python3 "$repository/tests/monitor_lid_test.py" LidTests.test_mirror_and_setup_guard

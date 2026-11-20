@@ -34,6 +34,26 @@ mkdir "$config/app/config"
 user_config_link "$dots/config" "$config/app/config"
 [[ -d $config/app/config && ! -L $config/app/config ]]
 
+# Fontconfig must use a digit-prefixed entry, preserving custom files and links.
+font_source=$dots/fontconfig/50-blankweave.conf
+font_link=$config/fontconfig/conf.d/50-blankweave.conf
+mkdir -p "$(dirname "$font_source")"
+cp "$repository/defaults/fontconfig/50-blankweave.conf" "$font_source"
+# shellcheck disable=SC2016
+grep -Fq 'user_config_link "$DOTS_DIR/fontconfig/50-blankweave.conf" "$CONFIG_DIR/fontconfig/conf.d/50-blankweave.conf"' "$repository/install.sh"
+for _ in 1 2; do
+    user_config_link "$font_source" "$font_link"
+done
+[[ $(readlink "$font_link") == "$font_source" ]]
+rm "$font_link"
+printf 'personal fonts\n' > "$font_link"
+user_config_link "$font_source" "$font_link"
+[[ ! -L $font_link && $(< "$font_link") == 'personal fonts' ]]
+rm "$font_link"
+ln -s ../missing.conf "$font_link"
+user_config_link "$font_source" "$font_link"
+[[ $(readlink "$font_link") == ../missing.conf ]]
+
 # Only exact old generated defaults may be adopted. Modified hardware config
 # remains active, even when the machine's selected hardware default changes.
 cp "$repository/defaults/hardware/env-intel.lua" "$config/hypr/env.lua"
@@ -80,6 +100,39 @@ ln -s ./missing.conf "$overrides/dunst.conf"
 user_config_seed "$repository/defaults/overrides/dunst.conf" "$overrides/dunst.conf"
 [[ $(readlink "$overrides/dunst.conf") == ./missing.conf ]]
 
+# Thunar actions are seeded copies; only unchanged packaged defaults are adopted.
+actions=$config/Thunar/uca.xml
+packaged=$test_root/packaged-uca.xml
+printf 'packaged default\n' > "$packaged"
+source_actions=$repository/defaults/thunar/uca.xml
+user_config_seed "$source_actions" "$actions" "$packaged"
+[[ -f $actions && ! -L $actions ]]
+cmp "$source_actions" "$actions"
+printf 'personal action\n' >> "$actions"
+cp "$actions" "$test_root/personal-actions"
+user_config_seed "$source_actions" "$actions" "$packaged"
+cmp "$test_root/personal-actions" "$actions"
+cp "$packaged" "$actions"
+user_config_seed "$source_actions" "$actions" "$packaged"
+cmp "$source_actions" "$actions"
+# A changed deployed default must not replace an already seeded copy.
+printf 'new managed default\n' > "$test_root/new-actions"
+user_config_seed "$test_root/new-actions" "$actions" "$packaged"
+cmp "$source_actions" "$actions"
+rm "$actions"
+ln -s "$packaged" "$actions"
+user_config_seed "$source_actions" "$actions" "$packaged"
+[[ $(readlink "$actions") == "$packaged" ]]
+[[ $(< "$packaged") == 'packaged default' ]]
+rm "$actions"
+ln -s ./missing.xml "$actions"
+user_config_seed "$source_actions" "$actions" "$packaged"
+[[ $(readlink "$actions") == ./missing.xml ]]
+rm "$actions"
+mkdir "$actions"
+user_config_seed "$source_actions" "$actions" "$packaged"
+[[ -d $actions && ! -L $actions ]]
+
 # Execute the real generated loader in Lua with stand-in compositor modules.
 # User settings must beat theme, hardware, display and optional voice defaults.
 cp "$repository/defaults/hypr/user-overrides.lua" "$dots/hypr/"
@@ -125,6 +178,17 @@ sed '1,/### ANY CUSTOM CONFIGS GO BELOW THIS LINE/d' "$zshrc" > "$test_root/new-
 # The template's final separator is part of its legacy custom section; avoid
 # accumulating it on each apply.
 cmp "$test_root/tail" "$test_root/new-tail"
+cp "$zshrc" "$test_root/zshrc-once"
+for _ in 2 3; do
+    user_config_install_zsh "$repository/defaults/shell/.zshrc" "$zshrc"
+    cmp "$test_root/zshrc-once" "$zshrc"
+done
+# Preserve a tail without a final newline as well.
+printf 'export PERSONAL=tail' >> "$zshrc"
+cp "$zshrc" "$test_root/zshrc-no-newline"
+user_config_install_zsh "$repository/defaults/shell/.zshrc" "$zshrc"
+cmp "$test_root/zshrc-no-newline" "$zshrc"
+
 printf 'my shell\n' > "$zshrc"
 user_config_install_zsh "$repository/defaults/shell/.zshrc" "$zshrc"
 [[ $(< "$zshrc") == 'my shell' ]]

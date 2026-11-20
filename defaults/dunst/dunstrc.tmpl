@@ -2,6 +2,8 @@
 [global]
 # Compact notification cards aligned with the native Blankweave shell.
 monitor = 0
+# follow overrides monitor; Wayland delegates output choice to Hyprland.
+follow = keyboard
 width = 420
 height = (0, 180)
 origin = top-right
@@ -16,7 +18,7 @@ gap_size = 6
 padding = 12
 horizontal_padding = 14
 text_icon_padding = 12
-frame_width = 1
+frame_width = {{design.shape.borderWidth}}
 frame_color = "{{colors.outlineStrong}}"
 separator_color = frame
 
@@ -28,13 +30,15 @@ format = "<span size='small' foreground='{{colors.textMuted}}'>%a</span>\n<b>%s<
 alignment = left
 vertical_alignment = center
 show_age_threshold = 60
+# Native Wayland idle notifications keep non-transient alerts until activity resumes.
+idle_threshold = 120s
 ellipsize = end
 ignore_newline = no
 stack_duplicates = true
 hide_duplicate_count = false
 show_indicators = true
 
-corner_radius = 0
+corner_radius = {{design.shape.notificationRadius}}
 icon_corner_radius = 0
 corners = none
 icon_corners = none
@@ -57,9 +61,9 @@ sticky_history = false
 history_length = 100
 browser = /usr/bin/xdg-open
 
-mouse_left_click = close_current
+mouse_left_click = do_action, close_current
 mouse_middle_click = do_action, close_current
-mouse_right_click = context
+mouse_right_click = close_current
 
 [experimental]
 pause_on_mouse_over = true
@@ -81,6 +85,8 @@ timeout = 6s
 default_icon = dialog-information
 
 [urgency_critical]
+# Manual DND and quiet hours pause at 100; equality passes in Dunst 1.13.
+override_pause_level = 100
 background = "{{colors.panelSurface:rgb}}"
 foreground = "{{colors.text}}"
 frame_color = "{{colors.critical}}"

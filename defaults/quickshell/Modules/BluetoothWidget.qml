@@ -113,14 +113,16 @@ WidgetFrame {
     }
 
     visible: adapter !== null
+    iconMark: !enabled ? "bluetooth-off" : connectedDevices.length > 0 ? "bluetooth-connected" : "bluetooth"
     icon: !enabled ? "󰂲" : (connectedDevices.length > 0 ? "󰂱" : "󰂯")
     label: !enabled ? "Off" : (connectedDevices.length > 0 ? String(connectedDevices.length) : "")
+    rightClickHint: root.bluetooth.busy ? "" : (enabled ? "turn Bluetooth off" : "turn Bluetooth on")
     tooltip: !enabled
-        ? "Bluetooth disabled\nClick for controls · Right-click to enable"
+        ? "Bluetooth disabled\nClick for controls"
         : (connectedDevices.length > 0
             ? connectedDevices.map(device => device.name).join("\n") + "\nClick for controls"
             : "Bluetooth enabled · No connected devices\nClick to scan")
-    active: connectedDevices.length > 0
+    active: bluetoothPanel.open
 
     onDeviceRowsChanged: root.syncDeviceModel()
 
@@ -139,6 +141,7 @@ WidgetFrame {
     }
 
     ControlPopup {
+        panelId: "bluetooth"
         id: bluetoothPanel
         bar: root.bar
         theme: root.theme
@@ -153,6 +156,7 @@ WidgetFrame {
 
         ControlPanelHeader {
             theme: root.theme
+            atBottom: root.bar.atBottom
             icon: root.icon
             title: "BLUETOOTH"
             subtitle: !root.adapter
@@ -166,11 +170,11 @@ WidgetFrame {
                             : "Ready")))
             actions: root.enabled
                 ? [
-                    { "id": "scan", "icon": "󰂰", "active": !root.scanPaused && root.enabled },
-                    { "id": "power", "icon": "󰂯" }
+                    { "id": "scan", "label": root.scanPaused ? "Resume scanning" : "Pause scanning", "icon": "󰂰", "active": !root.scanPaused && root.enabled },
+                    {"id": "power", "label": root.enabled ? "Turn Bluetooth off" : "Turn Bluetooth on", "kind": "switch", "checked": root.enabled, "pending": root.bluetooth.busy}
                 ]
                 : [
-                    { "id": "power", "icon": "󰂲", "attention": true }
+                    {"id": "power", "label": root.enabled ? "Turn Bluetooth off" : "Turn Bluetooth on", "kind": "switch", "checked": root.enabled, "pending": root.bluetooth.busy}
                 ]
             onActionPressed: actionId => {
                 if (actionId === "power") {
@@ -273,7 +277,7 @@ WidgetFrame {
                         color: root.theme.accentBright
 
                         Behavior on height {
-                            NumberAnimation { duration: root.theme.reducedMotion ? 0 : 140; easing.type: Easing.OutCubic }
+                            NumberAnimation { duration: Math.round(root.theme.motionDuration * 140 / 150); easing.type: Easing.OutCubic }
                         }
                     }
 
@@ -339,10 +343,13 @@ WidgetFrame {
                                 height: 1
                                 color: deviceDelegate.confirmForget ? root.theme.critical : root.theme.accentBright
 
-                                Behavior on width { NumberAnimation { duration: root.theme.reducedMotion ? 0 : 140 } }
+                                Behavior on width { NumberAnimation { duration: Math.round(root.theme.motionDuration * 140 / 150) } }
                             }
 
-                            MouseArea {
+                            ControlMouseArea {
+                                theme: root.theme
+                                accessibleName: "Forget " + deviceDelegate.row.name
+                                focusIdentity: String(deviceDelegate.row.key) + ":forget"
                                 id: forgetMouse
                                 enabled: !root.bluetooth.busy
                                 anchors.fill: parent
@@ -362,7 +369,7 @@ WidgetFrame {
                         }
 
                         Item {
-                            Layout.preferredWidth: 72
+                            Layout.preferredWidth: Math.round(72 * (root.theme.textScale || 1))
                             Layout.preferredHeight: 28
                             opacity: deviceDelegate.busy && deviceDelegate.pending !== "pairing" ? 0.58 : 1
 
@@ -382,10 +389,13 @@ WidgetFrame {
                                 height: 1
                                 color: root.theme.accentBright
 
-                                Behavior on width { NumberAnimation { duration: root.theme.reducedMotion ? 0 : 140 } }
+                                Behavior on width { NumberAnimation { duration: Math.round(root.theme.motionDuration * 140 / 150) } }
                             }
 
-                            MouseArea {
+                            ControlMouseArea {
+                                theme: root.theme
+                                accessibleName: root.primaryActionText(deviceDelegate.row) + " " + deviceDelegate.row.name
+                                focusIdentity: String(deviceDelegate.row.key) + ":primary"
                                 id: primaryMouse
                                 anchors.fill: parent
                                 enabled: !root.bluetooth.busy || deviceDelegate.pending === "pairing"
@@ -425,6 +435,12 @@ WidgetFrame {
             font.family: root.theme.fontFamily
             font.pixelSize: root.theme.smallTextSize
             renderType: Text.NativeRendering
+        }
+        PanelSettingsAction {
+            theme: root.theme
+            panelKey: "BluetoothWidget"
+            bar: root.bar
+            panel: bluetoothPanel
         }
     }
 

@@ -11,6 +11,7 @@ SETUP_CONFIG=$BLANKWEAVE_CONFIG_DIR/setup.conf
 THEME_STATE=$BLANKWEAVE_CONFIG_DIR/theme.json
 CAPABILITIES=
 NON_INTERACTIVE=false
+THEME_CHANGED=false
 TTY_FD=
 
 die() {
@@ -38,11 +39,42 @@ profile_enabled() {
     return 1
 }
 
+resume_setup() {
+    printf "Resume setup with:\n  %q setup\n" "$REPOSITORY/bin/blankweave" >&2
+}
+
+choose_signin() {
+    # shellcheck source=scripts/root-encryption.sh
+    source "$REPOSITORY/scripts/root-encryption.sh"
+    # Settings owns policy on an installed system; setup must not override it.
+    if [[ -r /etc/blankweave/signin.conf ]]; then
+        SETUP_AUTOMATIC_SIGNIN=$(cat /etc/blankweave/signin.conf)
+        printf 'Existing sign-in policy retained; change it in Settings.\n'
+        return
+    elif [[ -s ${XDG_STATE_HOME:-$HOME/.local/state}/blankweave/installed-revision ]]; then
+        SETUP_AUTOMATIC_SIGNIN=yes
+        printf 'Existing automatic sign-in policy retained; change it in Settings.\n'
+        return
+    fi
+    if ! root_is_encrypted; then
+        printf "WARNING: Root disk encryption could not be confirmed. Password sign-in is the safe default.\n"
+        printf "Without disk encryption, automatic sign-in lets anyone who powers on the machine reach the desktop and saved secrets.\n"
+        [[ -n $SETUP_AUTOMATIC_SIGNIN ]] || SETUP_AUTOMATIC_SIGNIN=no
+    fi
+    if [[ -z $SETUP_AUTOMATIC_SIGNIN ]]; then SETUP_AUTOMATIC_SIGNIN=yes; fi
+    if [[ $NON_INTERACTIVE == false ]]; then
+        prompt_yes_no "Use automatic sign-in? Anyone who can unlock the disk gets the desktop" "$SETUP_AUTOMATIC_SIGNIN"
+        SETUP_AUTOMATIC_SIGNIN=$REPLY
+    else
+        printf "Sign-in policy: automatic_signin=%s (saved choice or detected default).\n" "$SETUP_AUTOMATIC_SIGNIN"
+    fi
+}
+
 prompt_line() {
     local prompt=$1 default=${2:-}
 
     printf '%s' "$prompt" >&$TTY_FD
-    IFS= read -r REPLY <&$TTY_FD || die 'input ended before setup was complete'
+    IFS= read -r REPLY <&$TTY_FD || { resume_setup; die 'input ended before setup was complete'; }
     [[ -n $REPLY ]] || REPLY=$default
 }
 
@@ -97,13 +129,13 @@ load_initial_choices() {
     installer_config_load "$INSTALL_CONFIG" "$CAPABILITIES"
     setup_config_load "$SETUP_CONFIG"
 
+    if command -v jq >/dev/null 2>&1 && [[ -r $THEME_STATE ]]; then
+        existing_theme=$(jq -r '.theme // empty' "$THEME_STATE" 2>/dev/null || true)
+        existing_mode=$(jq -r '.mode // empty' "$THEME_STATE" 2>/dev/null || true)
+        [[ -z $existing_theme ]] || SETUP_THEME=$existing_theme
+        [[ -z $existing_mode ]] || SETUP_MODE=$existing_mode
+    fi
     if [[ ! -e $SETUP_CONFIG ]]; then
-        if command -v jq >/dev/null 2>&1 && [[ -r $THEME_STATE ]]; then
-            existing_theme=$(jq -r '.theme // empty' "$THEME_STATE" 2>/dev/null || true)
-            existing_mode=$(jq -r '.mode // empty' "$THEME_STATE" 2>/dev/null || true)
-            [[ -z $existing_theme ]] || SETUP_THEME=$existing_theme
-            [[ -z $existing_mode ]] || SETUP_MODE=$existing_mode
-        fi
         existing_name=$(git config --global --get user.name 2>/dev/null || true)
         existing_email=$(git config --global --get user.email 2>/dev/null || true)
         if [[ -n $existing_name && -n $existing_email ]]; then
@@ -137,7 +169,7 @@ choose_profiles() {
 }
 
 choose_theme() {
-    local theme
+    local theme previous_theme=$SETUP_THEME previous_mode=$SETUP_MODE
 
     printf '\n[2/4] Appearance\nAvailable themes:\n' >&$TTY_FD
     while IFS= read -r theme; do
@@ -158,6 +190,9 @@ choose_theme() {
             *) printf 'Mode must be dark or light.\n' >&$TTY_FD ;;
         esac
     done
+    if [[ $SETUP_THEME != "$previous_theme" || $SETUP_MODE != "$previous_mode" ]]; then
+        THEME_CHANGED=true
+    fi
 }
 
 choose_git() {
@@ -233,6 +268,9 @@ print_review() {
     printf '\n[4/4] Setup review\n'
     printf '  Capabilities: %s (detected)\n' "${CAPABILITIES:-none}"
     printf '  Profiles:     %s\n' "${INSTALLER_PROFILES[*]:-none}"
+    printf '  Automatic sign-in: %s\n' "$SETUP_AUTOMATIC_SIGNIN"
+    printf 'With automatic sign-in: Your disk passphrase is the login. Anyone who can unlock the disk gets the desktop.\n'
+    printf 'With password sign-in, the account password is required; no passwordless keyring is created.\n'
     printf '  Theme:        %s / %s\n' "$SETUP_THEME" "$SETUP_MODE"
     printf '  Git identity: %s\n' "$git_summary"
     printf '  SSH key:      %s\n' "$ssh_summary"
@@ -240,7 +278,7 @@ print_review() {
         "${#repository_packages[@]}" "${#aur_packages[@]}" "${#providers[@]}"
     printf '                Includes installed targets; dependencies and sizes are resolved during installation.\n'
     printf '\nApplying installs packages and configures the desktop, services, boot manager,\n'
-    printf 'and automatic login. Administrator authentication is required.\n'
+    printf 'and the selected sign-in policy. Administrator authentication is required.\n'
     printf 'Installation includes a full system upgrade. AUR builds and model downloads can take longer.\n'
 }
 
@@ -301,19 +339,23 @@ save_choices() {
         "git_identity=$SETUP_GIT_IDENTITY" \
         "git_name=$SETUP_GIT_NAME" \
         "git_email=$SETUP_GIT_EMAIL" \
-        "ssh_key=$SETUP_SSH_KEY")
+        "ssh_key=$SETUP_SSH_KEY" \
+        "automatic_signin=$SETUP_AUTOMATIC_SIGNIN")
     REPLY+=$'\n'
     write_atomic "$SETUP_CONFIG" 600
 }
 
 apply_setup() {
+    local theme='' mode=''
+    if [[ ! -e $THEME_STATE || $THEME_CHANGED == true ]]; then
+        theme=$SETUP_THEME
+        mode=$SETUP_MODE
+    fi
     if [[ -n ${BLANKWEAVE_SETUP_APPLY_COMMAND:-} ]]; then
-        BLANKWEAVE_SETUP_THEME=$SETUP_THEME \
-        BLANKWEAVE_SETUP_MODE=$SETUP_MODE \
+        BLANKWEAVE_SETUP_THEME=$theme BLANKWEAVE_SETUP_MODE=$mode \
             "$BLANKWEAVE_SETUP_APPLY_COMMAND" "$REPOSITORY"
     else
-        BLANKWEAVE_SETUP_THEME=$SETUP_THEME \
-        BLANKWEAVE_SETUP_MODE=$SETUP_MODE \
+        BLANKWEAVE_SETUP_THEME=$theme BLANKWEAVE_SETUP_MODE=$mode \
             "$REPOSITORY/bin/blankweave" _apply "$REPOSITORY"
     fi
 }
@@ -328,9 +370,7 @@ run_installation() {
     # apply_setup returns the external installer's status; pipefail also catches
     # failures to write the log, rather than reporting a successful setup.
     if apply_setup 2>&1 | tee "$log_file"; then
-        printf '\nSetup completed. Log: %s\n' "$log_file"
-        printf 'After restarting your session, open Settings with Super+, and the launcher with Super+Space.\n'
-        printf 'Check system health with: %q doctor\n' "$REPOSITORY/bin/blankweave"
+        : # The installer owns the final welcome block.
     else
         install_status=$?
         printf '\nSetup did not complete (exit %s). Some changes may already be applied.\n' "$install_status" >&2
@@ -385,15 +425,18 @@ main() {
         if [[ -f $INSTALL_CONFIG || -f $SETUP_CONFIG ]]; then
             printf 'Existing choices have been loaded as defaults.\n' >&$TTY_FD
         fi
+        trap 'resume_setup; exit 130' INT HUP TERM
         choose_profiles
         choose_theme
         choose_git
     fi
 
+    choose_signin
     theme_available "$SETUP_THEME" || die "theme is not available: $SETUP_THEME"
     setup_config_validate
     if [[ $NON_INTERACTIVE == false ]]; then
         if ! review_choices; then
+            resume_setup
             printf 'Setup cancelled; no choices or system configuration were changed.\n'
             return 0
         fi

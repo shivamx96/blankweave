@@ -1,5 +1,6 @@
 pragma ComponentBehavior: Bound
 import QtQuick
+import "LegacyErrors.js" as Errors
 import QtQuick.Controls.Basic
 import QtQuick.Layouts
 
@@ -15,6 +16,11 @@ ColumnLayout {
     readonly property var modifierChoices: ["", "SUPER", "CTRL", "ALT", "SHIFT", "SUPER + SHIFT", "SUPER + CTRL", "SUPER + ALT", "CTRL + ALT", "CTRL + SHIFT", "ALT + SHIFT", "SUPER + CTRL + SHIFT", "SUPER + ALT + SHIFT", "SUPER + CTRL + ALT", "CTRL + ALT + SHIFT", "SUPER + CTRL + ALT + SHIFT"]
     property string modifiers: ""
     property string key: ""
+    Keys.priority: Keys.AfterItem
+    Keys.onEscapePressed: event => {
+        if (draft !== null) { draft = null; event.accepted = true }
+        else event.accepted = false
+    }
     function begin() {
         if (!selected || !selected.available || !backend.writable) return
         draft = {id: selected.id, label: selected.label, revision: backend.revision, session: backend.session, fingerprint: backend.fingerprint}
@@ -76,11 +82,12 @@ ColumnLayout {
             enabled: root.ready && root.backend.writable && root.selected !== null && root.selected.available
             onClicked: root.begin()
         }
-        SettingsButton {
+        SettingsConfirmButton {
+                targetIdentity: root.selectedId
             objectName: "shortcutReset"
-            theme: root.theme; text: "Reset"
+            theme: root.theme; actionText: "Reset"
             enabled: root.ready && root.backend.writable && root.selected !== null && root.selected.available && root.selected.overridden
-            onClicked: root.backend.apply(root.selected.id, null, root.backend.revision, root.backend.session, root.backend.fingerprint)
+            onConfirmed: root.backend.apply(root.selected.id, null, root.backend.revision, root.backend.session, root.backend.fingerprint)
         }
     }
     ColumnLayout {
@@ -154,9 +161,9 @@ ColumnLayout {
     }
     Text {
         Layout.fillWidth: true
-        text: root.backend === null ? "Shortcut settings unavailable." : root.backend.error
+        text: root.backend === null ? "Shortcut settings unavailable." : Errors.message(root.backend.error)
             || (!root.ready ? "Loading shortcuts…" : root.backend.message || "Changes are saved and applied immediately. Reset restores this action’s default combination.")
-        color: root.backend && root.backend.error ? root.theme.warning : root.theme.textMuted
+        color: root.backend && Errors.message(root.backend.error) ? root.theme.critical : root.theme.textMuted
         font.family: root.theme.fontFamily; font.pixelSize: root.theme.smallTextSize; wrapMode: Text.WordWrap
     }
     SettingsButton {

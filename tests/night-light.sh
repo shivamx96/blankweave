@@ -27,6 +27,7 @@ jq -e '.identity and .temperature == 5000' "$NIGHT_LIGHT_TEST_STATE" >/dev/null
 rm "$NIGHT_LIGHT_TEST_STATE"
 python3 "$helper" set off 4500 21:00 07:00
 cp "$helper" "$test_root/shell/night-light.py"
+cp "$repository/defaults/shell/runtime_paths.py" "$test_root/shell/"
 cp "$repository/defaults/quickshell/Services/SettingsNightLight.qml" "$test_root/shell/Services/"
 cp "$repository/tests/quickshell/settings-night-light.qml" "$test_root/shell/shell.qml"
 if ! QT_QPA_PLATFORM=offscreen QT_QUICK_BACKEND=software timeout 20 qs -p "$test_root/shell" > "$test_root/log" 2>&1; then

@@ -3,8 +3,8 @@
   "description": "Violet, sky, and rose gradients around calm, precise working surfaces.",
   "folderColor": "violet",
   "plymouth": {
-    "logo": "../obsidian/plymouth/logo.png",
-    "progressBar": "../obsidian/plymouth/progress_bar.png"
+    "logo": "plymouth/logo.png",
+    "progressBar": "plymouth/progress_bar.png"
   },
   "modes": {
     "dark": {
@@ -29,8 +29,8 @@
         "accentBright": "#c9a7ed",
         "accentSurface": "#ac88d425",
         "outline": "#493b57",
-        "outlineStrong": "#69517f",
-        "divider": "#493b57",
+        "outlineStrong": "#785d91",
+        "divider": "#574768",
         "success": "#8bd5b0",
         "warning": "#edc58c",
         "critical": "#f49cae"
@@ -75,13 +75,13 @@
         "surfacePressed": "#ddcce7",
         "scrim": "#30223d65",
         "text": "#32253f",
-        "textMuted": "#756280",
+        "textMuted": "#74617f",
         "accent": "#7952a2",
         "accentBright": "#704494",
         "accentSurface": "#7952a21f",
         "outline": "#d8c8e1",
-        "outlineStrong": "#ac90be",
-        "divider": "#d8c8e1",
+        "outlineStrong": "#9d7eaf",
+        "divider": "#b9a2c6",
         "success": "#26704f",
         "warning": "#865a15",
         "critical": "#ae3455"
@@ -92,9 +92,9 @@
         "panelShadow": "#49688838",
         "hairline": "#d8c8e1",
         "inputSurface": "#eee5f5",
-        "placeholder": "#756280",
+        "placeholder": "#74617f",
         "text": "#32253f",
-        "textMuted": "#756280",
+        "textMuted": "#74617f",
         "textShadow": "#ffffffcc",
         "accent": "#7952a2",
         "accentBright": "#704494",
@@ -113,7 +113,10 @@
   "design": {
     "shape": {
       "controlRadius": 5,
-      "panelRadius": 8
+      "panelRadius": 8,
+      "windowRadius": 8,
+      "notificationRadius": 8,
+      "lockFieldRadius": 5
     },
     "spacing": {
       "panel": 16,

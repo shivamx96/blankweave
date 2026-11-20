@@ -1,5 +1,6 @@
 pragma ComponentBehavior: Bound
 import QtQuick
+import "LegacyErrors.js" as Errors
 import QtQuick.Layouts
 
 ColumnLayout {
@@ -20,11 +21,13 @@ ColumnLayout {
     spacing: root.theme.spacing("xl")
     Binding { target: root.backend; property: "automaticMenuOpen"; value: root.openMenus.length > 0; when: root.backend !== null }
 
-    SettingsButton {
+    SettingsSwitchRow {
         objectName: "automaticPowerToggle"
         theme: root.theme
-        text: root.enabledPolicy ? "Automatic switching: On" : "Automatic switching: Off"
-        selected: root.enabledPolicy
+            checked: root.enabledPolicy
+            busy: Boolean(root.backend && root.backend.busy)
+            error: root.backend && Errors.message(root.backend.automaticError) ? Errors.message(root.backend.automaticError) : ""
+            text: "Automatic switching"
         enabled: root.writable && (root.enabledPolicy || (root.backend.available && root.policy.source.available))
         onClicked: root.backend.configureAutomatic({enabled: !root.enabledPolicy})
     }
@@ -114,13 +117,13 @@ ColumnLayout {
     Text {
         Layout.fillWidth: true
         objectName: "automaticPowerStatus"
-        text: root.backend && root.backend.automaticError ? root.backend.automaticError
+        text: root.backend && Errors.message(root.backend.automaticError) ? Errors.message(root.backend.automaticError)
             : !root.ready ? root.policy ? root.policy.message : "Automatic profiles are unavailable."
             : !root.policy.source.available ? "Automatic profiles need a supported battery and a running UPower service."
             : root.policy.message + " Current power: " + (root.policy.source.onBattery ? "battery" : "plugged in")
                 + " · " + Math.round(root.policy.source.percentage) + "%"
         textFormat: Text.PlainText
-        color: root.backend && root.backend.automaticError ? root.theme.critical : root.theme.textMuted
+        color: root.backend && Errors.message(root.backend.automaticError) ? root.theme.critical : root.theme.textMuted
         font.family: root.theme.fontFamily
         font.pixelSize: root.theme.smallTextSize
         wrapMode: Text.WordWrap

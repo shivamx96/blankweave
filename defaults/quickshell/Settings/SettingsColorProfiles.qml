@@ -11,7 +11,6 @@ ColumnLayout {
     readonly property var profiles: backend && backend.colorProfiles ? backend.colorProfiles : []
     readonly property string assigned: backend && backend.monitor ? backend.monitor.colorProfile || "" : ""
     readonly property int assignedIndex: assigned ? profiles.findIndex(row => row.path === assigned) + 1 : 0
-    property string deletingId: ""
     spacing: root.theme.spacing("xl")
     RowLayout {
         Layout.fillWidth: true
@@ -60,23 +59,15 @@ ColumnLayout {
                 font.pixelSize: root.theme.smallTextSize
                 elide: Text.ElideRight
             }
-            SettingsButton {
+            SettingsConfirmButton {
                 theme: root.theme
-                text: root.deletingId === profile.modelData.id ? "Confirm remove" : "Remove"
+                actionText: "Remove"
+                confirmText: "Remove “" + profile.modelData.name + "”"
+                targetIdentity: profile.modelData.id
                 enabled: root.writable
-                onClicked: {
-                    if (root.deletingId === profile.modelData.id) {
-                        root.backend.deleteColorProfile(profile.modelData.id)
-                        root.deletingId = ""
-                    } else root.deletingId = profile.modelData.id
-                }
+                onConfirmed: root.backend.deleteColorProfile(profile.modelData.id)
             }
-            SettingsButton {
-                theme: root.theme
-                text: "Cancel"
-                visible: root.deletingId === profile.modelData.id
-                onClicked: root.deletingId = ""
-            }
+
         }
     }
     FileDialog {

@@ -33,7 +33,7 @@ grep -Fq 'Usage: blankweave doctor [--full|--normal] [--report]' <<< "$(
         "$repository/bin/blankweave" doctor --help
 )"
 
-grep -Fq 'Usage: blankweave update [--check|--dry-run]' <<< "$(
+grep -Fq 'Usage: blankweave update [--check|--dry-run] [--reapply | --to vX.Y.Z] [--yes]' <<< "$(
     HOME="$test_root/home" \
         XDG_STATE_HOME="$test_root/state" \
         "$repository/bin/blankweave" update --help
@@ -48,6 +48,15 @@ grep -Fq 'Usage: blankweave setup [--non-interactive]' <<< "$(
         XDG_STATE_HOME="$test_root/state" \
         "$repository/bin/blankweave" setup --help
 )"
+
+# Read-only theme lint is dispatched through the deployed helper.
+mkdir -p "$test_root/home/.local/share/blankweave/shell"
+cat > "$test_root/home/.local/share/blankweave/shell/theme-apply.sh" <<'EOF'
+#!/usr/bin/env bash
+[[ $* == "lint custom" ]]
+EOF
+chmod +x "$test_root/home/.local/share/blankweave/shell/theme-apply.sh"
+HOME="$test_root/home" "$repository/bin/blankweave" theme lint custom
 
 # The old command name hands over to the new one so an installed
 # `hyprarch update` can exec the fetched revision.
@@ -95,6 +104,7 @@ printf '[Desktop Entry]\nName=Steam\nExec=/usr/bin/steam -custom %%U\n' \
 # XDG_DATA_HOME is passed explicitly: a developer's session may export it, and
 # the migrations must act on the sandbox, never on the real home.
 HOME="$test_root/home" \
+    XDG_CONFIG_HOME="$test_root/home/.config" \
     XDG_CACHE_HOME="$test_root/cache" \
     XDG_DATA_HOME="$test_root/home/.local/share" \
     XDG_STATE_HOME="$test_root/state" \
@@ -109,6 +119,60 @@ HOME="$test_root/home" XDG_DATA_HOME="$test_root/home/.local/share" \
     "$repository/migrations/20261011-drop-steam-shadow-entry.sh"
 grep -Fxq 'Exec=/usr/bin/steam -mine %U' "$applications_dir/steam.desktop"
 
+# The Thunar migration repoints only the stock, exo-backed terminal action.
+thunar_dir=$test_root/home/.config/Thunar
+empty_path=$test_root/empty-path
+mkdir -p "$thunar_dir" "$empty_path"
+printf '<actions>\n<action>\n\t<unique-id>1-1</unique-id>\n\t<command>exo-open --working-directory %%f --launch TerminalEmulator</command>\n</action>\n</actions>\n' \
+    > "$thunar_dir/uca.xml"
+chmod 600 "$thunar_dir/uca.xml"
+for _ in 1 2; do
+    HOME="$test_root/home" XDG_CONFIG_HOME="$test_root/home/.config" PATH="$empty_path:/usr/bin:/bin" \
+        "$repository/migrations/20261112-thunar-terminal-action.sh"
+done
+if command -v exo-open >/dev/null 2>&1; then
+    grep -Fq 'exo-open --working-directory %f' "$thunar_dir/uca.xml"
+else
+    grep -Fq '<command>ghostty --working-directory=%f</command>' "$thunar_dir/uca.xml"
+    grep -Fq '<unique-id>1-1</unique-id>' "$thunar_dir/uca.xml"
+    [[ $(stat -c %a "$thunar_dir/uca.xml") == 600 ]]
+fi
+printf '<actions><action><command>kitty -d %%f</command></action></actions>\n' > "$thunar_dir/uca.xml"
+HOME="$test_root/home" XDG_CONFIG_HOME="$test_root/home/.config" \
+    "$repository/migrations/20261112-thunar-terminal-action.sh"
+grep -Fq '<command>kitty -d %f</command>' "$thunar_dir/uca.xml"
+
+# Fontconfig migration removes only our exact old link, including dangling links.
+fontconfig_dir=$test_root/home/.config/fontconfig/conf.d
+mkdir -p "$fontconfig_dir"
+legacy_fontconfig=$fontconfig_dir/local.conf
+fontconfig_migration=$repository/migrations/20261112-fontconfig-digit-prefix.sh
+ln -s "$test_root/home/.local/share/blankweave/fontconfig/local.conf" "$legacy_fontconfig"
+for _ in 1 2; do
+    HOME="$test_root/home" XDG_CONFIG_HOME="$test_root/home/.config" "$fontconfig_migration"
+done
+[[ ! -L $legacy_fontconfig && ! -e $legacy_fontconfig ]]
+# A live managed link is removed without deleting the deployed source.
+managed_font=$test_root/home/.local/share/blankweave/fontconfig/local.conf
+mkdir -p "$(dirname "$managed_font")"
+printf 'managed fonts\n' > "$managed_font"
+ln -s "$managed_font" "$legacy_fontconfig"
+HOME="$test_root/home" XDG_CONFIG_HOME="$test_root/home/.config" "$fontconfig_migration"
+[[ ! -L $legacy_fontconfig && -f $managed_font ]]
+printf 'personal fonts\n' > "$legacy_fontconfig"
+HOME="$test_root/home" XDG_CONFIG_HOME="$test_root/home/.config" "$fontconfig_migration"
+[[ $(< "$legacy_fontconfig") == 'personal fonts' ]]
+rm "$legacy_fontconfig"
+for target in /foreign/fontconfig/local.conf ../missing.conf; do
+    ln -s "$target" "$legacy_fontconfig"
+    HOME="$test_root/home" XDG_CONFIG_HOME="$test_root/home/.config" "$fontconfig_migration"
+    [[ $(readlink "$legacy_fontconfig") == "$target" ]]
+    rm "$legacy_fontconfig"
+done
+mkdir "$legacy_fontconfig"
+HOME="$test_root/home" XDG_CONFIG_HOME="$test_root/home/.config" "$fontconfig_migration"
+[[ -d $legacy_fontconfig ]]
+
 state_dir=$test_root/state/blankweave
 [[ $(< "$state_dir/repository") == "$migration_repository" ]]
 [[ $(< "$state_dir/installed-revision") == "$(git -C "$migration_repository" rev-parse HEAD)" ]]
@@ -119,3 +183,160 @@ state_dir=$test_root/state/blankweave
 [[ ! -e "$test_root/cache/hyprarch/git-login" ]]
 
 printf 'CLI and migration smoke tests passed.\n'
+
+# Settings CLI is exercised only with a stub IPC binary and a deployed temp Catalog.
+mkdir -p "$test_root/settings-bin" "$test_root/settings-data/quickshell/Settings"
+cp "$repository/defaults/quickshell/Settings/Catalog.js" "$test_root/settings-data/quickshell/Settings/"
+cat > "$test_root/settings-bin/qs" <<'EOF'
+#!/usr/bin/env bash
+printf '%s\n' "$@" > "$SETTINGS_CLI_LOG"
+EOF
+chmod +x "$test_root/settings-bin/qs"
+export SETTINGS_CLI_LOG="$test_root/settings-cli.log"
+for id in '' shortcuts unknown-id; do
+    args=()
+    [[ -z $id ]] || args+=("$id")
+    HOME="$test_root/home" BLANKWEAVE_DATA_DIR="$test_root/settings-data" PATH="$test_root/settings-bin:$PATH" \
+        "$repository/bin/blankweave" settings "${args[@]}"
+    if [[ -z $id ]]; then
+        [[ $(tail -n 1 "$SETTINGS_CLI_LOG") == settings ]]
+    else
+        [[ $(tail -n 2 "$SETTINGS_CLI_LOG") == "$(printf 'settingsTarget\n%s' "$id")" ]]
+    fi
+done
+# --list parses the deployed catalog read-only; deploy the repository copy to a fake home.
+mkdir -p "$test_root/settings-home/.local/share/blankweave"
+ln -s "$repository/defaults/quickshell" "$test_root/settings-home/.local/share/blankweave/quickshell"
+HOME="$test_root/settings-home" "$repository/bin/blankweave" settings --list > "$test_root/settings-ids"
+grep -Fxq $'shortcuts\tKeyboard shortcuts' "$test_root/settings-ids"
+grep -Fxq $'sound/input\tMicrophone & input level' "$test_root/settings-ids"
+grep -Fxq $'appearance\tAppearance' "$test_root/settings-ids"
+grep -Fq 'settings [<id>|--list]' <<< "$("$repository/bin/blankweave" help)"
+grep -Fq 'Usage: blankweave settings [<id>|--list]' <<< "$("$repository/bin/blankweave" settings --help)"
+printf 'Settings CLI deep-link smoke tests passed.\n'
+
+# The shared login hook is installed alongside console autologin.
+# shellcheck disable=SC2016
+grep -Fq '"$REPO_DIR/scripts/configure-session-profile.sh"' "$repository/install.sh"
+"$repository/tests/configure-session-profile.sh" < /dev/null
+
+# Exercise only bootstrap's existing-checkout handoff in a disposable checkout;
+# the real bootstrap (and its host prerequisites) is never run.
+bootstrap_home=$test_root/bootstrap-home
+bootstrap_repository=$bootstrap_home/.local/share/blankweave/repository
+mkdir -p "$bootstrap_repository/.git" "$bootstrap_repository/bin" "$test_root/bootstrap-bin"
+cat > "$bootstrap_repository/bin/blankweave" <<'EOF_FIXTURE'
+#!/bin/sh
+printf '%s\n' "$1" > "$BOOTSTRAP_CALL"
+EOF_FIXTURE
+cat > "$test_root/bootstrap-bin/git" <<'EOF_FIXTURE'
+#!/bin/sh
+printf 'https://github.com/shivamx96/blankweave.git\n'
+EOF_FIXTURE
+chmod +x "$bootstrap_repository/bin/blankweave" "$test_root/bootstrap-bin/git"
+# Keep the production branch intact, replacing only terminal input with null.
+awk '/^if \[ -e "\$repository" \]; then$/ {copy=1} copy {print} copy && /^fi$/ {exit}' \
+    "$repository/bootstrap.sh" | sed 's@</dev/tty@</dev/null@g' > "$test_root/handoff.sh"
+for expected in setup update; do
+    HOME="$bootstrap_home" XDG_STATE_HOME="$test_root/bootstrap-state" \
+        BOOTSTRAP_CALL="$test_root/bootstrap-call" PATH="$test_root/bootstrap-bin:$PATH" \
+        sh -c '
+            repository=$HOME/.local/share/blankweave/repository
+            repository_url=https://github.com/shivamx96/blankweave.git
+            repository_url_no_suffix=https://github.com/shivamx96/blankweave
+            repository_ssh_url=git@github.com:shivamx96/blankweave.git
+            repository_ssh_url_no_suffix=git@github.com:shivamx96/blankweave
+            die() { exit 1; }
+            . "$1"
+        ' sh "$test_root/handoff.sh"
+    [[ $(cat "$test_root/bootstrap-call") == "$expected" ]]
+    mkdir -p "$test_root/bootstrap-state/blankweave"
+    printf 'recorded-revision\n' > "$test_root/bootstrap-state/blankweave/installed-revision"
+done
+
+release_fixture=$test_root/bootstrap-release
+git init --quiet --initial-branch=main "$release_fixture"
+git -C "$release_fixture" config user.name Fixture
+git -C "$release_fixture" config user.email fixture@example.invalid
+mkdir -p "$release_fixture/scripts"
+cp "$repository/scripts/verify-release.sh" "$repository/scripts/release-version.sh" "$release_fixture/scripts/"
+printf '0.9.0\n' > "$release_fixture/VERSION"
+git -C "$release_fixture" add .
+git -C "$release_fixture" commit --quiet -m release
+git -C "$release_fixture" tag -a v0.9.0 -m release
+printf '0.10.0\n' > "$release_fixture/VERSION"
+git -C "$release_fixture" commit --quiet -am release
+git -C "$release_fixture" tag -a v0.10.0 -m release
+release_revision=$(git -C "$release_fixture" rev-parse HEAD)
+printf 'unreleased\n' > "$release_fixture/work"
+git -C "$release_fixture" add .
+git -C "$release_fixture" commit --quiet -m development
+git -C "$release_fixture" update-ref refs/remotes/origin/main HEAD
+awk '/^release_tag=/ {copy=1} copy && /^mv / {exit} copy {print}' \
+    "$repository/bootstrap.sh" > "$test_root/select-release.sh"
+sh -c 'temporary_repository=$1; die() { exit 1; }; . "$2"' sh \
+    "$release_fixture" "$test_root/select-release.sh"
+[[ $(git -C "$release_fixture" rev-parse HEAD) == "$release_revision" ]]
+[[ $(git -C "$release_fixture" branch --show-current) == main ]]
+git -C "$release_fixture" tag -d v0.9.0 v0.10.0 >/dev/null
+if "$repository/scripts/verify-release.sh" "$release_fixture" --newest > "$test_root/no-release" 2>&1; then exit 1; fi
+grep -Fq 'No valid annotated Blankweave release' "$test_root/no-release"
+
+# Welcome uses the same shell IPC, with no application launch in this fixture.
+mkdir -p "$test_root/welcome-bin"
+cat > "$test_root/welcome-bin/qs" <<'EOF_QS'
+#!/usr/bin/env bash
+printf '%s\n' "$@" > "$WELCOME_TEST_LOG"
+EOF_QS
+chmod +x "$test_root/welcome-bin/qs"
+HOME="$test_root/home" PATH="$test_root/welcome-bin:$PATH" WELCOME_TEST_LOG="$test_root/welcome-ipc"     "$repository/bin/blankweave" welcome
+[[ $(tail -n 1 "$test_root/welcome-ipc") == welcome ]]
+
+# Banner repair is byte-preserving outside exact consecutive separator copies.
+python3 - "$repository" "$test_root" <<'PYTEST'
+import os, pathlib, subprocess, sys
+root, temporary = map(pathlib.Path, sys.argv[1:])
+home = temporary / 'banner-home'
+home.mkdir()
+path = home / '.zshrc'
+banner = b'#' * 77
+for ending in (b'', b'\n'):
+    original = b'personal\r\n' + (banner + b'\n') * 23 + b'tail\n' + banner + ending
+    expected = b'personal\r\n' + banner + b'\n' + b'tail\n' + banner + ending
+    path.write_bytes(original)
+    path.chmod(0o640)
+    for _ in range(2):
+        subprocess.run([str(root / 'migrations/20261112-zsh-banner-duplicates.sh')], env={**os.environ, 'HOME': str(home)}, check=True)
+        assert path.read_bytes() == expected
+        assert path.stat().st_mode & 0o777 == 0o640
+path.unlink()
+foreign = home / 'personal'
+foreign.write_bytes(original)
+path.symlink_to(foreign)
+subprocess.run([str(root / 'migrations/20261112-zsh-banner-duplicates.sh')], env={**os.environ, 'HOME': str(home)}, check=True)
+assert path.is_symlink() and foreign.read_bytes() == original
+path.unlink()
+path.mkdir()
+subprocess.run([str(root / 'migrations/20261112-zsh-banner-duplicates.sh')], env={**os.environ, 'HOME': str(home)}, check=True)
+PYTEST
+printf 'Zsh banner migration tests passed.\n'
+
+for command in welcome version setup settings update rollback doctor theme webapp uninstall help; do
+    for flag in --help -h; do
+        "$repository/bin/blankweave" "$command" "$flag" > "$test_root/help-a"
+        "$repository/bin/blankweave" help "$command" > "$test_root/help-b"
+        cmp "$test_root/help-a" "$test_root/help-b"
+        grep -Fq "Usage: blankweave $command" "$test_root/help-a"
+        if grep -Eq 'theme-apply.sh|webapp.sh|scripts/' "$test_root/help-a"; then exit 1; fi
+    done
+done
+for sub in list status set mode toggle sync lint; do
+    "$repository/bin/blankweave" help theme "$sub" >/dev/null
+    "$repository/bin/blankweave" theme "$sub" --help >/dev/null
+done
+HOME="$test_root/theme-home" XDG_CONFIG_HOME="$test_root/config" "$repository/bin/blankweave" theme > "$test_root/theme-status"
+grep -Fq 'Theme:' "$test_root/theme-status"
+"$repository/bin/blankweave" --version > /dev/null
+if "$repository/bin/blankweave" udpate > "$test_root/typo" 2>&1; then exit 1; fi
+grep -Fq 'did you mean update' "$test_root/typo"
+printf 'Uniform CLI help and read-only theme tests passed.\n'

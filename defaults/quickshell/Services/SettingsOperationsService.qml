@@ -1,9 +1,13 @@
 import QtQuick
 import Quickshell
 import Quickshell.Io
+import "../Launcher/Launch.js" as Launch
 
 QtObject {
     id: root
+    function launchUpdate() {
+        Launch.activate({runInTerminal: true, command: ["blankweave", "update"]}, argv => Quickshell.execDetached(argv))
+    }
     property string page: ""
     property string jobsHelper: Quickshell.env("HOME") + "/.local/share/blankweave/shell/operations-settings.py"
     property var reports: []
@@ -56,7 +60,7 @@ QtObject {
     property SettingsOperationTask backupTask: SettingsOperationTask { script: "operations-settings.py"; arguments: ["backup"]; active: root.page === "storage"; onApplyFinished: (success, result) => { if (success && result && result.jobId) root.trackJob("backup", result.jobId) } }
     property SettingsOperationTask restoreTask: SettingsOperationTask { script: "operations-settings.py"; arguments: ["restore"]; active: root.page === "storage"; onApplyFinished: (success, result) => { if (success && result && result.jobId) root.trackJob("restore", result.jobId) } }
     property SettingsOperationTask snapshotsTask: SettingsOperationTask { script: "operations-settings.py"; arguments: ["snapshots"]; active: root.page === "storage"; onApplyFinished: (success, result) => { if (success && result && result.jobId) root.trackJob("snapshots", result.jobId) } }
-    property SettingsOperationTask updatesTask: SettingsOperationTask { script: "operations-settings.py"; arguments: ["updates"]; active: root.page === "system"; onApplyFinished: (success, result) => { if (success && result && result.jobId) root.trackJob("updates", result.jobId) } }
+    property SettingsOperationTask updatesTask: SettingsOperationTask { terminalLauncher: () => root.launchUpdate(); script: "operations-settings.py"; arguments: ["updates"]; active: root.page === "system"; onApplyFinished: (success, result) => { if (success && result && result.jobId) root.trackJob("updates", result.jobId) } }
     property SettingsOperationTask firmwareTask: SettingsOperationTask { script: "operations-settings.py"; arguments: ["firmware"]; active: root.page === "system"; onApplyFinished: (success, result) => { if (success && result && result.jobId) root.trackJob("firmware", result.jobId) } }
     property SettingsOperationTask accountsTask: SettingsOperationTask { script: "operations-settings.py"; arguments: ["accounts"]; active: root.page === "system"; onApplyFinished: (success, result) => { if (success && result && result.jobId) root.trackJob("accounts", result.jobId) } }
     property SettingsOperationTask datetimeTask: SettingsOperationTask { script: "operations-settings.py"; arguments: ["datetime"]; active: root.page === "system"; onApplyFinished: (success, result) => { if (success && result && result.jobId) root.trackJob("datetime", result.jobId) } }

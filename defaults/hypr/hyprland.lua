@@ -29,7 +29,7 @@ hl.config({
     general = {
         gaps_in = 2,
         gaps_out = 4,
-        border_size = 2,
+        border_size = theme.border_size or 2,
         col = {
             active_border = {
                 colors = theme.active_border,
@@ -37,7 +37,8 @@ hl.config({
             },
             inactive_border = theme.inactive_border,
         },
-        resize_on_border = false,
+        resize_on_border = true,
+        extend_border_grab_area = 8,
         allow_tearing = false,
         layout = "dwindle",
     },
@@ -48,6 +49,9 @@ hl.config({
         force_default_wallpaper = 0,
         disable_hyprland_logo = true,
         focus_on_activate = true,
+        allow_session_lock_restore = true,
+        key_press_enables_dpms = true,
+        mouse_move_enables_dpms = true,
     },
     -- XWayland cannot scale itself, so on a scaled display Hyprland would
     -- otherwise stretch its 1x output into a blurry window and hand the
@@ -60,7 +64,12 @@ hl.config({
         force_zero_scaling = true,
     },
     decoration = {
-        rounding = 10,
+        rounding = theme.rounding or 10,
+        shadow = {
+            color = theme.shadow_color or "rgba(05080f55)",
+            range = theme.shadow_range or 8,
+            offset = theme.shadow_offset or { 0, 2 },
+        },
         active_opacity = 1.0,
         inactive_opacity = 1.0,
         blur = {

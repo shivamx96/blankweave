@@ -12,8 +12,8 @@ TestCase {
         borderWidth: 1, headingSize: 22, textWeight: 400, headingWeight: 600, motionDuration: 0, motionEasing: Easing.OutCubic,
         spacing: function(name) { return ({xxs:2,xs:4,sm:6,md:8,lg:10,xl:12,section:14,panel:18,content:32,labelGap:5,descriptionGap:9,group:16,page:20,controlInset:24,rowInset:28})[name] },
         designValue: function(group, name, fallback) { return fallback },surfaceRaised:"#223344",surfaceHover:"#334455",surfacePressed:"#445566",
-        text:"#ffffff",textMuted:"#aabbcc",accentBright:"#77aaff",accentSurface:"#223355",outline:"#445566",
-        warning:"#ffaa33",fontFamily:"sans-serif",textSize:13,smallTextSize:12,widgetRadius:4})
+        text:"#ffffff",critical:"#ff7777",textMuted:"#aabbcc",accentBright:"#77aaff",accentSurface:"#223355",outline:"#445566",
+        critical:"#ff7777",warning:"#ffaa33",fontFamily:"sans-serif",textSize:13,smallTextSize:12,widgetRadius:4})
     QtObject {
         id: backend
         property bool ready: true
@@ -73,7 +73,7 @@ TestCase {
     }
     function test_error_and_refresh() {
         backend.error="Could not save preferences"
-        compare(findChild(controls,"idleStatus").text,backend.error)
+        compare(findChild(controls,"idleStatus").text,"Could not apply this change. Try again.")
         findChild(controls,"idleRefresh").clicked()
         compare(backend.calls[0][0],"refresh"); compare(backend.calls[0][1],true)
     }

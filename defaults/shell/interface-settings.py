@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 """Saved text and cursor sizes shared by the shell, theme writer, and compositor."""
+from runtime_paths import runtime_path
+from settings_support import file_refusal
 from contextlib import contextmanager
 import configparser
 import fcntl
@@ -74,7 +76,7 @@ class Interface:
     @contextmanager
     def locked(self):
         self.directory.mkdir(parents=True, exist_ok=True)
-        with (self.directory / 'interface.lock').open('a') as stream:
+        with (runtime_path('interface.lock')).open('a') as stream:
             try:
                 fcntl.flock(stream, fcntl.LOCK_EX | fcntl.LOCK_NB)
             except BlockingIOError as error:
@@ -120,7 +122,7 @@ class Interface:
             raise ValueError('Unsupported interface setting.')
         with self.locked(), gtk_settings.locked():
             if self.config.is_symlink() or self.rules.is_symlink():
-                raise ValueError('Interface preference symlinks are user-owned.')
+                raise file_refusal('Interface preference symlinks are user-owned.', self.config, self.rules)
             previous = self.settings()
             desktop = self.desktop()
             theme = self.cursor_theme()
@@ -194,5 +196,7 @@ if __name__ == '__main__':
     try:
         main()
     except (OSError, ValueError, configparser.Error, subprocess.SubprocessError) as error:
-        print(str(error), file=sys.stderr)
+        from settings_support import error_result, safe_detail
+        print(json.dumps({"error": error_result(error)}))
+        print(safe_detail(error), file=sys.stderr)
         sys.exit(1)

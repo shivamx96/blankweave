@@ -1,10 +1,10 @@
 [Desktop Entry]
 Type=Application
 Name=Blankweave Settings
-Comment=Personalize your desktop and explore upcoming system settings
+Comment=Manage desktop appearance, devices, applications, and system preferences
 Exec=sh -c "exec \\"\\$HOME/.local/bin/blankweave\\" settings"
 Icon=blankweave-settings
 Terminal=false
 Categories=Settings;DesktopSettings;
-Keywords=preferences;theme;appearance;display;power;keyboard;backup;
+Keywords=settings;preferences;theme;appearance;display;sound;network;wifi;bluetooth;power;keyboard;apps;backup;system;
 StartupNotify=false

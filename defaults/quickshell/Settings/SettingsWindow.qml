@@ -29,12 +29,13 @@ FloatingWindow {
     minimumSize: Qt.size(640, 480)
     color: theme.canvas
 
-    function openSettings() {
+    function openSettings(target) {
         // Remapping an existing window also brings it back from another workspace.
         visible = false
         visible = true
         minimized = false
         appearanceBackend.refresh()
+        if (target) content.openSetting(target)
         content.focusSearch()
     }
 
@@ -62,9 +63,11 @@ FloatingWindow {
 
     property SettingsTask webapps: SettingsTask { script: "webapps-settings.py"; active: root.visible && !root.minimized && content.page !== null && content.page.id === "apps" }
 
-    property SettingsTask system: SettingsTask { script: "system-settings.py"; active: root.visible && !root.minimized && content.page !== null && content.page.id === "system" }
+    property SettingsTask system: SettingsTask {
+        function showWelcome() { root.visible = false; Quickshell.execDetached(["blankweave", "welcome"]) }
+        script: "system-settings.py"; active: root.visible && !root.minimized && content.page !== null && content.page.id === "system" }
 
-    property SettingsTask notifications: SettingsTask { script: "notification-settings.py"; active: root.visible && !root.minimized && content.page !== null && content.page.id === "apps" }
+    property SettingsTask notifications: SettingsTask { script: "notification-settings.py"; active: root.visible && !root.minimized && content.page !== null && content.page.id === "alerts" }
 
     property SettingsDefaultApps defaultApps: SettingsDefaultApps {
         active: root.visible && !root.minimized && content.page !== null && content.page.id === "apps"
@@ -89,6 +92,8 @@ FloatingWindow {
     property SettingsPointer pointer: SettingsPointer {
         active: root.visible && !root.minimized && content.page !== null && content.page.id === "input"
     }
+
+    SettingsFiles { id: storageFiles; active: root.visible && !root.minimized }
 
     SettingsNightLight { id: nightLightBackend }
     SettingsSystemSounds {
@@ -116,7 +121,10 @@ FloatingWindow {
         when: root.sound !== null && Boolean(root.sound.microphone)
     }
 
+    SettingsCapabilities { id: hardware }
     SettingsContent {
+        capabilities: hardware.capabilities
+        fileAccess: storageFiles
         onCopyRequested: text => Quickshell.clipboardText = text
         id: content
         anchors.fill: parent

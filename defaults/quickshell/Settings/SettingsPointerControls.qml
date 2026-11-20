@@ -1,5 +1,6 @@
 pragma ComponentBehavior: Bound
 import QtQuick
+import "LegacyErrors.js" as Errors
 import QtQuick.Layouts
 
 ColumnLayout {
@@ -18,7 +19,7 @@ ColumnLayout {
     function sameTarget(a, b) { return a.scope === b.scope && a.name === b.name && a.address === b.address }
     function label(key) {
         return {sensitivity: "Pointer speed", accel_profile: "Acceleration", natural_scroll: "Natural scrolling",
-            left_handed: "Left-handed buttons", tap_to_click: "Tap to click", disable_while_typing: "Disable touchpad while typing"}[key]
+            clickfinger_behavior: "Secondary click (three fingers: middle click)", left_handed: "Left-handed buttons", tap_to_click: "Tap to click", disable_while_typing: "Disable touchpad while typing"}[key]
     }
     spacing: root.theme.spacing("xl")
 
@@ -80,6 +81,7 @@ ColumnLayout {
             }
             SettingsComboBox {
                 id: optionChoice
+                visible: root.target.scope === "device" || ["sensitivity", "accel_profile", "clickfinger_behavior"].includes(optionRow.modelData)
                 objectName: "pointer_" + optionRow.modelData
                 Layout.preferredWidth: root.width < 480 ? Math.min(240, root.width) : 175
                 theme: root.theme
@@ -94,6 +96,17 @@ ColumnLayout {
                     currentIndex = Qt.binding(() => optionRow.selected)
                 }
             }
+            SettingsSwitchRow {
+                Layout.fillWidth: true
+                theme: root.theme
+                visible: root.target.scope !== "device" && !["sensitivity", "accel_profile", "clickfinger_behavior"].includes(optionRow.modelData)
+                text: root.label(optionRow.modelData)
+                checked: root.backend.value(root.target, optionRow.modelData) === true
+                busy: Boolean(root.backend && root.backend.busy)
+                identity: JSON.stringify(root.target)
+                enabled: root.writable
+                onClicked: root.backend.apply(Object.assign({}, root.target), optionRow.modelData, !checked)
+            }
             Connections {
                 target: optionChoice.popup
                 function onAboutToShow() {
@@ -103,24 +116,25 @@ ColumnLayout {
                 }
                 function onClosed() { Qt.callLater(() => { if (!optionChoice.popup.visible) optionRow.choosing = false }) }
             }
-            SettingsButton {
+            SettingsConfirmButton {
+                targetIdentity: JSON.stringify(root.target) + optionRow.modelData
                 objectName: "pointerReset_" + optionRow.modelData
                 theme: root.theme
-                text: "Reset"
+                actionText: "Reset"
                 enabled: root.writable && root.backend.overridden(root.target, optionRow.modelData)
                 Accessible.name: "Reset " + root.label(optionRow.modelData)
-                onClicked: root.backend.apply(root.target, optionRow.modelData, null)
+                onConfirmed: root.backend.apply(root.target, optionRow.modelData, null)
             }
         }
     }
     Text {
         objectName: "pointerStatus"
         Layout.fillWidth: true
-        text: root.backend === null ? "Pointer settings unavailable." : root.backend.error
+        text: root.backend === null ? "Pointer settings unavailable." : Errors.message(root.backend.error)
             || (!root.devicePresent ? "This device disconnected. Select it again after reconnecting."
                 : !root.ready ? "Loading pointer settings…" : root.backend.message
                 || (root.backend.devices.length ? "Changes are saved and applied immediately." : "No pointer devices connected. Defaults still apply when a device connects."))
-        color: root.backend && root.backend.error ? root.theme.warning : root.theme.textMuted
+        color: root.backend && Errors.message(root.backend.error) ? root.theme.critical : root.theme.textMuted
         font.family: root.theme.fontFamily
         font.pixelSize: root.theme.smallTextSize
         wrapMode: Text.WordWrap

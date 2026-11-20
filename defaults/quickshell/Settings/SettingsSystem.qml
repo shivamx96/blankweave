@@ -18,11 +18,18 @@ ColumnLayout {
         }
     }
     SettingsButton {
+        visible: root.settingId === "about"
+        theme: root.theme
+        text: "Show welcome and essential shortcuts"
+        onClicked: if (root.backend && typeof root.backend.showWelcome === "function") root.backend.showWelcome()
+    }
+    SettingsButton {
         visible: root.settingId === "diagnostics"
         theme: root.theme; text: root.backend && root.backend.writing ? "Running health checks…" : "Run health checks"
         enabled: root.backend && root.backend.writable && root.backend.data.available
         onClicked: root.backend.apply({action: "diagnose"})
     }
+    SettingsActionResult { theme: root.theme; backend: root.backend; actionKey: "diagnose"; visible: root.settingId === "diagnostics" && outcome !== null }
     Text {
         visible: root.settingId === "diagnostics"
         Layout.fillWidth: true
@@ -49,5 +56,5 @@ ColumnLayout {
         }
     }
     SettingsButton { visible: root.settingId === "diagnostics" && root.report !== null; theme: root.theme; text: "Copy report"; onClicked: { reportText.selectAll(); reportText.copy(); reportText.deselect() } }
-    SettingsTaskStatus { theme: root.theme; backend: root.backend }
+    SettingsTaskStatus { showActionError: false; theme: root.theme; backend: root.backend }
 }

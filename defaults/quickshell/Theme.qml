@@ -4,6 +4,7 @@ import Quickshell.Io
 
 QtObject {
     id: root
+    readonly property color focusIndicator: text
 
     // The palette is resolved by theme-apply.sh into ~/.config/blankweave/theme.json,
     // the only file it is read from. Until the first apply has run, the bundled
@@ -104,6 +105,9 @@ QtObject {
     }
     // Emergency geometry for an old or incomplete install and the first load.
     readonly property var compatibilitySpacing: ({"xxs": 2, "xs": 4, "sm": 6, "md": 8, "lg": 10, "xl": 12, "section": 14, "panel": 18, "content": 32, "widgetPadding": 6, "sectionPadding": 7, "widgetContentGap": 4, "barItemGap": 0, "dividerMargin": 5, "labelGap": 5, "descriptionGap": 9, "group": 16, "page": 20, "controlInset": 24, "rowInset": 28})
+    readonly property int osdWidth: designValue("geometry", "osdWidth", 280)
+    readonly property int osdBarHeight: designValue("geometry", "osdBarHeight", 4)
+
     function spacing(name) {
         return designValue("spacing", name, compatibilitySpacing[name] || 0)
     }
@@ -124,6 +128,7 @@ QtObject {
     readonly property int headingWeight: designValue("typography", "headingWeight", 600)
     readonly property int headingSize: Math.round(designValue("typography", "headingSize", 22) * textScale)
     readonly property real borderWidth: Math.max(highContrast ? 1 : 0, designValue("shape", "borderWidth", 1))
+    readonly property color sliderTrack: highContrast ? cssColor("#767676") : outlineStrong
     readonly property int motionDuration: reducedMotion ? 0 : designValue("motion", "duration", 150)
     readonly property int motionEasing: {
         const name = designValue("motion", "easing", "outCubic")

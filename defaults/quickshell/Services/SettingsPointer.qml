@@ -20,7 +20,7 @@ QtObject {
     property var devices: []
     readonly property bool busy: status.running || action.running || writing
     readonly property var globalFields: ["sensitivity", "accel_profile", "natural_scroll", "left_handed"]
-    readonly property var touchpadFields: ["natural_scroll", "tap_to_click", "disable_while_typing"]
+    readonly property var touchpadFields: ["natural_scroll", "tap_to_click", "disable_while_typing", "clickfinger_behavior"]
 
     function refresh(clearError = false) {
         if (busy) return
@@ -29,9 +29,9 @@ QtObject {
     }
     function fields(target) {
         if (!target || !["global", "touchpad", "device"].includes(target.scope)) return []
-        if (target.scope === "touchpad") return touchpadFields
+        if (target.scope === "touchpad") return devices.some(d => d.kind === "touchpad") ? touchpadFields : []
         return target.scope === "device" && target.kind === "touchpad"
-            ? globalFields.concat(["tap_to_click", "disable_while_typing"]) : globalFields
+            ? globalFields.concat(["tap_to_click", "disable_while_typing", "clickfinger_behavior"]) : globalFields
     }
     function writable(target) {
         return target && ["global", "touchpad", "device"].includes(target.scope)
@@ -61,7 +61,8 @@ QtObject {
             const current = value(target, key)
             if (current !== null && !options.some(row => row.value === current))
                 options.push({value: current, label: "Custom (current)"})
-        } else options = [{value: false, label: "Off"}, {value: true, label: "On"}]
+        } else if (key === "clickfinger_behavior") options = [{value: false, label: "Bottom-right corner"}, {value: true, label: "Two-finger click"}]
+        else options = [{value: false, label: "Off"}, {value: true, label: "On"}]
         if (target && target.scope === "device") options.unshift({value: null, label: "No saved override"})
         return options
     }

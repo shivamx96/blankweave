@@ -1,6 +1,7 @@
 import QtQuick
 import QtQuick.Layouts
 import Quickshell.Widgets
+import "TooltipHints.js" as TooltipHints
 
 Item {
     id: root
@@ -21,19 +22,49 @@ Item {
     property int iconPixelSize: theme.barIconSize
     property string label: ""
     property string tooltip: ""
+    property var dataSources: []
+    readonly property bool dataStale: dataSources.some(source => source.stale)
+    readonly property string staleDetail: dataSources.filter(source => source.stale)
+        .map(source => source.staleText).filter((line, index, lines) => lines.indexOf(line) === index).join("\n")
+    property string rightClickHint: ""
+    property string scrollHint: ""
+    readonly property string tooltipText: TooltipHints.text(tooltip + (staleDetail ? "\n" + staleDetail : ""), rightClickHint, scrollHint)
+    onTooltipTextChanged: {
+        if (mouse.containsMouse && root.tooltipText)
+            root.bar.showTooltip(root, root.tooltipText)
+    }
     property bool active: false
     property bool attention: false
     property bool iconOnly: false
     property int labelWeight: Font.Medium
     property int labelWidth: 0
     property int horizontalPadding: theme.widgetPadding
-    property color foreground: attention ? theme.critical : (active ? theme.accentBright : theme.text)
+    property color foreground: dataStale ? theme.textMuted : attention ? theme.critical : (active ? theme.accentBright : theme.text)
     // Vector marks carry an accent detail. Once the widget itself is accented
     // the detail would disappear into it, so the mark goes monochrome instead.
-    readonly property color markAccent: active || attention ? foreground : theme.accentBright
+    readonly property color markAccent: dataStale || active || attention ? foreground : theme.accentBright
 
     signal pressed(int button)
-    signal scrolled(real delta)
+    signal scrolled(int steps)
+
+    readonly property bool barHitFrame: true
+    readonly property var hitBounds: typeof bar.hitBounds === "function"
+        ? bar.hitBounds(root) : Qt.rect(0, 0, width, height)
+    property real wheelRemainder: 0
+
+    function resetScroll() {
+        wheelRemainder = 0
+        scrollPause.stop()
+    }
+    function accumulateWheel(vertical, inverted) {
+        if (!vertical) return
+        wheelRemainder += inverted ? -vertical : vertical
+        const steps = Math.trunc(wheelRemainder / 120)
+        wheelRemainder -= steps * 120
+        scrollPause.restart()
+        if (steps) scrolled(steps)
+    }
+    Timer { id: scrollPause; interval: 250; onTriggered: root.resetScroll() }
 
     implicitWidth: content.implicitWidth + horizontalPadding * 2
     implicitHeight: theme.widgetHeight
@@ -88,7 +119,7 @@ Item {
         y: root.bar.atBottom ? 0 : parent.height - height
         width: mouse.containsMouse ? Math.max(8, root.width - root.horizontalPadding * 2) : 0
         height: 1
-        color: root.attention ? root.theme.critical : root.theme.accentBright
+        color: root.dataStale ? root.theme.textMuted : root.attention ? root.theme.critical : root.theme.accentBright
         opacity: mouse.pressed ? 1 : 0.72
 
         Behavior on width {
@@ -98,18 +129,28 @@ Item {
 
     MouseArea {
         id: mouse
-        anchors.fill: parent
+        objectName: "barWidgetHitArea"
+        x: root.hitBounds.x
+        y: root.hitBounds.y
+        width: root.hitBounds.width
+        height: root.hitBounds.height
         acceptedButtons: Qt.AllButtons
         hoverEnabled: true
         cursorShape: Qt.PointingHandCursor
 
         onEntered: {
-            if (root.tooltip)
-                root.bar.showTooltip(root, root.tooltip)
+            if (root.tooltipText)
+                root.bar.showTooltip(root, root.tooltipText)
         }
-        onExited: root.bar.hideTooltip(root)
+        onExited: {
+            root.resetScroll()
+            root.bar.hideTooltip(root)
+        }
         onClicked: mouse => root.pressed(mouse.button)
-        onWheel: wheel => root.scrolled(wheel.angleDelta.y)
+        onWheel: wheel => {
+            wheel.accepted = wheel.angleDelta.y !== 0
+            root.accumulateWheel(wheel.angleDelta.y, wheel.inverted)
+        }
     }
 
     Component.onDestruction: root.bar.hideTooltip(root)

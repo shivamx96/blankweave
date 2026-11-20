@@ -20,6 +20,7 @@ failed_target=aur/lmstudio-bin
 package_log=$test_root/commands
 
 pacman() {
+    if [[ " $* " == *" -Sp "* ]]; then printf '%s\n' "${transaction_target:-$missing_target}"; return 0; fi
     if [[ $1 == -Q ]]; then [[ ${*: -1} != "${missing_target:-}" ]]; return; fi
     printf 'pacman %s\n' "$*" >> "$package_log"
     [[ " $* " != *" $failed_target "* ]]
@@ -74,4 +75,22 @@ missing_target=after-failure
 OPTIONAL_PACKAGE_FAILURES=()
 install_manifest_packages "$test_root" '' aur >/dev/null
 [[ ${OPTIONAL_PACKAGE_FAILURES[*]} == aur/after-failure ]]
+# Rollback skips every installed package, including AUR targets.
+missing_target=
+: > "$package_log"
+install_rollback_packages "$test_root" ''
+[[ ! -s $package_log ]]
+# Missing packages use one no-refresh transaction and fail closed.
+missing_target=core
+failed_target=core
+if install_rollback_packages "$test_root" '' > "$test_root/rollback.out" 2>&1; then exit 1; fi
+grep -q 'could not be installed from local databases/cache' "$test_root/rollback.out"
+grep -q -- '-S --needed --noconfirm -- core' "$package_log"
+if grep -Eq -- '-Syu|-Sy |paru' "$package_log"; then exit 1; fi
+# Refuse a dependency resolution that would upgrade an existing package.
+transaction_target=installed-dependency
+: > "$package_log"
+if install_rollback_packages "$test_root" '' > "$test_root/dependency.out" 2>&1; then exit 1; fi
+grep -q 'would change installed package installed-dependency' "$test_root/dependency.out"
+[[ ! -s $package_log ]]
 printf 'Required and optional package installation tests passed.\n'

@@ -1,12 +1,40 @@
 import QtQuick
 import QtQuick.Layouts
+import Quickshell
+import Quickshell.Io
 import "../Components"
 import "../Services"
+import "../Services/PowerActions.js" as PowerActions
 
 WidgetFrame {
     id: root
 
+    property bool restartRequired: false
+    FileView {
+        id: restartMarker
+        path: Quickshell.env("XDG_RUNTIME_DIR") + "/blankweave/restart-required"
+        watchChanges: true
+        printErrors: false
+        onLoaded: root.restartRequired = true
+        onLoadFailed: root.restartRequired = false
+        onFileChanged: reload()
+    }
+
     property string pendingAction: ""
+    // tty1 signs the user straight back in unless the saved policy says "no",
+    // so stopping the session there restarts it rather than logging out.
+    property string signInPolicyPath: "/etc/blankweave/signin.conf"
+    property bool automaticSignIn: true
+    readonly property string sessionExitLabel: PowerActions.exitLabel(automaticSignIn)
+    FileView {
+        path: root.signInPolicyPath
+        watchChanges: true
+        printErrors: false
+        onLoaded: root.automaticSignIn = text().trim() !== "no"
+        onLoadFailed: root.automaticSignIn = true
+        onFileChanged: reload()
+    }
+    function handleKey(event) { powerPanel.handleKey(event) }
     SettingsTask {
         id: hibernation
         script: "operations-settings.py"
@@ -55,6 +83,7 @@ WidgetFrame {
     }
 
     ControlPopup {
+        panelId: "power"
         id: powerPanel
         bar: root.bar
         theme: root.theme
@@ -62,6 +91,7 @@ WidgetFrame {
         panelWidth: 340
 
         onOpenChanged: {
+            if (open) restartMarker.reload()
             if (!open) {
                 confirmTimer.stop()
                 root.pendingAction = ""
@@ -77,6 +107,14 @@ WidgetFrame {
                 : "Lock, suspend, or end this session"
         }
 
+        Text {
+            visible: root.restartRequired
+            text: "Restart to finish updating"
+            color: root.theme.warning
+            font.pixelSize: root.theme.smallTextSize
+            font.family: root.theme.fontFamily
+        }
+
         ControlDivider { theme: root.theme }
 
         ControlSectionLabel {
@@ -89,18 +127,20 @@ WidgetFrame {
             spacing: 8
 
             ControlAction {
+                id: lockAction
                 theme: root.theme
                 icon: "󰌾"
                 label: "Lock"
-                onPressed: root.execute(["hyprlock"])
+                onPressed: root.execute(PowerActions.lockCommand())
             }
 
             ControlAction {
+                id: logoutAction
                 theme: root.theme
                 icon: "󰍃"
-                label: root.confirmationLabel("logout", "Log out")
+                label: root.confirmationLabel("logout", root.sessionExitLabel)
                 attention: root.pendingAction === "logout"
-                onPressed: root.requestGuarded("logout", ["uwsm", "stop"])
+                onPressed: root.requestGuarded("logout", PowerActions.exitCommand())
             }
         }
 
@@ -114,30 +154,34 @@ WidgetFrame {
             spacing: 6
 
             ControlAction {
+                id: suspendAction
                 theme: root.theme
                 icon: "󰒲"
                 label: "Suspend"
-                onPressed: root.execute(["systemctl", "suspend"])
+                onPressed: root.execute(PowerActions.suspendCommand())
             }
 
             ControlAction {
+                id: rebootAction
                 theme: root.theme
                 icon: "󰜉"
                 label: root.confirmationLabel("reboot", "Restart")
                 attention: root.pendingAction === "reboot"
-                onPressed: root.requestGuarded("reboot", ["systemctl", "reboot"])
+                onPressed: root.requestGuarded("reboot", PowerActions.restartCommand())
             }
 
             ControlAction {
+                id: shutdownAction
                 theme: root.theme
                 icon: "󰐥"
                 label: root.confirmationLabel("shutdown", "Shut down")
                 attention: root.pendingAction === "shutdown"
-                onPressed: root.requestGuarded("shutdown", ["systemctl", "poweroff"])
+                onPressed: root.requestGuarded("shutdown", PowerActions.shutdownCommand())
             }
         }
 
         ControlAction {
+            id: hibernateAction
             theme: root.theme
             icon: "󰒲"
             label: root.confirmationLabel("hibernate", "Hibernate")
@@ -171,6 +215,13 @@ WidgetFrame {
             font.family: root.theme.fontFamily
             font.pixelSize: root.theme.microTextSize
             renderType: Text.NativeRendering
+        }
+        PanelSettingsAction {
+            id: settingsAction
+            theme: root.theme
+            panelKey: "PowerWidget"
+            bar: root.bar
+            panel: powerPanel
         }
     }
 }

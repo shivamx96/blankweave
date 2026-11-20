@@ -6,6 +6,7 @@ import "../Services"
 
 WidgetFrame {
     id: root
+    dataSources: [statusPoller]
 
     readonly property string shellDir: Quickshell.env("HOME") + "/.local/share/blankweave/shell"
     readonly property string gpuMark: "gpu"
@@ -102,8 +103,12 @@ WidgetFrame {
     attention: Number(status.temperature || 0) >= 85
     tooltip: String(status.tooltip || "GPU telemetry unavailable") + "\nClick for live details"
 
-    ScriptPoller {
+    SharedPoller {
         id: statusPoller
+        service: root.bar.shell.pollers
+        key: "GpuWidget:statusPoller"
+        // intel_gpu_top has its own four-second sample plus one-second kill grace.
+        timeout: 7000
         command: root.shellDir + "/gpu-usage.sh " + (gpuPanel.open ? "detail" : "summary")
         interval: gpuPanel.open ? 2500 : 5000
         onUpdated: payload => root.updateStatus(payload)
@@ -117,6 +122,7 @@ WidgetFrame {
     }
 
     ControlPopup {
+        panelId: "gpu"
         id: gpuPanel
         bar: root.bar
         theme: root.theme
@@ -134,11 +140,12 @@ WidgetFrame {
 
         ControlPanelHeader {
             theme: root.theme
+            atBottom: root.bar.atBottom
             iconMark: root.gpuMark
             title: "GRAPHICS"
             subtitle: String(root.status.name || "Graphics processor")
             actions: [
-                { "id": "monitor", "icon": "" }
+                { "id": "monitor", "label": "Open system monitor", "icon": "" }
             ]
             onActionPressed: actionId => {
                 if (actionId === "monitor") {
@@ -301,6 +308,12 @@ WidgetFrame {
                 : (root.status.backend === "intel" && root.status.accuracy !== "live"
                     ? "Client details require Intel engine telemetry access."
                     : "GPU workloads will appear here when active.")
+        }
+        PanelSettingsAction {
+            theme: root.theme
+            panelKey: "GpuWidget"
+            bar: root.bar
+            panel: gpuPanel
         }
     }
 }

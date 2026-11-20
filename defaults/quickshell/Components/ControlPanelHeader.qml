@@ -1,5 +1,8 @@
+pragma ComponentBehavior: Bound
 import QtQuick
 import QtQuick.Layouts
+import Quickshell
+import "../Settings"
 
 RowLayout {
     id: root
@@ -9,7 +12,10 @@ RowLayout {
     property string iconMark: ""
     property string title: ""
     property string subtitle: ""
+    // Each action requires id and a non-empty human label. kind defaults to button.
+    // Switches additionally use checked; pending prevents repeated activation.
     property var actions: []
+    property bool atBottom: false
 
     signal actionPressed(string actionId)
 
@@ -72,12 +78,26 @@ RowLayout {
 
                 required property var modelData
 
-                Layout.preferredWidth: 28
-                Layout.preferredHeight: 28
+                readonly property bool isSwitch: modelData.kind === "switch"
+                readonly property bool pending: Boolean(modelData.pending)
+                readonly property string actionLabel: String(modelData.label || "")
+                readonly property bool available: modelData.enabled !== false && !pending
+                Layout.preferredWidth: isSwitch ? 44 : 28
+                Layout.preferredHeight: 36
+                activeFocusOnTab: false
+                Accessible.role: Accessible.Button
+                Accessible.name: actionLabel
+                Accessible.onPressAction: activate()
+                function activate() {
+                    if (available)
+                        root.actionPressed(String(modelData.id))
+                }
 
                 Text {
+                    visible: !actionItem.isSwitch
                     anchors.centerIn: parent
                     text: String(actionItem.modelData.icon || "")
+                    opacity: actionItem.available ? 1 : 0.45
                     color: actionItem.modelData.attention
                         ? root.theme.critical
                         : (actionItem.modelData.active ? root.theme.accentBright : root.theme.text)
@@ -85,25 +105,84 @@ RowLayout {
                     font.pixelSize: root.theme.controlIconSize
                     renderType: Text.NativeRendering
                 }
-
                 Rectangle {
+                    visible: !actionItem.isSwitch
                     anchors.horizontalCenter: parent.horizontalCenter
                     anchors.bottom: parent.bottom
-                    width: actionItem.modelData.active || actionMouse.containsMouse ? 18 : 0
+                    width: actionItem.activeFocus || actionMouse.containsMouse || actionItem.modelData.active ? 18 : 0
                     height: 1
-                    color: actionItem.modelData.attention ? root.theme.critical : root.theme.accentBright
-
-                    Behavior on width {
-                        NumberAnimation { duration: Math.round(root.theme.motionDuration * 140 / 150); easing.type: root.theme.motionEasing }
-                    }
+                    color: root.theme.accentBright
                 }
-
-                MouseArea {
+                SettingsSwitch {
+                    id: toggle
+                    objectName: "headerSwitch"
+                    visible: actionItem.isSwitch
+                    anchors.fill: parent
+                    theme: root.theme
+                    enabled: actionItem.available
+                    checked: Boolean(actionItem.modelData.checked)
+                    Accessible.name: actionItem.actionLabel
+                    // The backend owns checked; never leave an optimistic local toggle.
+                    onToggled: checked = Qt.binding(() => Boolean(actionItem.modelData.checked))
+                    onClicked: actionItem.activate()
+                }
+                Text {
+                    visible: actionItem.pending
+                    anchors.right: parent.right
+                    anchors.bottom: parent.bottom
+                    text: "…"
+                    color: root.theme.textMuted
+                    font.pixelSize: root.theme.microTextSize
+                }
+                ControlMouseArea {
+                    theme: root.theme
+                    accessibleName: actionItem.actionLabel
                     id: actionMouse
                     anchors.fill: parent
+                    acceptedButtons: actionItem.isSwitch ? Qt.NoButton : Qt.LeftButton
                     hoverEnabled: true
-                    cursorShape: Qt.PointingHandCursor
-                    onClicked: root.actionPressed(String(actionItem.modelData.id || ""))
+                    cursorShape: actionItem.available ? Qt.PointingHandCursor : Qt.ArrowCursor
+                    onClicked: actionItem.activate()
+                }
+                PopupWindow {
+                    id: hint
+                    visible: actionItem.actionLabel !== "" && (actionMouse.containsMouse || toggle.hovered || actionItem.activeFocus || actionMouse.activeFocus || toggle.activeFocus)
+                    color: "transparent"
+                    implicitWidth: Math.min(360, hintText.implicitWidth + 24)
+                    implicitHeight: hintText.implicitHeight + 18
+                    anchor {
+                        id: hintAnchor
+                        window: actionItem.QsWindow.window
+                        adjustment: PopupAdjustment.Slide
+                        edges: root.atBottom ? Edges.Top | Edges.Left : Edges.Bottom | Edges.Left
+                        gravity: root.atBottom ? Edges.Top | Edges.Right : Edges.Bottom | Edges.Right
+                        onAnchoring: {
+                            const win = actionItem.QsWindow.window
+                            if (!win) return
+                            const point = actionItem.mapToItem(win.contentItem, actionItem.width / 2 - hint.width / 2,
+                                root.atBottom ? -7 : actionItem.height + 7)
+                            hintAnchor.rect.x = Math.round(point.x)
+                            hintAnchor.rect.y = Math.round(point.y)
+                        }
+                    }
+                    Rectangle {
+                        anchors.fill: parent
+                        radius: root.theme.widgetRadius
+                        color: root.theme.surfaceRaised
+                        border.width: 1
+                        border.color: root.theme.outlineStrong
+                        Text {
+                            id: hintText
+                            anchors.centerIn: parent
+                            width: Math.min(336, implicitWidth)
+                            text: actionItem.actionLabel + (actionItem.pending ? " · Applying…" : "")
+                            textFormat: Text.PlainText
+                            wrapMode: Text.Wrap
+                            color: root.theme.text
+                            font.family: root.theme.fontFamily
+                            font.pixelSize: root.theme.smallTextSize
+                        }
+                    }
                 }
             }
         }

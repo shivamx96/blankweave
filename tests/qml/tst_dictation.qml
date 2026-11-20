@@ -83,7 +83,7 @@ TestCase {
         verify(!findChild(controls, "dictationRestart").enabled)
         const cancel = findChild(controls, "dictationCancel")
         verify(cancel.enabled)
-        cancel.clicked()
+        cancel.clicked(); cancel.clicked()
         compare(voice.calls[0][0], "cancel")
     }
     function test_stopped_service_recovery_and_error() {
@@ -92,10 +92,10 @@ TestCase {
         voice.canStart = false
         const restart = findChild(controls, "dictationRestart")
         compare(restart.text, "Start service")
-        restart.clicked()
+        restart.clicked(); restart.clicked()
         compare(voice.calls[0][0], "restart")
         voice.actionError = "Could not restart dictation"
-        compare(findChild(controls, "dictationError").text, voice.actionError)
+        compare(findChild(controls, "dictationError").text, "Could not apply this change. Try again.")
         verify(findChild(controls, "dictationError").visible)
     }
     function test_transcript_is_plain_text_and_copy_is_explicit() {

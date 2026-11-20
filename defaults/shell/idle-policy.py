@@ -3,6 +3,7 @@
 from contextlib import contextmanager
 import fcntl
 import hashlib
+from settings_support import file_refusal, display_path
 import json
 import os
 from pathlib import Path
@@ -20,7 +21,10 @@ DPMS_OFF = "hyprctl dispatch 'hl.dsp.dpms({action = \"off\"})'"
 
 def normalize(base):
     # Managed templates predate Lua-only dispatch. Keep their timing policy.
-    return base.replace('hyprctl dispatch dpms on', DPMS_ON).replace('hyprctl dispatch dpms off', DPMS_OFF)
+    return (base.replace('hyprctl dispatch dpms on', DPMS_ON)
+            .replace('hyprctl dispatch dpms off', DPMS_OFF)
+            .replace('lock_cmd = pidof hyprlock || hyprlock',
+                     'lock_cmd = ~/.local/share/blankweave/shell/lock.sh'))
 
 
 def save(path, text):
@@ -71,6 +75,52 @@ def supply(directory=Path('/sys/class/power_supply')):
     return True, 'ac' if online or all(state == 'Charging' for state in batteries) else 'battery'
 
 
+# This is extra protection after manual locking, independent of idle preferences.
+LOCKED_SECONDS = 45
+LOCK_HELPER = 'python3 ~/.local/share/blankweave/shell/idle-policy.py'
+
+
+def locked_listener():
+    return (f'listener {{\n    timeout = {LOCKED_SECONDS}\n'
+            f'    condition_cmd = {LOCK_HELPER} locked-ready\n'
+            '    condition_retry = 5\n    ignore_inhibit = true\n'
+            f'    on-timeout = {LOCK_HELPER} locked-blank\n'
+            f'    on-resume = {DPMS_ON}\n}}')
+
+
+def lock_hooks(general):
+    return (general[:-1] + f'    on_lock_cmd = {LOCK_HELPER} locked\n'
+            f'    on_unlock_cmd = {LOCK_HELPER} unlocked\n}}')
+
+
+def protect_installed(base):
+    """Fallback keeps installed timings plus the managed locked-only guard."""
+    import re
+    base = normalize(base)
+    base = re.sub(r'^general\s*\{.*?^}', lambda m: lock_hooks(m[0]),
+                  base, count=1, flags=re.MULTILINE | re.DOTALL)
+    return base + '\n' + locked_listener() + '\n'
+
+
+def lock_state(action):
+    # Hypridle's Wayland lock notifications own this marker, never pidof/startup.
+    marker = Policy().runtime / 'locked-at'
+    if action == 'locked':
+        save(marker, str(time.monotonic()))
+    elif action == 'unlocked':
+        marker.unlink(missing_ok=True)
+    else:
+        try:
+            ready = time.monotonic() - float(marker.read_text()) >= LOCKED_SECONDS
+        except (OSError, ValueError):
+            ready = False
+        if not ready:
+            return 1
+        if action == 'locked-blank':
+            subprocess.run(['hyprctl', 'dispatch', 'hl.dsp.dpms({action = "off"})'], check=True, timeout=5)
+    return 0
+
+
 def render(base, row):
     """Render only managed templates; retain manual and pre-suspend protection."""
     import re
@@ -82,7 +132,7 @@ def render(base, row):
     general = re.search(r'^general\s*\{.*?^}', base, re.MULTILINE | re.DOTALL)[0]
     if 'after_sleep_cmd' not in general:
         general = general[:-1] + '    after_sleep_cmd = ' + DPMS_ON + '\n}'
-    result = [general]
+    result = [lock_hooks(general), locked_listener()]
     for block in blocks:
         if 'brightness.sh dim' in block and row['dim']:
             delay = min([row['dim']] + [max(1, v // 2) for v in deadlines + ([lock] if lock else [])])
@@ -93,8 +143,6 @@ def render(base, row):
         result.append(f"listener {{\n    timeout = {row['screen']}\n    on-timeout = {DPMS_OFF}\n    on-resume = {DPMS_ON}\n}}")
     if row['suspend']:
         result.append(f"listener {{\n    timeout = {row['suspend']}\n    on-timeout = systemctl suspend\n}}")
-    if len(result) == 1:
-        result.append('listener {\n    timeout = 86400\n    on-timeout = /usr/bin/true\n}')
     return '\n\n'.join(result) + '\n'
 
 
@@ -123,11 +171,10 @@ class Policy:
     def settings(self):
         if self.config.exists():
             return validate(json.loads(self.config.read_text()))
-        # Preserve today's installed policy until the user changes a control.
-        battery_defaults = 'timeout = 360' in self.base.read_text() if self.base.exists() else False
-        row = {'dim': 150 if battery_defaults else 300, 'lock': 300 if battery_defaults else 600,
-               'screen': 360 if battery_defaults else 0, 'suspend': 1800 if battery_defaults else 0}
-        return {'version': 1, 'ac': dict(row), 'battery': dict(row)}
+        # No migration: saved values above are returned exactly as written.
+        return {'version': 1,
+                'ac': {'dim': 300, 'lock': 600, 'screen': 0, 'suspend': 0},
+                'battery': {'dim': 150, 'lock': 300, 'screen': 360, 'suspend': 1800}}
 
     def revision(self):
         return hashlib.sha256(self.config.read_bytes() if self.config.exists() else b'').hexdigest()
@@ -165,7 +212,7 @@ class Policy:
         fresh = running and 0 <= time.monotonic() - state.get('time', 0) < 15
         managed = self.managed()
         applied = fresh and state.get('revision') == self.revision() and not state.get('error')
-        message = ('Your custom Hypridle configuration controls idle behavior.' if not managed else
+        message = (f'Your custom Hypridle configuration ({display_path(self.entry)}) controls idle behavior.' if not managed else
                    'Sign out and back in to start the updated idle service.' if not running else
                    state.get('error', '') if fresh and state.get('error') else
                    'Idle settings are active.' if applied else 'Waiting for the idle service to apply saved settings…')
@@ -179,7 +226,7 @@ class Policy:
         settings = validate(request['settings'])
         with self.locked('write.lock'):
             if not self.managed():
-                raise ValueError('A custom Hypridle configuration is active; it has not been changed.')
+                raise file_refusal('A custom Hypridle configuration is active; it has not been changed.', self.entry)
             if not self.running():
                 raise ValueError('The idle service is not running. Sign out and back in first.')
             if request['revision'] != self.revision():
@@ -187,7 +234,7 @@ class Policy:
             save(self.config, json.dumps(settings) + '\n')
 
     def desired(self):
-        if not self.managed() or not self.config.exists():
+        if not self.managed():
             return sleep_action(normalize(self.entry.read_text())) if self.managed() else self.entry.read_text(), self.revision()
         settings = self.settings()
         _, mode = supply()
@@ -201,6 +248,7 @@ class Policy:
         signal.signal(signal.SIGTERM, finish)
         signal.signal(signal.SIGINT, finish)
         with self.locked('runner.lock'):
+            (self.runtime / 'locked-at').unlink(missing_ok=True)
             child, current, revision, error = None, None, '', ''
             rejected = None
             def terminate():
@@ -244,7 +292,7 @@ class Policy:
                             fallback = self.entry
                             if self.managed():
                                 fallback = self.runtime / 'fallback.conf'
-                                save(fallback, normalize(self.entry.read_text()))
+                                save(fallback, protect_installed(self.entry.read_text()))
                             child = subprocess.Popen(['hypridle', '-c', str(fallback)])
                             current = None
                     save(self.runtime / 'status.json', json.dumps({'revision': revision,
@@ -256,11 +304,14 @@ class Policy:
             finally:
                 terminate()
                 (self.runtime / 'status.json').unlink(missing_ok=True)
+                (self.runtime / 'locked-at').unlink(missing_ok=True)
 
 
 def main():
     policy = Policy()
-    if sys.argv[1:] == ['status']:
+    if len(sys.argv) == 2 and sys.argv[1] in ('locked', 'unlocked', 'locked-ready', 'locked-blank'):
+        sys.exit(lock_state(sys.argv[1]))
+    elif sys.argv[1:] == ['status']:
         print(json.dumps(policy.status()))
     elif sys.argv[1:] == ['configure']:
         policy.configure(json.load(sys.stdin))

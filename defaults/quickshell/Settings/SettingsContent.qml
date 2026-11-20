@@ -1,5 +1,6 @@
 pragma ComponentBehavior: Bound
 import QtQuick
+import "LegacyErrors.js" as Errors
 import QtQuick.Controls.Basic
 import QtQuick.Layouts
 import "../Components"
@@ -9,6 +10,7 @@ Rectangle {
     id: root
     required property var theme
     required property var appearance
+    property var fileAccess: null
     property var displays: null
     property var power: null
     property var battery: null
@@ -33,9 +35,10 @@ Rectangle {
     property var wifi: null
     property var bluetooth: null
     property string selectedPage: "appearance"
-    readonly property var results: Catalog.pages
+    property var capabilities: null
+    readonly property var results: Catalog.visiblePages(capabilities)
     readonly property bool searching: search.text.trim().length > 0
-    readonly property var searchResults: Catalog.searchSettings(search.text)
+    readonly property var searchResults: Catalog.searchSettings(search.text, capabilities)
     property string highlightedSetting: ""
     property int searchIndex: 0
     property bool followSearchTarget: false
@@ -48,12 +51,23 @@ Rectangle {
 
     function focusSearch() { search.forceActiveFocus(); search.selectAll() }
     function openSetting(id) {
+        search.clear()
+        followSearchTarget = false
+        jumpTimer.stop()
+        highlightTimer.stop()
+        highlightedSetting = ""
+        pageScroll.contentItem.contentY = 0
+        const targetPage = Catalog.pages.find(page => page.id === id)
+        if (targetPage) { selectedPage = targetPage.id; return }
         for (const page of Catalog.pages) {
-            if (page.groups.some(group => group.rows.some(row => row.id === id))) {
-                showResult({id: id, pageId: page.id})
+            if (page.groups.some(group => group.rows.some(row => row.id === id || page.id + "/" + row.id === id))) {
+                const row = page.groups.reduce((rows, group) => rows.concat(group.rows), []).find(row => row.id === String(id).split("/").pop())
+                if (Catalog.available(row, capabilities)) showResult({id: row.id, pageId: page.id})
+                else selectedPage = page.id
                 return
             }
         }
+        selectedPage = Catalog.pages[0].id
     }
 
     function showResult(result) {
@@ -117,12 +131,19 @@ Rectangle {
 
     Shortcut { sequence: "Ctrl+F"; onActivated: root.focusSearch() }
     Shortcut { sequence: "Ctrl+W"; onActivated: root.closeRequested() }
-    Shortcut {
-        sequence: "Escape"
-        onActivated: {
-            if (search.text) search.clear()
-            else root.closeRequested()
-        }
+    // Bubble from the focused control after its own handlers and popup handling.
+    // A window Shortcut would intercept Escape before those handlers can run.
+    Keys.priority: Keys.AfterItem
+    function disarmConfirmation(item) {
+        if (item.armed === true && typeof item.disarm === "function") { item.disarm(); return true }
+        for (const child of item.children || []) if (disarmConfirmation(child)) return true
+        return false
+    }
+    Keys.onEscapePressed: event => {
+        if (root.disarmConfirmation(root)) { event.accepted = true; return }
+        if (search.text) search.clear()
+        else root.closeRequested()
+        event.accepted = true
     }
 
     ColumnLayout {
@@ -167,6 +188,12 @@ Rectangle {
                     onTextChanged: { root.followSearchTarget = false; jumpTimer.stop(); highlightTimer.stop(); root.highlightedSetting = ""; root.searchIndex = 0; pageScroll.contentItem.contentY = 0 }
                     onAccepted: root.showResult(root.searchResults[root.searchIndex])
                     Keys.onDownPressed: root.searching ? root.focusResult(0) : categories.forceActiveFocus()
+                    // Search holds focus when the window opens, so an empty
+                    // search must close on the first Escape, not just blur.
+                    escapeHandler: () => {
+                        if (search.text.length) search.clear()
+                        else root.closeRequested()
+                    }
                 }
                 SettingsButton {
                     theme: root.theme
@@ -382,41 +409,6 @@ Rectangle {
                             wrapMode: Text.WordWrap
                         }
 
-                        Rectangle {
-                            Layout.fillWidth: true
-                            Layout.topMargin: root.theme.spacing("xl")
-                            implicitHeight: notice.implicitHeight + 2 * root.theme.spacing("section")
-                            visible: root.page !== null
-                            color: root.theme.accentSurface
-                            radius: root.theme.widgetRadius
-                            Text {
-                                id: notice
-                                anchors { fill: parent; margins: root.theme.spacing("section") }
-                                text: root.page && root.page.id === "appearance"
-                                    ? "Theme, color mode, bar widgets, wallpaper, text, and pointer sizes are available."
-                                    : root.page && root.page.id === "displays" && root.displays
-                                    ? "Mode, mirror, and setup changes have a 20-second preview. Other display changes apply immediately; night light applies to all displays."
-                                    : root.page && root.page.id === "sound" && root.sound
-                                    ? "Sound controls are available. Changes apply to the selected device or supported apps."
-                                    : root.page && root.page.id === "power" && root.power
-                                    ? "Power profiles, battery controls, idle timeouts, and hibernation readiness are available."
-                                    : root.page && root.page.id === "input" && root.pointer
-                                    ? "Input and accessibility controls apply to this session and supported assistive applications."
-                                    : root.page && root.page.id === "apps" && root.defaultApps
-                                    ? "Manage installed software, supported application permissions, defaults, startup apps, and notifications."
-                                    : root.page && root.page.id === "system" && root.system
-                                    ? "System changes may require administrator authorization. Device support is detected before offering operations."
-                                    : root.page && root.page.id === "network" && root.wifi
-                                    ? "Manage connections, private networks, and supported sharing services."
-                                    : root.page && root.page.id === "storage" ? "Inspect storage, manage removable drives, and configure supported backup providers."
-                                    : "Controls report unavailable services and hardware before changes can be made."
-                                color: root.theme.text
-                                font.family: root.theme.fontFamily
-                                font.pixelSize: root.theme.smallTextSize
-                                wrapMode: Text.WordWrap
-                            }
-                        }
-
                         ColumnLayout {
                             visible: root.page !== null && root.page.id === "appearance"
                             Layout.fillWidth: true
@@ -427,8 +419,8 @@ Rectangle {
                                 Text {
                                     Layout.fillWidth: true
                                     text: root.appearance.busy ? "Updating appearance…"
-                                        : root.appearance.error || (root.appearance.ready ? "Connected to your desktop" : "Loading your preferences…")
-                                    color: root.appearance.error ? root.theme.warning : root.theme.textMuted
+                                        : Errors.message(root.appearance.error) || (root.appearance.ready ? "Connected to your desktop" : "Loading your preferences…")
+                                    color: root.appearance.error ? root.theme.critical : root.theme.textMuted
                                     font.family: root.theme.fontFamily
                                     font.pixelSize: root.theme.smallTextSize
                                     wrapMode: Text.WordWrap
@@ -478,7 +470,7 @@ Rectangle {
                                         Layout.fillWidth: true
                                         visible: root.appearance.syncMessage !== ""
                                         text: root.appearance.syncMessage
-                                        color: root.appearance.syncState === "error" ? root.theme.warning : root.theme.text
+                                        color: root.appearance.syncState === "error" ? root.theme.critical : root.theme.text
                                         font.family: root.theme.fontFamily
                                         font.pixelSize: root.theme.smallTextSize
                                         wrapMode: Text.WordWrap
@@ -561,11 +553,13 @@ Rectangle {
                                                     color: root.theme.divider
                                                 }
                                                 SettingsRow {
+                                                    fileAccess: root.fileAccess
                                                     onSettingRequested: id => root.openSetting(id)
                                                     onCopyRequested: text => root.copyRequested(text)
                                                     Layout.fillWidth: true
                                                     theme: root.theme
-                                                    setting: settingGroup.modelData
+                                                    timeFormat: root.appearance && root.appearance.preferences ? root.appearance.preferences.resolvedTimeFormat : "24h"
+                                                    setting: Object.assign({}, settingGroup.modelData, {file: settingGroup.modelData.file || root.page.file, store: settingGroup.modelData.store || root.page.store})
                                                     backend: settingGroup.modelData.kind === "operations" ? (root.operations ? root.operations.provider(settingGroup.modelData.id) : null)
                                                         : settingGroup.modelData.kind === "system-info" ? root.system
                                                         : settingGroup.modelData.kind === "webapps" ? root.webapps

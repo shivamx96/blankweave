@@ -24,7 +24,7 @@ ColumnLayout {
         text: root.job ? root.job.label + " · " + Status.phase(root.job)
             + (Status.elapsed(root.job, root.now) ? " · " + Status.elapsed(root.job, root.now) : "") : ""
         textFormat: Text.PlainText; wrapMode: Text.WordWrap
-        color: root.job && ["failed", "interrupted"].includes(root.job.phase) ? root.theme.warning : root.theme.text
+        color: root.job && ["failed", "interrupted"].includes(root.job.phase) ? root.theme.critical : root.theme.text
         font.family: root.theme.fontFamily; font.pixelSize: root.theme.smallTextSize
         font.weight: Font.Medium
         Accessible.role: Accessible.StaticText
@@ -36,6 +36,15 @@ ColumnLayout {
         text: "Continues in the background. Progress percentage is not available."
         wrapMode: Text.WordWrap
         color: root.theme.textMuted; font.family: root.theme.fontFamily; font.pixelSize: root.theme.smallTextSize
+    }
+    SettingsResult {
+        Layout.fillWidth: true
+        theme: root.theme
+        visible: Boolean(root.job && root.job.error)
+        message: root.job && root.job.error ? root.job.error.message : ""
+        detail: root.job && root.job.error ? root.job.error.detail || "" : ""
+        cancelled: Boolean(root.job && root.job.phase === "cancelled")
+        onCopyRequested: text => root.copyRequested(text)
     }
     Flow {
         Layout.fillWidth: true

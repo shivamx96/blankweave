@@ -6,6 +6,7 @@ import "../Services"
 
 WidgetFrame {
     id: root
+    dataSources: [statusPoller]
 
     readonly property string shellDir: Quickshell.env("HOME") + "/.local/share/blankweave/shell"
     readonly property string cpuMark: "cpu"
@@ -57,8 +58,10 @@ WidgetFrame {
     attention: Number(status.temperature || 0) >= 90
     tooltip: String(status.tooltip || "CPU information unavailable") + "\nClick for live details"
 
-    ScriptPoller {
+    SharedPoller {
         id: statusPoller
+        service: root.bar.shell.pollers
+        key: "CpuWidget:statusPoller"
         command: root.shellDir + "/cpu-usage.sh"
         interval: cpuPanel.open ? 1500 : 5000
         onUpdated: payload => root.updateStatus(payload)
@@ -72,6 +75,7 @@ WidgetFrame {
     }
 
     ControlPopup {
+        panelId: "cpu"
         id: cpuPanel
         bar: root.bar
         theme: root.theme
@@ -85,11 +89,12 @@ WidgetFrame {
 
         ControlPanelHeader {
             theme: root.theme
+            atBottom: root.bar.atBottom
             iconMark: root.cpuMark
             title: "PROCESSOR"
             subtitle: String(root.status.model || "Processor")
             actions: [
-                { "id": "monitor", "icon": "" }
+                { "id": "monitor", "label": "Open system monitor", "icon": "" }
             ]
             onActionPressed: actionId => {
                 if (actionId === "monitor") {
@@ -161,7 +166,7 @@ WidgetFrame {
                         id: coreLabel
                         anchors.left: parent.left
                         anchors.verticalCenter: parent.verticalCenter
-                        width: 24
+                        width: Math.round(24 * (root.theme.textScale || 1))
                         text: String(coreCell.index + 1).padStart(2, "0")
                         color: root.theme.textMuted
                         font.family: root.theme.monoFontFamily
@@ -187,7 +192,7 @@ WidgetFrame {
                                 : root.theme.accentBright
 
                             Behavior on width {
-                                NumberAnimation { duration: root.theme.reducedMotion ? 0 : 180; easing.type: Easing.OutCubic }
+                                NumberAnimation { duration: Math.round(root.theme.motionDuration * 180 / 150); easing.type: Easing.OutCubic }
                             }
                         }
                     }
@@ -230,6 +235,12 @@ WidgetFrame {
                     active: Number(modelData.usage || 0) > 10
                 }
             }
+        }
+        PanelSettingsAction {
+            theme: root.theme
+            panelKey: "CpuWidget"
+            bar: root.bar
+            panel: cpuPanel
         }
     }
 }

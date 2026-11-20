@@ -1,8 +1,27 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+installer_check_boot_layout() {
+    local scripts=$1 failed=false
+    shift
+    if ! "$@" "$scripts/configure-limine.sh" --check; then
+        printf '  FAIL: Unsupported boot layout. Requires direct Linux BLS entries with kernel and initrd on a FAT ESP (systemd-boot/Limine); GRUB and UKI-only layouts are unsupported.\n' >&2
+        failed=true
+    fi
+    "$@" "$scripts/configure-kernel-command-line.sh" --check "${BLANKWEAVE_BLS_ENTRIES_DIR:-/boot/loader/entries}" || failed=true
+    [[ $failed == false ]]
+}
+
 installer_preflight() {
     local root=${1:-} tool variable value failed=false
+    # This rule belongs only to an active apply; never retain it after a crash.
+    if [[ -e $root/etc/sudoers.d/blankweave-install || -L $root/etc/sudoers.d/blankweave-install ]]; then
+        if (( EUID == 0 )); then
+            rm -f -- "$root/etc/sudoers.d/blankweave-install"
+        else
+            sudo rm -f -- "$root/etc/sudoers.d/blankweave-install" || return 1
+        fi
+    fi
     printf '\nChecking installation prerequisites...\n'
     if [[ ! -r $root/etc/arch-release ]]; then
         printf '  FAIL: Blankweave requires an installed Arch Linux system.\n' >&2
@@ -12,7 +31,7 @@ installer_preflight() {
         printf '  FAIL: Boot this machine in UEFI mode before installing Blankweave.\n' >&2
         failed=true
     fi
-    for tool in sudo pacman git; do
+    for tool in sudo pacman git python3; do
         if ! command -v "$tool" >/dev/null 2>&1; then
             printf '  FAIL: Required command is missing: %s\n' "$tool" >&2
             failed=true
@@ -30,6 +49,18 @@ installer_preflight() {
             failed=true
         fi
     done
+    if [[ -z $root ]]; then
+        local scripts
+        local -a check_runner=()
+        (( EUID == 0 )) || check_runner=(sudo --)
+        scripts=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
+        # shellcheck source=scripts/root-encryption.sh
+        source "$scripts/root-encryption.sh"
+        if ! root_is_encrypted; then
+            printf '  WARNING: Root encryption could not be confirmed; first installs default to password sign-in.\n'
+        fi
+        installer_check_boot_layout "$scripts" "${check_runner[@]}" || failed=true
+    fi
     [[ $failed == false ]] || return 1
     printf 'Basic prerequisites passed. Package downloads require a working Internet connection.\n'
 }

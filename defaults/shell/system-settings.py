@@ -7,7 +7,7 @@ from pathlib import Path
 import platform
 import re
 import subprocess
-from settings_support import atomic, check_revision, cli, digest, locked, read
+from settings_support import file_refusal, atomic, check_revision, cli, digest, locked, read
 
 COMMAND = Path.home() / '.local/bin/blankweave'
 STATE = Path(os.environ.get('XDG_STATE_HOME', Path.home() / '.local/state')) / 'blankweave'
@@ -44,7 +44,7 @@ def status():
 def apply(request):
     with locked('system-diagnostics'):
         state = status(); check_revision(request, state)
-        if not state['writable']: raise ValueError('Diagnostics report is symlinked; edit its source.')
+        if not state['writable']: raise file_refusal('Diagnostics report is symlinked; edit its source.', REPORT)
         if request.get('action') != 'diagnose': raise ValueError('Invalid diagnostics request.')
         if not state['available']: raise ValueError('The Blankweave command is not installed.')
         result = subprocess.run([str(COMMAND), 'doctor', '--normal', '--report'], text=True, capture_output=True, timeout=90)

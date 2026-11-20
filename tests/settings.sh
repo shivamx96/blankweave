@@ -42,7 +42,7 @@ if HOME="$test_root/home" PATH="$test_root/bin:$PATH" SETTINGS_TEST_EXIT=1 \
     exit 1
 fi
 grep -q 'could not open settings' "$test_root/output"
-if "$repository/bin/blankweave" settings unexpected > "$test_root/output" 2>&1; then
+if "$repository/bin/blankweave" settings unexpected extra > "$test_root/output" 2>&1; then
     printf 'Settings should reject unexpected arguments\n' >&2
     exit 1
 fi
@@ -73,7 +73,7 @@ fi
 
 # Dictation actions use a fake service and never record or restart host audio.
 mkdir -p "$test_root/voice/Services"
-cp "$repository/defaults/quickshell/Services/"{Voxtype,ScriptPoller}.qml "$test_root/voice/Services/"
+cp "$repository/defaults/quickshell/Services/"{Voxtype.qml,ScriptPoller.qml,PollerOutput.js} "$test_root/voice/Services/"
 cp "$repository/tests/quickshell/settings-voice.qml" "$test_root/voice/shell.qml"
 cp "$repository/tests/fixtures/settings-voice.sh" "$test_root/voice/voice.sh"
 printf 'profiles=voice-dictation\n' > "$test_root/voice/install.conf"
@@ -94,7 +94,7 @@ diff -u "$test_root/expected-voice" "$SETTINGS_VOICE_LOG"
 
 # Power changes use a fixture, never the host power-profile daemon.
 mkdir -p "$test_root/power"
-cp -R "$repository/defaults/quickshell/"{Services,Settings,Components,Assets,Modules} "$test_root/power/"
+cp -R "$repository/defaults/quickshell/"{Services,Settings,Components,Assets,Modules,Launcher} "$test_root/power/"
 cp "$repository/defaults/quickshell/Theme.qml" "$test_root/power/"
 cp "$repository/tests/quickshell/settings-power.qml" "$test_root/power/shell.qml"
 cp "$repository/tests/fixtures/settings-power.py" "$test_root/power/power.py"
@@ -126,7 +126,7 @@ fi
 
 # Battery limit mutations use fake devices and never change host charging policy.
 mkdir -p "$test_root/battery"
-cp -R "$repository/defaults/quickshell/"{Services,Settings,Components,Assets} "$test_root/battery/"
+cp -R "$repository/defaults/quickshell/"{Services,Settings,Components,Assets,Launcher} "$test_root/battery/"
 cp "$repository/defaults/quickshell/Theme.qml" "$test_root/battery/"
 cp "$repository/tests/quickshell/settings-battery.qml" "$test_root/battery/shell.qml"
 cp "$repository/tests/fixtures/settings-battery.py" "$test_root/battery/battery.py"
@@ -161,7 +161,7 @@ fi
 
 # Native networking is supplied with fake devices: never scan or change host Wi-Fi.
 mkdir -p "$test_root/wifi"
-cp -R "$repository/defaults/quickshell/"{Services,Settings,Components,Assets,Modules} "$test_root/wifi/"
+cp -R "$repository/defaults/quickshell/"{Services,Settings,Components,Assets,Modules,Launcher} "$test_root/wifi/"
 cp "$repository/defaults/quickshell/Theme.qml" "$test_root/wifi/"
 mkdir -p "$test_root/home/.local/share/blankweave/shell"
 cat > "$test_root/home/.local/share/blankweave/shell/network-status.sh" <<'EOF'
@@ -185,7 +185,7 @@ fi
 
 # Ethernet and DNS actions are isolated from host NetworkManager.
 mkdir -p "$test_root/network"
-cp -R "$repository/defaults/quickshell/"{Services,Settings,Components,Assets} "$test_root/network/"
+cp -R "$repository/defaults/quickshell/"{Services,Settings,Components,Assets,Launcher} "$test_root/network/"
 cp "$repository/defaults/quickshell/Theme.qml" "$test_root/network/"
 cp "$repository/tests/quickshell/settings-network.qml" "$test_root/network/shell.qml"
 cp "$repository/tests/fixtures/settings-network.py" "$test_root/network/network.py"
@@ -203,7 +203,7 @@ fi
 
 # Radio and hotspot actions use an isolated helper; never block host radios.
 mkdir -p "$test_root/wireless"
-cp -R "$repository/defaults/quickshell/"{Services,Settings,Components,Assets} "$test_root/wireless/"
+cp -R "$repository/defaults/quickshell/"{Services,Settings,Components,Assets,Launcher} "$test_root/wireless/"
 cp "$repository/defaults/quickshell/Theme.qml" "$test_root/wireless/"
 cp "$repository/tests/quickshell/settings-wireless.qml" "$test_root/wireless/shell.qml"
 cp "$repository/tests/fixtures/settings-wireless.py" "$test_root/wireless/wireless.py"
@@ -221,7 +221,7 @@ fi
 
 # Bluetooth uses fake BlueZ objects and a JSON helper, never host pairing or rfkill.
 mkdir -p "$test_root/bluetooth"
-cp -R "$repository/defaults/quickshell/"{Services,Settings,Components,Assets,Modules} "$test_root/bluetooth/"
+cp -R "$repository/defaults/quickshell/"{Services,Settings,Components,Assets,Modules,Launcher} "$test_root/bluetooth/"
 cp "$repository/defaults/quickshell/Theme.qml" "$test_root/bluetooth/"
 cp "$repository/tests/quickshell/settings-bluetooth.qml" "$test_root/bluetooth/shell.qml"
 cp "$repository/tests/fixtures/settings-bluetooth.py" "$test_root/bluetooth/action.py"
@@ -280,7 +280,7 @@ diff -u "$test_root/expected-brightness" "$SETTINGS_BRIGHTNESS_DIR/commands"
 # catches shell-only types and lifecycle errors that qmltestrunner cannot load.
 mkdir -p "$test_root/window" "$test_root/home/.local/share/blankweave/shell" \
     "$test_root/home/.local/share/blankweave/themes/obsidian" "$test_root/home/.config/blankweave"
-cp -R "$repository/defaults/quickshell/"{Settings,Services,Components,Assets} "$test_root/window/"
+cp -R "$repository/defaults/quickshell/"{Settings,Services,Components,Assets,Launcher} "$test_root/window/"
 cp "$repository/defaults/quickshell/Theme.qml" "$test_root/window/"
 cp "$repository/tests/quickshell/settings-window.qml" "$test_root/window/shell.qml"
 cp "$repository/tests/fixtures/settings-theme.sh" "$test_root/home/.local/share/blankweave/shell/theme-apply.sh"
@@ -329,7 +329,7 @@ fi
 # Idle controls use a fixture; never restart the host idle daemon or suspend.
 export SETTINGS_IDLE_STATE="$test_root/idle-state"
 mkdir -p "$test_root/idle"
-cp -R "$repository/defaults/quickshell/"{Services,Settings,Components,Assets,Modules} "$test_root/idle/"
+cp -R "$repository/defaults/quickshell/"{Services,Settings,Components,Assets,Modules,Launcher} "$test_root/idle/"
 cp "$repository/defaults/quickshell/Theme.qml" "$test_root/idle/"
 cp "$repository/tests/quickshell/settings-idle.qml" "$test_root/idle/shell.qml"
 cp "$repository/tests/fixtures/settings-idle.py" "$test_root/idle/idle.py"
@@ -349,7 +349,7 @@ fi
 # Pointer actions use a fixture, never the host compositor or input devices.
 export SETTINGS_POINTER_STATE="$test_root/pointer-state"
 mkdir -p "$test_root/pointer"
-cp -R "$repository/defaults/quickshell/"{Services,Settings,Components,Assets,Modules} "$test_root/pointer/"
+cp -R "$repository/defaults/quickshell/"{Services,Settings,Components,Assets,Modules,Launcher} "$test_root/pointer/"
 cp "$repository/defaults/quickshell/Theme.qml" "$test_root/pointer/"
 cp "$repository/tests/quickshell/settings-pointer.qml" "$test_root/pointer/shell.qml"
 cp "$repository/tests/fixtures/settings-pointer.py" "$test_root/pointer/pointer.py"
@@ -368,7 +368,7 @@ fi
 # Keyboard actions use a fixture, never the host compositor or input devices.
 export SETTINGS_KEYBOARD_STATE="$test_root/keyboard-state"
 mkdir -p "$test_root/keyboard"
-cp -R "$repository/defaults/quickshell/"{Services,Settings,Components,Assets,Modules} "$test_root/keyboard/"
+cp -R "$repository/defaults/quickshell/"{Services,Settings,Components,Assets,Modules,Launcher} "$test_root/keyboard/"
 cp "$repository/defaults/quickshell/Theme.qml" "$test_root/keyboard/"
 cp "$repository/tests/quickshell/settings-keyboard.qml" "$test_root/keyboard/shell.qml"
 cp "$repository/tests/fixtures/settings-keyboard.py" "$test_root/keyboard/keyboard.py"
@@ -387,7 +387,7 @@ fi
 # Shortcuts actions use a fixture, never the host compositor or input devices.
 export SETTINGS_SHORTCUTS_STATE="$test_root/shortcuts-state"
 mkdir -p "$test_root/shortcuts"
-cp -R "$repository/defaults/quickshell/"{Services,Settings,Components,Assets,Modules} "$test_root/shortcuts/"
+cp -R "$repository/defaults/quickshell/"{Services,Settings,Components,Assets,Modules,Launcher} "$test_root/shortcuts/"
 cp "$repository/defaults/quickshell/Theme.qml" "$test_root/shortcuts/"
 cp "$repository/tests/quickshell/settings-shortcuts.qml" "$test_root/shortcuts/shell.qml"
 cp "$repository/tests/fixtures/settings-shortcuts.py" "$test_root/shortcuts/shortcuts.py"
@@ -406,7 +406,7 @@ fi
 # Interface actions use a fixture, never the host compositor or input devices.
 export SETTINGS_INTERFACE_STATE="$test_root/interface-state"
 mkdir -p "$test_root/interface"
-cp -R "$repository/defaults/quickshell/"{Services,Settings,Components,Assets,Modules} "$test_root/interface/"
+cp -R "$repository/defaults/quickshell/"{Services,Settings,Components,Assets,Modules,Launcher} "$test_root/interface/"
 cp "$repository/defaults/quickshell/Theme.qml" "$test_root/interface/"
 cp "$repository/tests/quickshell/settings-interface.qml" "$test_root/interface/shell.qml"
 cp "$repository/tests/fixtures/settings-interface.py" "$test_root/interface/interface.py"
@@ -425,7 +425,7 @@ fi
 # Accessibility actions use a fixture, never the host compositor or input devices.
 export SETTINGS_ACCESSIBILITY_STATE="$test_root/accessibility-state"
 mkdir -p "$test_root/accessibility"
-cp -R "$repository/defaults/quickshell/"{Services,Settings,Components,Assets,Modules} "$test_root/accessibility/"
+cp -R "$repository/defaults/quickshell/"{Services,Settings,Components,Assets,Modules,Launcher} "$test_root/accessibility/"
 cp "$repository/defaults/quickshell/Theme.qml" "$test_root/accessibility/"
 cp "$repository/tests/quickshell/settings-accessibility.qml" "$test_root/accessibility/shell.qml"
 cp "$repository/tests/fixtures/settings-accessibility.py" "$test_root/accessibility/accessibility.py"
@@ -444,7 +444,7 @@ fi
 # Default application actions use a fixture, never the host compositor or input devices.
 export SETTINGS_DEFAULT_APPS_STATE="$test_root/default-apps-state"
 mkdir -p "$test_root/default-apps"
-cp -R "$repository/defaults/quickshell/"{Services,Settings,Components,Assets,Modules} "$test_root/default-apps/"
+cp -R "$repository/defaults/quickshell/"{Services,Settings,Components,Assets,Modules,Launcher} "$test_root/default-apps/"
 cp "$repository/defaults/quickshell/Theme.qml" "$test_root/default-apps/"
 cp "$repository/tests/quickshell/settings-default-apps.qml" "$test_root/default-apps/shell.qml"
 cp "$repository/tests/fixtures/settings-default-apps.py" "$test_root/default-apps/default-apps.py"
@@ -463,7 +463,7 @@ fi
 # Shared task backend actions use a fixture, never the host compositor or input devices.
 export SETTINGS_TASK_STATE="$test_root/task-state"
 mkdir -p "$test_root/task"
-cp -R "$repository/defaults/quickshell/"{Services,Settings,Components,Assets,Modules} "$test_root/task/"
+cp -R "$repository/defaults/quickshell/"{Services,Settings,Components,Assets,Modules,Launcher} "$test_root/task/"
 cp "$repository/defaults/quickshell/Theme.qml" "$test_root/task/"
 cp "$repository/tests/quickshell/settings-task.qml" "$test_root/task/shell.qml"
 cp "$repository/tests/fixtures/settings-task.py" "$test_root/task/task.py"
@@ -479,4 +479,88 @@ if ! grep -q SETTINGS_TASK_PASSED "$test_root/task.log" \
     exit 1
 fi
 
+
+mkdir -p "$test_root/power-menu" "$test_root/home/.local/share/blankweave/shell"
+cp -R "$repository/defaults/quickshell/"{Services,Settings,Components,Assets,Modules,Launcher} "$test_root/power-menu/"
+cp "$repository/defaults/quickshell/Theme.qml" "$test_root/power-menu/"
+cp "$repository/tests/quickshell/power-menu.qml" "$test_root/power-menu/shell.qml"
+printf 'import json\nprint(json.dumps({"revision": "fixture", "actions": []}))\n' \
+    > "$test_root/home/.local/share/blankweave/shell/operations-settings.py"
+if ! HOME="$test_root/home" XDG_CONFIG_HOME="$test_root/home/.config" \
+    XDG_RUNTIME_DIR="$test_root/runtime" QT_QPA_PLATFORM=offscreen \
+    QT_QUICK_BACKEND=software timeout 15 qs -p "$test_root/power-menu" > "$test_root/power-menu.log" 2>&1; then
+    cat "$test_root/power-menu.log"
+    exit 1
+fi
+if ! grep -q POWER_MENU_PASSED "$test_root/power-menu.log" \
+    || grep -Eq '(TypeError|ReferenceError|Binding loop|Unable to assign|Failed to load|Error:)' "$test_root/power-menu.log"; then
+    cat "$test_root/power-menu.log"
+    exit 1
+fi
+
+# Native low-battery watcher/toast: fake aggregate device and power action only.
+mkdir -p "$test_root/low-battery"
+cp -R "$repository/defaults/quickshell/"{Services,Settings,Components,Assets,Modules,Launcher} "$test_root/low-battery/"
+cp "$repository/defaults/quickshell/Theme.qml" "$test_root/low-battery/"
+cp "$repository/tests/quickshell/low-battery.qml" "$test_root/low-battery/shell.qml"
+printf 'print("{}")\n' > "$test_root/low-battery-helper.py"
+if ! HOME="$test_root/home" XDG_CONFIG_HOME="$test_root/home/.config" \
+    XDG_RUNTIME_DIR="$test_root/runtime" QT_QPA_PLATFORM=offscreen \
+    LOW_BATTERY_HELPER="$test_root/low-battery-helper.py" \
+    QT_QUICK_BACKEND=software timeout 15 qs -p "$test_root/low-battery" > "$test_root/low-battery.log" 2>&1; then
+    cat "$test_root/low-battery.log"
+    exit 1
+fi
+if ! grep -q LOW_BATTERY_PASSED "$test_root/low-battery.log" \
+    || grep -Eq '(TypeError|ReferenceError|Binding loop|Unable to assign|Failed to load|Error:)' "$test_root/low-battery.log"; then
+    cat "$test_root/low-battery.log"
+    exit 1
+fi
+
+# Bar input and colours: injected audio, battery and Bluetooth only.
+mkdir -p "$test_root/bar-widgets"
+cp -R "$repository/defaults/quickshell/"{Components,Assets,Modules,Services,Settings,Launcher} "$test_root/bar-widgets/"
+cp "$repository/defaults/quickshell/Theme.qml" "$test_root/bar-widgets/"
+cp "$repository/tests/quickshell/bar-widgets.qml" "$test_root/bar-widgets/shell.qml"
+if ! HOME="$test_root/home" XDG_CONFIG_HOME="$test_root/home/.config" \
+    XDG_RUNTIME_DIR="$test_root/runtime" QT_QPA_PLATFORM=offscreen \
+    QT_QUICK_BACKEND=software timeout 15 qs -p "$test_root/bar-widgets" > "$test_root/bar-widgets.log" 2>&1; then
+    cat "$test_root/bar-widgets.log"
+    exit 1
+fi
+if ! grep -q BAR_WIDGETS_PASSED "$test_root/bar-widgets.log" \
+    || grep -Eq '(TypeError|ReferenceError|Binding loop|Unable to assign|Failed to load|Error:)' "$test_root/bar-widgets.log"; then
+    cat "$test_root/bar-widgets.log"
+    exit 1
+fi
+
 printf 'Settings command and interface tests passed.\n'
+
+# OSD brightness intent uses an isolated helper and never discovers host displays.
+mkdir -p "$test_root/osd-brightness"
+cp -R "$repository/defaults/quickshell/"{Services,Components,Modules,Launcher} "$test_root/osd-brightness/"
+cp "$repository/tests/quickshell/osd-brightness.qml" "$test_root/osd-brightness/shell.qml"
+cp "$repository/tests/fixtures/settings-brightness.sh" "$test_root/osd-brightness/brightness.sh"
+if ! HOME="$test_root/home" XDG_CONFIG_HOME="$test_root/home/.config" \
+    XDG_RUNTIME_DIR="$test_root/runtime" QT_QPA_PLATFORM=offscreen \
+    SETTINGS_BRIGHTNESS_DIR="$test_root/osd-brightness-state" \
+    QT_QUICK_BACKEND=software timeout 10 qs -p "$test_root/osd-brightness" > "$test_root/osd-brightness.log" 2>&1; then
+    cat "$test_root/osd-brightness.log"
+    exit 1
+fi
+if ! grep -q OSD_BRIGHTNESS_PASSED "$test_root/osd-brightness.log" \
+    || grep -Eq '(TypeError|ReferenceError|Binding loop|Unable to assign|Failed to load|Error:)' "$test_root/osd-brightness.log"; then
+    cat "$test_root/osd-brightness.log"
+    exit 1
+fi
+
+bash "$repository/tests/brightness.sh" </dev/null
+
+# Header action metadata is checked without instantiating host services.
+python3 "$repository/tests/header_actions_test.py" </dev/null
+
+# Poller lifecycle, shared collectors, and stale rendering use fake scripts only.
+bash "$repository/tests/script-poller.sh" </dev/null
+
+# Error contracts are pure Python and never invoke host services.
+PYTHONDONTWRITEBYTECODE=1 python3 "$repository/tests/settings_feedback_test.py" </dev/null

@@ -49,7 +49,7 @@ ShellRoot {
                     break
                 case 3:
                     test.check(backend.error.includes("changed") && controls.currentId === "two.desktop", "Stale request accepted")
-                    test.find(controls, "defaultAppInherited").clicked()
+                    test.find(controls, "defaultAppInherited").clicked(); test.find(controls, "defaultAppInherited").clicked()
                     break
                 case 4:
                     test.check(controls.currentId === "one.desktop" && !controls.selected.local, "Inherited reset failed")

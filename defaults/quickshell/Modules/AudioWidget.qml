@@ -3,6 +3,7 @@ import QtQuick
 import QtQuick.Layouts
 import "../Components"
 
+
 WidgetFrame {
     id: root
 
@@ -10,13 +11,18 @@ WidgetFrame {
     readonly property bool muted: !audio.available || audio.muted
     readonly property int percentage: Math.round(audio.volume * 100)
 
+    Component.onDestruction: bar.shell.osd.panel(root, "volume", false)
+
     visible: audio.outputKey !== ""
+    iconMark: muted ? "audio-muted" : "audio-" + (percentage < 35 ? 0 : percentage < 70 ? 1 : 2)
     icon: muted ? "󰝟" : (percentage < 35 ? "󰕿" : (percentage < 70 ? "󰖀" : "󰕾"))
     iconPixelSize: theme.barIconSize + 3
     label: muted ? "Muted" : percentage + "%"
+    rightClickHint: audio.available ? (audio.muted ? "unmute" : "mute") : ""
+    scrollHint: audio.available ? "adjust volume" : ""
     tooltip: audio.outputLabel
-        + "\nClick for controls · Scroll to adjust · Right-click to mute"
-    attention: muted
+        + "\nClick for controls"
+    active: audioPanel.open
 
     onPressed: button => {
         if (button === Qt.LeftButton) {
@@ -24,26 +30,31 @@ WidgetFrame {
             audioPanel.open = !audioPanel.open
         }
         else if (button === Qt.RightButton)
-            audio.setOutputMuted(!audio.muted)
+            bar.shell.osd.volume("mute")
     }
 
-    onScrolled: delta => audio.setVolume(audio.volume + (delta > 0 ? 0.02 : -0.02))
+    onScrolled: steps => {
+        bar.shell.osd.volume(steps > 0 ? "up" : "down", Math.abs(steps))
+    }
 
     ControlPopup {
+        panelId: "audio"
         id: audioPanel
         bar: root.bar
         theme: root.theme
         anchorItem: root
         panelWidth: 350
+        onOpenChanged: root.bar.shell.osd.panel(root, "volume", open)
 
         ControlPanelHeader {
             theme: root.theme
+            atBottom: root.bar.atBottom
             icon: "󰎆"
             title: "SOUND"
             subtitle: root.audio.outputLabel
             actions: [
-                { "id": "mixer", "icon": "󰒓" },
-                { "id": "mute", "icon": root.muted ? "󰝟" : "󰕾", "attention": root.muted }
+                { "id": "mixer", "label": "Open audio mixer", "icon": "󰒕" },
+                { "id": "mute", "label": "Toggle mute", "icon": root.muted ? "󰝟" : "󰕾", "attention": root.muted }
             ]
             onActionPressed: actionId => {
                 if (actionId === "mixer") {
@@ -63,6 +74,7 @@ WidgetFrame {
         AudioVolumeControl {
             theme: root.theme
             backend: root.audio
+            maximumVolume: 1
         }
 
         ControlDivider { theme: root.theme }
@@ -98,7 +110,7 @@ WidgetFrame {
                     color: root.theme.accentBright
 
                     Behavior on height {
-                        NumberAnimation { duration: root.theme.reducedMotion ? 0 : 140; easing.type: Easing.OutCubic }
+                        NumberAnimation { duration: Math.round(root.theme.motionDuration * 140 / 150); easing.type: Easing.OutCubic }
                     }
                 }
 
@@ -140,7 +152,12 @@ WidgetFrame {
                     font.pixelSize: root.theme.iconSize
                 }
 
-                MouseArea {
+                ControlMouseArea {
+                    theme: root.theme
+                    accessibleName: sinkRow.modelData.label
+                    checkable: true
+                    checked: sinkRow.selected
+                    focusIdentity: String(sinkRow.modelData.key)
                     id: sinkMouse
                     anchors.fill: parent
                     hoverEnabled: true
@@ -150,6 +167,12 @@ WidgetFrame {
             }
         }
 
+        PanelSettingsAction {
+            theme: root.theme
+            panelKey: "AudioWidget"
+            bar: root.bar
+            panel: audioPanel
+        }
     }
 
 }

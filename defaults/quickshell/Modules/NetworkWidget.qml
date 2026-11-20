@@ -7,6 +7,7 @@ import "../Services"
 
 WidgetFrame {
     id: root
+    dataSources: [metricPoller]
 
     readonly property string shellDir: Quickshell.env("HOME") + "/.local/share/blankweave/shell"
     readonly property string statusScript: shellDir + "/network-status.sh"
@@ -63,6 +64,7 @@ WidgetFrame {
     function flattenedWifiRow(row) {
         return {
             "ssid": row.ssid,
+            "networkKey": String(row.key || JSON.stringify([root.wifiDevice ? root.wifiDevice.name : "", row.ssid, row.security])),
             "connected": row.connected,
             "known": row.known,
             "stateChanging": row.stateChanging,
@@ -203,13 +205,17 @@ WidgetFrame {
             ? signalStrength + "% signal"
             : (wifiDevice && root.wifi.enabled ? "Scanning for networks" : "Disconnected"))
 
+    iconMark: kind === "ethernet" ? "ethernet" : kind === "wifi" ? "wifi-" + (signalStrength < 20 ? 0 : signalStrength < 40 ? 1 : signalStrength < 60 ? 2 : signalStrength < 80 ? 3 : 4) : "network-disconnected"
     icon: root.networkIcon
     iconPixelSize: theme.barIconSize - 2
     label: String(info.text || "")
     tooltip: String(info.tooltip || "No network connection") + "\nClick for controls"
-    attention: kind === "disconnected"
+    active: networkPanel.open
 
-    ScriptPoller {
+    SharedPoller {
+        id: metricPoller
+        service: root.bar.shell.pollers
+        key: "NetworkWidget:metricPoller"
         command: root.statusScript
         interval: 2500
         onUpdated: payload => {
@@ -269,6 +275,8 @@ WidgetFrame {
     }
 
     ControlPopup {
+        panelId: "network"
+        escapeHandler: () => { if (!root.passwordSsid) return false; root.cancelPasswordPrompt(); return true }
         id: networkPanel
         bar: root.bar
         theme: root.theme
@@ -289,17 +297,14 @@ WidgetFrame {
 
         ControlPanelHeader {
             theme: root.theme
+            atBottom: root.bar.atBottom
             icon: root.networkIcon
             title: root.headerTitle
             subtitle: root.headerSubtitle
             actions: root.wifiDevice
                 ? [
-                    { "id": "scan", "icon": "󰑓", "active": !root.scanPaused && root.wifi.usable },
-                    {
-                        "id": "power",
-                        "icon": root.wifi.enabled ? "󰤨" : "󰤭",
-                        "attention": !root.wifi.enabled
-                    }
+                    { "id": "scan", "label": root.scanPaused ? "Resume scanning" : "Pause scanning", "icon": "󰑓", "active": !root.scanPaused && root.wifi.usable },
+                    {"id": "power", "label": root.wifi.enabled ? "Turn Wi-Fi off" : "Turn Wi-Fi on", "kind": "switch", "checked": root.wifi.enabled, "pending": root.wifi.busy}
                 ]
                 : []
             onActionPressed: actionId => {
@@ -448,6 +453,7 @@ WidgetFrame {
                 id: networkDelegate
 
                 required property int index
+                required property string networkKey
                 required property string ssid
                 required property bool connected
                 required property bool known
@@ -488,7 +494,7 @@ WidgetFrame {
                         height: networkDelegate.connected ? 22 : (networkActionMouse.containsMouse ? 14 : 0)
                         color: root.theme.accentBright
 
-                        Behavior on height { NumberAnimation { duration: root.theme.reducedMotion ? 0 : 140 } }
+                        Behavior on height { NumberAnimation { duration: Math.round(root.theme.motionDuration * 140 / 150) } }
                     }
 
                     RowLayout {
@@ -576,7 +582,10 @@ WidgetFrame {
                                 font.weight: Font.Medium
                             }
 
-                            MouseArea {
+                            ControlMouseArea {
+                                theme: root.theme
+                                accessibleName: "Forget " + networkDelegate.ssid
+                                focusIdentity: networkDelegate.networkKey + ":forget"
                                 anchors.fill: parent
                                 hoverEnabled: true
                                 cursorShape: Qt.PointingHandCursor
@@ -594,7 +603,7 @@ WidgetFrame {
                         }
 
                         Item {
-                            Layout.preferredWidth: 68
+                            Layout.preferredWidth: Math.round(68 * (root.theme.textScale || 1))
                             Layout.preferredHeight: 28
                             opacity: root.busy && !networkDelegate.rowBusy ? 0.45 : 1
 
@@ -616,10 +625,13 @@ WidgetFrame {
                                 height: 1
                                 color: root.theme.accentBright
 
-                                Behavior on width { NumberAnimation { duration: root.theme.reducedMotion ? 0 : 140 } }
+                                Behavior on width { NumberAnimation { duration: Math.round(root.theme.motionDuration * 140 / 150) } }
                             }
 
-                            MouseArea {
+                            ControlMouseArea {
+                                theme: root.theme
+                                accessibleName: (networkDelegate.connected ? "Disconnect " : "Connect ") + networkDelegate.ssid
+                                focusIdentity: networkDelegate.networkKey + ":primary"
                                 id: networkActionMouse
                                 anchors.fill: parent
                                 enabled: !root.busy
@@ -654,6 +666,7 @@ WidgetFrame {
                         Layout.fillWidth: true
                         theme: root.theme
                         placeholderText: "Identity (user@domain)"
+                        escapeHandler: () => root.cancelPasswordPrompt()
                         text: root.identityText
                         onTextChanged: if (networkDelegate.passwordOpen) root.identityText = text
                         onAccepted: passwordField.forceActiveFocus()
@@ -676,7 +689,7 @@ WidgetFrame {
                                 root.passwordText,
                                 root.identityText
                             )
-                            Keys.onEscapePressed: root.cancelPasswordPrompt()
+                            escapeHandler: () => root.cancelPasswordPrompt()
                             onVisibleChanged: {
                                 if (visible && !networkDelegate.enterprise)
                                     Qt.callLater(() => passwordField.forceActiveFocus())
@@ -695,7 +708,10 @@ WidgetFrame {
                                 font.pixelSize: root.theme.iconSize
                             }
 
-                            MouseArea {
+                            ControlMouseArea {
+                                theme: root.theme
+                                accessibleName: "Join " + networkDelegate.ssid
+                                focusIdentity: networkDelegate.networkKey + ":join"
                                 anchors.fill: parent
                                 enabled: root.passwordText !== ""
                                     && (!networkDelegate.enterprise || root.identityText !== "")
@@ -730,6 +746,12 @@ WidgetFrame {
             font.family: root.theme.fontFamily
             font.pixelSize: root.theme.smallTextSize
             renderType: Text.NativeRendering
+        }
+        PanelSettingsAction {
+            theme: root.theme
+            panelKey: "NetworkWidget"
+            bar: root.bar
+            panel: networkPanel
         }
     }
 

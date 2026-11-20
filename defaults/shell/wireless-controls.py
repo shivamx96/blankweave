@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Airplane mode and temporary WPA2 hotspots; secrets travel only over stdin/D-Bus."""
+from runtime_paths import runtime_path
 import fcntl
 import importlib.util
 import json
@@ -84,7 +85,7 @@ class Airplane:
         if type(enable) is not bool:
             raise ValueError('Invalid airplane-mode request.')
         self.directory.mkdir(parents=True, exist_ok=True)
-        with open(self.directory / 'airplane.lock', 'w') as lock:
+        with open(runtime_path('airplane.lock'), 'w') as lock:
             fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
             current = radios()
             if not current:

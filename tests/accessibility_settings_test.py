@@ -109,7 +109,7 @@ class AccessibilityTests(unittest.TestCase):
 
     def test_compositor_integration_order(self):
         self.helper.apply(self.request())
-        script='''local enabled; hl={config=function(v) enabled=v.animations.enabled end,curve=function() end,animation=function() end}; dofile(arg[0]); assert(enabled==false); assert(blankweave_accessibility_revision); os.exit(0)'''
+        script='''local enabled; hl={config=function(v) enabled=v.animations.enabled end,curve=function(_,v) for _,p in ipairs(v.points) do assert(p[2]>=0 and p[2]<=1) end end,animation=function(v) assert(v.speed >= 2 and v.speed <= 3) end,layer_rule=function(v) assert(v.no_anim) end}; dofile(arg[0]); assert(enabled==false); assert(blankweave_accessibility_revision); os.exit(0)'''
         subprocess.run(['lua','-e',script,str(REPO/'defaults/hypr/animations.lua')],check=True)
 
 if __name__=='__main__':unittest.main()

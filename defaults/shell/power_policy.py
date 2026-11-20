@@ -1,4 +1,5 @@
 """Persisted, opt-in profile changes on power-source transitions."""
+from runtime_paths import runtime_path
 from contextlib import contextmanager
 import fcntl
 import json
@@ -96,7 +97,7 @@ class Policy:
         self.config = Path(os.environ.get('XDG_CONFIG_HOME', Path.home() / '.config')) / 'blankweave/power-profiles.json'
         directory = Path(os.environ.get('XDG_STATE_HOME', Path.home() / '.local/state')) / 'blankweave'
         self.state = directory / 'power-profiles-auto.json'
-        self.lock = directory / 'power-profiles.lock'
+        self.lock = runtime_path('power-profiles.lock')
 
     def settings(self):
         return validate(read(self.config, dict(DEFAULTS)))
@@ -114,6 +115,7 @@ class Policy:
     @contextmanager
     def locked(self):
         self.lock.parent.mkdir(parents=True, exist_ok=True)
+        self.state.parent.mkdir(parents=True, exist_ok=True)
         with self.lock.open('a') as stream:
             try:
                 fcntl.flock(stream, fcntl.LOCK_EX | fcntl.LOCK_NB)

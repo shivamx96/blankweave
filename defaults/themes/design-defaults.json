@@ -7,7 +7,7 @@
     "labelGap": 5, "descriptionGap": 9, "group": 16, "page": 20,
     "controlInset": 24, "rowInset": 28
   },
-  "shape": {"controlRadius": 4, "panelRadius": 14, "borderWidth": 1},
+  "shape": {"controlRadius": 4, "panelRadius": 14, "borderWidth": 1, "windowRadius": 10, "windowBorderWidth": 2, "notificationRadius": 0, "lockFieldRadius": 10},
   "typography": {
     "fontFamily": "Atkinson Hyperlegible Next",
     "monoFontFamily": "JetBrainsMono Nerd Font",

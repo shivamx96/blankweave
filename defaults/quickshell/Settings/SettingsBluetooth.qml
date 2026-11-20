@@ -1,5 +1,6 @@
 pragma ComponentBehavior: Bound
 import QtQuick
+import "LegacyErrors.js" as Errors
 import QtQuick.Layouts
 import "../Components"
 
@@ -7,19 +8,19 @@ ColumnLayout {
     id: root
     required property var theme
     required property var backend
-    property string confirmKey: ""
     readonly property bool active: backend !== null && backend.settingsActive
     spacing: root.theme.spacing("xl")
-    onActiveChanged: if (!active) { confirmKey = ""; if (backend) backend.cancelForOwner(root) }
+    onActiveChanged: if (!active) { if (backend) backend.cancelForOwner(root) }
     Component.onDestruction: if (backend) backend.cancelForOwner(root)
     Flow {
         Layout.fillWidth: true
         spacing: root.theme.spacing("md")
-        SettingsButton {
+        SettingsSwitchRow {
             objectName: "bluetoothPower"
             theme: root.theme
-            text: root.backend && root.backend.enabled ? "Bluetooth: On" : "Bluetooth: Off"
-            selected: root.backend !== null && root.backend.enabled
+            checked: root.backend !== null && root.backend.enabled
+            busy: Boolean(root.backend && root.backend.busy)
+            text: "Bluetooth"
             enabled: root.backend !== null && root.backend.adapter !== null && !root.backend.busy
             onClicked: root.backend.togglePower()
         }
@@ -53,7 +54,7 @@ ColumnLayout {
     Text {
         Layout.fillWidth: true
         visible: text !== ""
-        text: root.backend ? root.backend.error : ""
+        text: root.backend ? Errors.message(root.backend.error) : ""
         textFormat: Text.PlainText
         color: root.theme.critical
         font.family: root.theme.fontFamily
@@ -99,18 +100,15 @@ ColumnLayout {
                     onClicked: deviceRow.device.connected ? root.backend.runAction("disconnect", deviceRow.device.key, root)
                         : root.backend.connectDevice(deviceRow.device.key, root)
                 }
-                SettingsButton {
+                SettingsConfirmButton {
                     objectName: "bluetoothForget:" + deviceRow.device.key
                     theme: root.theme
                     visible: deviceRow.device.paired || deviceRow.device.bonded || deviceRow.device.trusted
-                    text: root.confirmKey === deviceRow.device.key ? "Confirm forget" : "Forget"
+                    actionText: "Forget"
+                    confirmText: "Forget “" + deviceRow.device.name + "”"
+                    targetIdentity: deviceRow.device.key
                     enabled: !root.backend.busy
-                    onClicked: {
-                        if (root.confirmKey === deviceRow.device.key) {
-                            root.backend.runAction("forget", deviceRow.device.key, root)
-                            root.confirmKey = ""
-                        } else { root.confirmKey = deviceRow.device.key; confirmTimer.restart() }
-                    }
+                    onConfirmed: root.backend.runAction("forget", deviceRow.device.key, root)
                 }
             }
             Item { implicitHeight: 4 }
@@ -124,5 +122,4 @@ ColumnLayout {
         font.pixelSize: root.theme.smallTextSize
         wrapMode: Text.WordWrap
     }
-    Timer { id: confirmTimer; interval: 5000; onTriggered: root.confirmKey = "" }
 }

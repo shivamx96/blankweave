@@ -44,6 +44,7 @@ git -C "$fixture" tag -a v1.2.3 -m 'Blankweave 1.2.3'
 
 blankweave_release_version_greater 1.2.3 1.2.2
 blankweave_release_version_greater 1.10.0 1.9.9
+blankweave_release_version_greater 18446744073709551616.0.0 9999999999999999999.0.0
 blankweave_release_version_greater_or_equal 1.2.3 1.2.3
 if blankweave_release_version_greater 1.2.3 1.2.3 \
     || blankweave_release_version_greater_or_equal 1.2.2 1.2.3 \
@@ -61,4 +62,31 @@ if blankweave_release_version_at "$fixture" "$invalid_revision" > /dev/null 2>&1
     exit 1
 fi
 
+# Selection is numeric SemVer, independent of date, lexical order, and tip.
+for version in 0.9.0 0.10.0; do
+    printf '%s\n' "$version" > "$fixture/VERSION"
+    git -C "$fixture" commit --quiet -am "release $version"
+    tag_date='2020-01-01T00:00:00Z'
+    [[ $version != 0.9.0 ]] || tag_date='2030-01-01T00:00:00Z'
+    GIT_COMMITTER_DATE=$tag_date git -C "$fixture" tag -a "v$version" -m "$version"
+done
+# Earlier 1.2.3 is intentionally still highest.
+[[ $(blankweave_release_select "$fixture" main) == v1.2.3 ]]
+git -C "$fixture" tag -d v1.2.3 >/dev/null
+[[ $(blankweave_release_select "$fixture" main) == v0.10.0 ]]
+printf '9.0.0\n' > "$fixture/VERSION"
+git -C "$fixture" commit --quiet -am 'unreleased tip'
+git -C "$fixture" tag v9.0.0
+git -C "$fixture" tag -a v8.0.0 -m mismatched
+[[ $(blankweave_release_select "$fixture" main) == v0.10.0 ]]
+git -C "$fixture" checkout --quiet -b side
+printf '10.0.0\n' > "$fixture/VERSION"
+git -C "$fixture" commit --quiet -am 'side release'
+git -C "$fixture" tag -a v10.0.0 -m side
+git -C "$fixture" checkout --quiet main
+[[ $(blankweave_release_select "$fixture" main) == v0.10.0 ]]
+[[ $(blankweave_release_select "$fixture" main v0.9.0) == v0.9.0 ]]
+for tag in v9.0.0 v8.0.0 v10.0.0 v7.0.0 garbage; do
+    if blankweave_release_select "$fixture" main "$tag"; then exit 1; fi
+done
 printf 'Release version tests passed.\n'

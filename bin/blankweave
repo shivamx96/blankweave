@@ -18,6 +18,7 @@ INSTALLED_VERSION_STATE=$BLANKWEAVE_STATE_DIR/installed-version
 INSTALLED_RELEASE_TAG_STATE=$BLANKWEAVE_STATE_DIR/installed-release-tag
 RECOVERY_DIR=$BLANKWEAVE_STATE_DIR/recovery
 RECOVERY_STATE=$RECOVERY_DIR/latest
+KERNEL_MODULES_DIR=/usr/lib/modules
 
 die() {
     printf '%s: %s\n' "$PROGRAM_NAME" "$*" >&2
@@ -99,7 +100,62 @@ apply_repository() {
 
     require_normal_user
     validate_repository "$repository"
-    "$repository/install.sh"
+    local policy=${2:-upgrade}
+    local -a apply_command=(env BLANKWEAVE_PACKAGE_POLICY="$policy" "$repository/install.sh")
+    if command -v systemd-inhibit >/dev/null 2>&1; then
+        apply_command=(systemd-inhibit --what=shutdown:sleep:idle --who=Blankweave
+            --why="Applying Blankweave configuration and packages" --mode=block "${apply_command[@]}")
+    else
+        printf 'Warning: systemd-inhibit unavailable; keep the machine awake during apply.\n' >&2
+    fi
+    local status=0 was_installed=false
+    [[ ! -s $INSTALLED_REVISION_STATE ]] || was_installed=true
+    "${apply_command[@]}" || status=$?
+    if [[ $was_installed == true ]]; then record_restart_required; fi
+    return "$status"
+}
+
+record_restart_required() {
+    if [[ ! -d $KERNEL_MODULES_DIR/$(uname -r) ]]; then
+        printf 'Restart required: the running kernel modules are no longer installed.\n'
+        if [[ -n ${XDG_RUNTIME_DIR:-} && -d $XDG_RUNTIME_DIR ]]; then
+            mkdir -p "$XDG_RUNTIME_DIR/blankweave"
+            printf 'Restart to finish updating\n' > "$XDG_RUNTIME_DIR/blankweave/restart-required"
+        fi
+    fi
+}
+
+print_update_summary() {
+    printf 'Apply Blankweave %s -> %s (full Arch system upgrade).\n' "$1" "$2"
+    printf 'Pending upgrades from local pacman databases (may change after refresh):\n'
+    local upgrades package rest label
+    if command -v pacman >/dev/null 2>&1 && upgrades=$(pacman -Qu 2>/dev/null); then
+        if [[ -z $upgrades ]]; then
+            printf '  None known locally; databases may be stale.\n'
+        else
+            while read -r package rest; do
+                label=
+                case "$package" in
+                    linux|linux-lts|linux-zen|linux-hardened|linux-rt*) label=' [KERNEL]' ;;
+                    mesa*|lib32-mesa*|nvidia*|lib32-nvidia*|vulkan-*|xf86-video-*) label=' [GPU/mesa]' ;;
+                    hyprland*) label=' [HYPRLAND]' ;;
+                    quickshell*) label=' [QUICKSHELL]' ;;
+                esac
+                printf '  %s %s%s\n' "$package" "$rest" "$label"
+            done <<< "$upgrades"
+        fi
+    else
+        printf '  Unavailable; pacman will resolve upgrades during apply.\n'
+    fi
+}
+
+confirm_update() {
+    local answer
+    if [[ $1 != true && -t 0 ]]; then
+        printf 'Apply this update? [y/N]: '
+        IFS= read -r answer || return 1
+        [[ ${answer,,} == y || ${answer,,} == yes ]] || return 1
+    fi
 }
 
 validate_revision() {
@@ -321,14 +377,38 @@ command_theme_sync() {
     sudo "$repository/scripts/theme-system.sh" "$HOME" "${XDG_CONFIG_HOME:-$HOME/.config}"
 }
 
+theme_helper() {
+    "$BLANKWEAVE_DATA_DIR/shell/theme-apply.sh" "$@" 2> >(sed 's/^theme-apply:/blankweave theme:/' >&2)
+}
+
 command_theme() {
     local script=$BLANKWEAVE_DATA_DIR/shell/theme-apply.sh
 
-    require_normal_user
-    [[ -x "$script" ]] || die "theme support is not deployed yet; run: blankweave update"
+    if [[ $# -eq 0 ]]; then
+        if [[ -r ${XDG_CONFIG_HOME:-$HOME/.config}/blankweave/theme.json ]]; then
+            jq -r '"Theme: \(.theme)\nMode: \(.mode)"' "${XDG_CONFIG_HOME:-$HOME/.config}/blankweave/theme.json"
+        else
+            printf 'Theme: not configured\n'
+        fi
+        if [[ -x $script ]]; then
+            theme_helper status | jq -r '"System sync pending: \(.system.pending // false)"'
+        fi
+        command_help theme
+        return
+    fi
+    case "$1" in
+        list|status|set|mode|toggle|sync|lint) ;;
+        *) unknown_command "$1" 'list status set mode toggle sync lint'; return 2 ;;
+    esac
+    # Lint only reads themes, so it also runs in root-only contexts such as CI.
+    [[ $1 == lint ]] || require_normal_user
+    [[ -x "$script" ]] || die "theme support is not deployed yet; run: blankweave update --reapply"
     case "${1:-}" in
+        lint)
+            theme_helper "$@"
+            ;;
         set)
-            "$script" "$@"
+            theme_helper "$@"
             command_theme_sync
             ;;
         sync)
@@ -336,7 +416,7 @@ command_theme() {
             command_theme_sync
             ;;
         *)
-            exec "$script" "$@"
+            theme_helper "$@"
             ;;
     esac
 }
@@ -344,8 +424,15 @@ command_theme() {
 command_webapp() {
     local script=$BLANKWEAVE_DATA_DIR/shell/webapp.sh
 
+    if [[ $# -eq 0 ]]; then command_help webapp; return; fi
+    case "$1" in
+        list|sync) [[ $# -eq 1 ]] || die "usage: blankweave webapp $1" ;;
+        install) [[ $# -eq 4 ]] || die 'usage: blankweave webapp install <name> <url> <icon>' ;;
+        remove) [[ $# -eq 2 ]] || die 'usage: blankweave webapp remove <name>' ;;
+        *) unknown_command "$1" 'list install remove sync'; return 2 ;;
+    esac
     require_normal_user
-    [[ -x "$script" ]] || die "web app support is not deployed yet; run: blankweave update"
+    [[ -x "$script" ]] || die "web app support is not deployed yet; run: blankweave update --reapply"
     exec "$script" "$@"
 }
 
@@ -374,25 +461,38 @@ command_setup() {
 command_update() {
     local repository branch mode=apply current target current_version target_version
     local current_tag target_tag rollback_floor commit_count update_log doctor_script apply_status
-    local SNAPSHOT_NUMBER=
+    local SNAPSHOT_NUMBER='' reapply=false yes=false option requested_release='' newest_tag
+    local RECOVERY_DIR=$RECOVERY_DIR RECOVERY_STATE=$RECOVERY_STATE
 
-    case "${1:-}" in
-        '') ;;
-        --check) mode=check ;;
-        --dry-run) mode=dry-run ;;
-        --help|-h)
-            cat <<'EOF'
-Usage: blankweave update [--check|--dry-run]
+    while (( $# > 0 )); do
+        option=$1
+        shift
+        case "$option" in
+            --to)
+                (( $# > 0 )) && [[ -z $requested_release && -n $1 && $1 != -* ]] || die "--to requires one release tag"
+                requested_release=$1
+                shift ;;
+            --check|--dry-run)
+                [[ $mode == apply ]] || die "choose only one preview mode"
+                mode=${option#--} ;;
+            --reapply) reapply=true ;;
+            --yes) yes=true ;;
+            --help|-h)
+                cat <<'EOF'
+Usage: blankweave update [--check|--dry-run] [--reapply | --to vX.Y.Z] [--yes]
 
-  --check    Fetch and report whether a tagged update is available.
-  --dry-run  Validate the tagged update and print its install plan without applying it.
+  --to       Select a specific newer annotated release reachable from main.
+  --check    Fetch and report tagged releases; no system changes.
+  --dry-run  Validate and print the install plan without applying.
+  --reapply  Apply the current revision again, including a full system upgrade.
+  --yes      Skip the terminal confirmation (scripts without a TTY already do).
 EOF
-            return 0
-            ;;
-        *) die "update accepts only --check or --dry-run" ;;
-    esac
-    (( $# <= 1 )) || die "update accepts only one option"
+                return 0 ;;
+            *) die "unknown update option: $option" ;;
+        esac
+    done
 
+    [[ -z $requested_release || $reapply != true ]] || die "--to and --reapply cannot be combined"
     require_normal_user
     repository=$(configured_repository)
     validate_repository "$repository"
@@ -407,18 +507,30 @@ EOF
     git -C "$repository" merge-base --is-ancestor HEAD origin/main \
         || die "origin/main is not a fast-forward of the local checkout"
     current=$(git -C "$repository" rev-parse HEAD)
-    target=$(git -C "$repository" rev-parse origin/main)
 
     # shellcheck source=scripts/release-version.sh
     source "$repository/scripts/release-version.sh"
+    newest_tag=$(blankweave_release_select "$repository" origin/main) \
+        || die "no valid annotated release is reachable from origin/main"
+    target_tag=$(blankweave_release_select "$repository" origin/main "$requested_release") \
+        || die "requested release is unknown, invalid, or not reachable from origin/main: $requested_release"
+    target=$(git -C "$repository" rev-parse "refs/tags/$target_tag^{commit}")
+    if [[ $mode == check && $(git -C "$repository" rev-parse origin/main) != "$(git -C "$repository" rev-parse "refs/tags/$newest_tag^{commit}")" ]]; then
+        printf 'main has unreleased commits; the newest release is %s\n' "$newest_tag"
+    fi
+    [[ $reapply != true ]] || target=$current
     current_version=$(blankweave_release_version_at "$repository" "$current") \
         || die "current checkout has an invalid VERSION"
     current_tag=$(blankweave_release_tag_at "$repository" "$current") \
         || die "current checkout is not an annotated release matching VERSION"
 
-    if [[ $current == "$target" ]]; then
+    [[ $reapply == true ]] || git -C "$repository" merge-base --is-ancestor "$current" "$target" \
+        || die "selected release is not a fast-forward; use blankweave rollback for a downgrade"
+
+    if [[ $current == "$target" && $reapply != true && -z $requested_release ]]; then
         printf 'Blankweave %s (%s) is already up to date at %s.\n' \
             "$current_version" "$current_tag" "${current:0:12}"
+        printf 'Run blankweave update --reapply to repair configuration or apply saved package choices.\n'
         return 0
     fi
 
@@ -426,8 +538,8 @@ EOF
         || die "target revision has an invalid VERSION"
     target_tag=$(blankweave_release_tag_at "$repository" "$target") \
         || die "target revision is not an annotated release matching VERSION"
-    blankweave_release_version_greater "$target_version" "$current_version" \
-        || die "target release must advance beyond $current_version (found $target_version)"
+    [[ $reapply == true ]] || blankweave_release_version_greater "$target_version" "$current_version" \
+        || die "target release must advance beyond $current_version (found $target_version); use blankweave rollback for a downgrade"
     rollback_floor=$(blankweave_release_floor_at "$repository" "$target") \
         || die "target revision has an invalid MIN_ROLLBACK_VERSION"
     blankweave_release_version_greater_or_equal "$current_version" "$rollback_floor" \
@@ -452,8 +564,19 @@ EOF
         return 0
     fi
 
+    print_update_summary "$current_tag" "$target_tag"
+    if ! confirm_update "$yes"; then
+        printf 'Update cancelled; no changes applied.\n'
+        return 0
+    fi
+
     printf 'Validating sudo before changing the checkout...\n'
     sudo -v
+    # Same-revision repair must never replace a previous-release rollback point.
+    if [[ $reapply == true ]]; then
+        RECOVERY_DIR=$RECOVERY_DIR/reapply
+        RECOVERY_STATE=$RECOVERY_DIR/latest
+    fi
     recovery_write "$current" "$current_version" "$target" "$target_version" prepared
     doctor_script=$repository/scripts/doctor.sh
     if ! "$doctor_script" "$repository" --normal --report > "$RECOVERY_DIR/preflight-report.txt"; then
@@ -463,7 +586,7 @@ EOF
 
     create_pre_snapshot "$current" "$target"
     recovery_write "$current" "$current_version" "$target" "$target_version" prepared "$SNAPSHOT_NUMBER"
-    git -C "$repository" merge --ff-only origin/main
+    [[ $reapply == true ]] || git -C "$repository" merge --ff-only "$target"
     recovery_update_status applying
 
     update_log=$RECOVERY_DIR/update.log
@@ -497,24 +620,32 @@ EOF
 
 command_rollback() {
     local repository branch previous previous_version target target_version status current
-    local rollback_floor rollback_log rollback_status snapshot=
+    local rollback_floor rollback_log rollback_status snapshot='' allow_upgrade=false
+    local package_policy=missing-only answer
 
     case "${1:-}" in
         '') ;;
+        --allow-upgrade) allow_upgrade=true ;;
         --help|-h)
             cat <<'EOF'
-Usage: blankweave rollback
+Usage: blankweave rollback [--allow-upgrade]
 
 Restore the previous Blankweave revision and reconverge managed configuration.
+No system upgrade or database refresh is performed. Only missing manifest
+packages are installed from the local cache; unavailable packages stop rollback.
 Packages and completed one-time migrations are not reversed. If a Snapper
 pre-update snapshot was recorded, its number is shown for manual system recovery.
 Rollback never crosses the release floor recorded by the applied update.
+
+A release from before this policy cannot skip the upgrade: its installer always
+runs a full system upgrade and needs the network. Rollback to such a release
+asks first on a terminal, or needs --allow-upgrade when there is none.
 EOF
             return 0
             ;;
-        *) die "rollback does not accept arguments" ;;
+        *) die "rollback accepts only --allow-upgrade" ;;
     esac
-    (( $# <= 1 )) || die "rollback does not accept arguments"
+    (( $# <= 1 )) || die "rollback accepts only --allow-upgrade"
 
     require_normal_user
     repository=$(configured_repository)
@@ -562,6 +693,25 @@ EOF
         return 0
     fi
 
+    # A release from before the package policy ignores it and upgrades the
+    # system. Rollback is the recovery path, so it stays available, but never
+    # silently: say what will happen and require an explicit yes.
+    if ! git -C "$repository" show "$previous:install.sh" | grep 'BLANKWEAVE_PACKAGE_POLICY' >/dev/null; then
+        package_policy=upgrade
+        printf 'Blankweave %s predates upgrade-free rollback: its installer also runs a full\n' "$previous_version"
+        printf 'Arch system upgrade and needs the network.\n'
+        if [[ $allow_upgrade != true ]]; then
+            [[ -t 0 ]] || die "rerun with --allow-upgrade to accept the system upgrade"
+            printf 'Roll back and upgrade the system? [y/N]: '
+            IFS= read -r answer || answer=
+            if [[ ${answer,,} != y && ${answer,,} != yes ]]; then
+                printf 'Rollback cancelled; no changes applied.\n'
+                return 0
+            fi
+        fi
+    fi
+    validate_target_plan "$repository" "$previous"
+
     printf 'Rolling Blankweave back to %s (%s)...\n' \
         "$previous_version" "${previous:0:12}"
     sudo -v
@@ -570,7 +720,7 @@ EOF
     fi
     recovery_update_status rolling-back
     rollback_log=$RECOVERY_DIR/rollback.log
-    if apply_repository "$repository" 2>&1 | tee "$rollback_log"; then
+    if apply_repository "$repository" "$package_policy" 2>&1 | tee "$rollback_log"; then
         chmod 600 "$rollback_log"
         recovery_update_status rolled-back
         printf 'Managed configuration is restored to %s (%s).\n' \
@@ -592,23 +742,90 @@ print_help() {
 Usage: blankweave <command>
 
 Commands:
+  welcome   Show the desktop welcome card again
   version   Show the CLI version and installed/repository revisions
   setup     Guide first-install choices; use --non-interactive with saved configs
-  settings  Open the desktop settings application
+  settings [<id>|--list]  Open Settings at a page/row, or list valid ids
   update    Check, preview, or safely apply a fast-forward update
   rollback  Restore the previous Blankweave revision and managed configuration
   doctor    Run read-only health checks; add --report for shareable diagnostics
-  theme     Manage the desktop theme: list, status, set <id>, mode <dark|light>, toggle, sync
+  theme     Manage the desktop theme: list, status, set <id>, mode <dark|light>, toggle, sync, lint
   webapp    Manage Helium web apps: list, install <name> <url> <icon>, remove <name>, sync
+  uninstall Preview the footprint; --apply removes proven owned files
   help      Show this help
 EOF
+}
+
+command_help() {
+    local command=${1:-} sub=${2:-}
+    case "$command" in
+        '') print_help; return ;;
+        update) command_update --help ;;
+        rollback) command_rollback --help ;;
+        setup) printf 'Usage: blankweave setup [--non-interactive]\nGuide installation; --non-interactive applies saved choices.\n' ;;
+        doctor) printf 'Usage: blankweave doctor [--full|--normal] [--report]\nRun read-only diagnostics; --normal never elevates; --report omits identifiers.\n' ;;
+        theme)
+            case "$sub" in
+                ''|list|status|set|mode|toggle|sync|lint) ;;
+                *) unknown_command "$sub" 'list status set mode toggle sync lint'; return 2 ;;
+            esac
+            printf 'Usage: blankweave theme [list|status|set <id>|mode <dark|light>|toggle|sync|lint [<id>]]\nShow theme status, choose appearance, validate themes, or sync system styling.\n' ;;
+        webapp)
+            case "$sub" in
+                ''|list|install|remove|sync) ;;
+                *) unknown_command "$sub" 'list install remove sync'; return 2 ;;
+            esac
+            printf 'Usage: blankweave webapp [list|install <name> <url> <icon>|remove <name>|sync]\nManage Helium web application entries.\n' ;;
+        settings) printf 'Usage: blankweave settings [<id>|--list]\nOpen a Settings row or list valid identifiers.\n' ;;
+        uninstall) printf 'Usage: blankweave uninstall [--apply] [--purge-config] [--yes]\nPreview removal; --apply removes proven owned files; packages stay installed.\n' ;;
+        version) printf 'Usage: blankweave version\nShow release and installed revisions.\n' ;;
+        welcome) printf 'Usage: blankweave welcome\nShow the first-login welcome card.\n' ;;
+        help) printf 'Usage: blankweave help [<command> [<subcommand>]]\nShow command help.\n' ;;
+        *) unknown_command "$command"; return 2 ;;
+    esac
+    printf '\nExample: blankweave %s' "$command"
+    case "$command" in
+        theme) printf ' status' ;;
+        webapp) printf ' list' ;;
+        uninstall) printf ' --apply --yes' ;;
+        settings) printf ' --list' ;;
+        help) printf ' update' ;;
+        doctor) printf ' --normal' ;;
+        update) printf ' --check' ;;
+    esac
+    printf '\n'
+}
+
+unknown_command() {
+    local closest
+    closest=$(python3 - "$1" "${2:-welcome version setup settings update rollback doctor theme webapp uninstall help}" <<'PYNEAR'
+import difflib, sys
+print(next(iter(difflib.get_close_matches(sys.argv[1], sys.argv[2].split(), n=1, cutoff=0.4)), 'help'))
+PYNEAR
+    )
+    printf 'blankweave: unknown command: %s; did you mean %s?\n' "$1" "$closest" >&2
 }
 
 main() {
     local command=${1:-help}
     shift || true
 
+    if [[ $command == help && ${1:-} != --help && ${1:-} != -h ]]; then
+        (( $# <= 2 )) || die 'help accepts a command and optional subcommand'
+        command_help "$@"; return
+    fi
+    if [[ ${1:-} == --help || ${1:-} == -h ]]; then
+        command_help "$command"; return
+    fi
+    if [[ ${2:-} == --help || ${2:-} == -h ]]; then
+        command_help "$command" "$1"; return
+    fi
     case "$command" in
+        uninstall)
+            local repository
+            repository=$(configured_repository)
+            exec "$repository/scripts/uninstall.sh" "$@"
+            ;;
         version|--version|-V)
             [[ $# -eq 0 ]] || die "version does not accept arguments"
             command_version
@@ -619,10 +836,46 @@ main() {
         setup)
             command_setup "$@"
             ;;
+        welcome)
+            [[ $# -eq 0 ]] || die "usage: blankweave welcome"
+            qs ipc -n -p "$BLANKWEAVE_DATA_DIR/quickshell" call blankweave welcome \
+                || die "could not open welcome; start the Blankweave desktop first"
+            ;;
         settings)
-            [[ $# -eq 0 ]] || die "settings does not accept arguments"
+            [[ $# -le 1 ]] || die "usage: blankweave settings [<id>|--list]"
+            if [[ ${1:-} == --help || ${1:-} == -h ]]; then
+                printf 'Usage: blankweave settings [<id>|--list]\n'
+                return
+            fi
+            if [[ ${1:-} == --list ]]; then
+                # Catalog is a data literal. Parse only id/title records; never evaluate JS/QML.
+                python3 - "$BLANKWEAVE_DATA_DIR/quickshell/Settings/Catalog.js" <<'PYLIST'
+import pathlib, re, sys
+source = pathlib.Path(sys.argv[1]).read_text().split('\n];', 1)[0]
+records = []
+page = ''
+for line in source.splitlines():
+    # A record opens with its id; any other keys may sit before the title.
+    match = re.search(r'\{ id: "([^"\n]+)",[^\n]*?\btitle: "([^"\n]+)"', line)
+    if not match:
+        continue
+    ident, title = match.groups()
+    if 'groups: [' in line:
+        page = ident
+        records.append((ident, title, ''))
+    elif 'kind:' in line:
+        records.append((ident, title, page))
+pages = {ident for ident, _, page in records if not page}
+for ident, title, page in records:
+    target = page + '/' + ident if page and ident in pages else ident
+    print(target + '\t' + title)
+PYLIST
+                return
+            fi
+            local settings_method=settings
+            [[ $# -eq 0 ]] || settings_method=settingsTarget
             command -v qs >/dev/null 2>&1 || die "Quickshell is not installed"
-            qs ipc -n -p "$BLANKWEAVE_DATA_DIR/quickshell" call blankweave settings \
+            qs ipc -n -p "$BLANKWEAVE_DATA_DIR/quickshell" call blankweave "$settings_method" "$@" \
                 || die "could not open settings; make sure the Blankweave desktop is running and up to date"
             ;;
         rollback)
@@ -646,7 +899,7 @@ main() {
             apply_repository "$1"
             ;;
         *)
-            printf '%s: unknown command: %s\n\n' "$PROGRAM_NAME" "$command" >&2
+            unknown_command "$command"
             print_help >&2
             exit 2
             ;;

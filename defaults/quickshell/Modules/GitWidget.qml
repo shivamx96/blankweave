@@ -6,6 +6,7 @@ import "../Services"
 
 WidgetFrame {
     id: root
+    dataSources: [reposPoller, prPoller]
 
     readonly property string shellDir: Quickshell.env("HOME") + "/.local/share/blankweave/shell"
 
@@ -116,21 +117,22 @@ WidgetFrame {
         if (!path)
             return
         gitPanel.open = false
-        root.bar.run(root.ideAvailable ? ["idea", path] : ["xdg-open", path])
+        root.bar.run(root.ideAvailable ? ["idea", path] : [root.shellDir + "/open-default.sh", "files", path])
     }
 
     function openInBrowser(url) {
         if (!url)
             return
         gitPanel.open = false
-        root.bar.run(["xdg-open", url])
+        root.bar.run([root.shellDir + "/open-default.sh", "browser", url])
     }
 
     visible: available
     icon: "󰊢"
     iconOnly: root.reviewCount === 0
     label: root.reviewCount > 0 ? String(root.reviewCount) : ""
-    active: root.reviewCount > 0 || gitPanel.open
+    active: gitPanel.open
+    // Waiting reviews show as the count beside the mark; they are not a fault.
     tooltip: {
         const lines = []
         if (root.reviewCount > 0)
@@ -143,8 +145,10 @@ WidgetFrame {
         return lines.join("\n")
     }
 
-    ScriptPoller {
+    SharedPoller {
         id: reposPoller
+        service: root.bar.shell.pollers
+        key: "GitWidget:reposPoller"
         command: root.shellDir + "/git-repos.sh"
         // Local scanning only runs while the panel is open; the startup pass is
         // enough to decide whether the widget belongs on the bar at all.
@@ -152,8 +156,12 @@ WidgetFrame {
         onUpdated: payload => root.updateRepos(payload)
     }
 
-    ScriptPoller {
+    SharedPoller {
         id: prPoller
+        service: root.bar.shell.pollers
+        key: "GitWidget:prPoller"
+        // Two auth calls and two searches already have individual deadlines.
+        timeout: 45000
         command: root.prCommand(300)
         // Keeps the review badge live without spending a search request per tick.
         interval: gitPanel.open ? 120000 : 600000
@@ -171,6 +179,7 @@ WidgetFrame {
     }
 
     ControlPopup {
+        panelId: "git"
         id: gitPanel
         bar: root.bar
         theme: root.theme
@@ -187,13 +196,14 @@ WidgetFrame {
 
         ControlPanelHeader {
             theme: root.theme
+            atBottom: root.bar.atBottom
             icon: "󰊢"
             title: "GIT"
             subtitle: root.signedIn
                 ? "@" + String(root.prs.login || "github")
                     + (root.prs.stale ? "  ·  showing cached results" : "")
                 : "Not signed in to GitHub"
-            actions: [{ "id": "refresh", "icon": "󰑐" }]
+            actions: [{ "id": "refresh", "label": "Refresh", "icon": "󰑐" }]
             onActionPressed: actionId => {
                 if (actionId !== "refresh")
                     return

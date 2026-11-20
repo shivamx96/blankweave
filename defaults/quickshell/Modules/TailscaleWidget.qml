@@ -7,6 +7,7 @@ import "../Services"
 
 WidgetFrame {
     id: root
+    dataSources: [statusPoller]
 
     readonly property string shellDir: Quickshell.env("HOME") + "/.local/share/blankweave/shell"
     property var status: ({
@@ -139,7 +140,7 @@ WidgetFrame {
         if (event === "auth-url" && value.startsWith("https://") && !root.loginUrlOpened) {
             root.loginUrlOpened = true
             root.actionOutput = "Complete sign-in in your browser"
-            root.bar.run(["xdg-open", value])
+            root.bar.run([root.shellDir + "/open-default.sh", "browser", value])
         } else if (event === "error") {
             root.actionError = value || "Tailscale authentication failed"
         } else if (event === "state") {
@@ -185,15 +186,17 @@ WidgetFrame {
     iconMark: root.tailscaleMark
     iconOnly: true
     active: tailscalePanel.open
-    attention: running && !connected
+    attention: running && (!loggedIn || String(status.error || "") !== "")
     tooltip: !loggedIn
         ? "Tailscale sign-in required\nClick to authenticate"
         : (connected
         ? "Tailscale connected · " + Number(status.onlinePeerCount || 0) + " peers online\nClick for mesh controls"
         : "Tailscale " + String(status.backend || "stopped") + "\nClick for controls")
 
-    ScriptPoller {
+    SharedPoller {
         id: statusPoller
+        service: root.bar.shell.pollers
+        key: "TailscaleWidget:statusPoller"
         command: root.shellDir + "/tailscale-status.sh"
         interval: root.actionKind === "login" ? 1000 : (tailscalePanel.open ? 4000 : 10000)
         onUpdated: payload => root.updateStatus(payload)
@@ -255,6 +258,7 @@ WidgetFrame {
     }
 
     ControlPopup {
+        panelId: "tailscale"
         id: tailscalePanel
         bar: root.bar
         theme: root.theme
@@ -274,6 +278,7 @@ WidgetFrame {
 
         ControlPanelHeader {
             theme: root.theme
+            atBottom: root.bar.atBottom
             iconMark: root.tailscaleMark
             title: "TAILSCALE"
             subtitle: root.logoutArmed
@@ -287,25 +292,21 @@ WidgetFrame {
                     : String(root.status.backend || "Stopped"))))
             actions: root.loggedIn
                 ? [
-                    { "id": "admin", "icon": "󰖟" },
+                    { "id": "admin", "label": "Open Tailscale admin console", "icon": "󰖟" },
+                    {"id": "power", "label": root.connected ? "Disconnect Tailscale" : "Connect Tailscale", "kind": "switch", "checked": root.connected, "pending": root.busy},
                     {
-                        "id": "power",
-                        "icon": root.connected ? "󰅖" : "󰐥",
-                        "active": root.connected
-                    },
-                    {
-                        "id": "logout",
+                        "id": "logout", "label": "Log out of Tailscale",
                         "icon": "󰍃",
                         "attention": root.logoutArmed
                     }
                 ]
                 : [
-                    { "id": "login", "icon": "󰍂", "attention": true }
+                    { "id": "login", "label": "Sign in to Tailscale", "icon": "󰍂", "attention": true }
                 ]
             onActionPressed: actionId => {
                 if (actionId === "admin") {
                     tailscalePanel.open = false
-                    root.bar.run(["xdg-open", "https://login.tailscale.com/admin/machines"])
+                    root.bar.run([root.shellDir + "/open-default.sh", "browser", "https://login.tailscale.com/admin/machines"])
                 } else if (actionId === "power") {
                     root.beginConnectionAction(!root.connected)
                 } else if (actionId === "login") {
@@ -512,6 +513,12 @@ WidgetFrame {
             renderType: Text.NativeRendering
         }
 
+        PanelSettingsAction {
+            theme: root.theme
+            panelKey: "TailscaleWidget"
+            bar: root.bar
+            panel: tailscalePanel
+        }
     }
 
     Component.onCompleted: root.syncPeerModel()

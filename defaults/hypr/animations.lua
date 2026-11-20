@@ -1,23 +1,30 @@
-hl.config({
-    animations = {
-        enabled = true,
-    },
+-- Hyprland speed is in deciseconds: 2 = 200 ms, 2.5 = 250 ms.
+hl.config({ animations = { enabled = true },
+    ecosystem = { no_update_news = true, no_donation_nag = true },
 })
 
-hl.curve("myBezier", {
+hl.curve("easeOut", {
     type = "bezier",
-    points = {
-        { 0.05, 0.9 },
-        { 0.1, 1.05 },
-    },
+    points = { { 0.0, 0.0 }, { 0.2, 1.0 } },
 })
 
-hl.animation({ leaf = "windows",     enabled = true, speed = 7,  bezier = "myBezier" })
-hl.animation({ leaf = "windowsOut",  enabled = true, speed = 7,  bezier = "default", style = "popin 80%" })
-hl.animation({ leaf = "border",      enabled = true, speed = 10, bezier = "default" })
-hl.animation({ leaf = "borderangle", enabled = true, speed = 8,  bezier = "default" })
-hl.animation({ leaf = "fade",        enabled = true, speed = 7,  bezier = "default" })
-hl.animation({ leaf = "workspaces",  enabled = true, speed = 6,  bezier = "default" })
+hl.animation({ leaf = "windows", enabled = true, speed = 2.5, bezier = "easeOut", style = "popin 96%" })
+hl.animation({ leaf = "windowsIn", enabled = true, speed = 2.5, bezier = "easeOut", style = "popin 96%" })
+hl.animation({ leaf = "windowsOut", enabled = true, speed = 2, bezier = "easeOut", style = "popin 96%" })
+hl.animation({ leaf = "windowsMove", enabled = true, speed = 2.5, bezier = "easeOut" })
+hl.animation({ leaf = "fade", enabled = true, speed = 2, bezier = "easeOut" })
+hl.animation({ leaf = "border", enabled = true, speed = 2, bezier = "easeOut" })
+hl.animation({ leaf = "borderangle", enabled = false, speed = 2, bezier = "easeOut" })
+hl.animation({ leaf = "workspaces", enabled = true, speed = 2.5, bezier = "easeOut", style = "slide" })
+
+-- These surfaces own their transitions in QML, including popups on the bar.
+-- Exact namespace matches keep unrelated layer clients unaffected.
+hl.layer_rule({ match = { namespace = "^blankweave-bar$" }, no_anim = true })
+hl.layer_rule({ match = { namespace = "^blankweave-launcher$" }, no_anim = true })
+hl.layer_rule({ match = { namespace = "^blankweave-low-battery$" }, no_anim = true })
+hl.layer_rule({ match = { namespace = "^blankweave-osd$" }, no_anim = true })
+hl.layer_rule({ match = { namespace = "^blankweave-welcome$" }, no_anim = true })
+hl.layer_rule({ match = { namespace = "^blankweave-voxtype-transcript$" }, no_anim = true })
 
 -- Apply accessibility preferences after animation defaults, before personal overrides.
 _G.blankweave_accessibility_revision = "defaults"

@@ -10,11 +10,14 @@ import unittest
 from unittest.mock import patch
 
 REPO = Path(__file__).resolve().parents[1]
+import sys
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'defaults/shell'))
+
 SPEC = importlib.util.spec_from_file_location('pointer', REPO / 'defaults/shell/pointer-settings.py')
 m = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(m)
 DEFAULTS = {'global': {'sensitivity': 0.0, 'natural_scroll': False, 'left_handed': False, 'accel_profile': ''},
-            'touchpad': {'natural_scroll': True, 'tap_to_click': True, 'disable_while_typing': True}}
+            'touchpad': {'natural_scroll': True, 'tap_to_click': True, 'disable_while_typing': True, 'clickfinger_behavior': False}}
 
 
 class PointerTests(unittest.TestCase):
@@ -68,6 +71,22 @@ class PointerTests(unittest.TestCase):
     def request(self, **changes):
         return dict({'revision': m.revision(self.pointer.settings()), 'session': 'session-one',
                      'scope': 'global', 'device': '', 'address': '', 'key': 'sensitivity', 'value': 0.5}, **changes)
+
+    def test_clickfinger(self):
+        for scope, device, address in [('touchpad', '', ''), ('device', 'touchpad', '0x2')]:
+            request = dict(revision=m.revision(self.pointer.settings()), session='session-one',
+                           scope=scope, device=device, address=address, key='clickfinger_behavior', value=True)
+            self.pointer.apply(request)
+            if scope == 'touchpad':
+                self.assertTrue(self.live['touchpad']['clickfinger_behavior'])
+            else:
+                self.assertTrue(self.pointer.settings()['devices']['touchpad']['clickfinger_behavior'])
+            request['revision'] = m.revision(self.pointer.settings())
+            request['value'] = False
+            before = self.pointer.config.read_bytes()
+            self.reject = True
+            with self.assertRaisesRegex(ValueError, 'restored'): self.pointer.apply(request)
+            self.assertEqual(self.pointer.config.read_bytes(), before)
 
     def test_status_reads_live_values_and_device_kinds(self):
         status = self.pointer.status()

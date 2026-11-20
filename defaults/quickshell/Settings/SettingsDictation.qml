@@ -1,5 +1,6 @@
 pragma ComponentBehavior: Bound
 import QtQuick
+import "LegacyErrors.js" as Errors
 import QtQuick.Layouts
 
 ColumnLayout {
@@ -55,21 +56,21 @@ ColumnLayout {
             enabled: root.backend !== null && (root.backend.canStart || root.backend.canStop)
             onClicked: root.backend.record(root.backend.canStop ? "stop" : "start", true)
         }
-        SettingsButton {
+        SettingsConfirmButton {
             objectName: "dictationCancel"
             Layout.fillWidth: true
             theme: root.theme
-            text: "Cancel and discard"
+            actionText: "Cancel and discard"
             enabled: root.backend !== null && root.backend.canCancel
-            onClicked: root.backend.record("cancel")
+            onConfirmed: root.backend.record("cancel")
         }
-        SettingsButton {
+        SettingsConfirmButton {
             objectName: "dictationRestart"
             Layout.fillWidth: true
             theme: root.theme
-            text: root.backend && root.backend.daemonRunning ? "Restart service" : "Start service"
+            actionText: root.backend && root.backend.daemonRunning ? "Restart service" : "Start service"
             enabled: root.backend !== null && root.backend.canRestart
-            onClicked: root.backend.restart()
+            onConfirmed: root.backend.restart()
         }
     }
     Text {
@@ -84,7 +85,7 @@ ColumnLayout {
     Text {
         Layout.fillWidth: true
         objectName: "dictationError"
-        text: root.backend ? root.backend.actionError || root.backend.error : ""
+        text: root.backend ? Errors.message(root.backend.actionError) || Errors.message(root.backend.error) : ""
         visible: text !== ""
         textFormat: Text.PlainText
         color: root.theme.critical

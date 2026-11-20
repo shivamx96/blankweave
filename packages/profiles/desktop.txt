@@ -2,9 +2,9 @@ firefox
 obsidian
 yubikey-manager
 spotify-launcher
+gvfs-smb
 
 # Native Settings providers (services are enabled only through explicit setup).
-udisks2
 smartmontools
 cups
 sane
@@ -15,5 +15,4 @@ snapper
 orca
 networkmanager-openvpn
 samba
-pacman-contrib
 flatpak

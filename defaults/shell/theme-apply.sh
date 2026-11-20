@@ -30,6 +30,9 @@
 
 set -euo pipefail
 
+# shellcheck source=defaults/shell/runtime-paths.sh
+source "$(dirname -- "${BASH_SOURCE[0]}")/runtime-paths.sh"
+
 DOTS_DIR=$HOME/.local/share/blankweave
 CONFIG_DIR=${XDG_CONFIG_HOME:-$HOME/.config}
 BLANKWEAVE_CONFIG_DIR=$CONFIG_DIR/blankweave
@@ -80,6 +83,7 @@ def lookup($path):
     ($ctx | getpath($path | split("."))) as $value
     | if $value == null then error("unknown placeholder: " + $path) else $value end;
 $template
+| if (gsub("\\{\\{[A-Za-z0-9_.]+(:[a-z]+)?\\}\\}"; "") | test("\\{\\{|\\}\\}")) then error("malformed placeholder") else . end
 | gsub("\\{\\{(?<p>[A-Za-z0-9_.]+)(:(?<f>[a-z]+))?\\}\\}";
        (.f // $format) as $chosen | lookup(.p) | render($chosen))
 '
@@ -87,6 +91,8 @@ $template
 THEME=$DEFAULT_THEME
 MODE=$DEFAULT_MODE
 RESOLVED=""
+STAGED=()
+TARGETS=()
 
 die() {
     printf 'theme-apply: %s\n' "$*" >&2
@@ -133,9 +139,10 @@ load_selection() {
 }
 
 resolve_theme() {
-    local id=$1 mode=$2 dir required design
+    local id=$1 mode=$2 dir required design validated
 
     dir=$(theme_dir "$id") || die "unknown theme: $id"
+    validated=$(python3 "$DOTS_DIR/shell/theme-validation.py" "$dir/theme.json" "$DOTS_DIR/themes/design-defaults.json") || return 1
     design=$(python3 "$DOTS_DIR/shell/theme-design.py" \
         "$DOTS_DIR/themes/design-defaults.json" "$dir/theme.json" "$mode") || return 1
     required=$(printf '%s\n' "${REQUIRED_COLORS[@]}" | jq -R . | jq -s .)
@@ -157,6 +164,9 @@ resolve_theme() {
             theme: $id,
             mode: $mode,
             design: $design,
+            windowShadow: (if $mode == "light"
+                then {color: ($variant.colors.text[0:7] + "18"), range: 12, x: 0, y: 2}
+                else {color: ($variant.colors.canvas[0:7] + "55"), range: 8, x: 0, y: 2} end),
             name: .name,
             wallpaper: ($variant.wallpaper | path_in_theme),
             folderColor: (.folderColor // null),
@@ -165,31 +175,41 @@ resolve_theme() {
                               progressBar: (.plymouth.progressBar | path_in_theme) } end),
             modes: (.modes | map_values({label, ghostty, iconTheme, cursorTheme, colors}))
           }
-    ' "$dir/theme.json"
+    ' <<< "$validated"
 }
 
 render_template() {
-    local format=$1 template=$2 output=$3 staged
+    local format=$1 template=$2 output=$3 staged error detail
 
     if [[ ! -r $template ]]; then
-        printf 'theme-apply: template not found, skipped: %s\n' "$template" >&2
-        return 0
+        die "$THEME $MODE template: missing $template"
     fi
     mkdir -p "$(dirname "$output")"
     staged=$(mktemp "$(dirname "$output")/.$(basename "$output").XXXXXX")
+    error=$(mktemp)
     if ! jq -j --rawfile template "$template" --arg format "$format" \
-            --argjson ctx "$RESOLVED" -n "$RENDER_PROGRAM" > "$staged"; then
-        rm -f "$staged"
-        die "failed to render $template"
+            --argjson ctx "$RESOLVED" -n "$RENDER_PROGRAM" > "$staged" 2>"$error"; then
+        detail=$(tr '\n' ' ' < "$error")
+        rm -f "$staged" "$error"
+        die "$THEME $MODE template $template: $detail"
     fi
+    rm -f "$error"
     chmod 0644 "$staged"
-    mv -f "$staged" "$output"
+    STAGED+=("$staged")
+    TARGETS+=("$output")
+}
+
+render_lock() {
+    local lock_time
+    lock_time=$(python3 "$DOTS_DIR/shell/lock-format.py")
+    RESOLVED=$(jq --arg time "$lock_time" '. + {lockTime: $time, lockTimeSize: (if $time == "$TIME12" then 88 else 120 end)}' <<< "$RESOLVED")
+    render_template hypr "$DOTS_DIR/hypr/hyprlock-theme.conf.tmpl" "$DOTS_DIR/hypr/hyprlock-theme.conf"
 }
 
 render_all() {
     render_template css "$DOTS_DIR/dunst/dunstrc.tmpl" "$DOTS_DIR/dunst/dunstrc"
     render_template css "$DOTS_DIR/ghostty/config.tmpl" "$DOTS_DIR/ghostty/config"
-    render_template hypr "$DOTS_DIR/hypr/hyprlock-theme.conf.tmpl" "$DOTS_DIR/hypr/hyprlock-theme.conf"
+    render_lock
     render_template hypr "$DOTS_DIR/hypr/theme.lua.tmpl" "$BLANKWEAVE_CONFIG_DIR/theme.lua"
     if [[ -r $DOTS_DIR/voxtype/config.toml.tmpl ]]; then
         render_template css "$DOTS_DIR/voxtype/config.toml.tmpl" "$DOTS_DIR/voxtype/config.toml"
@@ -203,7 +223,7 @@ render_all() {
 # without artwork leaves an incomplete stage that theme-system.sh refuses to
 # install rather than a splash with the previous theme's logo.
 stage_plymouth_artwork() {
-    local logo bar staged
+    local logo bar staged file
 
     [[ -d $PLYMOUTH_STAGE ]] || return 0
     logo=$(jq -r '.plymouth.logo // empty' <<< "$RESOLVED")
@@ -213,10 +233,14 @@ stage_plymouth_artwork() {
             staged=$(mktemp "$PLYMOUTH_STAGE/.${file##*:}.XXXXXX")
             cp -f "${file%%:*}" "$staged"
             chmod 0644 "$staged"
-            mv -f "$staged" "$PLYMOUTH_STAGE/${file##*:}"
+            STAGED+=("$staged")
+            TARGETS+=("$PLYMOUTH_STAGE/${file##*:}")
         done
     else
-        rm -f "$PLYMOUTH_STAGE/logo.png" "$PLYMOUTH_STAGE/progress_bar.png"
+        # A theme with no splash artwork is valid: the stage is left
+        # incomplete at the commit point so theme-system.sh keeps the
+        # installed splash instead of pairing it with another theme's logo.
+        PLYMOUTH_ARTWORK_ABSENT=1
     fi
 }
 
@@ -228,8 +252,14 @@ write_state() {
 }
 
 apply_desktop_preferences() {
-    local scheme gtk_theme prefer_dark icon_theme cursor_theme
+    local scheme gtk_theme prefer_dark icon_theme cursor_theme font_name mono_font_name point_size
 
+    # Only the typeface follows the theme. The size stays at the 11 pt that GTK
+    # and browser interfaces are laid out around; the shell's own textSize is a
+    # bar-density choice, and text scale is owned by interface-settings.py.
+    point_size=11
+    font_name="$(jq -r '.design.typography.fontFamily' <<< "$RESOLVED") $point_size"
+    mono_font_name="$(jq -r '.design.typography.monoFontFamily' <<< "$RESOLVED") $point_size"
     icon_theme=$(jq -r '.iconTheme' <<< "$RESOLVED")
     cursor_theme=$(jq -r '.cursorTheme' <<< "$RESOLVED")
     if [[ $MODE == light ]]; then
@@ -257,6 +287,8 @@ apply_desktop_preferences() {
         gsettings set org.gnome.desktop.interface gtk-theme "$gtk_theme" 2> /dev/null || true
         gsettings set org.gnome.desktop.interface icon-theme "$icon_theme" 2> /dev/null || true
         gsettings set org.gnome.desktop.interface cursor-theme "$cursor_theme" 2> /dev/null || true
+        gsettings set org.gnome.desktop.interface font-name "$font_name" 2> /dev/null || true
+        gsettings set org.gnome.desktop.interface monospace-font-name "$mono_font_name" 2> /dev/null || true
         gsettings set org.gnome.desktop.interface cursor-size "$CURSOR_SIZE" 2> /dev/null || true
     fi
 
@@ -265,7 +297,7 @@ apply_desktop_preferences() {
     python3 "$DOTS_DIR/shell/gtk_settings.py" \
         "gtk-application-prefer-dark-theme=$prefer_dark" "gtk-theme-name=Adwaita" \
         "gtk-icon-theme-name=$icon_theme" "gtk-cursor-theme-name=$cursor_theme" \
-        "gtk-cursor-theme-size=$CURSOR_SIZE"
+        "gtk-cursor-theme-size=$CURSOR_SIZE" "gtk-font-name=$font_name"
 }
 
 apply_wallpaper() {
@@ -356,7 +388,7 @@ system_status() {
 
 list_themes() {
     local -A seen=()
-    local source root file id entries=()
+    local source root file id reason entries=()
 
     for source in user bundled; do
         case $source in
@@ -369,8 +401,8 @@ list_themes() {
             valid_theme_id "$id" || continue
             [[ -n ${seen[$id]:-} ]] && continue
             seen[$id]=1
-            if ! resolve_theme "$id" dark >/dev/null 2>&1 || ! resolve_theme "$id" light >/dev/null 2>&1; then
-                entries+=("$(jq -nc --arg id "$id" --arg source "$source" '{id:$id,name:$id,source:$source,invalid:true}')")
+            if ! reason=$(resolve_theme "$id" dark 2>&1 >/dev/null) || ! reason=$(resolve_theme "$id" light 2>&1 >/dev/null); then
+                entries+=("$(jq -nc --arg id "$id" --arg source "$source" --arg reason "${reason##*$'\n'}" '{id:$id,name:$id,source:$source,invalid:true,reason:$reason}')")
                 continue
             fi
             entries+=("$(jq -c --arg id "$id" --arg source "$source" '{
@@ -392,14 +424,14 @@ list_themes() {
 }
 
 main() {
-    local command=${1:-apply}
+    local command=${1:-apply} output staged row index toolkit
     shift || true
 
     # Serialize with interface sizing so a theme switch cannot restore an old
     # cursor size over a concurrent Settings write. Read-only queries need no lock.
-    if [[ $command == apply || $command == set || $command == mode || $command == toggle ]]; then
+    if [[ $command == apply || $command == set || $command == mode || $command == toggle || $command == lock ]]; then
         mkdir -p "$BLANKWEAVE_CONFIG_DIR"
-        exec {interface_lock}> "$BLANKWEAVE_CONFIG_DIR/interface.lock"
+        exec {interface_lock}> "$(blankweave_runtime_path interface.lock)"
         flock -x "$interface_lock"
         trap 'flock -u "$interface_lock"' EXIT
         if [[ -e $BLANKWEAVE_CONFIG_DIR/interface.json ]]; then
@@ -437,6 +469,16 @@ main() {
             list_themes
             return 0
             ;;
+        lint)
+            [[ $# -le 1 ]] || die "lint accepts at most one theme id"
+            local ids id dir failed=0
+            if [[ $# -eq 1 ]]; then ids=$1; else ids=$(list_themes | jq -r '.[].id'); fi
+            for id in $ids; do
+                dir=$(theme_dir "$id") || { printf '%s all theme: unknown theme\n' "$id" >&2; failed=1; continue; }
+                python3 "$DOTS_DIR/shell/theme-validation.py" "$dir/theme.json" "$DOTS_DIR/themes/design-defaults.json" --contrast >/dev/null || failed=1
+            done
+            return "$failed"
+            ;;
         status)
             [[ $# -eq 0 ]] || die "status does not accept arguments"
             if [[ -r $STATE_FILE ]]; then
@@ -445,6 +487,15 @@ main() {
                 RESOLVED=$(resolve_theme "$THEME" "$MODE")
             fi
             jq --argjson system "$(system_status "$RESOLVED")" '. + {system: $system}' <<< "$RESOLVED"
+            return 0
+            ;;
+        lock)
+            [[ $# -eq 0 ]] || die "lock does not accept arguments"
+            RESOLVED=$(resolve_theme "$THEME" "$MODE")
+            trap 'rm -f -- "${STAGED[@]}"; flock -u "$interface_lock"' EXIT
+            render_lock
+            # render_template stages outputs; commit this one lock-only render.
+            mv -f "${STAGED[0]}" "${TARGETS[0]}"
             return 0
             ;;
         help|-h|--help)
@@ -459,9 +510,27 @@ main() {
     [[ $MODE == dark || $MODE == light ]] || die "mode must be dark or light: $MODE"
     RESOLVED=$(resolve_theme "$THEME" "$MODE")
     python3 "$DOTS_DIR/shell/hyprtoolkit_settings.py" --check-theme <<< "$RESOLVED"
+    # Every render, including artwork and toolkit configuration, completes first.
+    trap 'rm -f -- "${STAGED[@]}"; flock -u "$interface_lock"' EXIT
     render_all
+    toolkit=$(python3 "$DOTS_DIR/shell/hyprtoolkit_settings.py" --stage-theme <<< "$RESOLVED") || die "$THEME $MODE hyprtoolkit: render failed"
+    while IFS= read -r row; do
+        [[ -n $row ]] || continue
+        output=$(jq -r '.[0]' <<< "$row")
+        mkdir -p "$(dirname "$output")"
+        staged=$(mktemp "$(dirname "$output")/.theme.XXXXXX")
+        jq -jr '.[1]' <<< "$row" > "$staged"
+        chmod 0644 "$staged"
+        STAGED+=("$staged"); TARGETS+=("$output")
+    done <<< "$toolkit"
+    # Commit point: no final output has been touched before this loop.
+    for ((index=0; index<${#STAGED[@]}; index++)); do
+        mv -f "${STAGED[index]}" "${TARGETS[index]}"
+    done
+    if [[ ${PLYMOUTH_ARTWORK_ABSENT:-0} == 1 ]]; then
+        rm -f "$PLYMOUTH_STAGE/logo.png" "$PLYMOUTH_STAGE/progress_bar.png"
+    fi
     write_state
-    python3 "$DOTS_DIR/shell/hyprtoolkit_settings.py"
     apply_desktop_preferences
     apply_wallpaper
     reload_services

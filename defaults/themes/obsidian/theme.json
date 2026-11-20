@@ -36,7 +36,7 @@
         "critical": "#ff6b8a"
       },
       "lock": {
-        "panelSurface": "#070c16ad",
+        "panelSurface": "#070c16d9",
         "panelBorder": "#67a6ff70",
         "panelShadow": "#00000080",
         "hairline": "#67a6ff59",
@@ -74,10 +74,10 @@
         "accentBright": "#1d4ed8",
         "accentSurface": "#2563eb1f",
         "outline": "#bdd3f3",
-        "outlineStrong": "#8ab4ed",
+        "outlineStrong": "#6d91c5",
         "divider": "#91add4",
-        "success": "#07894f",
-        "warning": "#b46608",
+        "success": "#078049",
+        "warning": "#a85f07",
         "critical": "#d52149"
       },
       "lock": {

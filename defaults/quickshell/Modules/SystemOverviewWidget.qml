@@ -6,6 +6,7 @@ import "../Services"
 
 WidgetFrame {
     id: root
+    dataSources: [systemPoller]
 
     readonly property string shellDir: Quickshell.env("HOME") + "/.local/share/blankweave/shell"
     readonly property var preferences: root.bar.shell.preferences
@@ -82,7 +83,8 @@ WidgetFrame {
     iconMark: "blankweave"
     iconOnly: true
     active: systemPanel.open
-    tooltip: "System overview\nRight-click: full terminal report"
+    rightClickHint: "open terminal report"
+    tooltip: "System overview"
     horizontalPadding: 10
 
     onPressed: button => {
@@ -97,14 +99,17 @@ WidgetFrame {
         }
     }
 
-    ScriptPoller {
+    SharedPoller {
         id: systemPoller
+        service: root.bar.shell.pollers
+        key: "SystemOverviewWidget:systemPoller"
         command: root.shellDir + "/system-overview.sh"
         interval: systemPanel.open ? 30000 : 120000
         onUpdated: payload => root.updateSystemInfo(payload)
     }
 
     ControlPopup {
+        panelId: "system"
         id: systemPanel
         bar: root.bar
         theme: root.theme
@@ -113,15 +118,16 @@ WidgetFrame {
 
         ControlPanelHeader {
             theme: root.theme
+            atBottom: root.bar.atBottom
             iconMark: "blankweave"
             title: "SYSTEM OVERVIEW"
             subtitle: root.systemInfo.available
                 ? String(root.systemInfo.hostname || "System") + " · " + String(root.systemInfo.os || "Linux")
                 : "Blankweave machine snapshot"
             actions: [
-                { "id": "settings", "icon": "󰒓" },
-                { "id": "refresh", "icon": "󰑐" },
-                { "id": "report", "icon": "󰋊" }
+                { "id": "settings", "label": "Open Settings", "icon": "󰒓" },
+                { "id": "refresh", "label": "Refresh", "icon": "󰑐" },
+                { "id": "report", "label": "Open terminal report", "icon": "󰋊" }
             ]
             onActionPressed: actionId => {
                 if (actionId === "settings") {
@@ -304,6 +310,12 @@ WidgetFrame {
             icon: "󰋊"
             title: systemPoller.running ? "Reading system information…" : "System overview unavailable"
             message: systemPoller.running ? "" : String(root.systemInfo.error || "Try refreshing the panel.")
+        }
+        PanelSettingsAction {
+            theme: root.theme
+            panelKey: "SystemOverviewWidget"
+            bar: root.bar
+            panel: systemPanel
         }
     }
 }

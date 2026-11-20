@@ -153,15 +153,6 @@ set_percent() {
     esac
 }
 
-show_popup() {
-    local percent=$1 bars empty bar
-    bars=$((percent / 5))
-    empty=$((20 - bars))
-    bar=$(printf '█%.0s' $(seq 1 "$bars"))$(printf '░%.0s' $(seq 1 "$empty"))
-    notify-send -t 1200 "󰃟 Brightness" "$bar\n$percent%" \
-        -h string:x-canonical-private-synchronous:brightness
-}
-
 case "$CMD" in
     status)
         percent=$(get_percent) || exit 1
@@ -182,9 +173,7 @@ case "$CMD" in
             next=$((current - step))
             ((next < 5)) && next=5
         fi
-        if set_percent "$next"; then
-            show_popup "$next"
-        fi
+        set_percent "$next"
         ;;
     set)
         set_percent "$ARG"

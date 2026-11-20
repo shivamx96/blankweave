@@ -74,7 +74,7 @@ def status(domain):
                    field('exclude', 'Excluded paths or patterns (one per line)', '\n'.join(data.get('exclude', [])) if data else '', multiline=True),
                    field('keep', 'Backups to keep', data['keep'] if data else '14', input_type='integer', minimum=1, maximum=365, hint='Keep between 1 and 365 backups per source and host. Older backups are removed only when you apply retention.'),
                    field('schedule', 'Schedule', data['schedule'] if data else 'off', [choice('off'), choice('daily'), choice('weekly')]),
-                   field('password', 'Repository password (leave blank to keep the saved password)', secret=True)],
+                   field('password', 'Repository password (leave blank to keep the saved password)', secret=True, confirm=True, confirm_optional=True)],
                    'Store the repository password in your keyring and save this schedule. Keep a separate copy of the password; backups cannot be decrypted without it.')]
         if data:
             actions += [action('init', 'Initialize repository', confirm='Create a new encrypted repository at the configured destination? Existing repositories are never overwritten.'),

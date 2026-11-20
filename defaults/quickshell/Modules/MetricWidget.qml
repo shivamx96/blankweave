@@ -4,6 +4,7 @@ import "../Services"
 
 WidgetFrame {
     id: root
+    dataSources: [poller]
 
     property string command: ""
     property int interval: 5000
@@ -17,8 +18,10 @@ WidgetFrame {
     label: value + suffix
     tooltip: detail
 
-    ScriptPoller {
+    SharedPoller {
         id: poller
+        service: root.bar.shell.pollers
+        key: "metric:" + root.command
         command: root.command
         interval: root.interval
         onUpdated: payload => {
@@ -30,8 +33,7 @@ WidgetFrame {
                 root.value = String(parsed.text ?? "—")
                 root.detail = String(parsed.tooltip ?? "")
             } catch (error) {
-                root.value = payload
-                root.detail = payload
+                // ScriptPoller rejects malformed output and retains the last value.
             }
         }
     }

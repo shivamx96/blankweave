@@ -13,8 +13,8 @@ import signal
 import subprocess
 import sys
 import uuid
-from settings_support import atomic, check_revision, digest, locked
-from settings_operations import notice
+from settings_support import atomic, check_revision, digest, locked, error_result, safe_detail
+from settings_operations import notice, set_field_labels
 
 PROVIDERS = {
     'vpn': 'settings_network', 'sharing': 'settings_network',
@@ -63,7 +63,7 @@ def status(domain):
     try:
         data = provider(domain).status(domain)
     except Exception as error:
-        data = dict(message='Provider unavailable: ' + str(error)[:2000], details=[], actions=[], identity=None, notices=[notice('service-unavailable', 'Could not read current state', 'Refresh to try again. If this continues, check the service or connection named in the error below.')])
+        data = dict(message='This service is unavailable.', details=[], actions=[], identity=None, notices=[notice('service-unavailable', 'Could not read current state', 'Refresh to try again. If this continues, check the service or connection named in the error below.')])
     data['revision'] = revision(data)
     data['job'] = read_job(domain)
     data['writable'] = not data['job'] or data['job']['phase'] not in ('starting', 'running')
@@ -81,7 +81,14 @@ def start(domain, request):
             raise ValueError('Review and confirm this operation first.')
         # Restrict fields to the current provider schema before spawning.
         keys = {f['key'] for f in operation['fields']} | {'action', 'revision', 'confirmed'}
+        keys |= {f['key'] + '_confirm' for f in operation['fields'] if f.get('confirm')}
         if set(request) - keys: raise ValueError('Unexpected operation fields.')
+        for field in operation['fields']:
+            companion = field['key'] + '_confirm'
+            if field.get('confirm') and companion in request:
+                if request[companion] != request.get(field['key']):
+                    raise ValueError('Passwords do not match.')
+                request = {key: value for key, value in request.items() if key != companion}
         token = uuid.uuid4().hex
         child = subprocess.Popen([sys.executable, str(Path(__file__).resolve()), domain, 'worker', token],
                                  stdin=subprocess.PIPE, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
@@ -108,11 +115,14 @@ def worker(domain, token, request):
             # Revalidate resource identities immediately before mutation.
             current = provider(domain).status(domain)
             check_revision(request, {'revision': revision(current)})
+            operation = next((item for item in current.get('actions', []) if item['key'] == request.get('action')), {})
+            set_field_labels(operation.get('fields', []))
             output = provider(domain).apply(domain, request)
             text = str(output or 'Completed. Refresh to see current state.')
             job.update(phase='completed', message=text[:16384] + ('\n[Report truncated; narrow the operation to see more.]' if len(text) > 16384 else ''))
         except Exception as error:
-            job.update(phase='failed', message=str(error)[:4000])
+            failure = error_result(error, [v for k, v in request.items() if any(s in k.lower() for s in ('password', 'secret', 'token', 'credential'))], shareable=True)
+            job.update(phase='cancelled' if failure.get('cancelled') else 'failed', message=failure['message'], error=failure)
         job['cancellable'] = False
         job['finished'] = datetime.datetime.now().astimezone().isoformat(timespec='seconds')
         atomic(job_path(domain), json.dumps(job))
@@ -131,6 +141,7 @@ def cancel(domain, request):
 
 
 def main():
+    request = {}
     try:
         if sys.argv[1:] == ['jobs']:
             reports = []
@@ -165,7 +176,9 @@ def main():
                 raise ValueError((job or {}).get('message', 'Scheduled backup did not complete.'))
         else: raise ValueError('Usage: domain status|apply')
     except (ValueError, OSError, KeyError, TypeError, subprocess.SubprocessError) as error:
-        print(str(error), file=sys.stderr); return 1
+        secrets = [v for k, v in request.items() if any(word in k.lower() for word in ("password", "secret", "token", "credential"))] if isinstance(request, dict) else []
+        print(json.dumps({"error": error_result(error, secrets)}))
+        print(safe_detail(error, secrets), file=sys.stderr); return 1
     return 0
 
 

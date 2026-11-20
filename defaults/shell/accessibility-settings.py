@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 """Persistent reduced motion and high contrast with verified desktop writes."""
+from runtime_paths import runtime_path
+from settings_support import file_refusal
 from contextlib import contextmanager
 import configparser
 import fcntl
@@ -76,7 +78,7 @@ class Accessibility:
     @contextmanager
     def locked(self):
         self.directory.mkdir(parents=True, exist_ok=True)
-        with (self.directory / 'interface.lock').open('a') as stream:
+        with (runtime_path('interface.lock')).open('a') as stream:
             try:
                 fcntl.flock(stream, fcntl.LOCK_EX | fcntl.LOCK_NB)
             except BlockingIOError as error:
@@ -116,7 +118,7 @@ class Accessibility:
             raise ValueError('Unsupported accessibility setting.')
         with self.locked(), gtk_settings.locked():
             if self.config.is_symlink() or self.rules.is_symlink():
-                raise ValueError('Accessibility preference symlinks are user-owned.')
+                raise file_refusal('Accessibility preference symlinks are user-owned.', self.config, self.rules)
             previous = self.settings()
             desktop = self.desktop()
             if (not self.session or request['session'] != self.session or request['revision'] != revision(previous)
@@ -152,7 +154,7 @@ class Accessibility:
                 if self.marker() != revision(updated):
                     raise ValueError('The desktop did not load saved accessibility preferences.')
                 if key == 'reduced_motion' and self.desktop()['compositor_motion'] != updated[key]:
-                    raise ValueError('Personal configuration overrides compositor animations. Change reverted.')
+                    raise file_refusal('Personal configuration overrides compositor animations. Change reverted.', self.directory / 'overrides/hyprland.lua', self.directory.parent / 'hypr/hyprland.lua')
                 changed_desktop = True
                 run('gsettings', 'set', schema, gkey, str(gvalue).lower())
                 if self.desktop()[key] != updated[key]:
@@ -191,5 +193,7 @@ if __name__ == '__main__':
     try:
         main()
     except (OSError, ValueError, configparser.Error, subprocess.SubprocessError) as error:
-        print(str(error), file=sys.stderr)
+        from settings_support import error_result, safe_detail
+        print(json.dumps({"error": error_result(error)}))
+        print(safe_detail(error), file=sys.stderr)
         sys.exit(1)

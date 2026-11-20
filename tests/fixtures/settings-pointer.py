@@ -9,7 +9,7 @@ state = json.loads(path.read_text()) if path.exists() else {
     'saved': {'version': 1, 'global': {}, 'touchpad': {}, 'devices': {}},
     'revision': 'initial', 'session': 'fixture', 'installed': True, 'synced': True, 'message': '',
     'values': {'global': {'sensitivity': 0, 'accel_profile': '', 'natural_scroll': False, 'left_handed': False},
-               'touchpad': {'natural_scroll': True, 'tap_to_click': True, 'disable_while_typing': True}},
+               'touchpad': {'natural_scroll': True, 'tap_to_click': True, 'disable_while_typing': True, 'clickfinger_behavior': False}},
     'devices': [{'name': 'fixture-touchpad', 'address': '0x1', 'kind': 'touchpad', 'unique': True}], 'writes': 0}
 if sys.argv[1:] == ['status']:
     print(json.dumps(state))

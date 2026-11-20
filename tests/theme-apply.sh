@@ -72,11 +72,15 @@ for version in gtk-3.0 gtk-4.0; do
 done
 
 assert_rendered() {
+    if grep -Eq '^keybind = (home|end)=text:' "$ghostty"; then
+        echo 'Ghostty must preserve standard Home/End sequences' >&2
+        exit 1
+    fi
     local file
     for version in gtk-3.0 gtk-4.0; do
         grep -Fxq 'gtk-enable-event-sounds=false' "$XDG_CONFIG_HOME/$version/settings.ini"
         grep -Fxq 'gtk-sound-theme-name=custom' "$XDG_CONFIG_HOME/$version/settings.ini"
-        grep -Fxq 'gtk-font-name=Custom 12' "$XDG_CONFIG_HOME/$version/settings.ini"
+        grep -Fxq 'gtk-font-name=Atkinson Hyperlegible Next 11' "$XDG_CONFIG_HOME/$version/settings.ini"
     done
     [[ -f "$XDG_CONFIG_HOME/hypr/hyprtoolkit.conf" && ! -L "$XDG_CONFIG_HOME/hypr/hyprtoolkit.conf" ]]
     grep -Fxq 'font_family = Atkinson Hyperlegible Next' "$XDG_CONFIG_HOME/hypr/hyprtoolkit.conf"
@@ -101,6 +105,24 @@ assert_rendered
 [[ -f $(jq -r '.wallpaper' "$state") ]]
 grep -Fxq 'background = "#0b111c"' "$dunstrc"
 grep -Fxq 'frame_color = "#4f75ad"' "$dunstrc"
+
+# Notification interaction, placement, idle retention and critical DND bypass.
+for line in 'monitor = 0' 'follow = keyboard' 'idle_threshold = 120s' \
+    'mouse_left_click = do_action, close_current' \
+    'mouse_middle_click = do_action, close_current' \
+    'mouse_right_click = close_current'; do
+    grep -Fxq "$line" "$dunstrc"
+done
+expect_failure grep -Eq '^mouse_.*=.*context' "$dunstrc"
+awk '
+    /^\[/ { critical = ($0 == "[urgency_critical]") }
+    /^override_pause_level =/ {
+        if (!critical || $0 != "override_pause_level = 100") exit 1
+        found++
+    }
+    END { if (found != 1) exit 1 }
+' "$dunstrc"
+
 grep -Fq "foreground='#8798ae'" "$dunstrc"
 grep -Fxq 'theme = light:Catppuccin Latte,dark:Catppuccin Mocha' "$ghostty"
 grep -Fxq 'config-file = ?~/.config/blankweave/overrides/ghostty.conf' "$ghostty"
@@ -212,7 +234,23 @@ for theme_file in "$data"/themes/*/theme.json; do
     for theme_mode in dark light; do
         "$script" set "$theme_id"
         "$script" mode "$theme_mode"
+        for time_format in 12h 24h; do
+            printf '{"timeFormat":"%s"}\n' "$time_format" > "$XDG_CONFIG_HOME/blankweave/shell.json"
+            "$script" lock
+            expected_time="\$TIME"
+            [[ $time_format != 12h ]] || expected_time="\$TIME12"
+            python3 "$repository/tests/theme_render_checks.py" "$state" "$hypr_theme" "$dunstrc" "$hyprlock" "$expected_time"
+        done
+        printf '{"timeFormat":"auto"}\n' > "$XDG_CONFIG_HOME/blankweave/shell.json"
+        for locale_name in en_US.UTF-8 en_GB.UTF-8; do
+            LC_ALL=$locale_name "$script" lock
+            expected_time="\$TIME"
+            [[ $locale_name != en_US.UTF-8 ]] || expected_time="\$TIME12"
+            python3 "$repository/tests/theme_render_checks.py" "$state" "$hypr_theme" "$dunstrc" "$hyprlock" "$expected_time"
+        done
         assert_rendered
+        python3 "$repository/tests/theme_contrast.py" "$state"
+        python3 "$repository/tests/theme_render_checks.py" "$state" "$hypr_theme" "$dunstrc" "$hyprlock"
         [[ $(jq -r '.theme' "$state") == "$theme_id" ]]
         [[ $(jq -r '.mode' "$state") == "$theme_mode" ]]
         [[ -f $(jq -r '.wallpaper' "$state") ]]
@@ -226,14 +264,30 @@ done
 "$script" set obsidian
 "$script" mode light
 
+# Geometry uses resolved root + mode overrides in every consumer.
+shape_theme=$XDG_CONFIG_HOME/blankweave/themes/shape-test
+mkdir -p "$shape_theme"
+cp -R "$data/themes/obsidian/." "$shape_theme/"
+jq '.design.shape = {panelRadius: 9, controlRadius: 3, borderWidth: 2, windowRadius: 6, windowBorderWidth: 1, notificationRadius: 4, lockFieldRadius: 8}
+    | .modes.light.design.shape = {panelRadius: 7, controlRadius: 2, borderWidth: 3, windowRadius: 5, windowBorderWidth: 3, notificationRadius: 2, lockFieldRadius: 6}'     "$data/themes/obsidian/theme.json" > "$shape_theme/theme.json"
+"$script" set shape-test
+for theme_mode in dark light; do
+    "$script" mode "$theme_mode"
+    python3 "$repository/tests/theme_render_checks.py" "$state" "$hypr_theme" "$dunstrc" "$hyprlock"
+done
+rm -rf "$shape_theme"
+"$script" set obsidian
+"$script" mode light
+
 # A user theme under ~/.config shadows the bundled set and is listed as such.
 user_theme=$XDG_CONFIG_HOME/blankweave/themes/ember
 mkdir -p "$user_theme"
+cp -R "$data/themes/obsidian/." "$user_theme/"
 jq '.name = "Ember"
     | .description = "Test theme"
     | .modes.dark.colors.accent = "#ff5500"
     | .modes.dark.colors.accentBright = "#ff7733"
-    | .modes.dark.wallpaper = "/nonexistent/ember.png"' \
+' \
     "$data/themes/obsidian/theme.json" > "$user_theme/theme.json"
 : > "$FAKE_LOG"
 "$script" set ember
@@ -245,7 +299,7 @@ assert_rendered
 [[ $(jq -r '.colors.accent' "$state") == '#ff5500' ]]
 grep -Fxq 'highlight = "#ff7733"' "$dunstrc"
 grep -Fq 'active_border = { "rgba(ff5500ff)", "rgba(ff7733ff)" },' "$hypr_theme"
-# A missing wallpaper never blocks the palette change.
+# Valid theme artwork stays inside its directory.
 expect_failure grep -Fq 'awww img /nonexistent' "$FAKE_LOG"
 
 listing=$("$script" list)
@@ -256,8 +310,39 @@ bundled_themes=("$data"/themes/*/theme.json)
 [[ $(jq -r '.[] | select(.id == "obsidian") | .modes | length' <<< "$listing") == 2 ]]
 [[ $(jq -r '.[] | select(.id == "ember") | .modes[] | select(.mode == "dark") | .accent' <<< "$listing") == '#ff5500' ]]
 [[ $(jq -r '.theme' <<< "$("$script" status)") == ember ]]
-# Nothing root-owned is present in the sandbox, so nothing can be pending.
+# Model an already-synced splash inside the sandbox; staged artwork alone
+# otherwise correctly reports pending when the installed copy is absent.
+mkdir -p "$BLANKWEAVE_PLYMOUTH_DIR"
+cp "$data/plymouth/blankweave/"* "$BLANKWEAVE_PLYMOUTH_DIR/"
 [[ $(jq -r '.system.pending' <<< "$("$script" status)") == false ]]
+
+# GTK fonts follow resolved root/mode typography; sizing stays independent.
+font_theme=$XDG_CONFIG_HOME/blankweave/themes/font-test
+mkdir -p "$font_theme"
+cp -R "$data/themes/obsidian/." "$font_theme/"
+jq '.design.typography = {fontFamily: "Noto Sans", monoFontFamily: "JetBrains Mono", textSize: 16}
+    | .modes.light.design.typography = {fontFamily: "Noto Serif", textSize: 14}' \
+    "$data/themes/obsidian/theme.json" > "$font_theme/theme.json"
+: > "$FAKE_LOG"
+"$script" set font-test
+"$script" mode light
+for version in gtk-3.0 gtk-4.0; do
+    grep -Fxq 'gtk-font-name=Noto Serif 11' "$XDG_CONFIG_HOME/$version/settings.ini"
+    grep -Fxq 'gtk-sound-theme-name=custom' "$XDG_CONFIG_HOME/$version/settings.ini"
+done
+grep -Fxq 'gsettings set org.gnome.desktop.interface font-name Noto Serif 11' "$FAKE_LOG"
+grep -Fxq 'gsettings set org.gnome.desktop.interface monospace-font-name JetBrains Mono 11' "$FAKE_LOG"
+"$script" mode dark
+for version in gtk-3.0 gtk-4.0; do
+    grep -Fxq 'gtk-font-name=Noto Sans 11' "$XDG_CONFIG_HOME/$version/settings.ini"
+done
+grep -Fxq 'gsettings set org.gnome.desktop.interface font-name Noto Sans 11' "$FAKE_LOG"
+grep -Fxq 'gsettings set org.gnome.desktop.interface monospace-font-name JetBrains Mono 11' "$FAKE_LOG"
+expect_failure grep -Fq 'text-scaling-factor' "$FAKE_LOG"
+"$script" set ember
+# Default fonts are restored along with the theme.
+grep -Fxq 'gsettings set org.gnome.desktop.interface font-name Atkinson Hyperlegible Next 11' "$FAKE_LOG"
+grep -Fxq 'gsettings set org.gnome.desktop.interface monospace-font-name JetBrainsMono Nerd Font 11' "$FAKE_LOG"
 
 # Invalid requests fail before anything is touched.
 before=$(cat "$state" "$dunstrc")
@@ -270,22 +355,24 @@ expect_failure "$script" bogus
 # A theme missing a companion token is rejected with a message naming it.
 broken=$XDG_CONFIG_HOME/blankweave/themes/nocursor
 mkdir -p "$broken"
+cp -R "$data/themes/obsidian/." "$broken/"
 jq 'del(.modes.dark.cursorTheme)' "$data/themes/obsidian/theme.json" > "$broken/theme.json"
 if "$script" set nocursor 2> "$test_root/nocursor.err"; then
     printf 'A theme missing cursorTheme must be rejected.\n' >&2
     exit 1
 fi
-grep -Fq 'missing: cursorTheme' "$test_root/nocursor.err"
+grep -Eq 'missing: cursorTheme|dark cursorTheme:' "$test_root/nocursor.err"
 
 # A theme missing a palette token is rejected rather than rendered with holes.
 broken=$XDG_CONFIG_HOME/blankweave/themes/broken
 mkdir -p "$broken"
+cp -R "$data/themes/obsidian/." "$broken/"
 jq 'del(.modes.dark.colors.accent)' "$data/themes/obsidian/theme.json" > "$broken/theme.json"
 if "$script" set broken 2> "$test_root/broken.err"; then
     printf 'A theme missing a colour token must be rejected.\n' >&2
     exit 1
 fi
-grep -Fq 'missing colours: accent' "$test_root/broken.err"
+grep -Eq 'missing colours: accent|dark colors.accent:' "$test_root/broken.err"
 [[ $(jq -r '.theme' "$state") == ember ]]
 
 # Theme changes preserve saved accessibility preferences and GTK animation keys.
@@ -327,6 +414,7 @@ rm "$XDG_CONFIG_HOME/blankweave/accessibility.json"
 
 # An unknown placeholder in a template aborts the render and leaves no
 # staged output behind the previously rendered file.
+cp "$data/dunst/dunstrc.tmpl" "$test_root/dunst-template"
 printf '\nbogus = "{{colors.nothing}}"\n' >> "$data/dunst/dunstrc.tmpl"
 if "$script" 2> "$test_root/placeholder.err"; then
     printf 'An unknown placeholder must fail the render.\n' >&2
@@ -336,4 +424,47 @@ grep -Fq 'unknown placeholder: colors.nothing' "$test_root/placeholder.err"
 grep -Fxq 'highlight = "#ff7733"' "$dunstrc"
 [[ -z $(find "$data/dunst" -name '.dunstrc.*') ]]
 
+cp "$test_root/dunst-template" "$data/dunst/dunstrc.tmpl"
+
 printf 'Theme apply tests passed.\n'
+
+# Every invalid value and the very last template render leave all outputs intact.
+cp "$repository/defaults/dunst/dunstrc.tmpl" "$data/dunst/dunstrc.tmpl"
+"$script" set obsidian
+"$script" mode dark
+validation_theme=$XDG_CONFIG_HOME/blankweave/themes/validation-test
+mkdir -p "$validation_theme"
+cp -R "$data/themes/obsidian/." "$validation_theme/"
+outputs=("$state" "$dunstrc" "$ghostty" "$hyprlock" "$hypr_theme" "$plymouth" "$voxtype"
+    "$data/plymouth/blankweave/logo.png" "$data/plymouth/blankweave/progress_bar.png"
+    "$XDG_CONFIG_HOME/hypr/hyprtoolkit.conf" "$XDG_CONFIG_HOME/gtk-3.0/settings.ini"
+    "$XDG_CONFIG_HOME/gtk-4.0/settings.ini" "$FAKE_LOG")
+snapshot=$test_root/validation-snapshot
+mkdir -p "$snapshot"
+for index in "${!outputs[@]}"; do cp "${outputs[index]}" "$snapshot/$index"; done
+assert_unchanged() {
+    for index in "${!outputs[@]}"; do cmp "${outputs[index]}" "$snapshot/$index"; done
+}
+for expression in '.modes.dark.colors.text = "red"' '.modes.light.lock.brightness = 3' \
+    '.modes.dark.wallpaper = "../escape.png"' '.modes.dark.lock.text = "#12345g"' \
+    '.modes.dark.ghostty = ""' '.plymouth.logo = "/tmp/logo.png"'; do
+    jq "$expression" "$data/themes/obsidian/theme.json" > "$validation_theme/theme.json"
+    expect_failure "$script" set validation-test
+    assert_unchanged
+    listing=$("$script" list)
+    jq -e '.[] | select(.id == "validation-test") | .invalid and (.reason | length > 0)' <<< "$listing" >/dev/null
+done
+cp "$data/themes/obsidian/theme.json" "$validation_theme/theme.json"
+cp "$data/plymouth/blankweave/blankweave.script.tmpl" "$test_root/last-template"
+printf '\n{{missing.lastToken}}\n' >> "$data/plymouth/blankweave/blankweave.script.tmpl"
+expect_failure "$script" set validation-test
+assert_unchanged
+cp "$test_root/last-template" "$data/plymouth/blankweave/blankweave.script.tmpl"
+jq '.unknownAuditKey = true | .modes.dark.unknownModeKey = 4' \
+    "$data/themes/obsidian/theme.json" > "$validation_theme/theme.json"
+"$script" lint validation-test 2>"$test_root/lint-warning"
+grep -Fq 'unknownAuditKey: warning: unknown key' "$test_root/lint-warning"
+grep -Fq 'unknownModeKey: warning: unknown key' "$test_root/lint-warning"
+rm -rf "$XDG_CONFIG_HOME/blankweave/themes/ember" "$XDG_CONFIG_HOME/blankweave/themes/nocursor" "$XDG_CONFIG_HOME/blankweave/themes/broken"
+"$script" lint obsidian
+"$script" lint

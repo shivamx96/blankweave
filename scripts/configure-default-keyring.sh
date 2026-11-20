@@ -2,6 +2,12 @@
 
 set -euo pipefail
 
+if [[ -r ${BLANKWEAVE_SYSTEM_ROOT:-}/etc/blankweave/signin.conf ]] \
+    && [[ $(cat "${BLANKWEAVE_SYSTEM_ROOT:-}/etc/blankweave/signin.conf") == no ]]; then
+    printf 'Password sign-in selected; leaving keyring password protection unchanged. Unlock it with Passwords and Keys when needed.\n'
+    exit 0
+fi
+
 data_home=${XDG_DATA_HOME:-$HOME/.local/share}
 keyring_dir=$data_home/keyrings
 default_file=$keyring_dir/default

@@ -30,14 +30,11 @@ ColumnLayout {
                     required property int index
                     Layout.fillWidth: true
                     Text { text: Widgets.labels[entry.modelData]; Layout.fillWidth: true; color: root.theme.text; font.family: root.theme.fontFamily; font.pixelSize: root.theme.smallTextSize }
-                    SettingsButton {
-                        theme: root.theme
-                        text: root.prefs && Widgets.hidden(root.prefs.bar.hiddenWidgets).includes(entry.modelData) ? "Show" : "Hide"
+                    SettingsSwitchRow {
+                        theme: root.theme; checked: root.prefs && !Widgets.hidden(root.prefs.confirmedHiddenWidgets).includes(entry.modelData); busy: Boolean(root.prefs && root.prefs.widgetsPending); error: root.prefs ? root.prefs.writeError : ""
+                        text: "Visible"
                         enabled: root.writable && !["overview", "power"].includes(entry.modelData)
-                        onClicked: {
-                            const hidden = Widgets.hidden(root.prefs.bar.hiddenWidgets)
-                            root.prefs.bar.hiddenWidgets = (hidden.includes(entry.modelData) ? hidden.filter(id => id !== entry.modelData) : hidden.concat([entry.modelData])).join(",")
-                        }
+                        onClicked: root.prefs.setWidgetVisibility(entry.modelData, !checked)
                     }
                     SettingsButton { theme: root.theme; text: "←"; Accessible.name: "Move " + Widgets.labels[entry.modelData] + " left"; enabled: root.writable && Widgets.canMove(section.modelData, section.order, entry.index, -1); onClicked: root.prefs.bar[section.modelData + "Order"] = Widgets.move(section.modelData, root.prefs.bar[section.modelData + "Order"], entry.modelData, -1) }
                     SettingsButton { theme: root.theme; text: "→"; Accessible.name: "Move " + Widgets.labels[entry.modelData] + " right"; enabled: root.writable && Widgets.canMove(section.modelData, section.order, entry.index, 1); onClicked: root.prefs.bar[section.modelData + "Order"] = Widgets.move(section.modelData, root.prefs.bar[section.modelData + "Order"], entry.modelData, 1) }
@@ -45,6 +42,8 @@ ColumnLayout {
             }
         }
     }
-    SettingsButton { theme: root.theme; text: "Restore default widgets"; enabled: root.writable; onClicked: { root.prefs.bar.hiddenWidgets = ""; root.prefs.bar.leftOrder = ""; root.prefs.bar.centerOrder = ""; root.prefs.bar.rightOrder = "" } }
-    Text { Layout.fillWidth: true; text: root.prefs ? root.prefs.writeError : "Bar preferences unavailable."; visible: text !== ""; color: root.theme.warning; font.family: root.theme.fontFamily; font.pixelSize: root.theme.smallTextSize; wrapMode: Text.WordWrap }
+    SettingsConfirmButton {
+                targetIdentity: JSON.stringify(root.prefs ? root.prefs.bar : {})
+                theme: root.theme; actionText: "Restore default widgets"; enabled: root.writable; onConfirmed: { root.prefs.bar.hiddenWidgets = ""; root.prefs.bar.leftOrder = ""; root.prefs.bar.centerOrder = ""; root.prefs.bar.rightOrder = "" } }
+    Text { Layout.fillWidth: true; text: root.prefs ? root.prefs.writeError : "Bar preferences unavailable."; visible: text !== ""; color: root.theme.critical; font.family: root.theme.fontFamily; font.pixelSize: root.theme.smallTextSize; wrapMode: Text.WordWrap }
 }

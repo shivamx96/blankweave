@@ -2,6 +2,8 @@
 
 set -euo pipefail
 
+check_only=false
+if [[ ${1:-} == --check ]]; then check_only=true; shift; fi
 entries_dir=${1:-/boot/loader/entries}
 
 die() {
@@ -16,6 +18,7 @@ entries=("$entries_dir"/*.conf)
 shopt -u nullglob
 
 if (( ${#entries[@]} == 0 )); then
+    [[ $check_only == false ]] || die 'no BLS entries; direct Linux BLS entries are required'
     printf 'No systemd-boot entries found in %s.\n' "$entries_dir"
     exit 0
 fi
@@ -28,6 +31,11 @@ for entry in "${entries[@]}"; do
     (( ${#option_lines[@]} <= 1 )) \
         || die "expected at most one options line in $entry"
 done
+
+if [[ $check_only == true ]]; then
+    printf 'Kernel command-line layout supported.\n'
+    exit 0
+fi
 
 for entry in "${entries[@]}"; do
     mapfile -t option_lines < <(grep -nE '^[[:space:]]*options([[:space:]]+|$)' "$entry" || true)

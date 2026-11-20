@@ -94,14 +94,25 @@ WidgetFrame {
         if (displayMode === 1)
             return Qt.formatDateTime(clock.date, "ddd, dd MMM")
         if (displayMode === 2)
-            return Qt.formatDateTime(clock.date, "ddd, dd MMM · hh:mm AP")
-        return Qt.formatDateTime(clock.date, "hh:mm AP")
+            return Qt.formatDateTime(clock.date, "ddd, dd MMM") + " · " + preferences.formatTime(clock.date)
+        return preferences.formatTime(clock.date)
     }
-    tooltip: Qt.formatDateTime(clock.date, "dddd, d MMMM yyyy\nHH:mm:ss")
-        + "\nRight-click: change display"
+    rightClickHint: "change display"
+    tooltip: Qt.formatDateTime(clock.date, "dddd, d MMMM yyyy") + "\n" + preferences.formatTime(clock.date, true)
+        + ""
     active: calendarPanel.open
     labelWeight: Font.DemiBold
     horizontalPadding: 13
+    labelWidth: Math.ceil(clockLabelMetrics.width)
+    TextMetrics {
+        id: clockLabelMetrics
+        font.family: root.theme.fontFamily
+        font.pixelSize: root.theme.textSize
+        font.weight: root.labelWeight
+        text: (root.displayMode === 1 ? root.label : root.displayMode === 2
+            ? Qt.formatDateTime(clock.date, "ddd, dd MMM") + " · " : "")
+            + (root.displayMode === 1 ? "" : root.preferences.resolvedTimeFormat === "12h" ? "00:00 PM" : "00:00")
+    }
 
     SystemClock {
         id: clock
@@ -118,6 +129,7 @@ WidgetFrame {
     }
 
     ControlPopup {
+        panelId: "clock"
         id: calendarPanel
         bar: root.bar
         theme: root.theme
@@ -127,13 +139,14 @@ WidgetFrame {
 
         ControlPanelHeader {
             theme: root.theme
+            atBottom: root.bar.atBottom
             icon: "󰃭"
             title: "TIME & DATE"
-            subtitle: Qt.formatDateTime(clock.date, "dddd, d MMMM yyyy · HH:mm:ss t")
+            subtitle: Qt.formatDateTime(clock.date, "dddd, d MMMM yyyy") + " · " + preferences.formatTime(clock.date, true) + " " + Qt.formatDateTime(clock.date, "t")
             actions: [
-                { "id": "previous", "icon": "󰁍" },
-                { "id": "today", "icon": "󰃭", "active": root.todayKey === root.selectedKey },
-                { "id": "next", "icon": "󰁔" }
+                { "id": "previous", "label": "Previous month", "icon": "󰁍" },
+                { "id": "today", "label": "Go to today", "icon": "󰃭", "active": root.todayKey === root.selectedKey },
+                { "id": "next", "label": "Next month", "icon": "󰁔" }
             ]
             onActionPressed: actionId => {
                 if (actionId === "previous")
@@ -152,7 +165,7 @@ WidgetFrame {
             metrics: [
                 {
                     "label": "LOCAL TIME",
-                    "value": Qt.formatDateTime(clock.date, "hh:mm AP"),
+                    "value": preferences.formatTime(clock.date),
                     "active": true
                 },
                 {
@@ -221,19 +234,18 @@ WidgetFrame {
                             if (calendarCell.isDate && !Boolean(calendarCell.modelData.inMonth))
                                 return root.theme.textMuted
                             if (calendarCell.isWeek || calendarCell.modelData.kind === "weekHeader")
-                                return root.theme.divider
+                                return root.theme.textMuted
                             if (calendarCell.modelData.kind === "dayHeader")
                                 return root.theme.textMuted
                             return root.theme.text
                         }
-                        opacity: calendarCell.isDate && !Boolean(calendarCell.modelData.inMonth) ? 0.5 : 1
                         font.family: calendarCell.isWeek || calendarCell.modelData.kind === "weekHeader"
                             ? root.theme.monoFontFamily
                             : root.theme.fontFamily
                         font.pixelSize: calendarCell.modelData.kind === "dayHeader"
                             || calendarCell.modelData.kind === "weekHeader"
                             ? root.theme.microTextSize
-                            : root.theme.smallTextSize
+                            : root.theme.textSize
                         font.weight: calendarCell.isDate && (Boolean(calendarCell.modelData.today)
                             || Boolean(calendarCell.modelData.selected))
                             ? Font.Bold
@@ -252,7 +264,10 @@ WidgetFrame {
                         color: root.theme.accentBright
                     }
 
-                    MouseArea {
+                    ControlMouseArea {
+                        theme: root.theme
+                        accessibleName: String(calendarCell.modelData.timestamp)
+                        focusIdentity: String(calendarCell.modelData.timestamp) + ":" + accessibleName
                         id: calendarMouse
                         anchors.fill: parent
                         enabled: calendarCell.isDate
@@ -277,7 +292,7 @@ WidgetFrame {
                     ? root.theme.accentBright
                     : root.theme.text
                 font.family: root.theme.fontFamily
-                font.pixelSize: root.theme.smallTextSize
+                font.pixelSize: root.theme.textSize
                 font.weight: Font.DemiBold
                 renderType: Text.NativeRendering
             }
@@ -289,6 +304,12 @@ WidgetFrame {
                 font.pixelSize: root.theme.microTextSize
                 renderType: Text.NativeRendering
             }
+        }
+        PanelSettingsAction {
+            theme: root.theme
+            panelKey: "ClockWidget"
+            bar: root.bar
+            panel: calendarPanel
         }
     }
 }

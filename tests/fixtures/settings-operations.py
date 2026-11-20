@@ -17,6 +17,7 @@ else:
     request = json.load(sys.stdin)
     assert request['action'] == 'fixture' and request['revision'] == 'fixture'
     if request.get('folder') == 'reject':
+        print(json.dumps({'error': {'message': 'The folder is unavailable.', 'detail': 'The selected folder was removed.'}}))
         print('The folder is unavailable.', file=sys.stderr)
         sys.exit(1)
     state.write_text(json.dumps(dict(id='fixture-job', phase='completed', label='Fixture', message='Done', cancellable=False)))

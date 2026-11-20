@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Render a complete, owned Hyprtoolkit 0.6 configuration (no sourced fragments)."""
 import hashlib
+from settings_support import display_path
 import json
 import math
 import os
@@ -100,7 +101,7 @@ def ownership_message():
     except (OSError, UnicodeError):
         personal = True
     if personal:
-        return 'The screen-sharing picker uses your personal Hyprtoolkit configuration; its appearance is not changed by Settings.'
+        return f'The screen-sharing picker uses your personal Hyprtoolkit configuration ({display_path(path)}); its appearance is not changed by Settings.'
     return ''
 
 
@@ -129,6 +130,9 @@ if __name__ == '__main__':
     try:
         if sys.argv[1:] == ['--check-theme']:
             prepare(theme=json.load(sys.stdin))
+        elif sys.argv[1:] == ['--stage-theme']:
+            for path, text in prepare(theme=json.load(sys.stdin)):
+                print(json.dumps([str(path), text]))
         elif not sys.argv[1:]:
             sync()
         else:

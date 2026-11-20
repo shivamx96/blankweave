@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 """Managed desktop shortcut preferences, conflict checks, and verified rollback."""
+from runtime_paths import runtime_path
+from settings_support import file_refusal
 from contextlib import contextmanager
 import copy
 import fcntl
@@ -19,8 +21,8 @@ KEYS = list('ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789') + ['F' + str(i) for i in ran
     'Return', 'Tab', 'Escape', 'space', 'comma', 'period', 'slash', 'minus', 'equal',
     'bracketleft', 'bracketright', 'backslash', 'grave', 'Left', 'Right', 'Up', 'Down',
     'Home', 'End', 'Page_Up', 'Page_Down', 'Insert', 'Delete', 'BackSpace', 'Print',
-    'XF86AudioRaiseVolume', 'XF86AudioLowerVolume', 'XF86AudioMute', 'XF86AudioPlay',
-    'XF86AudioPause', 'XF86AudioNext', 'XF86AudioPrev', 'XF86MonBrightnessUp', 'XF86MonBrightnessDown']
+    'XF86PowerOff', 'XF86AudioRaiseVolume', 'XF86AudioLowerVolume', 'XF86AudioMute', 'XF86AudioPlay',
+    'XF86AudioMicMute', 'XF86AudioStop', 'XF86AudioPause', 'XF86AudioNext', 'XF86AudioPrev', 'XF86MonBrightnessUp', 'XF86MonBrightnessDown']
 
 
 def catalog():
@@ -57,6 +59,10 @@ def validate(data):
             or type(data['version']) is not int or data['version'] != 1
             or not isinstance(data['bindings'], dict)):
         raise ValueError('Invalid shortcut preferences.')
+    # Retired by directional movement. Preserve all other user choices while
+    # allowing preferences written by the previous catalog to load.
+    data = copy.deepcopy(data)
+    data['bindings'].pop('move-monitor', None)
     known = {r['id'] for r in catalog()}
     if any(k not in known for k in data['bindings']):
         raise ValueError('Unknown saved shortcut action.')
@@ -70,7 +76,7 @@ def revision(data):
 
 
 def render(data):
-    validate(data)
+    data = validate(data)
     fields = ', '.join('[' + lua(k) + '] = ' + lua(v) for k, v in sorted(data['bindings'].items()))
     return HEADER + '_G.blankweave_shortcuts_revision = ' + lua(revision(data)) + '\nreturn { ' + fields + ' }\n'
 
@@ -108,7 +114,7 @@ class Shortcuts:
     @contextmanager
     def locked(self):
         self.directory.mkdir(parents=True, exist_ok=True)
-        with (self.directory / '.shortcuts.lock').open('a') as stream:
+        with (runtime_path('.shortcuts.lock')).open('a') as stream:
             try:
                 fcntl.flock(stream, fcntl.LOCK_EX | fcntl.LOCK_NB)
             except BlockingIOError as error:
@@ -150,6 +156,7 @@ class Shortcuts:
                 and matches[0]['key'].lower() == key and not matches[0]['submap']
                 and not matches[0].get('release') and not matches[0].get('mouse')
                 and bool(matches[0].get('repeat')) == next(r['repeat'] for r in catalog() if r['id'] == action)
+                and bool(matches[0].get('locked')) == next(r.get('locked', False) for r in catalog() if r['id'] == action)
                 and not self.conflict(rows, action, value))
 
     def marker(self):
@@ -191,7 +198,7 @@ class Shortcuts:
         value = chord(request['value'] if request['value'] is not None else known[action]['default'])[0]
         with self.locked():
             if self.config.is_symlink() or self.rules.is_symlink():
-                raise ValueError('Shortcuts preference symlinks are user-owned and cannot be edited here.')
+                raise file_refusal('Shortcuts preference symlinks are user-owned and cannot be edited here.', self.config, self.rules)
             previous = self.settings()
             if request['revision'] != revision(previous) or request['session'] != self.session or not self.session:
                 raise ValueError('Shortcuts settings or the desktop session changed. Refresh and try again.')
@@ -206,7 +213,7 @@ class Shortcuts:
                 raise ValueError('Live shortcuts changed. Refresh and try again.')
             current = previous['bindings'].get(action, known[action]['default'])
             if not self.verified(bindings, action, current):
-                raise ValueError('This shortcut was removed or overridden outside Settings. Resolve it in your personal configuration.')
+                raise file_refusal('This shortcut was removed or overridden outside Settings. Resolve it in your personal configuration.', self.directory / 'overrides/hyprland.lua', self.directory.parent / 'hypr/hyprland.lua')
             conflict = self.conflict(bindings, action, value)
             if conflict:
                 raise ValueError('Shortcut conflicts with ' + conflict + '. Choose another combination.')
@@ -234,7 +241,7 @@ class Shortcuts:
                 if self.marker() != revision(updated):
                     raise ValueError('The desktop configuration did not load the saved shortcuts rules.')
                 if not self.verified(self.bindings(), action, value):
-                    raise ValueError('A personal configuration overrides or conflicts with this shortcut. The change was reverted.')
+                    raise file_refusal('A personal configuration overrides or conflicts with this shortcut. The change was reverted.', self.directory / 'overrides/hyprland.lua', self.directory.parent / 'hypr/hyprland.lua')
             except (OSError, ValueError, subprocess.SubprocessError) as failure:
                 # Restore only our own writes, never a concurrent external edit.
                 restored = True
@@ -269,5 +276,7 @@ if __name__ == '__main__':
     try:
         main()
     except (OSError, ValueError, subprocess.SubprocessError) as error:
-        print(str(error), file=sys.stderr)
+        from settings_support import error_result, safe_detail
+        print(json.dumps({"error": error_result(error)}))
+        print(safe_detail(error), file=sys.stderr)
         sys.exit(1)

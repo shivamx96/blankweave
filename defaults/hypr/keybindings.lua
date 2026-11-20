@@ -20,40 +20,46 @@ end
 local main_mod = "SUPER"
 
 -- Applications
+bind("settings-shortcuts", main_mod .. " + slash", hl.dsp.exec_cmd("~/.local/bin/blankweave settings shortcuts"))
 bind("settings", main_mod .. " + comma", hl.dsp.exec_cmd("~/.local/bin/blankweave settings"))
-bind("terminal", main_mod .. " + Return", hl.dsp.exec_cmd("ghostty"))
-bind("browser", main_mod .. " + B", hl.dsp.exec_cmd("zen-browser"))
-bind("bluetooth", main_mod .. " + SHIFT + B", hl.dsp.exec_cmd("blueman-manager"))
-bind("files", main_mod .. " + F", hl.dsp.exec_cmd("thunar"))
+bind("terminal", main_mod .. " + Return", hl.dsp.exec_cmd("~/.local/share/blankweave/shell/open-default.sh terminal"))
+bind("browser", main_mod .. " + B", hl.dsp.exec_cmd("~/.local/share/blankweave/shell/open-default.sh browser"))
+bind("bluetooth", main_mod .. " + SHIFT + B", hl.dsp.exec_cmd("~/.local/bin/blankweave settings bluetooth"))
+bind("files", main_mod .. " + E", hl.dsp.exec_cmd("~/.local/share/blankweave/shell/open-default.sh files"))
 bind("launcher", main_mod .. " + space", hl.dsp.exec_cmd([[qs ipc -n -p "$HOME/.local/share/blankweave/quickshell" call blankweave launcher]]))
-bind("lock", main_mod .. " + L", hl.dsp.exec_cmd("hyprlock"))
+bind("lock", main_mod .. " + L", hl.dsp.exec_cmd("~/.local/share/blankweave/shell/lock.sh"), { locked = true })
 bind("theme", main_mod .. " + T", hl.dsp.exec_cmd("~/.local/share/blankweave/shell/theme-apply.sh toggle"))
 bind("wallpaper", main_mod .. " + SHIFT + W", hl.dsp.exec_cmd("~/.local/share/blankweave/shell/wallpaper.sh cycle"))
 bind("clipboard", main_mod .. " + SHIFT + V", hl.dsp.exec_cmd([[qs ipc -n -p "$HOME/.local/share/blankweave/quickshell" call blankweave clipboard]]))
 bind("reload-shell", main_mod .. " + Y", hl.dsp.exec_cmd([[qs ipc -n -p "$HOME/.local/share/blankweave/quickshell" call blankweave reload]]))
 
 -- Screenshots
-bind("screenshot-print", "Print", hl.dsp.exec_cmd("grim - | wl-copy"))
-bind("screenshot", main_mod .. " + S", hl.dsp.exec_cmd("grim - | wl-copy"))
-bind("screenshot-region", main_mod .. " + SHIFT + S", hl.dsp.exec_cmd([[grim -g "$(slurp)" - | wl-copy]]))
+bind("screenshot-print", "Print", hl.dsp.exec_cmd("~/.local/share/blankweave/shell/screenshot.sh screen"))
+bind("screenshot", main_mod .. " + S", hl.dsp.exec_cmd("~/.local/share/blankweave/shell/screenshot.sh screen"))
+bind("screenshot-region", main_mod .. " + SHIFT + S", hl.dsp.exec_cmd("~/.local/share/blankweave/shell/screenshot.sh region"))
+
+bind("screenshot-window", main_mod .. " + ALT + S", hl.dsp.exec_cmd("~/.local/share/blankweave/shell/screenshot.sh window"))
 
 -- Multimedia keys (repeating = repeat on hold)
-bind("volume-up", "XF86AudioRaiseVolume", hl.dsp.exec_cmd("wpctl set-volume -l 1.0 @DEFAULT_AUDIO_SINK@ 5%+ && ~/.local/share/blankweave/shell/volume-popup.sh"), { repeating = true })
-bind("volume-down", "XF86AudioLowerVolume", hl.dsp.exec_cmd("wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%- && ~/.local/share/blankweave/shell/volume-popup.sh"), { repeating = true })
-bind("volume-mute", "XF86AudioMute", hl.dsp.exec_cmd("wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle && ~/.local/share/blankweave/shell/volume-popup.sh"))
-bind("media-play", "XF86AudioPlay", hl.dsp.exec_cmd("playerctl play-pause"))
-bind("media-pause", "XF86AudioPause", hl.dsp.exec_cmd("playerctl pause"))
-bind("media-next", "XF86AudioNext", hl.dsp.exec_cmd("playerctl next"))
-bind("media-previous", "XF86AudioPrev", hl.dsp.exec_cmd("playerctl previous"))
-bind("brightness-up", "XF86MonBrightnessUp", hl.dsp.exec_cmd("~/.local/share/blankweave/shell/brightness.sh up 5"), { repeating = true })
-bind("brightness-down", "XF86MonBrightnessDown", hl.dsp.exec_cmd("~/.local/share/blankweave/shell/brightness.sh down 5"), { repeating = true })
+bind("volume-up", "XF86AudioRaiseVolume", hl.dsp.exec_cmd('qs ipc -n -p "$HOME/.local/share/blankweave/quickshell" call blankweave volume up || wpctl set-volume -l 1.0 @DEFAULT_AUDIO_SINK@ 5%+'), { repeating = true, locked = true })
+bind("volume-down", "XF86AudioLowerVolume", hl.dsp.exec_cmd('qs ipc -n -p "$HOME/.local/share/blankweave/quickshell" call blankweave volume down || wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-'), { repeating = true, locked = true })
+bind("volume-mute", "XF86AudioMute", hl.dsp.exec_cmd('qs ipc -n -p "$HOME/.local/share/blankweave/quickshell" call blankweave volume mute || wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle'), { locked = true })
+bind("mic-mute", "XF86AudioMicMute", hl.dsp.exec_cmd('qs ipc -n -p "$HOME/.local/share/blankweave/quickshell" call blankweave micMute || wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle'), { locked = true })
+bind("media-play", "XF86AudioPlay", hl.dsp.exec_cmd("~/.local/share/blankweave/shell/open-default.sh command playerctl play-pause"), { locked = true })
+bind("media-pause", "XF86AudioPause", hl.dsp.exec_cmd("~/.local/share/blankweave/shell/open-default.sh command playerctl pause"), { locked = true })
+bind("media-next", "XF86AudioNext", hl.dsp.exec_cmd("~/.local/share/blankweave/shell/open-default.sh command playerctl next"), { locked = true })
+bind("media-previous", "XF86AudioPrev", hl.dsp.exec_cmd("~/.local/share/blankweave/shell/open-default.sh command playerctl previous"), { locked = true })
+bind("media-stop", "XF86AudioStop", hl.dsp.exec_cmd("~/.local/share/blankweave/shell/open-default.sh command playerctl stop"), { locked = true })
+bind("brightness-up", "XF86MonBrightnessUp", hl.dsp.exec_cmd([[qs ipc -n -p "$HOME/.local/share/blankweave/quickshell" call blankweave brightness up || ~/.local/share/blankweave/shell/brightness.sh up 5 "$(hyprctl monitors -j | jq -r '.[] | select(.focused) | .name')"]]), { repeating = true, locked = true })
+bind("brightness-down", "XF86MonBrightnessDown", hl.dsp.exec_cmd([[qs ipc -n -p "$HOME/.local/share/blankweave/quickshell" call blankweave brightness down || ~/.local/share/blankweave/shell/brightness.sh down 5 "$(hyprctl monitors -j | jq -r '.[] | select(.focused) | .name')"]]), { repeating = true, locked = true })
 
 -- Window management
 bind("close-window", main_mod .. " + Q", hl.dsp.window.close())
 bind("float-window", main_mod .. " + V", hl.dsp.window.float({ action = "toggle" }))
 bind("pseudo-window", main_mod .. " + P", hl.dsp.window.pseudo({ action = "toggle" }))
 bind("split", main_mod .. " + J", hl.dsp.layout("togglesplit"))
-bind("logout", main_mod .. " + M", hl.dsp.exec_cmd("uwsm stop"))
+bind("logout", main_mod .. " + Escape", hl.dsp.exec_cmd('qs ipc -n -p "$HOME/.local/share/blankweave/quickshell" call blankweave power'))
+bind("power-menu", "XF86PowerOff", hl.dsp.exec_cmd('qs ipc -n -p "$HOME/.local/share/blankweave/quickshell" call blankweave power'))
 
 -- Focus with arrow keys
 bind("focus-left", main_mod .. " + left", hl.dsp.focus({ direction = "l" }))
@@ -61,8 +67,17 @@ bind("focus-right", main_mod .. " + right", hl.dsp.focus({ direction = "r" }))
 bind("focus-up", main_mod .. " + up", hl.dsp.focus({ direction = "u" }))
 bind("focus-down", main_mod .. " + down", hl.dsp.focus({ direction = "d" }))
 
--- Move window to monitor
-bind("move-monitor", main_mod .. " + SHIFT + K", hl.dsp.window.move({ monitor = "+1" }))
+-- Directional movement swaps tiled neighbours and crosses monitor edges.
+bind("fullscreen-window", main_mod .. " + F", hl.dsp.window.fullscreen({ mode = "fullscreen", action = "toggle" }))
+bind("maximize-window", main_mod .. " + SHIFT + F", hl.dsp.window.fullscreen({ mode = "maximized", action = "toggle" }))
+bind("move-left", main_mod .. " + SHIFT + left", hl.dsp.window.move({ direction = "l" }))
+bind("move-right", main_mod .. " + SHIFT + right", hl.dsp.window.move({ direction = "r" }))
+bind("move-up", main_mod .. " + SHIFT + up", hl.dsp.window.move({ direction = "u" }))
+bind("move-down", main_mod .. " + SHIFT + down", hl.dsp.window.move({ direction = "d" }))
+bind("resize-left", main_mod .. " + ALT + left", hl.dsp.window.resize({ x = -40, y = 0, relative = true }), { repeating = true })
+bind("resize-right", main_mod .. " + ALT + right", hl.dsp.window.resize({ x = 40, y = 0, relative = true }), { repeating = true })
+bind("resize-up", main_mod .. " + ALT + up", hl.dsp.window.resize({ x = 0, y = -40, relative = true }), { repeating = true })
+bind("resize-down", main_mod .. " + ALT + down", hl.dsp.window.resize({ x = 0, y = 40, relative = true }), { repeating = true })
 
 -- Scroll workspaces
 bind("workspace-next", main_mod .. " + CTRL + right", hl.dsp.focus({ workspace = "e+1" }))
@@ -96,3 +111,27 @@ end
 bind("assistive-reader", "SUPER + CTRL + R", hl.dsp.exec_cmd("python3 ~/.local/share/blankweave/shell/settings_session.py reader"))
 bind("assistive-keyboard", "SUPER + CTRL + K", hl.dsp.exec_cmd("python3 ~/.local/share/blankweave/shell/settings_session.py keyboard"))
 bind("assistive-zoom-reset", "SUPER + CTRL + M", hl.dsp.exec_cmd("python3 ~/.local/share/blankweave/shell/settings_session.py zoom"))
+
+-- Fixed pointer gestures: the Settings editor only accepts keyboard keysyms.
+hl.bind("SUPER + mouse:272", hl.dsp.window.drag(), { mouse = true, description = "blankweave:drag-move" })
+hl.bind("SUPER + mouse:273", hl.dsp.window.resize(), { mouse = true, description = "blankweave:drag-resize" })
+hl.bind("SUPER + SHIFT + mouse:272", hl.dsp.window.resize(), { mouse = true, description = "blankweave:drag-resize-left" })
+
+-- Capability-gated hardware switches are independent of editable shortcuts.
+local capability_path = (os.getenv("HOME") .. "/.local/share/blankweave/hardware-capabilities.json")
+local capabilities = io.open(capability_path, "r")
+if capabilities then
+    local data = capabilities:read("*a")
+    capabilities:close()
+    if data:find('"internal-display"', 1, true) then
+        hl.bind("switch:on:Lid Switch", hl.dsp.exec_cmd("~/.local/share/blankweave/shell/monitor-layout.sh lid closed"), { locked = true })
+        hl.bind("switch:off:Lid Switch", hl.dsp.exec_cmd("~/.local/share/blankweave/shell/monitor-layout.sh lid open"), { locked = true })
+    end
+end
+
+-- Bar panels on the focused output.
+bind("panel-audio", "SUPER + CTRL + A", hl.dsp.exec_cmd('qs ipc -n -p "$HOME/.local/share/blankweave/quickshell" call blankweave panel audio'))
+bind("panel-network", "SUPER + CTRL + N", hl.dsp.exec_cmd('qs ipc -n -p "$HOME/.local/share/blankweave/quickshell" call blankweave panel network'))
+bind("panel-bluetooth", "SUPER + CTRL + B", hl.dsp.exec_cmd('qs ipc -n -p "$HOME/.local/share/blankweave/quickshell" call blankweave panel bluetooth'))
+bind("panel-notifications", "SUPER + CTRL + I", hl.dsp.exec_cmd('qs ipc -n -p "$HOME/.local/share/blankweave/quickshell" call blankweave panel notifications'))
+bind("panel-display", "SUPER + CTRL + D", hl.dsp.exec_cmd('qs ipc -n -p "$HOME/.local/share/blankweave/quickshell" call blankweave panel display'))

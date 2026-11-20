@@ -65,9 +65,10 @@ blankweave_release_version_greater_or_equal() {
     for index in 0 1 2; do
         candidate_part=${candidate_parts[$index]}
         floor_part=${floor_parts[$index]}
-        if (( 10#$candidate_part > 10#$floor_part )); then
+        if (( ${#candidate_part} > ${#floor_part} )) \
+            || { (( ${#candidate_part} == ${#floor_part} )) && [[ $candidate_part > $floor_part ]]; }; then
             return 0
-        elif (( 10#$candidate_part < 10#$floor_part )); then
+        elif [[ $candidate_part != "$floor_part" ]]; then
             return 1
         fi
     done
@@ -76,4 +77,29 @@ blankweave_release_version_greater_or_equal() {
 
 blankweave_release_version_greater() {
     [[ $1 != "$2" ]] && blankweave_release_version_greater_or_equal "$1" "$2"
+}
+
+# Return a tag, never an arbitrary revision supplied by the caller. Ignore
+# development, lightweight, mismatched, and off-main tags.
+blankweave_release_select() {
+    local repository=$1 main=${2:-origin/main} requested=${3:-}
+    local tag revision version best='' best_version=''
+    if [[ -n $requested ]]; then
+        [[ $requested == v* ]] && blankweave_release_version_valid "${requested#v}" || return 1
+    fi
+    while IFS= read -r tag; do
+        [[ -z $requested || $tag == "$requested" ]] || continue
+        blankweave_release_version_valid "${tag#v}" || continue
+        git -C "$repository" rev-parse -q --verify "refs/tags/$tag^{tag}" >/dev/null 2>&1 || continue
+        revision=$(git -C "$repository" rev-parse "refs/tags/$tag^{commit}" 2>/dev/null) || continue
+        git -C "$repository" merge-base --is-ancestor "$revision" "$main" || continue
+        [[ $(blankweave_release_tag_at "$repository" "$revision") == "$tag" ]] || continue
+        version=${tag#v}
+        if [[ -z $best ]] || blankweave_release_version_greater "$version" "$best_version"; then
+            best=$tag
+            best_version=$version
+        fi
+    done < <(git -C "$repository" tag --list 'v*')
+    [[ -n $best ]] || return 1
+    printf '%s\n' "$best"
 }

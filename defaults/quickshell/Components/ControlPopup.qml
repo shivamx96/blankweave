@@ -1,5 +1,7 @@
 import QtQuick
 import QtQuick.Layouts
+import "PanelNavigation.js" as Navigation
+import "PopupGeometry.js" as Geometry
 import Quickshell
 
 PopupWindow {
@@ -8,8 +10,19 @@ PopupWindow {
     required property var bar
     required property var theme
     required property Item anchorItem
-    default property alias content: panelContent.children
+    default property alias content: panelContent.content
+    readonly property Item navigationScope: panelScope
+    property string panelId: ""
+    readonly property var session: root.bar.shell && root.bar.shell.panels ? root.bar.shell.panels : null
+    property var escapeHandler: null
+    property bool keyboardMode: false
+    property string focusIdentity: ""
     property bool open: false
+    function handleKey(event) {
+        keyboardMode = true
+        if (event.key === Qt.Key_Escape) { if (!escapeHandler || !escapeHandler()) open = false; event.accepted = true; return }
+        Navigation.key(panelScope, event)
+    }
     property bool preserveNextClose: false
     property int panelWidth: 340
     property string anchorAlignment: "right"
@@ -23,7 +36,9 @@ PopupWindow {
     grabFocus: true
     color: "transparent"
     implicitWidth: panelWidth
-    implicitHeight: panelContent.implicitHeight + root.theme.spacing("section") * 2
+    readonly property real maximumHeight: Geometry.maximum(
+        ((bar.screen && bar.screen.height) || 1080), bar.height)
+    implicitHeight: Math.min(maximumHeight, panelContent.naturalHeight + root.theme.spacing("section") * 2)
 
     onClosed: {
         if (preserveNextClose) {
@@ -34,10 +49,23 @@ PopupWindow {
             open = false
         }
     }
-    onOpenChanged: syncVisibilityHold()
+    onOpenChanged: {
+        if (open) {
+            if (session && !(session.open && session.mode === panelId && session.targetName === bar.screen.name)) session.claim(root)
+            keyboardMode = session ? session.keyboardRequest : false
+            focusIdentity = ""
+            Qt.callLater(() => {
+                if (!root.open) return
+                const items = Navigation.controls(panelScope)
+                if (items.length) { items[0].forceActiveFocus(Qt.TabFocusReason); Navigation.reveal(items[0]) }
+            })
+        } else if (session && !session.synchronizing && session.mode === panelId && bar.screen && session.targetName === bar.screen.name) session.dismiss()
+        syncVisibilityHold()
+    }
 
-    Component.onCompleted: syncVisibilityHold()
+    Component.onCompleted: { if (session) session.registerPanel(root); syncVisibilityHold() }
     Component.onDestruction: {
+        if (session) session.unregisterPanel(root)
         if (root.bar && root.bar.setVisibilityHold)
             root.bar.setVisibilityHold(root, false)
     }
@@ -79,9 +107,12 @@ PopupWindow {
     }
 
     FocusScope {
+        id: panelScope
+        readonly property var panelController: root
         anchors.fill: parent
         focus: root.visible
-        Keys.onEscapePressed: root.open = false
+        Keys.priority: Keys.AfterItem
+        Keys.onPressed: event => root.handleKey(event)
 
         // One uniform border, the same as the tooltip and the bar's widgets,
         // rather than accent hairlines that vary along the edges.
@@ -94,11 +125,11 @@ PopupWindow {
             border.color: root.theme.outlineStrong
         }
 
-        ColumnLayout {
+        PanelViewport {
             id: panelContent
+            theme: root.theme
             anchors.fill: parent
             anchors.margins: root.theme.spacing("section")
-            spacing: root.theme.spacing("lg")
         }
     }
 }

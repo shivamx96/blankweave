@@ -34,6 +34,7 @@ WidgetFrame {
     }
 
     ControlPopup {
+        panelId: "agent-usage"
         id: usagePanel
         bar: root.bar
         theme: root.theme
@@ -46,10 +47,11 @@ WidgetFrame {
 
         ControlPanelHeader {
             theme: root.theme
+            atBottom: root.bar.atBottom
             icon: root.icon
             title: "AGENT USAGE"
             subtitle: root.usage.busy ? "Refreshing…" : "Subscription allowance remaining"
-            actions: [{ "id": "refresh", "icon": "󰑐" }]
+            actions: [{ "id": "refresh", "label": "Refresh", "icon": "󰑐" }]
             onActionPressed: root.usage.refresh(true)
         }
 

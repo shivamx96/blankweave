@@ -38,7 +38,7 @@ Item {
         anchors.verticalCenter: parent.verticalCenter
         width: 2
         height: root.active ? 24 : 12
-        color: root.active ? root.theme.accentBright : root.theme.divider
+        color: root.active ? root.theme.accentBright : root.theme.outlineStrong
 
         Behavior on height { NumberAnimation { duration: Math.round(root.theme.motionDuration * 140 / 150) } }
     }
@@ -154,7 +154,10 @@ Item {
                         Behavior on width { NumberAnimation { duration: Math.round(root.theme.motionDuration * 120 / 150) } }
                     }
 
-                    MouseArea {
+                    ControlMouseArea {
+                        theme: root.theme
+                        accessibleName: root.title + " " + String(actionItem.modelData.label || actionItem.modelData.id)
+                        focusIdentity: root.title + ":" + String(actionItem.modelData.id)
                         id: actionMouse
                         anchors.fill: parent
                         enabled: !root.busy && actionItem.actionEnabled

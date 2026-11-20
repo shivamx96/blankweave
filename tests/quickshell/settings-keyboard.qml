@@ -31,6 +31,8 @@ ShellRoot {
                     break
                 case 1:
                     test.check(backend.ready && backend.writable, "Controls unavailable")
+                    test.check(test.find(controls, "keyboard_repeat_delay").currentText === "600 ms", "Repeat delay default")
+                    test.check(test.find(controls, "keyboard_compose:").count === 4, "Compose Caps offered with remapped Caps")
                     test.find(controls, "keyboardEdit").clicked()
                     test.check(controls.draft.length === 1, "Draft lost current layout")
                     test.find(controls, "keyboardAdd").popup.open()

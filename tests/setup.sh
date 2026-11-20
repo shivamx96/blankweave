@@ -79,6 +79,15 @@ mapfile -t replay_apply < "$replay_home/apply-called"
 grep -q 'Profiles:     desktop development' "$test_root/replay.out"
 grep -q 'Git identity: Ada Lovelace <ada@example.com>' "$test_root/replay.out"
 
+# Existing theme/mode survive a replay even when setup.conf differs.
+printf '{"theme":"obsidian","mode":"dark"}\n' > "$replay_config/theme.json"
+HOME=$replay_home XDG_CONFIG_HOME=$replay_home/config \
+BLANKWEAVE_SETUP_APPLY_COMMAND=$fake_apply \
+    "$repository/scripts/setup.sh" --non-interactive > "$test_root/preserve.out"
+mapfile -t preserved_apply < "$replay_home/apply-called"
+[[ -z ${preserved_apply[1]} && -z ${preserved_apply[2]} ]]
+[[ $(cat "$replay_config/theme.json") == '{"theme":"obsidian","mode":"dark"}' ]]
+
 missing_home=$test_root/missing-home
 mkdir -p "$missing_home"
 if HOME=$missing_home XDG_CONFIG_HOME=$missing_home/config \
@@ -92,11 +101,12 @@ fi
 # requires for its confirmation prompts.
 cancel_home=$test_root/cancel-home
 mkdir -p "$cancel_home"
-printf '\n\n\n\n\n\n\nn\nn\nn\n' | \
+printf '\n\n\n\n\n\n\nn\nn\nn\nn\n' | \
     HOME=$cancel_home \
     XDG_CONFIG_HOME=$cancel_home/config \
     BLANKWEAVE_SETUP_APPLY_COMMAND=$fake_apply \
-    script -qec "'$repository/scripts/setup.sh'" /dev/null > /dev/null
+    script -qec "'$repository/scripts/setup.sh'" /dev/null > "$test_root/cancel.out"
+grep -Fq "$repository/bin/blankweave setup" "$test_root/cancel.out"
 [[ ! -e $cancel_home/config/blankweave/install.conf ]]
 [[ ! -e $cancel_home/config/blankweave/setup.conf ]]
 [[ ! -e $cancel_home/config/blankweave/theme.json ]]
@@ -104,7 +114,7 @@ printf '\n\n\n\n\n\n\nn\nn\nn\n' | \
 
 guided_home=$test_root/guided-home
 mkdir -p "$guided_home"
-printf '\n\n\n\n\nmoss\nlight\ny\nAda Lovelace\nada@example.com\ny\ny\n' | \
+printf '\n\n\n\n\nmoss\nlight\ny\nAda Lovelace\nada@example.com\ny\ny\ny\n' | \
     HOME=$guided_home \
     XDG_CONFIG_HOME=$guided_home/config \
     BLANKWEAVE_SETUP_APPLY_COMMAND=$fake_apply \
@@ -128,7 +138,7 @@ mapfile -t guided_apply < "$guided_home/apply-called"
 # The review can revisit a section without restarting or saving partial choices.
 edit_home=$test_root/edit-home
 mkdir -p "$edit_home"
-printf '\n\n\n\n\nmoss\nlight\nn\nn\npackages\ntheme\nobsidian\ndark\ny\n' | \
+printf '\n\n\n\n\nmoss\nlight\nn\nn\nn\npackages\ntheme\nobsidian\ndark\ny\n' | \
     HOME=$edit_home \
     XDG_CONFIG_HOME=$edit_home/config \
     BLANKWEAVE_SETUP_APPLY_COMMAND=$fake_apply \
@@ -167,3 +177,30 @@ grep -q 'Some changes may already be applied' "$test_root/failure.out"
 [[ $(sha256sum "$replay_config/setup.conf") == "$setup_before" ]]
 
 printf 'Guided setup and setup config tests passed.\n'
+
+grep -Fq 'Your disk passphrase is the login. Anyone who can unlock the disk gets the desktop.' "$repository/scripts/setup.sh"
+# Exercise review defaults with synthetic root ancestry; never consult a host disk.
+(
+    source "$repository/scripts/setup.sh"
+    # choose_signin sources the production detector, so supply its command inputs.
+    findmnt() { printf '/dev/fixture[/@]\n'; }
+    lsblk() { if [[ $fixture_encrypted == yes ]]; then printf 'lvm\ncrypt\npart\ndisk\n'; else printf 'part\ndisk\n'; fi; }
+    NON_INTERACTIVE=true
+    HOME=$test_root/choice-home
+    XDG_STATE_HOME=$test_root/choice-state
+    mkdir -p "$HOME"
+    for fixture_encrypted in yes no; do
+        SETUP_AUTOMATIC_SIGNIN=
+        choose_signin > "$test_root/choice.out"
+        [[ $SETUP_AUTOMATIC_SIGNIN == "$fixture_encrypted" ]]
+        if [[ $fixture_encrypted == no ]]; then grep -q 'WARNING: Root disk encryption' "$test_root/choice.out"; fi
+        SETUP_AUTOMATIC_SIGNIN=yes
+        choose_signin > "$test_root/explicit.out"
+        [[ $SETUP_AUTOMATIC_SIGNIN == yes ]]
+    done
+)
+
+# The successful apply owns the closing block; setup must not append technical
+# success text after the five-key welcome.
+if grep -q 'Setup completed. Log:' "$(dirname -- "${BASH_SOURCE[0]}")/../scripts/setup.sh"; then exit 1; fi
+grep -Fq ': # The installer owns the final welcome block.' "$(dirname -- "${BASH_SOURCE[0]}")/../scripts/setup.sh"

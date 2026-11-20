@@ -33,7 +33,127 @@ def module(name, path):
 system = module('system_settings_root', ROOT / 'scripts/settings-system.py')
 
 
+class LaptopRows(unittest.TestCase):
+    def disk(self, mounted=False):
+        child = dict(path='/dev/test1', type='part', size=1024, uuid='fixture', serial='secret', fstype='ext4', mountpoints=['/media/test'] if mounted else [], **{'maj:min': '8:1'})
+        disk = dict(path='/dev/test', type='disk', size=2048, serial='secret', rm=True, children=[child], mountpoints=[], **{'maj:min': '8:0'})
+        return [disk, child]
+
+    def test_drive_protection_propagates_to_whole_disk_and_siblings(self):
+        for mount in ('/', '/boot', '/boot/efi', '/home', '/home/user', '[SWAP]'):
+            rows = self.disk(); rows[1]['mountpoints'] = [mount]
+            self.assertTrue(all(r['protected'] and not r['commands'] for r in storage.drive_inventory(rows)))
+        rows = self.disk(); rows[1]['parttype'] = 'c12a7328-f81f-11d2-ba4b-00a0c93ec93b'
+        self.assertTrue(all(r['protected'] for r in storage.drive_inventory(rows)))
+
+    def test_drive_identity_is_private_and_replacement_rejected(self):
+        rows = self.disk(); captured = storage.drive_identity(rows[1]); rows[1]['uuid'] = 'replacement'
+        self.assertNotIn('secret', json.dumps(storage.drive_inventory(rows)))
+        with patch.object(storage, 'blocks', return_value=rows), patch.object(storage, 'run') as run:
+            with self.assertRaisesRegex(ValueError, 'changed'): storage.apply('drives', dict(action='mount:' + captured))
+            run.assert_not_called()
+
+    def test_each_drive_action_reads_back_and_rejects_failure(self):
+        for command in ('mount', 'unmount', 'eject'):
+            before = self.disk(command == 'unmount')
+            target = before[0 if command == 'eject' else 1]
+            key = command + ':' + storage.drive_identity(target)
+            after = [] if command == 'eject' else self.disk(command == 'mount')
+            with patch.object(storage, 'blocks', side_effect=[before, before, before, after]), patch.object(storage, 'run') as run:
+                self.assertIn('verified', storage.apply('drives', dict(action=key)))
+                self.assertEqual(run.call_args.args[0][0], 'udisksctl')
+            with patch.object(storage, 'blocks', return_value=before), patch.object(storage, 'run', side_effect=ValueError('denied')):
+                with self.assertRaisesRegex(ValueError, 'denied'): storage.apply('drives', dict(action=key))
+            with patch.object(storage, 'blocks', return_value=before), patch.object(storage, 'run'):
+                with self.assertRaises(ValueError): storage.apply('drives', dict(action=key))
+
+    def test_fake_lsblk_enumeration_and_partition_eject_target(self):
+        rows = self.disk()
+        payload = json.dumps({'blockdevices':[rows[0]]})
+        with patch.object(storage, 'run', return_value=payload), patch.object(Path, 'read_text', return_value='Filename Type Size Used Priority\n'):
+            listed = storage.blocks()
+        self.assertEqual([r['path'] for r in listed], ['/dev/test', '/dev/test1'])
+        inventory = storage.drive_inventory(listed)
+        self.assertIn('eject', inventory[1]['commands'])
+        self.assertEqual(inventory[0]['identity'], inventory[1]['ejectIdentity'])
+        self.assertNotIn('secret', json.dumps(inventory))
+
+    def test_busy_eject_requires_confirmation_and_verifies_unmount(self):
+        current = self.disk(True)
+        captured = storage.drive_identity(current[0])
+        with patch.object(storage, 'blocks', return_value=current), patch.object(storage, 'run') as run:
+            with self.assertRaisesRegex(ValueError, 'Confirm'): storage.apply('drives', dict(action='eject:' + captured))
+            run.assert_not_called()
+        def mutate(args, **kwargs):
+            if args[1] == 'unmount': current[1]['mountpoints'] = []
+            elif args[1] == 'power-off': current.clear()
+            return ''
+        with patch.object(storage, 'blocks', side_effect=lambda: current), patch.object(storage, 'run', side_effect=mutate) as run:
+            self.assertIn('verified', storage.apply('drives', dict(action='eject:' + captured, confirmed=True)))
+            self.assertEqual([call.args[0][1] for call in run.call_args_list], ['unmount','power-off'])
+
+    def test_annotated_tag_notes_exclude_lightweight_and_outside_range(self):
+        text = 'v1.0.0\ttag\tOld\x1ev1.1.0\ttag\tFirst\x1ev1.2.0\tcommit\tIgnored\x1ev2.0.0\ttag\tSecond\x1ev3.0.0\ttag\tFuture\x1e'
+        self.assertEqual(apps.tag_notes(text,'v1.0.0','v2.0.0'), ['v1.1.0\nFirst','v2.0.0\nSecond'])
+
+    def test_update_notes_select_only_pending_versions(self):
+        text = '# Policy\n## 1.0.0\nOld\n## 1.1.0\nFirst\n## 2.0.0\nSecond\n## 3.0.0\nFuture'
+        self.assertEqual(apps.release_notes(text, 'v1.0.0', 'v2.0.0'), ['Version 1.1.0\nFirst', 'Version 2.0.0\nSecond'])
+        self.assertEqual(apps.release_notes(text, 'v2.0.0', 'v2.0.0'), [])
+        with patch.object(apps, 'run', return_value='checked') as run:
+            apps.apply('updates', dict(action='check'))
+            self.assertEqual(run.call_args.args[0][-2:], ['update', '--check'])
+
+    def test_restart_marker_and_unknown_update_state(self):
+        with tempfile.TemporaryDirectory() as tmp, patch.dict(os.environ, {'XDG_RUNTIME_DIR': tmp}), patch.object(apps, 'run', side_effect=ValueError('offline')):
+            self.assertFalse(apps.release_status()['restartRequired'])
+            marker = Path(tmp) / 'blankweave/restart-required'; marker.parent.mkdir(); marker.touch()
+            self.assertTrue(apps.release_status()['restartRequired'])
+
+    def test_datetime_automatic_disables_manual_action(self):
+        def query(args):
+            if args == ['timedatectl', 'show']: return 'Timezone=UTC\nNTP=yes'
+            if args == ['timedatectl', 'list-timezones']: return 'UTC\nAsia/Kolkata'
+            return ''
+        with patch.object(devices, 'installed', return_value=True), patch.object(devices, 'run', side_effect=query):
+            value = devices.status('datetime')
+            self.assertNotIn('time', [a['key'] for a in value['actions']])
+            self.assertIn('UTC+05:30', value['actions'][0]['fields'][0]['options'][1]['label'])
+
+
 class Validation(unittest.TestCase):
+    def test_confirmation_schema_and_dispatch_guard(self):
+        self.assertNotIn('confirm', common.field('password', 'Password', secret=True))
+        self.assertTrue(common.field('password', 'Password', secret=True, confirm=True)['confirm'])
+        dispatcher = module('confirmation_dispatcher', ROOT / 'defaults/shell/operations-settings.py')
+        operation = common.action('create', 'Create', [common.field('password', 'Password', secret=True, confirm=True)])
+        data = dict(revision='test', writable=True, actions=[operation])
+        with patch.object(dispatcher, 'status', return_value=data), patch.object(dispatcher, 'locked'), patch.object(dispatcher.subprocess, 'Popen') as spawn:
+            with self.assertRaisesRegex(ValueError, 'Passwords do not match'):
+                dispatcher.start('accounts', dict(action='create', revision='test', password='secret', password_confirm='typo'))
+            spawn.assert_not_called()
+            spawn.return_value.pid = 12345
+            with patch.object(dispatcher, 'atomic') as persist, patch.object(dispatcher, 'STATE'), patch.object(dispatcher, 'identity', return_value='fixture'):
+                dispatcher.start('accounts', dict(action='create', revision='test', password='secret', password_confirm='secret'))
+            sent = json.loads(spawn.return_value.stdin.write.call_args.args[0])
+            self.assertNotIn('password_confirm', sent)
+            self.assertEqual(sent['password'], 'secret')
+            self.assertNotIn('secret', str(persist.call_args))
+            self.assertNotIn('secret', str(spawn.call_args))
+
+    def test_account_and_backup_catalog_confirmation(self):
+        account = Mock(pw_name='fixture', pw_uid=1001, pw_gecos='')
+        with patch.object(session, 'accounts', return_value=[account]), patch.object(session.grp, 'getgrall', return_value=[]):
+            actions = session.status('accounts')['actions']
+        for key in ('create', 'password'):
+            operation = next(a for a in actions if a['key'] == key)
+            self.assertTrue(next(f for f in operation['fields'] if f['key'] == 'password')['confirm'])
+        with patch.object(backup, 'installed', return_value=True), patch.object(backup, 'config', return_value=None):
+            fields = backup.status('backup')['actions'][0]['fields']
+        password = next(f for f in fields if f['key'] == 'password')
+        self.assertTrue(password['confirm'])
+        self.assertTrue(password['confirmOptional'])
+
     def test_field_validation(self):
         for value in ('', '\n', 'bad\0value', 2, None):
             with self.subTest(value=value), self.assertRaises(ValueError): common.require({'name': value}, 'name')
@@ -125,13 +245,12 @@ class CapabilityGuidance(unittest.TestCase):
     def test_snapshot_guidance_matches_filesystem(self):
         with patch.object(recovery, 'installed', return_value=True), patch.object(recovery, 'run', return_value='ext4'), patch.object(Path, 'exists', return_value=False):
             value = recovery.status('snapshots')
-            self.assertEqual(value['notices'][0]['kind'], 'unsupported')
-            self.assertEqual(value['notices'][0]['target'], 'backup')
+            self.assertEqual(value['message'], 'System snapshots are unavailable because the root filesystem is not Btrfs.')
             self.assertFalse(value['actions'])
         with patch.object(recovery, 'installed', return_value=True), patch.object(recovery, 'run', return_value='btrfs'), patch.object(Path, 'exists', return_value=False):
             value = recovery.status('snapshots')
-            self.assertEqual(value['notices'][0]['kind'], 'not-configured')
-            self.assertEqual(value['actions'][0]['key'], 'setup')
+            self.assertEqual(value['message'], 'System snapshots are unavailable because no root Snapper configuration exists.')
+            self.assertFalse(value['actions'])
 
     def test_firmware_no_devices_does_not_claim_up_to_date(self):
         with patch.object(devices, 'installed', return_value=True), patch.object(devices, 'devices', return_value=[]):
@@ -411,7 +530,7 @@ class Jobs(unittest.TestCase):
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory(); self.directory = Path(self.temp.name)
         self.env = {**os.environ, 'HOME': self.temp.name, 'XDG_CONFIG_HOME': str(self.directory / 'config'), 'XDG_STATE_HOME': str(self.directory / 'state'), 'PYTHONDONTWRITEBYTECODE': '1'}
-        for name in ('operations-settings.py', 'settings_support.py', 'settings_operations.py'):
+        for name in ('operations-settings.py', 'settings_support.py', 'settings_operations.py', 'runtime_paths.py'):
             shutil.copy(ROOT / 'defaults/shell' / name, self.directory)
         (self.directory / 'settings_network.py').write_text('''import time
 from pathlib import Path
@@ -469,7 +588,7 @@ def apply(domain, request):
         value = self.status()
         self.assertEqual(value['notices'][0]['kind'], 'service-unavailable')
         self.assertFalse(value['actions'])
-        self.assertIn('service offline', value['message'])
+        self.assertEqual('This service is unavailable.', value['message'])
 
     def test_stale_revision_and_missing_confirmation_rejected(self):
         for request in ({'action': 'work', 'revision': 'stale', 'confirmed': True}, {'action': 'work', 'revision': self.status()['revision']}):
@@ -485,6 +604,52 @@ def apply(domain, request):
         cancelled = self.status()['job']
         self.assertEqual(cancelled['phase'], 'cancelled')
         self.assertGreaterEqual(cancelled['finished'], cancelled['started'])
+
+
+class CacheCleanup(unittest.TestCase):
+    def test_privileged_retention_and_no_arguments(self):
+        with patch.object(system, 'run', return_value='done') as run, patch.object(system.Path, 'exists', return_value=False):
+            system.execute('package-cache-clean', {}, 1000)
+            self.assertEqual([c.args[0] for c in run.call_args_list],
+                             [['/usr/bin/paccache', '-rk3'], ['/usr/bin/paccache', '-ruk1']])
+            with self.assertRaises(ValueError): system.execute('package-cache-clean', {'flags': '-rk0'}, 1000)
+        with patch.object(storage, 'privileged', return_value='done') as privileged:
+            storage.apply('disk-usage', {'action': 'pacman-clean'})
+            privileged.assert_called_once_with('package-cache-clean')
+
+    def test_paru_cleanup_and_refusals(self):
+        with tempfile.TemporaryDirectory() as tmp, patch.object(storage.Path, 'home', return_value=Path(tmp)):
+            cache = Path(tmp) / '.cache/paru'
+            clone = cache / 'clone'
+            clone.mkdir(parents=True)
+            (clone / 'source').write_text('build')
+            outside = Path(tmp) / 'keep'; outside.mkdir(); (outside / 'file').write_text('keep')
+            (clone / 'link').symlink_to(outside, target_is_directory=True)
+            (cache / 'metadata').write_text('keep')
+            storage.clean_paru()
+            self.assertFalse(clone.exists()); self.assertTrue((outside / 'file').exists())
+            self.assertTrue((cache / 'metadata').exists())
+            clone.symlink_to(outside, target_is_directory=True)
+            with self.assertRaises(ValueError): storage.clean_paru()
+            clone.unlink(); cache.rename(cache.with_name('old')); cache.symlink_to(outside)
+            with self.assertRaises(ValueError): storage.clean_paru()
+            cache.unlink(); cache.mkdir()
+            with patch.object(storage.os, 'getuid', return_value=os.getuid() + 1):
+                with self.assertRaises(ValueError): storage.clean_paru()
+
+    def test_cache_reads_and_actions(self):
+        with tempfile.TemporaryDirectory() as tmp, patch.dict(os.environ, BLANKWEAVE_STORAGE_VISIBLE='1'), patch.object(storage.Path, 'home', return_value=Path(tmp)):
+            path = Path(tmp) / 'file'; path.write_bytes(b'x' * 4096)
+            self.assertIn('MiB', storage.cache_size(Path(tmp)))
+            with patch.object(storage, 'cache_size', return_value='1 MiB'):
+                data = storage.status('disk-usage')
+            actions = {a['key']: a for a in data['actions']}
+            for key in ['pacman-clean', 'paru-clean']:
+                self.assertTrue(actions[key]['confirm']); self.assertFalse(actions[key]['cancellable'])
+            self.assertIn('Pacman package cache: 1 MiB', data['details'])
+            self.assertIn('Paru cache: 1 MiB', data['details'])
+        with patch.dict(os.environ, BLANKWEAVE_STORAGE_VISIBLE='0'), patch.object(storage.os, 'walk', side_effect=AssertionError('hidden read')):
+            self.assertIn('Open Storage', storage.cache_size(Path('/unused')))
 
 
 if __name__ == '__main__': unittest.main()

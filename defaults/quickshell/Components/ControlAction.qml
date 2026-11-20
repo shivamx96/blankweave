@@ -54,7 +54,9 @@ Item {
         }
     }
 
-    MouseArea {
+    ControlMouseArea {
+        theme: root.theme
+        accessibleName: root.label
         id: actionMouse
         anchors.fill: parent
         enabled: root.enabled

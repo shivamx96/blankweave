@@ -1,4 +1,5 @@
 import QtQuick
+import "../Services/PowerActions.js" as PowerActions
 import QtQuick.Controls.Basic
 import QtQuick.Layouts
 import Quickshell
@@ -7,6 +8,7 @@ import "../Services"
 
 WidgetFrame {
     id: root
+    dataSources: [statusPoller]
 
     readonly property string shellDir: Quickshell.env("HOME") + "/.local/share/blankweave/shell"
     property var status: ({
@@ -39,18 +41,20 @@ WidgetFrame {
 
     function runControl(arguments) {
         if (arguments[0] === "set-paused")
-            root.bar.run(["python3", root.shellDir + "/notification-settings.py", "toggle"])
+            root.bar.run(PowerActions.dndCommand(root.shellDir))
         else root.bar.run(["dunstctl"].concat(arguments))
         refreshTimer.restart()
     }
 
+    iconMark: Boolean(status.paused) ? "notifications-paused" : "notifications"
     icon: Boolean(status.paused) ? "󰂛" : "󰂚"
     iconOnly: true
     active: notificationPanel.open
     attention: Number(status.waitingCount || 0) > 0
+    rightClickHint: status.paused ? "resume notifications" : "pause notifications"
     tooltip: Boolean(status.paused)
-        ? "Do not disturb · " + Number(status.waitingCount || 0) + " waiting\nRight-click: resume notifications"
-        : Number(status.historyCount || 0) + " archived notifications\nRight-click: pause notifications"
+        ? "Do not disturb · " + Number(status.waitingCount || 0) + " waiting"
+        : Number(status.historyCount || 0) + " archived notifications"
 
     onPressed: button => {
         if (button === Qt.LeftButton) {
@@ -63,8 +67,10 @@ WidgetFrame {
             root.runControl(["set-paused", "toggle"])
     }
 
-    ScriptPoller {
+    SharedPoller {
         id: statusPoller
+        service: root.bar.shell.pollers
+        key: "NotificationWidget:statusPoller"
         command: root.shellDir + "/notifications-status.sh"
         interval: notificationPanel.open ? 1500 : 5000
         onUpdated: payload => root.updateStatus(payload)
@@ -77,6 +83,7 @@ WidgetFrame {
     }
 
     ControlPopup {
+        panelId: "notifications"
         id: notificationPanel
         bar: root.bar
         theme: root.theme
@@ -90,19 +97,16 @@ WidgetFrame {
 
         ControlPanelHeader {
             theme: root.theme
+            atBottom: root.bar.atBottom
             icon: Boolean(root.status.paused) ? "󰂛" : "󰂚"
             title: "NOTIFICATIONS"
             subtitle: Boolean(root.status.paused)
                 ? "Do not disturb · " + Number(root.status.waitingCount || 0) + " waiting"
                 : "Dunst notification archive"
             actions: [
+                {"id": "dnd", "label": root.status.paused ? "Turn Do Not Disturb off" : "Turn Do Not Disturb on", "kind": "switch", "checked": Boolean(root.status.paused)},
                 {
-                    "id": "dnd",
-                    "icon": Boolean(root.status.paused) ? "󰂛" : "󰂚",
-                    "active": Boolean(root.status.paused)
-                },
-                {
-                    "id": "clear",
+                    "id": "clear", "label": "Clear notification history",
                     "icon": "󰎟",
                     "attention": Number(root.status.historyCount || 0) > 0
                 }
@@ -192,9 +196,15 @@ WidgetFrame {
                 : "Notification history unavailable"
             message: Boolean(root.status.available)
                 ? (Boolean(root.status.paused)
-                    ? "New notifications will wait quietly until do not disturb is disabled."
+                    ? "Notifications wait until do not disturb is disabled. Critical alerts still appear; muted apps stay muted."
                     : "Notifications will appear here after they leave the screen.")
                 : String(root.status.error || "Dunst is not responding.")
+        }
+        PanelSettingsAction {
+            theme: root.theme
+            panelKey: "NotificationWidget"
+            bar: root.bar
+            panel: notificationPanel
         }
     }
 }

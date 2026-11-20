@@ -1,4 +1,5 @@
 import QtQuick
+import "../Services/PowerActions.js" as PowerActions
 import QtQuick.Layouts
 import Quickshell
 import Quickshell.Io
@@ -7,6 +8,7 @@ import "../Services"
 
 WidgetFrame {
     id: root
+    dataSources: [placementPoller, themePoller, themeStatusPoller]
 
     readonly property string shellDir: Quickshell.env("HOME") + "/.local/share/blankweave/shell"
 
@@ -112,17 +114,24 @@ WidgetFrame {
         root.displays = list
     }
 
-    visible: display.available
-    icon: display.percentage < 34 ? "󰃞" : (display.percentage < 67 ? "󰃟" : "󰃠")
+    Component.onDestruction: bar.shell.osd.panel(root, "brightness", false)
+
+    visible: true
+    iconMark: !display.available ? "display" : "brightness-" + (display.percentage < 34 ? 0 : display.percentage < 67 ? 1 : 2)
+    icon: !display.available ? "󰍹" : display.percentage < 34 ? "󰃞" : (display.percentage < 67 ? "󰃟" : "󰃠")
     iconPixelSize: theme.barIconSize - 2
     label: display.available ? display.percentage + "%" : ""
+    scrollHint: display.available ? "adjust brightness" : ""
     tooltip: display.available
-        ? display.displayName + ": " + display.percentage + "%\nClick for controls · Scroll to adjust"
-        : ""
+        ? display.displayName + ": " + display.percentage + "%\nClick for controls"
+        : display.displayName + "\nClick for display controls"
 
     DisplayBrightness {
         id: ownDisplay
         screen: root.bar.screen
+        Component.onCompleted: root.bar.shell.brightness.registerDisplay(ownDisplay)
+        Component.onDestruction: root.bar.shell.brightness.unregisterDisplay(ownDisplay)
+        onStepRequested: value => root.bar.shell.osd.show("brightness", "Brightness · " + value + "%", "󰃟", value / 100)
     }
 
     Instantiator {
@@ -137,8 +146,10 @@ WidgetFrame {
         onObjectRemoved: (index, object) => root.syncDisplays()
     }
 
-    ScriptPoller {
+    SharedPoller {
         id: placementPoller
+        service: root.bar.shell.pollers
+        key: "BrightnessWidget:placementPoller"
         command: root.shellDir + "/monitor-layout.sh status"
         interval: 0
         onUpdated: payload => {
@@ -166,8 +177,10 @@ WidgetFrame {
         }
     }
 
-    ScriptPoller {
+    SharedPoller {
         id: themePoller
+        service: root.bar.shell.pollers
+        key: "BrightnessWidget:themePoller"
         command: root.shellDir + "/theme-apply.sh list"
         interval: 0
         onUpdated: payload => {
@@ -176,9 +189,9 @@ WidgetFrame {
                 const listing = JSON.parse(payload)
                 const entries = Array.isArray(listing) ? listing : []
                 for (let index = 0; index < entries.length; index++) {
-                    if (entries[index].invalid)
-                        continue
                     rows.push({
+                        "invalid": Boolean(entries[index].invalid),
+                        "reason": String(entries[index].reason || ""),
                         "id": String(entries[index].id || ""),
                         "name": String(entries[index].name || entries[index].id || ""),
                         "modes": Array.isArray(entries[index].modes) ? entries[index].modes : []
@@ -190,8 +203,10 @@ WidgetFrame {
         }
     }
 
-    ScriptPoller {
+    SharedPoller {
         id: themeStatusPoller
+        service: root.bar.shell.pollers
+        key: "BrightnessWidget:themeStatusPoller"
         command: root.shellDir + "/theme-apply.sh status"
         interval: 0
         onUpdated: payload => {
@@ -221,18 +236,22 @@ WidgetFrame {
         }
     }
 
-    onScrolled: delta => {
+    active: brightnessPanel.open
+
+    onScrolled: steps => {
         if (display.available)
-            display.queuePercentage(display.percentage + (delta > 0 ? 2 : -2))
+            display.step(steps * 2)
     }
 
     ControlPopup {
+        panelId: "display"
         id: brightnessPanel
         bar: root.bar
         theme: root.theme
         anchorItem: root
 
         onOpenChanged: {
+            root.bar.shell.osd.panel(root, "brightness", open)
             if (open) {
                 placementPoller.refresh()
                 themePoller.refresh()
@@ -242,19 +261,20 @@ WidgetFrame {
 
         ControlPanelHeader {
             theme: root.theme
+            atBottom: root.bar.atBottom
             icon: "󰃠"
             title: "DISPLAY"
             subtitle: root.displays.length > 1
                 ? root.displays.length + " displays"
-                : root.display.displayName + " · " + root.display.backendName
+                : root.display.displayName + (root.display.available ? " · " + root.display.backendName : "")
             actions: [
-                { "id": "theme", "icon": root.theme.dark ? "󰖙" : "󰖔" }
+                { "id": "theme", "label": "Switch color theme", "icon": root.theme.dark ? "󰖙" : "󰖔" }
             ]
             onActionPressed: actionId => {
                 if (actionId === "theme") {
                     brightnessPanel.preserveNextClose = true
                     themeCloseGuard.restart()
-                    root.bar.run([root.shellDir + "/theme-apply.sh", "toggle"])
+                    root.bar.run(PowerActions.themeCommand(root.shellDir))
                 }
             }
         }
@@ -288,17 +308,18 @@ WidgetFrame {
 
                 Layout.fillWidth: true
                 spacing: 10
-                visible: modelData.available || placement !== null
+                visible: true
 
                 ControlSectionLabel {
                     theme: root.theme
                     text: root.displays.length > 1
                         ? displayRow.modelData.displayName.toUpperCase()
                             + (displayRow.modelData.available ? " · " + displayRow.modelData.backendName.toUpperCase() : "")
-                        : "BUILT-IN DISPLAY"
+                        : displayRow.modelData.displayName.toUpperCase()
                 }
 
                 ControlValueRow {
+                    accessibleName: "Brightness for " + displayRow.modelData.displayName
                     id: brightnessControl
                     visible: displayRow.modelData.available
                     theme: root.theme
@@ -309,6 +330,16 @@ WidgetFrame {
                     valueText: displayRow.modelData.percentage + "%"
                     onValueMoved: value => displayRow.modelData.queuePercentage(value)
                     onValueCommitted: value => displayRow.modelData.commitPercentage(value)
+                }
+
+                Text {
+                    visible: !displayRow.modelData.available
+                    Layout.fillWidth: true
+                    text: "Brightness is not available for this display"
+                    color: root.theme.textMuted
+                    font.family: root.theme.fontFamily
+                    font.pixelSize: root.theme.smallTextSize
+                    wrapMode: Text.WordWrap
                 }
 
                 Binding {
@@ -419,11 +450,11 @@ WidgetFrame {
                     required property var modelData
 
                     theme: root.theme
-                    text: String(modelData.name)
+                    text: String(modelData.name) + (modelData.invalid ? " — " + modelData.reason : "")
                     swatch: root.themeSwatch(modelData)
                     selected: root.theme.themeId === String(modelData.id)
                     busy: root.pendingThemeId === String(modelData.id)
-                    enabled: !themeProcess.running
+                    enabled: !themeProcess.running && !modelData.invalid
                     onPressed: root.setTheme(String(modelData.id))
                 }
             }
@@ -438,6 +469,12 @@ WidgetFrame {
             font.family: root.theme.fontFamily
             font.pixelSize: root.theme.microTextSize
             renderType: Text.NativeRendering
+        }
+        PanelSettingsAction {
+            theme: root.theme
+            panelKey: "BrightnessWidget"
+            bar: root.bar
+            panel: brightnessPanel
         }
     }
 

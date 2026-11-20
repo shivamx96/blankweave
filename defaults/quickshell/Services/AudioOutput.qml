@@ -50,7 +50,8 @@ QtObject {
     }
     function setVolume(value, expectedGeneration = generation) {
         if (!available || expectedGeneration !== generation || !Number.isFinite(value)) return
-        output.audio.volume = Math.max(0, Math.min(1.5, value))
+        // Preserve normal downward steps if another tool exceeded our UI range.
+        output.audio.volume = Math.max(0, Math.min(Math.max(1.5, volume), value))
     }
     function setOutputMuted(value, expectedGeneration = generation) {
         if (available && expectedGeneration === generation && typeof value === "boolean") output.audio.muted = value

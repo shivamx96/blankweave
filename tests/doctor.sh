@@ -117,6 +117,7 @@ chmod +x "$fake_bin/getcap"
 
 cat > "$fake_bin/systemctl" <<'EOF'
 #!/usr/bin/env bash
+if [[ "$*" == 'is-enabled paccache.timer' ]]; then printf 'disabled\n'; exit 1; fi
 exit 0
 EOF
 chmod +x "$fake_bin/systemctl"
@@ -150,6 +151,14 @@ exec "$@"
 EOF
 chmod +x "$fake_bin/sudo"
 
+cat > "$fake_bin/systemd-analyze" <<'EOF'
+#!/usr/bin/env bash
+[[ "$1" == "--root=$BLANKWEAVE_SYSTEM_ROOT" && "$2" == cat-config && "$3" == systemd/logind.conf ]] || exit 1
+[[ ${BLANKWEAVE_TEST_LOGIND:-ignore} != unreadable ]] || exit 1
+printf '[Login]\nHandlePowerKey=poweroff\n[Other]\nHandlePowerKey=ignore\n[Login]\nHandlePowerKey=%s\n' "${BLANKWEAVE_TEST_LOGIND:-ignore}"
+EOF
+chmod +x "$fake_bin/systemd-analyze"
+
 run_doctor() {
     PATH="$fake_bin:/usr/bin" \
         HOME="$home" \
@@ -173,7 +182,66 @@ run_doctor() {
         "$repository/scripts/doctor.sh" "$repository" "$@"
 }
 
+# Both saved policies must agree with getty and keyring state.
+mkdir -p "$system_root/etc/blankweave"
+autologin=$system_root/etc/systemd/system/getty@tty1.service.d/autologin.conf
+cp "$autologin" "$test_root/autologin.good"
+printf 'no\n' > "$system_root/etc/blankweave/signin.conf"
+if run_doctor --normal > "$test_root/password-mismatch"; then exit 1; fi
+grep -Eq '^FAIL +tty1 sign-in.*remedy:' "$test_root/password-mismatch"
+rm "$autologin"
+mv "$home/.local/share/keyrings" "$test_root/keyrings.good"
+password_output=$(run_doctor --normal)
+grep -Eq '^PASS +tty1 sign-in' <<< "$password_output"
+grep -Eq '^PASS +default keyring.*not required' <<< "$password_output"
+printf 'yes\n' > "$system_root/etc/blankweave/signin.conf"
+if run_doctor --normal > "$test_root/automatic-mismatch"; then exit 1; fi
+grep -Eq '^FAIL +tty1 automatic login.*remedy:' "$test_root/automatic-mismatch"
+grep -Eq '^FAIL +default keyring.*remedy:' "$test_root/automatic-mismatch"
+cp "$test_root/autologin.good" "$autologin"
+mv "$test_root/keyrings.good" "$home/.local/share/keyrings"
+automatic_output=$(run_doctor --normal)
+grep -Eq '^PASS +tty1 automatic login' <<< "$automatic_output"
+grep -Eq '^PASS +default keyring' <<< "$automatic_output"
+# Validator details remain local; identifiers cannot enter a report.
+cp "$fake_bin/hyprland" "$test_root/hyprland.good"
+cat > "$fake_bin/hyprland" <<'EOF_VALIDATOR'
+#!/bin/sh
+printf 'fixture validator error /home/privateuser/config host.private 192.0.2.1 UUID=private-id\n' >&2
+exit 1
+EOF_VALIDATOR
+if run_doctor --normal > "$test_root/validator-normal"; then exit 1; fi
+grep -Fq '      fixture validator error /home/privateuser/config' "$test_root/validator-normal"
+if run_doctor --normal --report > "$test_root/validator-report"; then exit 1; fi
+grep -Fq 'validator details omitted for privacy' "$test_root/validator-report"
+if grep -Eq 'privateuser|host.private|192.0.2.1|private-id' "$test_root/validator-report"; then exit 1; fi
+cp "$test_root/hyprland.good" "$fake_bin/hyprland"
+# Protected validator details survive the helper boundary in local output and
+# remain omitted when the parent requests a shareable report.
+cp "$fake_bin/efibootmgr" "$test_root/efibootmgr.good"
+cat > "$fake_bin/efibootmgr" <<'EOF_VALIDATOR'
+#!/bin/sh
+printf 'firmware validator error UUID=private-firmware-id\n' >&2
+exit 1
+EOF_VALIDATOR
+if BLANKWEAVE_TEST_BOOT_ACCESSIBLE=false run_doctor --full > "$test_root/boot-validator-normal"; then exit 1; fi
+grep -Fq '      firmware validator error UUID=private-firmware-id' "$test_root/boot-validator-normal"
+if BLANKWEAVE_TEST_BOOT_ACCESSIBLE=false run_doctor --full --report > "$test_root/boot-validator-report"; then exit 1; fi
+grep -Fq 'validator details omitted for privacy' "$test_root/boot-validator-report"
+if grep -Fq 'private-firmware-id' "$test_root/boot-validator-report"; then exit 1; fi
+cp "$test_root/efibootmgr.good" "$fake_bin/efibootmgr"
+for result in "$test_root/password-mismatch" "$test_root/automatic-mismatch" "$test_root/validator-normal"; do
+    if grep -E '^(WARN|FAIL) ' "$result" | grep -v 'remedy:'; then exit 1; fi
+done
+
+rm -f "$test_root/sudo.log"
+power_warning=$(BLANKWEAVE_TEST_LOGIND=poweroff run_doctor --normal --report)
+grep -Eq '^WARN +power key policy' <<< "$power_warning"
+power_unknown=$(BLANKWEAVE_TEST_LOGIND=unreadable run_doctor --normal)
+grep -Eq '^WARN +power key policy' <<< "$power_unknown"
+
 output=$(run_doctor)
+grep -Eq "^PASS +power key policy" <<< "$output"
 grep -Eq '^PASS  +repository ' <<< "$output"
 grep -Fq 'PASS  runtime commands' <<< "$output"
 grep -Fq 'PASS  tty1 automatic login' <<< "$output"
@@ -185,6 +253,7 @@ grep -Fq 'PASS  UEFI boot order' <<< "$output"
 grep -Fq 'PASS  bootloader recovery' <<< "$output"
 grep -Fq 'PASS  CPU microcode package' <<< "$output"
 grep -Fq '0 failures' <<< "$output"
+grep -Fq '      disabled' <<< "$output"
 grep -Fq 'running and installed 0.57.1' <<< "$output"
 grep -Eq '^PASS +Hyprland deprecations +none reported' <<< "$output"
 
@@ -271,6 +340,23 @@ grep -Fq 'FAIL  Limine Linux entries' "$test_root/missing-boot.log"
 grep -Fq 'FAIL  Limine BLS handoff' "$test_root/missing-boot.log"
 mv "$system_root/boot.available" "$system_root/boot"
 
+mkdir -p "$system_root/etc/sudoers.d"
+printf 'fixture ALL=(root) NOPASSWD: /usr/bin/pacman\n' > "$system_root/etc/sudoers.d/blankweave-install"
+if run_doctor --report > "$test_root/stale-rule.log"; then exit 1; fi
+grep -Fq 'sudo rm -f /etc/sudoers.d/blankweave-install' "$test_root/stale-rule.log"
+[[ -e $system_root/etc/sudoers.d/blankweave-install ]]
+if PATH="$fake_bin:/usr/bin" BLANKWEAVE_SYSTEM_ROOT="$system_root" BLANKWEAVE_TEST_ALLOW_BOOT_HELPER=true \
+    "$repository/scripts/doctor.sh" --boot-only > "$test_root/stale-helper.log"; then exit 1; fi
+grep -Fq 'temporary installer sudo rule' "$test_root/stale-helper.log"
+rm "$system_root/etc/sudoers.d/blankweave-install"
+# Force an unknown root source without exposing a disk identifier in reports.
+cat > "$fake_bin/findmnt" <<'EOF_FIXTURE'
+#!/bin/sh
+printf 'overlay\n'
+EOF_FIXTURE
+chmod +x "$fake_bin/findmnt"
+encryption_report=$(run_doctor --report)
+grep -Fq 'automatic sign-in is active but root encryption could not be confirmed' <<< "$encryption_report"
 report=$(run_doctor --report)
 grep -Fq 'Sanitized report' <<< "$report"
 grep -Fq 'hyprlock: 1.0-1' <<< "$report"
@@ -315,3 +401,47 @@ else
 fi
 
 printf 'Doctor tests passed.\n'
+
+# Cache retention is a read-only service check, with no private paths in its label.
+grep -Fq 'system_units=(NetworkManager.service paccache.timer)' "$repository/scripts/doctor.sh"
+
+# Firewall inspection uses only fixture output; no host rule or socket query.
+cat > "$fake_bin/nft" <<'EOF_NFT'
+#!/bin/sh
+[ "${FIREWALL_RULES_MODE:-empty}" != unreadable ] || exit 1
+[ "${FIREWALL_RULES_MODE:-empty}" != active ] || printf 'chain input { type filter hook input priority 0; policy drop; }\n'
+EOF_NFT
+cat > "$fake_bin/ss" <<'EOF_SS'
+#!/bin/sh
+printf '%s\n' \
+ 'tcp LISTEN 0 4096 0.0.0.0:8080 0.0.0.0:*' \
+ 'tcp LISTEN 0 4096 127.0.0.1:9999 0.0.0.0:*' \
+ 'udp UNCONN 0 0 [::]:5353 [::]:*' \
+ 'tcp LISTEN 0 10 [::1]:7777 [::]:*'
+EOF_SS
+chmod +x "$fake_bin/nft" "$fake_bin/ss"
+# Extract just the check, so unrelated doctor checks cannot mask its result.
+sed -n '/^check_firewall() {/,/^}/p' "$repository/scripts/doctor.sh" > "$test_root/firewall-check"
+# The sourced check calls these fixture callbacks dynamically.
+# shellcheck disable=SC2329
+firewall_fixture() (
+    export PATH="$fake_bin:/usr/bin"
+    # shellcheck source=/dev/null
+    source "$test_root/firewall-check"
+    systemctl() { return 1; }
+    pass() { printf 'PASS %s %s\n' "$1" "$2"; }
+    warn() { printf 'WARN %s %s\n' "$1" "$2"; }
+    skip() { printf 'SKIP %s %s\n' "$1" "$2"; }
+    # BASH_SOURCE in the extracted function needs its colocated parser.
+    cp "$repository/scripts/doctor-firewall.py" "$test_root/doctor-firewall.py"
+    check_firewall
+)
+firewall_fixture > "$test_root/firewall-output"
+grep -Fq 'tcp/8080' "$test_root/firewall-output"
+grep -Fq 'udp/5353' "$test_root/firewall-output"
+if grep -Eq '9999|7777|127\.0|0\.0\.0|::|users:|pid=' "$test_root/firewall-output"; then exit 1; fi
+FIREWALL_RULES_MODE=active firewall_fixture > "$test_root/firewall-active"
+grep -Fq PASS "$test_root/firewall-active"
+FIREWALL_RULES_MODE=unreadable firewall_fixture > "$test_root/firewall-unknown"
+grep -Fq 'state unknown' "$test_root/firewall-unknown"
+printf 'Read-only firewall privacy tests passed.\n'

@@ -48,9 +48,9 @@ TestCase {
         const toggle=findChild(controls,"eventSoundsToggle")
         toggle.clicked()
         compare(backend.calls[0][0],"event-sounds"); compare(backend.calls[0][1],false)
-        compare(toggle.text,"Event sounds: On")
+        compare(toggle.checked,true)
         backend.preferences={"event-sounds":false,"input-feedback-sounds":true,"theme-name":"default"}
-        compare(toggle.text,"Event sounds: Off")
+        compare(toggle.checked,false)
         verify(!findChild(controls,"inputSoundsToggle").enabled)
         verify(!findChild(controls,"systemSoundPreview").enabled)
     }
@@ -60,18 +60,18 @@ TestCase {
         verify(toggle.enabled)
         toggle.clicked()
         compare(backend.calls[0][0],"bell"); compare(backend.calls[0][1],false)
-        compare(toggle.text,"System bell: On")
+        compare(toggle.checked,true)
         backend.bell={available:true,writable:false,enabled:false,message:"Personal override"}
-        compare(toggle.text,"System bell: Off")
+        compare(toggle.checked,false)
         verify(!toggle.enabled)
         backend.bell={available:false,writable:false,enabled:false,message:"Not available"}
-        compare(toggle.text,"System bell: unavailable")
+        verify(!toggle.enabled)
     }
     function test_readonly_unavailable_and_busy_controls() {
         backend.writable={}
         verify(!findChild(controls,"eventSoundsToggle").enabled)
         backend.ready=false
-        compare(findChild(controls,"eventSoundsToggle").text,"Event sounds: —")
+        verify(!findChild(controls,"eventSoundsToggle").enabled)
         verify(!findChild(controls,"systemSoundTheme").enabled)
         backend.busy=true
         verify(!findChild(controls,"systemSoundRefresh").enabled)
@@ -92,6 +92,6 @@ TestCase {
         backend.gtkSynced=true
         verify(!findChild(controls,"systemSoundSync").visible)
         backend.error="Could not play sound"
-        compare(findChild(controls,"systemSoundStatus").text,backend.error)
+        compare(findChild(controls,"systemSoundStatus").text,"Could not apply this change. Try again.")
     }
 }

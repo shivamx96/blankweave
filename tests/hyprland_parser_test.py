@@ -110,6 +110,49 @@ require(os.getenv("HOME") .. "/.config/hypr/hyprland")
                         str(self.config)], env=self.environment, check=True, timeout=10)
         self.verify()
 
+    def test_lock_recovery_options_and_binding(self):
+        # Capture the real defaults as they are passed to the compositor parser.
+        source = self.wrapper.read_text()
+        self.wrapper.write_text('''
+local config, bind = hl.config, hl.bind
+local locked, recovery = 0, false
+hl.config = function(options)
+    if options.misc and options.misc.allow_session_lock_restore ~= nil then
+        recovery = true
+        assert(options.misc.allow_session_lock_restore == true)
+        assert(options.misc.key_press_enables_dpms == true)
+        assert(options.misc.mouse_move_enables_dpms == true)
+    end
+    return config(options)
+end
+hl.bind = function(keys, action, options)
+    if options and options.locked then
+        locked = locked + 1
+        local allowed = {["blankweave:brightness-down"] = true, ["blankweave:brightness-up"] = true, ["blankweave:lock"] = true, ["blankweave:media-next"] = true, ["blankweave:media-pause"] = true, ["blankweave:media-play"] = true, ["blankweave:media-previous"] = true, ["blankweave:media-stop"] = true, ["blankweave:mic-mute"] = true, ["blankweave:volume-down"] = true, ["blankweave:volume-mute"] = true, ["blankweave:volume-up"] = true}
+        assert(allowed[options.description])
+    end
+    return bind(keys, action, options)
+end
+''' + source + '\nassert(recovery and locked == 12)\n')
+        self.verify()
+
+    def test_motion_and_layer_defaults(self):
+        source = self.wrapper.read_text()
+        namespaces = set()
+        for path in (REPOSITORY / 'defaults/quickshell').rglob('*.qml'):
+            namespaces.update(re.findall(r'WlrLayershell.namespace:\s*"(blankweave-[^"]+)"', path.read_text()))
+        self.wrapper.write_text('\nlocal curve, animation, layer, config = hl.curve, hl.animation, hl.layer_rule, hl.config\nlocal rules, ecosystem = {}, false\nhl.curve = function(name, v)\n    if v.type == "bezier" then\n        for _, p in ipairs(v.points) do assert(p[2] >= 0 and p[2] <= 1) end\n    end\n    return curve(name, v)\nend\nhl.animation = function(v)\n    assert(v.speed >= 2 and v.speed <= 3)\n    return animation(v)\nend\nhl.layer_rule = function(v)\n    if v.no_anim then rules[v.match.namespace] = true end\n    return layer(v)\nend\nhl.config = function(v)\n    if v.ecosystem then\n        assert(v.ecosystem.no_update_news and v.ecosystem.no_donation_nag)\n        ecosystem = true\n    end\n    return config(v)\nend\n' + source + '\nassert(ecosystem)\n' +
+            '\n'.join('assert(rules["^' + name + '$"])' for name in sorted(namespaces)))
+        self.verify()
+
+    def test_lid_switch_capability(self):
+        capability = self.dots / 'hardware-capabilities.json'
+        source = self.wrapper.read_text()
+        for internal in (False, True):
+            capability.write_text('{"capabilities": ["internal-display"]}' if internal else '{"capabilities": []}')
+            self.wrapper.write_text('\nlocal bind, count = hl.bind, 0\nhl.bind = function(keys, action, options)\n    if keys:find("switch:", 1, true) then\n        assert(keys == "switch:on:Lid Switch" or keys == "switch:off:Lid Switch")\n        assert(options.locked == true)\n        count = count + 1\n    end\n    return bind(keys, action, options)\nend\n' + source + f'\nassert(count == {2 if internal else 0})\n')
+            self.verify()
+
     def test_generated_saved_preferences(self):
         examples = {
             'pointer': {'version': 1, 'global': {'sensitivity': 0.2, 'accel_profile': 'flat'},

@@ -11,6 +11,12 @@ quickshell
 dunst
 ghostty
 thunar
+gvfs
+gvfs-mtp
+udisks2
+tumbler
+ffmpegthumbnailer
+webp-pixbuf-loader
 btop
 fastfetch
 pipewire
@@ -36,6 +42,7 @@ ttf-roboto
 ttf-atkinson-hyperlegible
 ttf-jetbrains-mono
 noto-fonts
+noto-fonts-cjk
 noto-fonts-emoji
 papirus-icon-theme
 base-devel
@@ -48,6 +55,11 @@ linux-firmware
 inter-font
 ttf-jetbrains-mono-nerd
 zsh
+zsh-autosuggestions
+zsh-syntax-highlighting
+zsh-completions
+zsh-history-substring-search
+nano
 fzf
 zoxide
 wl-clipboard
@@ -69,3 +81,15 @@ alsa-plugins
 plymouth
 limine
 efibootmgr
+
+# Media and document handlers
+mpv
+loupe
+papers
+satty
+libnotify
+coreutils
+bash
+
+# Bounded package-cache retention for offline repair and rollback
+pacman-contrib

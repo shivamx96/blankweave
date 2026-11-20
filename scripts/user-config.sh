@@ -29,10 +29,20 @@ user_config_link() {
 }
 
 user_config_seed() {
-    local source_file=$1 target_file=$2
+    local source_file=$1 target_file=$2 legacy_file
+    shift 2
     mkdir -p "$(dirname "$target_file")"
     if [[ ! -e $target_file && ! -L $target_file ]]; then
         cp -- "$source_file" "$target_file"
+    elif [[ -f $target_file && ! -L $target_file ]]; then
+        # App-rewritten defaults are copies, adopted only when still identical
+        # to an explicitly supplied packaged default. Never follow user links.
+        for legacy_file in "$@"; do
+            if cmp -s -- "$target_file" "$legacy_file"; then
+                cp -- "$source_file" "$target_file"
+                break
+            fi
+        done
     fi
 }
 
@@ -92,6 +102,9 @@ user_config_install_zsh() (
     trap 'rm -f -- "$staged"' EXIT
     if [[ -f $target_file ]]; then
         # Preserve the old custom tail exactly, including trailing newlines.
+        # Stop the new managed prefix AT the marker: the lower separator is
+        # already in the preserved tail. Copying the whole template here was
+        # what appended one more banner on every legacy apply.
         sed -n "1,/$marker/p" "$source_file" > "$staged"
         sed "1,/$marker/d" "$target_file" >> "$staged"
     else

@@ -1,0 +1,26 @@
+#compdef blankweave
+# Public vocabulary is kept explicit for offline completion and scan tests.
+local commands='welcome version setup settings update rollback doctor theme webapp uninstall help'
+local flags='--help -h --version -V --non-interactive --list --check --dry-run --yes --to --reapply --allow-upgrade --full --normal --report --apply --purge-config'
+local themes='list status set mode toggle sync lint'
+local webapps='list install remove sync'
+if (( CURRENT == 2 )); then
+    compadd -- ${(z)commands} --help --version
+elif [[ $words[CURRENT-1] == --to ]]; then
+    local repository="${XDG_STATE_HOME:-$HOME/.local/state}/blankweave/repository"
+    [[ ! -r $repository ]] || compadd -- ${(f)"$(git -C "$(cat "$repository")" tag --list 'v[0-9]*' 2>/dev/null)"}
+elif [[ $words[2] == settings ]]; then
+    compadd -- ${(f)"$(blankweave settings --list 2>/dev/null | cut -f1)"} --list --help
+elif [[ $words[2] == theme && $words[3] == mode ]]; then
+    compadd dark light
+elif [[ $words[2] == theme && $words[3] == (set|lint) ]]; then
+    compadd -- ${(f)"$(blankweave theme list 2>/dev/null | jq -r '.[].id' 2>/dev/null)"}
+elif [[ $words[2] == theme ]]; then
+    compadd -- ${(z)themes} --help -h
+elif [[ $words[2] == webapp ]]; then
+    compadd -- ${(z)webapps} --help -h
+elif [[ $words[2] == help ]]; then
+    compadd -- ${(z)commands}
+else
+    compadd -- ${(z)flags}
+fi

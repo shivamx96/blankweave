@@ -1,5 +1,6 @@
 pragma ComponentBehavior: Bound
 import QtQuick
+import "LegacyErrors.js" as Errors
 import QtQuick.Layouts
 
 ColumnLayout {
@@ -46,9 +47,9 @@ ColumnLayout {
     }
     Text {
         Layout.fillWidth: true
-        text: root.backend === null ? "Interface sizing unavailable." : root.backend.error || (!root.ready ? "Loading interface sizes…" : root.backend.message)
+        text: root.backend === null ? "Interface sizing unavailable." : Errors.message(root.backend.error) || (!root.ready ? "Loading interface sizes…" : root.backend.message)
         visible: text !== ""
-        color: root.backend && root.backend.error ? root.theme.warning : root.theme.textMuted
+        color: root.backend && Errors.message(root.backend.error) ? root.theme.critical : root.theme.textMuted
         font.family: root.theme.fontFamily; font.pixelSize: root.theme.smallTextSize; wrapMode: Text.WordWrap
     }
     SettingsButton {

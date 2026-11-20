@@ -1,5 +1,6 @@
 pragma ComponentBehavior: Bound
 import QtQuick
+import "LegacyErrors.js" as Errors
 import QtQuick.Layouts
 
 ColumnLayout {
@@ -85,11 +86,12 @@ ColumnLayout {
         text: "Only installed apps registered for every listed type are offered. Changes affect compatible open-link and open-file actions. Application launch shortcuts keep their configured actions."
         color: root.theme.textMuted; font.family: root.theme.fontFamily; font.pixelSize: root.theme.smallTextSize; wrapMode: Text.WordWrap
     }
-    SettingsButton {
+    SettingsConfirmButton {
+                targetIdentity: root.selectedId
         objectName: "defaultAppInherited"
-        theme: root.theme; text: "Use inherited defaults"
+        theme: root.theme; actionText: "Use inherited defaults"
         enabled: root.ready && root.backend.writable && root.selected !== null && root.selected.local
-        onClicked: root.backend.apply(root.selectedId, null, root.backend.snapshot())
+        onConfirmed: root.backend.apply(root.selectedId, null, root.backend.snapshot())
     }
     Text {
         Layout.fillWidth: true
@@ -98,9 +100,9 @@ ColumnLayout {
     }
     Text {
         Layout.fillWidth: true
-        text: root.backend === null ? "Default applications unavailable." : root.backend.error || (!root.ready ? "Loading default applications…" : root.backend.message)
+        text: root.backend === null ? "Default applications unavailable." : Errors.message(root.backend.error) || (!root.ready ? "Loading default applications…" : root.backend.message)
         visible: text !== ""
-        color: root.backend && root.backend.error ? root.theme.warning : root.theme.textMuted
+        color: root.backend && Errors.message(root.backend.error) ? root.theme.critical : root.theme.textMuted
         font.family: root.theme.fontFamily; font.pixelSize: root.theme.smallTextSize; wrapMode: Text.WordWrap
     }
     SettingsButton {

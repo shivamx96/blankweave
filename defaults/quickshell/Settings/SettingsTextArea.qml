@@ -1,8 +1,10 @@
 import QtQuick
+import "../Components"
 import QtQuick.Controls.Basic
 
 TextArea {
     id: root
+    FocusRing { theme: root.theme }
     required property var theme
     padding: root.theme.spacing("xl")
     color: enabled ? theme.text : theme.textMuted
@@ -15,6 +17,12 @@ TextArea {
     selectByMouse: true
     wrapMode: TextEdit.WrapAnywhere
     textFormat: TextEdit.PlainText
+    Keys.onEscapePressed: event => {
+        if (text.length) clear()
+        else { focus = false; if (parent) parent.forceActiveFocus() }
+        event.accepted = true
+    }
+
     background: Rectangle {
         radius: root.theme.widgetRadius
         color: root.theme.surfaceRaised

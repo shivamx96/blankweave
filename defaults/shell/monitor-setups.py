@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Layout operations for monitor-layout.sh; its flock serializes every writer."""
+from runtime_paths import runtime_path
 import json
 import math
 import os
@@ -16,6 +17,11 @@ from display_color import ColorProfiles, validate_icc
 def require(condition, message):
     if not condition:
         raise ValueError(message)
+
+
+def current_lid_closed():
+    nodes = list(Path("/proc/acpi/button/lid").glob("*/state"))
+    return any("closed" in node.read_text().lower() for node in nodes) if nodes else None
 
 
 def live_monitors():
@@ -183,7 +189,86 @@ class Setups:
         self.directory = Path(directory)
         self.shell = shell
         self.store = self.directory / "monitor-setups.json"
-        self.pending = self.directory / ".monitor-mode-preview.json"
+        self.pending = runtime_path(".monitor-mode-preview.json")
+
+    def lid_path(self, create=True):
+        # A compositor restart gets a clean ledger even within the same login.
+        runtime = os.environ.get("XDG_RUNTIME_DIR")
+        require(runtime and Path(runtime).is_dir(), "Lid handling requires XDG_RUNTIME_DIR")
+        import hashlib
+        session = hashlib.sha256(os.environ.get("HYPRLAND_INSTANCE_SIGNATURE", "test").encode()).hexdigest()[:20]
+        directory = Path(runtime) / "blankweave" / ("lid-" + session)
+        if create:
+            directory.mkdir(parents=True, exist_ok=True, mode=0o700)
+        return directory / "state.json"
+
+    def lid(self, action):
+        path = self.lid_path()
+        state = read_json(path, {"closed": False, "layout": []})
+        if action == "startup":
+            state = {"closed": False, "layout": []}
+            # Missing ACPI lid nodes are normal on desktops. The ledger also
+            # handles switch events when firmware exposes no readable ACPI node.
+            closed = current_lid_closed()
+            if closed is not None:
+                state["closed"] = closed
+        elif action == "reconcile":
+            pass
+        elif action in ("open", "closed"):
+            state["closed"] = action == "closed"
+        else:
+            raise ValueError("Usage: lid <closed|open|startup|reconcile>")
+        atomic_write(path, json.dumps(state))
+        live = live_monitors()
+        internal = [row for row in live if re.match(r"^(eDP|LVDS|DSI)-", row["name"])]
+        external = [row for row in live if not re.match(r"^(eDP|LVDS|DSI)-", row["name"])]
+        # Defer during preview, except recovery when there is no external left.
+        if self.pending.exists() and external:
+            return
+        if state["layout"] and (not state["closed"] or not external):
+            connected = json.loads(subprocess.check_output(["hyprctl", "monitors", "all", "-j"], timeout=5))
+            descriptions = {row["description"] for row in connected}
+            entries = [dict(row) for row in state["layout"] if row["description"] in descriptions]
+            for row in entries:
+                if row.get("mirror") not in descriptions:
+                    row["mirror"] = ""
+            apply_layout(entries)
+            require(verify(entries), "Could not restore the open-lid layout")
+            state["layout"] = []
+            atomic_write(path, json.dumps(state))
+        elif state["closed"] and internal and external:
+            require(not self.pending.exists(), "Keep or revert the display preview first")
+            if not state["layout"]:
+                state["layout"] = self.snapshot(live)
+            # Persist recovery BEFORE touching outputs, so failures can be retried.
+            atomic_write(path, json.dumps(state))
+            try:
+                internal_descriptions = {row["description"] for row in internal}
+                # A mirror of the panel must become an independent usable source.
+                for row in state["layout"]:
+                    if row.get("mirror") in internal_descriptions:
+                        evaluate(render({**row, "mirror": ""}))
+                require(any(not row["mirrorConnector"] and row["name"] in {m["name"] for m in external}
+                            for row in live_monitors()), "No independent external output is available")
+                # Disabling a monitor migrates its workspaces via Hyprland's
+                # monitor removal path; do not move individual windows manually.
+                for row in internal:
+                    evaluate('hl.monitor({ output = ' + json.dumps("desc:" + row["description"]) + ', disabled = true })')
+                remaining = live_monitors()
+                require(remaining and not any(re.match(r"^(eDP|LVDS|DSI)-", row["name"]) for row in remaining),
+                        "The compositor did not disable the internal display")
+            except (ValueError, OSError, subprocess.SubprocessError):
+                apply_layout(state["layout"])
+                require(verify(state["layout"]), "Could not recover the lid layout; retry lid open")
+                state["layout"] = []
+                atomic_write(path, json.dumps(state))
+                raise
+
+    def require_lid_open(self):
+        # Refuse saved-layout edits while hidden rather than persist an incomplete
+        # topology, or momentarily reveal the panel during a layout preview.
+        path = self.lid_path(create=False)
+        require(not read_json(path, {}).get("layout"), "Open the lid before editing the display layout")
 
     def snapshot(self, live):
         saved = read_json(self.directory / "monitors.json", {"monitors": []})["monitors"]
@@ -279,7 +364,7 @@ class Setups:
             "deadline": int(time.time()) + 20, "entries": entries, "previousLayout": previous,
             "persistDescriptions": persist_descriptions or [row["description"] for row in entries]}
         atomic_write(self.pending, json.dumps(pending))
-        with (self.directory / ".mode-preview.log").open("w") as log:
+        with (runtime_path(".mode-preview.log")).open("w") as log:
             subprocess.Popen(["bash", self.shell, "mode-watch", token], stdin=subprocess.DEVNULL,
                 stdout=log, stderr=log, start_new_session=True, close_fds=True)
         try:
@@ -360,7 +445,13 @@ class Setups:
 def main():
     directory, shell, command, *args = sys.argv[1:]
     backend = Setups(directory, shell)
-    if command == "live":
+    if command == "lid":
+        backend.lid(*args)
+    elif command == "lid-guard":
+        # Ordinary layout use remains supported without a runtime directory.
+        if os.environ.get("XDG_RUNTIME_DIR"):
+            backend.require_lid_open()
+    elif command == "live":
         print(json.dumps(live_monitors()))
     elif command == "render":
         for entry in sorted(json.load(sys.stdin), key=lambda row: bool(row.get("mirror"))):

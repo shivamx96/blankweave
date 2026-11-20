@@ -48,12 +48,13 @@ ColumnLayout {
             theme: root.theme
             backend: root.backend
         }
-        SettingsButton {
+        SettingsSwitchRow {
             objectName: "soundOutputMute"
             theme: root.theme
-            text: root.available && root.backend.muted ? "Unmute" : "Mute"
+            checked: root.available && root.backend.muted
+            busy: Boolean(root.backend && root.backend.busy)
+            text: "Mute output"
             enabled: root.available
-            Accessible.name: root.available && root.backend.muted ? "Unmute output" : "Mute output"
             onClicked: root.backend.setOutputMuted(!root.backend.muted)
         }
     }
