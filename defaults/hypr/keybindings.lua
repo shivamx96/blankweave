@@ -112,3 +112,15 @@ bind("assistive-zoom-reset", "SUPER + CTRL + M", hl.dsp.exec_cmd("python3 ~/.loc
 hl.bind("SUPER + mouse:272", hl.dsp.window.drag(), { mouse = true, description = "blankweave:drag-move" })
 hl.bind("SUPER + mouse:273", hl.dsp.window.resize(), { mouse = true, description = "blankweave:drag-resize" })
 hl.bind("SUPER + SHIFT + mouse:272", hl.dsp.window.resize(), { mouse = true, description = "blankweave:drag-resize-left" })
+
+-- Capability-gated hardware switches are independent of editable shortcuts.
+local capability_path = (os.getenv("HOME") .. "/.local/share/blankweave/hardware-capabilities.json")
+local capabilities = io.open(capability_path, "r")
+if capabilities then
+    local data = capabilities:read("*a")
+    capabilities:close()
+    if data:find('"internal-display"', 1, true) then
+        hl.bind("switch:on:Lid Switch", hl.dsp.exec_cmd("~/.local/share/blankweave/shell/monitor-layout.sh lid closed"), { locked = true })
+        hl.bind("switch:off:Lid Switch", hl.dsp.exec_cmd("~/.local/share/blankweave/shell/monitor-layout.sh lid open"), { locked = true })
+    end
+end

@@ -729,6 +729,20 @@ only through QML and `design.motion`; `tests/hyprland-motion.py` derives the
 namespace list from the QML, so a new layer surface without a rule fails.
 Saved accessibility preferences still load after these defaults.
 
+`monitor-layout.sh lid closed|open|startup|reconcile` handles a docked
+laptop under the monitor writer lock. Closing the lid disables the internal
+panel (eDP/LVDS/DSI) only while an external output is enabled; opening it
+restores mode, scale, position, rotation, mirroring, and colour assignment
+from a snapshot. Lid state and that snapshot are runtime-only, under
+`$XDG_RUNTIME_DIR`, and never reach `monitors.json`, saved setups, or
+`monitors.lua`. The session must never be left with no output: unplugging
+the last external display while closed re-enables the panel through hotplug
+reconciliation. A pending mode preview defers lid changes until keep or
+revert, and layout edits and setup saves refuse while the panel is hidden.
+The locked lid-switch bindings exist only with the internal-display
+capability; startup reads the ACPI lid state. Test with the isolated
+compositor fixture (`tests/monitor_lid_test.py`), never real outputs.
+
 Window controls: `Super+F` fullscreen, `Super+Shift+F` maximize (keeps the
 bar), `Super+Shift+arrows` move the window and cross to the neighbouring
 monitor at an edge, `Super+Alt+arrows` resize and repeat, `Super+E` opens

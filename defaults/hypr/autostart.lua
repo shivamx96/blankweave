@@ -1,5 +1,6 @@
 local startup_commands = {
     "~/.local/share/blankweave/shell/clear-boot-console.sh",
+    "~/.local/share/blankweave/shell/monitor-layout.sh lid startup",
     "awww-daemon",
     "~/.local/share/blankweave/shell/wallpaper.sh theme",
     "quickshell -n -p ~/.local/share/blankweave/quickshell",
@@ -26,4 +27,19 @@ hl.on("monitor.added", function(monitor)
         return
     end
     hl.exec_cmd("~/.local/share/blankweave/shell/wallpaper.sh restore " .. name)
+end)
+
+-- Reconcile both directions: unplugging the last external must reveal the panel.
+for _, event in ipairs({ "monitor.added", "monitor.removed" }) do
+    hl.on(event, function()
+        hl.exec_cmd("~/.local/share/blankweave/shell/monitor-layout.sh lid reconcile")
+    end)
+end
+
+-- Reload can re-enable a saved panel rule (for example when changing themes).
+-- --verify-config emits this event without any outputs; never spawn there.
+hl.on("config.reloaded", function()
+    if #hl.get_monitors() > 0 then
+        hl.exec_cmd("~/.local/share/blankweave/shell/monitor-layout.sh lid reconcile")
+    end
 end)

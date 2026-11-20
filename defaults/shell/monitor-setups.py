@@ -19,6 +19,11 @@ def require(condition, message):
         raise ValueError(message)
 
 
+def current_lid_closed():
+    nodes = list(Path("/proc/acpi/button/lid").glob("*/state"))
+    return any("closed" in node.read_text().lower() for node in nodes) if nodes else None
+
+
 def live_monitors():
     rows = json.loads(subprocess.check_output(["hyprctl", "monitors", "all", "-j"], timeout=5))
     rows = [row for row in rows if not row.get("disabled", False)]
@@ -440,7 +445,13 @@ class Setups:
 def main():
     directory, shell, command, *args = sys.argv[1:]
     backend = Setups(directory, shell)
-    if command == "live":
+    if command == "lid":
+        backend.lid(*args)
+    elif command == "lid-guard":
+        # Ordinary layout use remains supported without a runtime directory.
+        if os.environ.get("XDG_RUNTIME_DIR"):
+            backend.require_lid_open()
+    elif command == "live":
         print(json.dumps(live_monitors()))
     elif command == "render":
         for entry in sorted(json.load(sys.stdin), key=lambda row: bool(row.get("mirror"))):

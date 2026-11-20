@@ -5,6 +5,8 @@ test_root=$(mktemp -d)
 trap 'rm -rf -- "$test_root"' EXIT
 mkdir -p "$test_root/bin"
 export XDG_CONFIG_HOME=$test_root/config
+export XDG_RUNTIME_DIR=$test_root/runtime
+mkdir -p "$XDG_RUNTIME_DIR"
 export MODE_TEST_STATE=$test_root/monitors.json
 export MODE_TEST_LOG=$test_root/commands
 export PATH=$test_root/bin:$PATH
@@ -42,7 +44,7 @@ PY
 chmod +x "$test_root/bin/hyprctl"
 script=$repository/defaults/shell/monitor-layout.sh
 config=$XDG_CONFIG_HOME/blankweave/monitors.json
-pending=$XDG_CONFIG_HOME/blankweave/.monitor-mode-preview.json
+pending=$XDG_RUNTIME_DIR/blankweave/.monitor-mode-preview.json
 rules=$XDG_CONFIG_HOME/blankweave/monitors.lua
 token() { jq -r .token "$pending"; }
 width() { jq '.[0].width' "$MODE_TEST_STATE"; }
@@ -122,3 +124,5 @@ if "$script" mode-confirm "$(token)" 2>/dev/null; then exit 1; fi
 "$script" mode-revert "$(token)"
 [[ ! -e $pending && $(cat "$config") == "$saved" ]]
 printf 'Display mode preview, confirmation, and watchdog tests passed.\n'
+
+PYTHONDONTWRITEBYTECODE=1 python3 "$repository/tests/monitor_lid_test.py" LidTests.test_preview_defers_and_reconciles LidTests.test_expired_preview_reconciles

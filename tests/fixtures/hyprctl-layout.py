@@ -9,7 +9,7 @@ import sys
 state = Path(os.environ["LAYOUT_TEST_STATE"])
 rows = json.loads(state.read_text())
 if sys.argv[1] == "monitors":
-    print(json.dumps(rows if "all" in sys.argv else [row for row in rows if row.get("mirrorOf", "none") == "none"]))
+    print(json.dumps(rows if "all" in sys.argv else [row for row in rows if not row.get("disabled") and row.get("mirrorOf", "none") == "none"]))
     sys.exit(0)
 if sys.argv[1] == "configerrors":
     print("")
@@ -31,10 +31,16 @@ if command.startswith("dofile"):
     path = json.loads(re.search(r'dofile\((".*")\)', command)[1])
     command = Path(path).read_text()
 for rule in re.findall(r'hl.monitor\(\{ (.*?) \}\)', command):
-    fields = {key: json.loads(value) for key, value in re.findall(r'(\w+) = ("[^"]*"|-?[\d.]+)', rule)}
+    fields = {key: json.loads(value) for key, value in re.findall(r'(\w+) = ("[^"]*"|true|false|-?[\d.]+)', rule)}
     row = next((r for r in rows if "desc:" + r["description"] == fields["output"]), None)
     if row is None:
         continue
+    if "disabled" in fields:
+        if os.environ.get("LAYOUT_IGNORE_DISABLE"):
+            continue
+        row["disabled"] = fields["disabled"]
+    elif "mode" in fields:
+        row["disabled"] = False
     if "mode" in fields and fields["mode"] != "preferred":
         width, height, rate = re.split('[x@]', fields["mode"])
         row.update(width=int(width), height=int(height), refreshRate=float(rate))

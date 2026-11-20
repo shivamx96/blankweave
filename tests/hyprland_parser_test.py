@@ -119,6 +119,14 @@ require(os.getenv("HOME") .. "/.config/hypr/hyprland")
             '\n'.join('assert(rules["^' + name + '$"])' for name in sorted(namespaces)))
         self.verify()
 
+    def test_lid_switch_capability(self):
+        capability = self.dots / 'hardware-capabilities.json'
+        source = self.wrapper.read_text()
+        for internal in (False, True):
+            capability.write_text('{"capabilities": ["internal-display"]}' if internal else '{"capabilities": []}')
+            self.wrapper.write_text('\nlocal bind, count = hl.bind, 0\nhl.bind = function(keys, action, options)\n    if keys:find("switch:", 1, true) then\n        assert(keys == "switch:on:Lid Switch" or keys == "switch:off:Lid Switch")\n        assert(options.locked == true)\n        count = count + 1\n    end\n    return bind(keys, action, options)\nend\n' + source + f'\nassert(count == {2 if internal else 0})\n')
+            self.verify()
+
     def test_generated_saved_preferences(self):
         examples = {
             'pointer': {'version': 1, 'global': {'sensitivity': 0.2, 'accel_profile': 'flat'},

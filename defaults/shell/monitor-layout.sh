@@ -13,6 +13,7 @@
 # monitors.lua, so these rules win on every start.
 #
 # Usage:
+#   monitor-layout.sh lid <closed|open|startup|reconcile>  runtime-only dock handling
 #   monitor-layout.sh status                        JSON for the display panel
 #   monitor-layout.sh set <connector> <position>    position: left|right|above|below|auto
 #   monitor-layout.sh set-scale <connector> <scale> scale: auto or a supported numeric option
@@ -443,7 +444,27 @@ if [ "${1:-}" = mode-watch ]; then
 fi
 lock_layout
 
+# Also reconcile after an expired confirmation exits with an error: its revert
+# may already have removed the preview token. The watchdog uses this same path.
+reconcile_lid_after_preview() {
+    if [ ! -e "$pending_file" ] && [ -n "${XDG_RUNTIME_DIR:-}" ]; then
+        setups lid reconcile
+    fi
+}
 case "${1:-}" in
+    mode-confirm|mode-revert) trap reconcile_lid_after_preview EXIT ;;
+esac
+
+case "${1:-}" in
+    status|lid|mode-confirm|mode-revert) ;;
+    *) setups lid-guard ;;
+esac
+
+case "${1:-}" in
+    lid)
+        [ $# -eq 2 ] || fail 'Usage: monitor-layout.sh lid <closed|open|startup|reconcile>'
+        setups lid "$2"
+        ;;
     status)
         cmd_status
         ;;
