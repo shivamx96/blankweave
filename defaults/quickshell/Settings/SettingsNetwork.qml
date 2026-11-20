@@ -1,5 +1,6 @@
 pragma ComponentBehavior: Bound
 import QtQuick
+import "LegacyErrors.js" as Errors
 import QtQuick.Layouts
 import "../Components"
 
@@ -46,9 +47,9 @@ ColumnLayout {
     Text {
         Layout.fillWidth: true
         visible: text !== ""
-        text: !root.backend ? "NetworkManager is unavailable." : root.backend.error || root.backend.notice || (!root.ready ? "Reading network connections…" : "")
+        text: !root.backend ? "NetworkManager is unavailable." : Errors.message(root.backend.error) || root.backend.notice || (!root.ready ? "Reading network connections…" : "")
         textFormat: Text.PlainText
-        color: root.backend && root.backend.error ? root.theme.critical : root.theme.textMuted
+        color: root.backend && Errors.message(root.backend.error) ? root.theme.critical : root.theme.textMuted
         font.family: root.theme.fontFamily; font.pixelSize: root.theme.smallTextSize
         wrapMode: Text.WordWrap
     }

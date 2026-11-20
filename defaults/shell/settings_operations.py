@@ -1,4 +1,6 @@
 """Shared presentation and validation for native system Settings providers."""
+from settings_support import SettingsError
+from contextvars import ContextVar
 import json
 import os
 from pathlib import Path
@@ -51,20 +53,29 @@ def state(message='', details=(), actions=(), identity=None, notices=()):
     return dict(message=message, details=list(details), actions=list(actions), identity=identity, notices=list(notices))
 
 
-def require(request, key, pattern=None, maximum=4096):
+CURRENT_FIELD_LABELS = ContextVar("settings_field_labels", default={})
+
+def set_field_labels(fields):
+    CURRENT_FIELD_LABELS.set({field["key"]: field["label"].split(" (", 1)[0].lower() for field in fields})
+
+FIELD_LABELS = {"uri": "server address", "url": "website address", "ssid": "network name", "path": "file path", "username": "user name", "repository": "backup repository", "destination": "destination folder", "source": "source folder", "timezone": "time zone"}
+
+def require(request, key, pattern=None, maximum=4096, label=None):
+    label = label or CURRENT_FIELD_LABELS.get().get(key) or FIELD_LABELS.get(key, key.replace("_", " "))
     value = request.get(key)
     if not isinstance(value, str) or not value or len(value) > maximum or '\0' in value or '\n' in value or '\r' in value:
-        raise ValueError(f'Enter a valid {key}.')
+        raise SettingsError(f'Enter a valid {label}.', field=key)
     if pattern and not re.fullmatch(pattern, value):
-        raise ValueError(f'Invalid {key}.')
+        raise SettingsError(f'Enter a valid {label}.', field=key)
     return value
 
 
 def path_value(request, key, exists=True, directory=False):
+    label = CURRENT_FIELD_LABELS.get().get(key) or FIELD_LABELS.get(key, key.replace("_", " "))
     path = Path(require(request, key)).expanduser()
-    if not path.is_absolute(): raise ValueError(f'{key} must be an absolute path.')
-    if exists and not path.exists(): raise ValueError(f'{key} does not exist.')
-    if directory and exists and not path.is_dir(): raise ValueError(f'{key} must be a directory.')
+    if not path.is_absolute(): raise SettingsError(f'Choose an absolute path for {label}.', field=key)
+    if exists and not path.exists(): raise SettingsError(f'The selected {label} does not exist.', field=key)
+    if directory and exists and not path.is_dir(): raise SettingsError(f'Choose a folder for {label}.', field=key)
     return path
 
 

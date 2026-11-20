@@ -1,5 +1,6 @@
 pragma ComponentBehavior: Bound
 import QtQuick
+import "LegacyErrors.js" as Errors
 import QtQuick.Layouts
 
 ColumnLayout {
@@ -129,11 +130,11 @@ ColumnLayout {
     Text {
         objectName: "pointerStatus"
         Layout.fillWidth: true
-        text: root.backend === null ? "Pointer settings unavailable." : root.backend.error
+        text: root.backend === null ? "Pointer settings unavailable." : Errors.message(root.backend.error)
             || (!root.devicePresent ? "This device disconnected. Select it again after reconnecting."
                 : !root.ready ? "Loading pointer settings…" : root.backend.message
                 || (root.backend.devices.length ? "Changes are saved and applied immediately." : "No pointer devices connected. Defaults still apply when a device connects."))
-        color: root.backend && root.backend.error ? root.theme.warning : root.theme.textMuted
+        color: root.backend && Errors.message(root.backend.error) ? root.theme.critical : root.theme.textMuted
         font.family: root.theme.fontFamily
         font.pixelSize: root.theme.smallTextSize
         wrapMode: Text.WordWrap

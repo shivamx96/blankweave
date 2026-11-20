@@ -562,3 +562,5 @@ python3 "$repository/tests/header_actions_test.py" </dev/null
 # Poller lifecycle, shared collectors, and stale rendering use fake scripts only.
 bash "$repository/tests/script-poller.sh" </dev/null
 
+# Error contracts are pure Python and never invoke host services.
+PYTHONDONTWRITEBYTECODE=1 python3 "$repository/tests/settings_feedback_test.py" </dev/null

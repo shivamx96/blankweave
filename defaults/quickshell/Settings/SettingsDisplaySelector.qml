@@ -1,4 +1,5 @@
 import QtQuick
+import "LegacyErrors.js" as Errors
 import QtQuick.Layouts
 
 ColumnLayout {
@@ -12,11 +13,11 @@ ColumnLayout {
         Text {
             objectName: "displayStatus"
             Layout.fillWidth: true
-            text: root.backend.error || (!root.backend.loaded ? "Loading displays…"
+            text: Errors.message(root.backend.error) || (!root.backend.loaded ? "Loading displays…"
                 : root.backend.monitors.length === 0 ? "No connected displays."
                 : root.backend.previewPending === true ? "Confirm or revert the display changes."
                 : root.backend.busy ? "Updating displays…" : "Choose a display to adjust.")
-            color: root.backend.error ? root.theme.warning : root.theme.textMuted
+            color: Errors.message(root.backend.error) ? root.theme.critical : root.theme.textMuted
             font.family: root.theme.fontFamily
             font.pixelSize: root.theme.smallTextSize
             wrapMode: Text.WordWrap

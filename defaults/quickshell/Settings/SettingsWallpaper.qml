@@ -14,7 +14,16 @@ ColumnLayout {
     property string draftFit: "crop"
     property string draftRevision: ""
     property string draftId: ""
+    Keys.priority: Keys.AfterItem
+    Keys.onEscapePressed: event => {
+        if (draftRevision) { draftRevision = ""; event.accepted = true }
+        else event.accepted = false
+    }
+    function clearEditOutcome() {
+        if (backend && typeof backend.clearOutcome === "function" && selected) backend.clearOutcome("set", draftId || selected.id)
+    }
     function beginEdit() {
+        clearEditOutcome()
         if (!draftRevision && selected) { draftRevision = backend.data.revision; draftId = selected.id; draftPath = selected.path; draftFit = selected.fit }
     }
     spacing: root.theme.spacing("lg")
@@ -50,7 +59,7 @@ ColumnLayout {
             if (url.startsWith("file://")) root.draftPath = decodeURIComponent(url.slice(7))
         }
     }
-    ControlTextField { theme: root.theme; Layout.fillWidth: true; visible: root.draftRevision !== ""; text: root.draftPath; Accessible.name: "Wallpaper image path"; onTextEdited: root.draftPath = text }
+    ControlTextField { theme: root.theme; Layout.fillWidth: true; visible: root.draftRevision !== ""; text: root.draftPath; Accessible.name: "Wallpaper image path"; onTextEdited: { root.clearEditOutcome(); root.draftPath = text } }
     SettingsComboBox {
         theme: root.theme; Layout.fillWidth: true
         model: ["Fill (crop)", "Fit", "Stretch", "Center"]
@@ -62,7 +71,11 @@ ColumnLayout {
     RowLayout {
         SettingsButton { theme: root.theme; text: "Apply"; enabled: root.backend && root.backend.writable && root.draftRevision !== ""; onClicked: { root.backend.apply({action: "set", id: root.draftId, path: root.draftPath, fit: root.draftFit}, root.draftRevision); root.draftRevision = "" } }
         SettingsButton { theme: root.theme; text: "Cancel edit"; visible: root.draftRevision !== ""; onClicked: root.draftRevision = "" }
-        SettingsButton { theme: root.theme; text: "Use theme wallpaper"; enabled: root.backend && root.backend.writable && root.selected !== null && root.selected.custom; onClicked: root.backend.apply({action: "reset", id: root.selected.id}) }
+        SettingsConfirmButton {
+                targetIdentity: root.selected ? root.selected.id : ""
+                theme: root.theme; actionText: "Use theme wallpaper"; enabled: root.backend && root.backend.writable && root.selected !== null && root.selected.custom; onConfirmed: root.backend.apply({action: "reset", id: root.selected.id}) }
     }
-    SettingsTaskStatus { theme: root.theme; backend: root.backend }
+    SettingsActionResult { theme: root.theme; backend: root.backend; actionKey: "set"; targetKey: root.selected ? root.selected.id : "" }
+    SettingsActionResult { theme: root.theme; backend: root.backend; actionKey: "reset"; targetKey: root.selected ? root.selected.id : "" }
+    SettingsTaskStatus { showActionError: false; theme: root.theme; backend: root.backend }
 }

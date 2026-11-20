@@ -469,7 +469,7 @@ def apply(domain, request):
         value = self.status()
         self.assertEqual(value['notices'][0]['kind'], 'service-unavailable')
         self.assertFalse(value['actions'])
-        self.assertIn('service offline', value['message'])
+        self.assertEqual('This service is unavailable.', value['message'])
 
     def test_stale_revision_and_missing_confirmation_rejected(self):
         for request in ({'action': 'work', 'revision': 'stale', 'confirmed': True}, {'action': 'work', 'revision': self.status()['revision']}):

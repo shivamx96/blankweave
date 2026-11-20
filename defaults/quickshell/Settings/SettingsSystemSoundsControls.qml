@@ -1,5 +1,6 @@
 pragma ComponentBehavior: Bound
 import QtQuick
+import "LegacyErrors.js" as Errors
 import QtQuick.Layouts
 
 ColumnLayout {
@@ -112,13 +113,13 @@ ColumnLayout {
     Text {
         Layout.fillWidth: true
         objectName: "systemSoundStatus"
-        text: root.backend && root.backend.error ? root.backend.error
+        text: root.backend && Errors.message(root.backend.error) ? Errors.message(root.backend.error)
             : !root.ready ? "Reading desktop sound settings…"
             : !root.backend.gtkSynced ? "Saved sound preferences need to be applied to apps."
             : !root.backend.previewAvailable ? "Install libcanberra to play a sound preview."
             : "Sound preferences saved. Reopen apps that do not pick up the change."
         textFormat: Text.PlainText
-        color: root.backend && root.backend.error ? root.theme.critical : root.theme.textMuted
+        color: root.backend && Errors.message(root.backend.error) ? root.theme.critical : root.theme.textMuted
         font.family: root.theme.fontFamily
         font.pixelSize: root.theme.smallTextSize
         wrapMode: Text.WordWrap

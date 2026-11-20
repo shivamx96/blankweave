@@ -269,5 +269,7 @@ if __name__ == '__main__':
     try:
         main()
     except (OSError, ValueError, subprocess.SubprocessError) as error:
-        print(str(error), file=sys.stderr)
+        from settings_support import error_result, safe_detail
+        print(json.dumps({"error": error_result(error)}))
+        print(safe_detail(error), file=sys.stderr)
         sys.exit(1)

@@ -69,12 +69,17 @@ def check_revision(request, state):
 
 
 def cli(status, apply):
+    request = {}
     try:
         if sys.argv[1:] == ['status']: print(json.dumps(status()))
-        elif sys.argv[1:] == ['apply']: apply(json.load(sys.stdin))
+        elif sys.argv[1:] == ['apply']:
+            request = json.load(sys.stdin)
+            apply(request)
         else: raise ValueError('Usage: status|apply')
     except (OSError, ValueError, KeyError, TypeError, subprocess.SubprocessError) as error:
-        print(str(error), file=sys.stderr)
+        secrets = [v for k, v in request.items() if any(word in k.lower() for word in ("password", "secret", "token", "credential"))] if isinstance(request, dict) else []
+        print(json.dumps({"error": error_result(error, secrets)}))
+        print(safe_detail(error, secrets), file=sys.stderr)
         sys.exit(1)
 
 

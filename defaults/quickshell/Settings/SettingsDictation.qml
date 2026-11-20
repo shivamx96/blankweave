@@ -1,5 +1,6 @@
 pragma ComponentBehavior: Bound
 import QtQuick
+import "LegacyErrors.js" as Errors
 import QtQuick.Layouts
 
 ColumnLayout {
@@ -84,7 +85,7 @@ ColumnLayout {
     Text {
         Layout.fillWidth: true
         objectName: "dictationError"
-        text: root.backend ? root.backend.actionError || root.backend.error : ""
+        text: root.backend ? Errors.message(root.backend.actionError) || Errors.message(root.backend.error) : ""
         visible: text !== ""
         textFormat: Text.PlainText
         color: root.theme.critical

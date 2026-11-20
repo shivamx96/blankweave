@@ -1,5 +1,6 @@
 pragma ComponentBehavior: Bound
 import QtQuick
+import "LegacyErrors.js" as Errors
 import QtQuick.Layouts
 
 ColumnLayout {
@@ -46,11 +47,11 @@ ColumnLayout {
     Text {
         objectName: "powerProfileStatus"
         Layout.fillWidth: true
-        text: root.backend && root.backend.error ? root.backend.error
+        text: root.backend && Errors.message(root.backend.error) ? Errors.message(root.backend.error)
             : root.backend && root.backend.busy ? "Updating power profiles…"
             : root.backend ? root.backend.explanation : "Power profiles are unavailable."
         textFormat: Text.PlainText
-        color: root.backend && root.backend.error ? root.theme.critical : root.theme.textMuted
+        color: root.backend && Errors.message(root.backend.error) ? root.theme.critical : root.theme.textMuted
         font.family: root.theme.fontFamily
         font.pixelSize: root.theme.smallTextSize
         wrapMode: Text.WordWrap

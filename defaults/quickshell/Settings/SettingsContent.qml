@@ -1,5 +1,6 @@
 pragma ComponentBehavior: Bound
 import QtQuick
+import "LegacyErrors.js" as Errors
 import QtQuick.Controls.Basic
 import QtQuick.Layouts
 import "../Components"
@@ -405,8 +406,8 @@ Rectangle {
                                 Text {
                                     Layout.fillWidth: true
                                     text: root.appearance.busy ? "Updating appearance…"
-                                        : root.appearance.error || (root.appearance.ready ? "Connected to your desktop" : "Loading your preferences…")
-                                    color: root.appearance.error ? root.theme.warning : root.theme.textMuted
+                                        : Errors.message(root.appearance.error) || (root.appearance.ready ? "Connected to your desktop" : "Loading your preferences…")
+                                    color: root.appearance.error ? root.theme.critical : root.theme.textMuted
                                     font.family: root.theme.fontFamily
                                     font.pixelSize: root.theme.smallTextSize
                                     wrapMode: Text.WordWrap
@@ -456,7 +457,7 @@ Rectangle {
                                         Layout.fillWidth: true
                                         visible: root.appearance.syncMessage !== ""
                                         text: root.appearance.syncMessage
-                                        color: root.appearance.syncState === "error" ? root.theme.warning : root.theme.text
+                                        color: root.appearance.syncState === "error" ? root.theme.critical : root.theme.text
                                         font.family: root.theme.fontFamily
                                         font.pixelSize: root.theme.smallTextSize
                                         wrapMode: Text.WordWrap

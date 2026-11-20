@@ -1,5 +1,6 @@
 pragma ComponentBehavior: Bound
 import QtQuick
+import "LegacyErrors.js" as Errors
 import QtQuick.Layouts
 
 ColumnLayout {
@@ -265,9 +266,9 @@ ColumnLayout {
         SettingsConfirmButton {
                 targetIdentity: JSON.stringify(root.draft)
             objectName: "keyboardReset"
-            theme: root.theme; text: "Reset defaults"
+            theme: root.theme; actionText: "Reset defaults"
             enabled: root.ready && root.backend.writable && Object.keys(root.backend.saved.values).length > 0
-            onClicked: { root.editing = false; root.backend.apply(null, "", root.backend.values, root.backend.revision, root.backend.session) }
+            onConfirmed: { root.editing = false; root.backend.apply(null, "", root.backend.values, root.backend.revision, root.backend.session) }
         }
     }
 }

@@ -200,7 +200,7 @@ ColumnLayout {
                     visible: text !== ""
                     text: root.draft ? root.draft.fieldErrors[formField.modelData.key] || "" : ""
                     textFormat: Text.PlainText; wrapMode: Text.WordWrap
-                    color: root.theme.warning; font.family: root.theme.fontFamily; font.pixelSize: root.theme.smallTextSize
+                    color: root.theme.critical; font.family: root.theme.fontFamily; font.pixelSize: root.theme.smallTextSize
                     Accessible.role: Accessible.StaticText
                     Accessible.name: text
                 }
@@ -232,7 +232,7 @@ ColumnLayout {
             text: root.draft ? root.draft.error : ""
             visible: text !== ""
             textFormat: Text.PlainText; wrapMode: Text.WordWrap
-            color: root.theme.warning; font.family: root.theme.fontFamily; font.pixelSize: root.theme.smallTextSize
+            color: root.theme.critical; font.family: root.theme.fontFamily; font.pixelSize: root.theme.smallTextSize
             Accessible.role: Accessible.StaticText
             Accessible.name: text
         }

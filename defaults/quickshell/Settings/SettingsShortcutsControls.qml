@@ -1,5 +1,6 @@
 pragma ComponentBehavior: Bound
 import QtQuick
+import "LegacyErrors.js" as Errors
 import QtQuick.Controls.Basic
 import QtQuick.Layouts
 
@@ -160,9 +161,9 @@ ColumnLayout {
     }
     Text {
         Layout.fillWidth: true
-        text: root.backend === null ? "Shortcut settings unavailable." : root.backend.error
+        text: root.backend === null ? "Shortcut settings unavailable." : Errors.message(root.backend.error)
             || (!root.ready ? "Loading shortcuts…" : root.backend.message || "Changes are saved and applied immediately. Reset restores this action’s default combination.")
-        color: root.backend && root.backend.error ? root.theme.warning : root.theme.textMuted
+        color: root.backend && Errors.message(root.backend.error) ? root.theme.critical : root.theme.textMuted
         font.family: root.theme.fontFamily; font.pixelSize: root.theme.smallTextSize; wrapMode: Text.WordWrap
     }
     SettingsButton {

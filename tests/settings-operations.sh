@@ -9,6 +9,7 @@ chmod 700 "$test_root/runtime"
 mkdir -p "$test_root/Launcher"
 cp "$repository/defaults/quickshell/Launcher/Launch.js" "$test_root/Launcher/"
 cp "$repository/defaults/quickshell/Services/"{SettingsTask,SettingsOperationTask,SettingsOperationDraft,SettingsOperationsService}.qml "$test_root/Services/"
+cp "$repository/defaults/quickshell/Services/SettingsOutcome.js" "$test_root/Services/"
 cp "$repository/tests/quickshell/settings-operations.qml" "$test_root/shell.qml"
 cp "$repository/tests/fixtures/settings-operations.py" "$test_root/fixture.py"
 if ! HOME="$test_root/home" XDG_CONFIG_HOME="$test_root/home/.config" \

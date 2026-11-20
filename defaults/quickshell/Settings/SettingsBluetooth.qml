@@ -1,5 +1,6 @@
 pragma ComponentBehavior: Bound
 import QtQuick
+import "LegacyErrors.js" as Errors
 import QtQuick.Layouts
 import "../Components"
 
@@ -53,7 +54,7 @@ ColumnLayout {
     Text {
         Layout.fillWidth: true
         visible: text !== ""
-        text: root.backend ? root.backend.error : ""
+        text: root.backend ? Errors.message(root.backend.error) : ""
         textFormat: Text.PlainText
         color: root.theme.critical
         font.family: root.theme.fontFamily

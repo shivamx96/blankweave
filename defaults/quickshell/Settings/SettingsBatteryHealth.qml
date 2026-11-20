@@ -1,5 +1,6 @@
 pragma ComponentBehavior: Bound
 import QtQuick
+import "LegacyErrors.js" as Errors
 import QtQuick.Layouts
 
 ColumnLayout {
@@ -83,13 +84,13 @@ ColumnLayout {
     Text {
         objectName: "batteryHealthStatus"
         Layout.fillWidth: true
-        text: root.backend && root.backend.error ? root.backend.error
+        text: root.backend && Errors.message(root.backend.error) ? Errors.message(root.backend.error)
             : !root.ready ? "Reading battery information…"
             : !root.backend.available ? "Battery information is unavailable. Check that UPower is running."
             : root.backend.batteries.length === 0 ? "No system batteries detected."
             : "Health compares reported full-charge capacity with the original design capacity. Missing readings are shown as unknown. Charge limits use the system’s configured thresholds or firmware policy."
         textFormat: Text.PlainText
-        color: root.backend && root.backend.error ? root.theme.critical : root.theme.textMuted
+        color: root.backend && Errors.message(root.backend.error) ? root.theme.critical : root.theme.textMuted
         font.family: root.theme.fontFamily
         font.pixelSize: root.theme.smallTextSize
         wrapMode: Text.WordWrap

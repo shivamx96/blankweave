@@ -1,5 +1,6 @@
 pragma ComponentBehavior: Bound
 import QtQuick
+import "LegacyErrors.js" as Errors
 import QtQuick.Layouts
 
 ColumnLayout {
@@ -116,13 +117,13 @@ ColumnLayout {
     Text {
         Layout.fillWidth: true
         objectName: "automaticPowerStatus"
-        text: root.backend && root.backend.automaticError ? root.backend.automaticError
+        text: root.backend && Errors.message(root.backend.automaticError) ? Errors.message(root.backend.automaticError)
             : !root.ready ? root.policy ? root.policy.message : "Automatic profiles are unavailable."
             : !root.policy.source.available ? "Automatic profiles need a supported battery and a running UPower service."
             : root.policy.message + " Current power: " + (root.policy.source.onBattery ? "battery" : "plugged in")
                 + " · " + Math.round(root.policy.source.percentage) + "%"
         textFormat: Text.PlainText
-        color: root.backend && root.backend.automaticError ? root.theme.critical : root.theme.textMuted
+        color: root.backend && Errors.message(root.backend.automaticError) ? root.theme.critical : root.theme.textMuted
         font.family: root.theme.fontFamily
         font.pixelSize: root.theme.smallTextSize
         wrapMode: Text.WordWrap

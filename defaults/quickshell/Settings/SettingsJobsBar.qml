@@ -26,7 +26,7 @@ ColumnLayout {
         visible: root.service && Boolean(root.service.jobsError)
         text: root.service ? root.service.jobsError || "" : ""
         wrapMode: Text.WordWrap
-        color: root.theme.warning; font.family: root.theme.fontFamily; font.pixelSize: root.theme.smallTextSize
+        color: root.theme.critical; font.family: root.theme.fontFamily; font.pixelSize: root.theme.smallTextSize
     }
     ScrollView {
         visible: root.expanded

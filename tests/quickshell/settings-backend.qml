@@ -39,7 +39,9 @@ ShellRoot {
                 switch (test.step++) {
                 case 0:
                     test.check(backend.ready && !backend.error, "Backend did not initialize")
-                    test.check(backend.themes.length === 2 && backend.systemPending, "Invalid discovery result")
+                    test.check(backend.themes.length === 3 && backend.systemPending, "Invalid discovery result")
+                    backend.apply("theme", 2)
+                    test.check(!backend.action.running && backend.themes[2].invalid, "Invalid theme was selectable: " + JSON.stringify(backend.themes) + " running=" + backend.action.running)
                     test.desktopTheme.themeId = "moss"
                     test.check(backend.selection("theme") === 1, "External theme change not reflected")
                     backend.apply("bar-position", 1)
@@ -71,7 +73,7 @@ ShellRoot {
                     backend.refresh()
                     break
                 case 4:
-                    test.check(!backend.error && backend.themes.length === 2, "Refresh did not recover")
+                    test.check(!backend.error && backend.themes.length === 3, "Refresh did not recover")
                     test.check(backend.syncAvailable, "Installed helper was not detected")
                     backend.syncCommand = ["bash", test.fixture, "sync-cancel"]
                     backend.syncSystem()

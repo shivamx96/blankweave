@@ -10,10 +10,11 @@ QtObject {
     property bool pending: false
     property string jobId: ""
     property string error: ""
+    property var backendFieldErrors: ({})
     property bool secretsCleared: false
     readonly property bool stale: editing !== null && backend.ready && revision !== backend.data.revision
     readonly property var fieldErrors: {
-        let errors = {}
+        let errors = Object.assign({}, backendFieldErrors)
         for (const field of editing ? editing.fields : []) {
             const value = String(values[field.key] ?? "")
             if (field.inputType === "integer" && (!/^[0-9]+$/.test(value)
@@ -84,7 +85,14 @@ QtObject {
         }
         if (["starting", "running"].includes(job.phase)) return
         pending = false
+        if (editing && backend.outcomes !== undefined) {
+            const next = Object.assign({}, backend.jobOutcomes !== undefined ? backend.jobOutcomes : backend.outcomes)
+            next[JSON.stringify([editing.key, ""])] = {message: job.message || "Completed.", detail: job.error ? job.error.detail || "" : "", cancelled: job.phase === "cancelled"}
+            if (backend.jobOutcomes !== undefined) backend.jobOutcomes = next
+            else backend.outcomes = next
+        }
         if (job.phase === "completed") discard()
+        else if (job.error && job.error.field) backendFieldErrors = ({[job.error.field]: job.error.message})
         else error = job.message || "The operation did not complete. Review your inputs before retrying."
     }
     property Connections events: Connections {
@@ -93,7 +101,12 @@ QtObject {
         function onDataChanged() { root.reconcile() }
         function onApplyFinished(success, result) {
             if (!root.pending || root.jobId) return
-            if (!success) { root.pending = false; root.error = root.backend.error || "Could not start the operation."; return }
+            if (!success) {
+                root.pending = false
+                if (result && result.error && result.error.field) root.backendFieldErrors = ({[result.error.field]: result.error.message})
+                else root.error = root.backend.error || "Could not start the operation."
+                return
+            }
             if (!result || !result.jobId) {
                 root.pending = false
                 root.error = "Could not track the operation. Refresh and check its result before retrying."
