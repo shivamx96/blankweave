@@ -330,6 +330,21 @@ gives web links and folders a default where the user has none: Zen, then
 Firefox, then Helium, then any other registered browser, and Thunar for
 folders.
 
+The managed zshrc never downloads code. The prompt and plugins come from
+packages (powerlevel10k, fzf-tab, and the Oh My Zsh git snippets from the
+AUR manifest; autosuggestions, syntax highlighting, completions, and
+history search from the repositories) and are sourced from their packaged
+paths only when readable, so a missing one degrades to a plain prompt.
+Completion initialises first, fzf-tab before autosuggestions, syntax
+highlighting last, then `zsh-keys.zsh`, then personal overrides and the
+preserved custom tail. The powerlevel10k wizard is disabled: a user's
+`~/.p10k.zsh` wins over the managed lean default in `shell/p10k.zsh`, and
+`p10k configure` still works. `tests/zsh-startup.sh` starts an interactive
+shell with failing `git`/`curl`/`wget` stubs to prove startup stays offline.
+The managed profile defaults `EDITOR` to nano (required), `VISUAL` to
+`EDITOR`, and `BROWSER` to the effective-browser helper, never replacing a
+value already set. `wireless-regdb` is required with the Wi-Fi capability.
+
 Ghostty sends the standard Home and End sequences; never remap keys in the
 terminal to work around the shell, because the remap reaches every program
 (Home incremented numbers in vim). Line-editor bindings for Home, End,

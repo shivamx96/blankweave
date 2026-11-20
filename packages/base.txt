@@ -55,6 +55,11 @@ linux-firmware
 inter-font
 ttf-jetbrains-mono-nerd
 zsh
+zsh-autosuggestions
+zsh-syntax-highlighting
+zsh-completions
+zsh-history-substring-search
+nano
 fzf
 zoxide
 wl-clipboard

@@ -241,3 +241,32 @@ git -C "$release_fixture" tag -d v0.9.0 v0.10.0 >/dev/null
 if "$repository/scripts/verify-release.sh" "$release_fixture" --newest > "$test_root/no-release" 2>&1; then exit 1; fi
 grep -Fq 'No valid annotated Blankweave release' "$test_root/no-release"
 
+# Banner repair is byte-preserving outside exact consecutive separator copies.
+python3 - "$repository" "$test_root" <<'PYTEST'
+import os, pathlib, subprocess, sys
+root, temporary = map(pathlib.Path, sys.argv[1:])
+home = temporary / 'banner-home'
+home.mkdir()
+path = home / '.zshrc'
+banner = b'#' * 77
+for ending in (b'', b'\n'):
+    original = b'personal\r\n' + (banner + b'\n') * 23 + b'tail\n' + banner + ending
+    expected = b'personal\r\n' + banner + b'\n' + b'tail\n' + banner + ending
+    path.write_bytes(original)
+    path.chmod(0o640)
+    for _ in range(2):
+        subprocess.run([str(root / 'migrations/20261112-zsh-banner-duplicates.sh')], env={**os.environ, 'HOME': str(home)}, check=True)
+        assert path.read_bytes() == expected
+        assert path.stat().st_mode & 0o777 == 0o640
+path.unlink()
+foreign = home / 'personal'
+foreign.write_bytes(original)
+path.symlink_to(foreign)
+subprocess.run([str(root / 'migrations/20261112-zsh-banner-duplicates.sh')], env={**os.environ, 'HOME': str(home)}, check=True)
+assert path.is_symlink() and foreign.read_bytes() == original
+path.unlink()
+path.mkdir()
+subprocess.run([str(root / 'migrations/20261112-zsh-banner-duplicates.sh')], env={**os.environ, 'HOME': str(home)}, check=True)
+PYTEST
+printf 'Zsh banner migration tests passed.\n'
+

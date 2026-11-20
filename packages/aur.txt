@@ -1,3 +1,8 @@
 ttf-atkinson-hyperlegible-next
 bibata-cursor-theme-bin
 papirus-folders
+
+# Shell components absent from the configured official repositories
+zsh-theme-powerlevel10k
+fzf-tab-git
+oh-my-zsh-git

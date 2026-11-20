@@ -5,7 +5,9 @@ blankweave_profile_sourced=1
 export MOZ_ENABLE_WAYLAND=1
 export QT_QPA_PLATFORM=wayland
 export SDL_VIDEODRIVER=wayland
-export EDITOR=nano
+# Preserve the caller's choices, including deliberately empty values.
+export EDITOR="${EDITOR-nano}"
+export VISUAL="${VISUAL-$EDITOR}"
 export BROWSER="${BROWSER-\"${XDG_DATA_HOME:-$HOME/.local/share}/blankweave/shell/open-default.sh\" browser}"
 export TERMINAL=ghostty
 
