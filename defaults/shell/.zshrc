@@ -74,6 +74,12 @@ alias update-blankweave='blankweave update'
 # Updating PATH with Zed
 export PATH=$HOME/.local/bin:$PATH
 
+# Apply after plugins and shell integrations; personal overrides still win.
+() {
+    local keys="${XDG_DATA_HOME:-$HOME/.local/share}/blankweave/shell/zsh-keys.zsh"
+    [[ -r $keys ]] && source "$keys"
+}
+
 if [[ -r "$HOME/.config/blankweave/overrides/zsh.zsh" ]]; then
     source "$HOME/.config/blankweave/overrides/zsh.zsh"
 fi

@@ -330,6 +330,13 @@ gives web links and folders a default where the user has none: Zen, then
 Firefox, then Helium, then any other registered browser, and Thunar for
 folders.
 
+Ghostty sends the standard Home and End sequences; never remap keys in the
+terminal to work around the shell, because the remap reaches every program
+(Home incremented numbers in vim). Line-editor bindings for Home, End,
+Delete, Ctrl+arrows, and Ctrl+Backspace/Delete live in `shell/zsh-keys.zsh`,
+sourced by the managed `.zshrc` after plugins and before personal overrides,
+and tested without plugins by `tests/zsh-keys.sh`.
+
 `default-apps.py seed` runs as the user on every apply and gives video and
 audio to mpv, images to Loupe, and PDF to Papers only where the user has no
 explicit default; it uses the Settings helper's lock and atomic writer and

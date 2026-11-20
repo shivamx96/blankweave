@@ -72,6 +72,10 @@ for version in gtk-3.0 gtk-4.0; do
 done
 
 assert_rendered() {
+    if grep -Eq '^keybind = (home|end)=text:' "$ghostty"; then
+        echo 'Ghostty must preserve standard Home/End sequences' >&2
+        exit 1
+    fi
     local file
     for version in gtk-3.0 gtk-4.0; do
         grep -Fxq 'gtk-enable-event-sounds=false' "$XDG_CONFIG_HOME/$version/settings.ini"
