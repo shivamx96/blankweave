@@ -674,7 +674,17 @@ from the session locale. Every time of day and temperature the shell shows
 goes through its `formatTime` and `temperature` methods
 (`Components/LocaleFormats.js`), so the bar clock, its tooltip and panel, and
 the weather views cannot disagree; weather data stays Celsius and ISO and is
-converted only for display.
+converted only for display. Hyprlock follows the same preference: its
+clock is the built-in `$TIME` or `$TIME12`, chosen when `theme-apply.sh`
+renders `hyprlock-theme.conf` from a read-only look at `shell.json`
+(`shell/lock-format.py`), with `auto` resolved by the same Qt locale rule.
+The lock theme is re-rendered at shell startup, after a preference save, and
+on theme apply; a lock screen that is already up keeps its format until the
+next lock. Its font families come from the resolved typography tokens.
+Hyprlock 0.9 has no date or Caps Lock variable, so the date label polls
+`date` once a minute and the "Caps Lock is on" label polls
+`shell/lock-caps.sh` every two seconds; keep both to a single light command,
+because they run on every monitor for as long as the screen is locked.
 
 The rightmost power control is a native panel. Lock and suspend are immediate;
 logout, reboot, and shutdown require a second confirmation click and must clear

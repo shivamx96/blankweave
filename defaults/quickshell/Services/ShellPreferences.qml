@@ -55,6 +55,22 @@ QtObject {
         if (root.ready) file.writeAdapter()
     }
 
+    // Render only the lock theme, after shell.json is durably saved and at login.
+    property bool lockRenderPending: false
+    function refreshLockTheme() {
+        if (lockRender.running) lockRenderPending = true
+        else lockRender.running = true
+    }
+    property Process lockRender: Process {
+        command: ["bash", Quickshell.env("HOME") + "/.local/share/blankweave/shell/theme-apply.sh", "lock"]
+        onExited: (code, status) => {
+            if (code !== 0 || status !== 0) console.warn("Could not refresh the lock theme")
+            if (root.lockRenderPending) {
+                root.lockRenderPending = false
+                root.refreshLockTheme()
+            }
+        }
+    }
 
     property FileView file: FileView {
         id: file
@@ -64,9 +80,9 @@ QtObject {
         atomicWrites: true
         printErrors: false
 
-        onLoaded: { root.ready = true; root.confirmedHiddenWidgets = preferences.bar.hiddenWidgets; root.widgetsPending = false }
-        onLoadFailed: { root.ready = true }
-        onSaved: { root.writeError = ""; if (root.widgetsPending) reload() }
+        onLoaded: { root.refreshLockTheme(); root.ready = true; root.confirmedHiddenWidgets = preferences.bar.hiddenWidgets; root.widgetsPending = false }
+        onLoadFailed: { root.ready = true; root.refreshLockTheme() }
+        onSaved: { root.refreshLockTheme(); root.writeError = ""; if (root.widgetsPending) reload() }
         onSaveFailed: { root.widgetsPending = false; root.writeError = "Could not save bar preferences. Check access to the settings file." }
         onFileChanged: reload()
         onAdapterUpdated: {

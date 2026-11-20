@@ -234,8 +234,23 @@ for theme_file in "$data"/themes/*/theme.json; do
     for theme_mode in dark light; do
         "$script" set "$theme_id"
         "$script" mode "$theme_mode"
+        for time_format in 12h 24h; do
+            printf '{"timeFormat":"%s"}\n' "$time_format" > "$XDG_CONFIG_HOME/blankweave/shell.json"
+            "$script" lock
+            expected_time="\$TIME"
+            [[ $time_format != 12h ]] || expected_time="\$TIME12"
+            python3 "$repository/tests/theme_render_checks.py" "$state" "$hypr_theme" "$dunstrc" "$hyprlock" "$expected_time"
+        done
+        printf '{"timeFormat":"auto"}\n' > "$XDG_CONFIG_HOME/blankweave/shell.json"
+        for locale_name in en_US.UTF-8 en_GB.UTF-8; do
+            LC_ALL=$locale_name "$script" lock
+            expected_time="\$TIME"
+            [[ $locale_name != en_US.UTF-8 ]] || expected_time="\$TIME12"
+            python3 "$repository/tests/theme_render_checks.py" "$state" "$hypr_theme" "$dunstrc" "$hyprlock" "$expected_time"
+        done
         assert_rendered
         python3 "$repository/tests/theme_contrast.py" "$state"
+        python3 "$repository/tests/theme_render_checks.py" "$state" "$hypr_theme" "$dunstrc" "$hyprlock"
         [[ $(jq -r '.theme' "$state") == "$theme_id" ]]
         [[ $(jq -r '.mode' "$state") == "$theme_mode" ]]
         [[ -f $(jq -r '.wallpaper' "$state") ]]
@@ -246,6 +261,21 @@ for theme_file in "$data"/themes/*/theme.json; do
         [[ $(jq -r '.modes.dark.colors.canvas' "$state") =~ ^#[0-9a-f]{6}$ ]]
     done
 done
+"$script" set obsidian
+"$script" mode light
+
+# Geometry uses resolved root + mode overrides in every consumer.
+shape_theme=$XDG_CONFIG_HOME/blankweave/themes/shape-test
+mkdir -p "$shape_theme"
+cp -R "$data/themes/obsidian/." "$shape_theme/"
+jq '.design.shape = {panelRadius: 9, controlRadius: 3, borderWidth: 2, windowRadius: 6, windowBorderWidth: 1, notificationRadius: 4, lockFieldRadius: 8}
+    | .modes.light.design.shape = {panelRadius: 7, controlRadius: 2, borderWidth: 3, windowRadius: 5, windowBorderWidth: 3, notificationRadius: 2, lockFieldRadius: 6}'     "$data/themes/obsidian/theme.json" > "$shape_theme/theme.json"
+"$script" set shape-test
+for theme_mode in dark light; do
+    "$script" mode "$theme_mode"
+    python3 "$repository/tests/theme_render_checks.py" "$state" "$hypr_theme" "$dunstrc" "$hyprlock"
+done
+rm -rf "$shape_theme"
 "$script" set obsidian
 "$script" mode light
 

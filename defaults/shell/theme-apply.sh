@@ -199,10 +199,17 @@ render_template() {
     TARGETS+=("$output")
 }
 
+render_lock() {
+    local lock_time
+    lock_time=$(python3 "$DOTS_DIR/shell/lock-format.py")
+    RESOLVED=$(jq --arg time "$lock_time" '. + {lockTime: $time, lockTimeSize: (if $time == "$TIME12" then 88 else 120 end)}' <<< "$RESOLVED")
+    render_template hypr "$DOTS_DIR/hypr/hyprlock-theme.conf.tmpl" "$DOTS_DIR/hypr/hyprlock-theme.conf"
+}
+
 render_all() {
     render_template css "$DOTS_DIR/dunst/dunstrc.tmpl" "$DOTS_DIR/dunst/dunstrc"
     render_template css "$DOTS_DIR/ghostty/config.tmpl" "$DOTS_DIR/ghostty/config"
-    render_template hypr "$DOTS_DIR/hypr/hyprlock-theme.conf.tmpl" "$DOTS_DIR/hypr/hyprlock-theme.conf"
+    render_lock
     render_template hypr "$DOTS_DIR/hypr/theme.lua.tmpl" "$BLANKWEAVE_CONFIG_DIR/theme.lua"
     if [[ -r $DOTS_DIR/voxtype/config.toml.tmpl ]]; then
         render_template css "$DOTS_DIR/voxtype/config.toml.tmpl" "$DOTS_DIR/voxtype/config.toml"
@@ -422,7 +429,7 @@ main() {
 
     # Serialize with interface sizing so a theme switch cannot restore an old
     # cursor size over a concurrent Settings write. Read-only queries need no lock.
-    if [[ $command == apply || $command == set || $command == mode || $command == toggle ]]; then
+    if [[ $command == apply || $command == set || $command == mode || $command == toggle || $command == lock ]]; then
         mkdir -p "$BLANKWEAVE_CONFIG_DIR"
         exec {interface_lock}> "$(blankweave_runtime_path interface.lock)"
         flock -x "$interface_lock"
@@ -480,6 +487,15 @@ main() {
                 RESOLVED=$(resolve_theme "$THEME" "$MODE")
             fi
             jq --argjson system "$(system_status "$RESOLVED")" '. + {system: $system}' <<< "$RESOLVED"
+            return 0
+            ;;
+        lock)
+            [[ $# -eq 0 ]] || die "lock does not accept arguments"
+            RESOLVED=$(resolve_theme "$THEME" "$MODE")
+            trap 'rm -f -- "${STAGED[@]}"; flock -u "$interface_lock"' EXIT
+            render_lock
+            # render_template stages outputs; commit this one lock-only render.
+            mv -f "${STAGED[0]}" "${TARGETS[0]}"
             return 0
             ;;
         help|-h|--help)

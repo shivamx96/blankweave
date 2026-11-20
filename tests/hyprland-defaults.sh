@@ -31,3 +31,6 @@ grep -q 'switch:off:Lid Switch' "$hypr/keybindings.lua"
 
 # Lock visuals must use the rendered font/time; the minute clock never forks.
 if grep -q 'cmd\[.*date.*%H\|cmd\[.*date.*%I' "$hypr/hyprlock.conf"; then exit 1; fi
+grep -Fq "text = \$lock_time" "$hypr/hyprlock.conf"
+grep -Fq "capslock_color = \$warning" "$hypr/hyprlock.conf"
+grep -Fq "fail_text = Incorrect password — attempt \$ATTEMPTS" "$hypr/hyprlock.conf"
