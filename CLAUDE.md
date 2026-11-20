@@ -1421,7 +1421,13 @@ mutation tests use fake buses/helpers; never change host charging limits in test
 `idle-policy.py`. Preferences are strict, atomic, compare-and-swap JSON in
 `idle.json`. The Hyprland autostart wrapper supervises only its own Hypridle
 child, persists across Settings closing, and switches generated runtime configs
-on power-source changes. Until the first edit, retain the installed policy.
+on power-source changes. Without a saved `idle.json` the defaults differ by
+power source: on mains the screen dims at 300 seconds and locks at 600 with
+no automatic suspend, on battery it keeps 150/300/360/1800 seconds, and a
+machine with no battery uses the mains policy. A saved policy is never
+migrated. Managed configs also turn the displays off after about 45 seconds
+of no input while the session is locked, including after a manual lock,
+through a conditional listener in the same Hypridle child.
 Never overwrite custom Hypridle entry files or foreign symlinks; those make the
 Settings controls unavailable. Preserve manual locking and lock-before-sleep. Each idle action can be Never;
 short screen-off/suspend delays move enabled locking/dimming earlier.

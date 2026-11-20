@@ -66,7 +66,7 @@ ColumnLayout {
     Text {
         Layout.fillWidth: true
         visible: root.ready && root.backend.managed
-        text: "Changes restart idle timers. Dimming and locking may happen earlier to precede screen-off or sleep. Never disables only that idle action; manual locking and lock-before-suspend remain available. Lid behavior is managed by the system."
+        text: "Changes restart idle timers. Dimming and locking may happen earlier to precede screen-off or sleep. Never disables only that idle action; manual locking and lock-before-suspend remain available. While locked, the screen turns off after about 45 seconds without input, including after manual locking. Lid behavior is managed by the system."
         color: root.theme.textMuted
         font.family: root.theme.fontFamily
         font.pixelSize: root.theme.smallTextSize

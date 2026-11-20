@@ -12,6 +12,9 @@ import unittest
 from unittest.mock import patch
 
 REPO = Path(__file__).resolve().parents[1]
+import sys
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'defaults/shell'))
+
 SPEC = importlib.util.spec_from_file_location('idle_policy', REPO / 'defaults/shell/idle-policy.py')
 idle = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(idle)
@@ -33,12 +36,56 @@ class IdleTests(unittest.TestCase):
         self.policy.entry.parent.mkdir(parents=True)
         self.policy.entry.symlink_to(self.policy.base)
 
-    def test_defaults_preserve_installed_policy(self):
-        self.assertEqual(self.policy.desired()[0], idle.normalize(self.base))
+    def test_defaults_and_saved_policy(self):
+        expected = {'version': 1, 'ac': dict(dim=300, lock=600, screen=0, suspend=0),
+                    'battery': dict(dim=150, lock=300, screen=360, suspend=1800)}
+        self.assertEqual(self.policy.settings(), expected)
         self.assertFalse(self.policy.config.exists())
-        self.assertEqual(self.policy.settings()['ac'], {'dim': 150, 'lock': 300, 'screen': 360, 'suspend': 1800})
-        self.policy.base.write_text((REPO / 'defaults/hardware/hypridle-ac.conf').read_text())
-        self.assertEqual(self.policy.settings()['battery'], {'dim': 300, 'lock': 600, 'screen': 0, 'suspend': 0})
+        for mode in ('ac', 'battery'):
+            with patch.object(idle, 'supply', return_value=(mode == 'battery', mode)):
+                text = self.policy.desired()[0]
+                self.assertEqual('on-timeout = systemctl suspend' in text, mode == 'battery')
+                self.assertIn(idle.locked_listener(), text)
+        expected['ac']['suspend'] = 1800
+        idle.save(self.policy.config, json.dumps(expected))
+        before = self.policy.config.read_bytes()
+        with patch.object(idle, 'supply', return_value=(False, 'ac')):
+            self.assertIn('on-timeout = systemctl suspend', self.policy.desired()[0])
+        self.assertEqual(self.policy.config.read_bytes(), before)
+        self.assertEqual(self.policy.settings(), expected)
+
+    def test_locked_only_blanking(self):
+        with patch.object(idle.subprocess, 'run') as dispatch:
+            self.assertEqual(idle.lock_state('locked-blank'), 1)
+            idle.lock_state('locked')
+            self.assertEqual(idle.lock_state('locked-blank'), 1)
+            idle.save(self.policy.runtime / 'locked-at', str(time.monotonic() - 46))
+            self.assertEqual(idle.lock_state('locked-ready'), 0)
+            self.assertEqual(idle.lock_state('locked-blank'), 0)
+            dispatch.assert_called_once_with(['hyprctl', 'dispatch', 'hl.dsp.dpms({action = "off"})'], check=True, timeout=5)
+            idle.lock_state('unlocked')
+            self.assertEqual(idle.lock_state('locked-blank'), 1)
+        for mode in ('ac', 'battery'):
+            text = idle.render(self.base, self.policy.settings()[mode])
+            self.assertIn('timeout = 45', text)
+            self.assertIn('condition_retry = 5', text)
+            self.assertIn('on_lock_cmd = ' + idle.LOCK_HELPER + ' locked', text)
+            self.assertIn('on_unlock_cmd = ' + idle.LOCK_HELPER + ' unlocked', text)
+            self.assertEqual(text.count('lock_cmd = ~/.local/share/blankweave/shell/lock.sh'), 1)
+            self.assertNotIn('hypridle ', text)
+            self.assertNotIn('hyprlock ', text)
+
+    def test_lock_helper_in_installed_and_generated_policies(self):
+        for mode in ('ac', 'battery'):
+            base = (REPO / f'defaults/hardware/hypridle-{mode}.conf').read_text()
+            self.assertIn('lock_cmd = ~/.local/share/blankweave/shell/lock.sh', base)
+            for text in (idle.normalize(base), idle.render(base, self.policy.settings()[mode]),
+                         idle.protect_installed(base)):
+                self.assertIn('lock_cmd = ~/.local/share/blankweave/shell/lock.sh', text)
+                self.assertIn('before_sleep_cmd = loginctl lock-session', text)
+            legacy = base.replace('lock_cmd = ~/.local/share/blankweave/shell/lock.sh',
+                                  'lock_cmd = pidof hyprlock || hyprlock')
+            self.assertEqual(idle.normalize(legacy), idle.normalize(base))
 
     def test_custom_configs_are_readonly(self):
         self.policy.entry.unlink()
@@ -98,12 +145,12 @@ class IdleTests(unittest.TestCase):
 
     def test_never_allows_no_idle_actions_without_removing_manual_lock(self):
         text = idle.render(self.base, dict(dim=0, lock=0, screen=0, suspend=0))
-        self.assertIn('on-timeout = /usr/bin/true', text)
+        self.assertIn(idle.locked_listener(), text)
         self.assertNotIn('brightness.sh', text)
         self.assertNotIn('on-timeout = loginctl', text)
         self.assertNotIn(idle.DPMS_OFF, text)
         self.assertNotIn('systemctl suspend', text)
-        self.assertIn('lock_cmd = pidof hyprlock || hyprlock', text)
+        self.assertIn('lock_cmd = ~/.local/share/blankweave/shell/lock.sh', text)
         self.assertIn('before_sleep_cmd = loginctl lock-session', text)
 
     def test_short_timeouts_lock_before_screen_or_sleep(self):
@@ -157,6 +204,8 @@ class IdleTests(unittest.TestCase):
         binary.mkdir()
         helper = self.root / 'idle-policy.py'
         helper.write_text((REPO / 'defaults/shell/idle-policy.py').read_text())
+        for name in ('settings_support.py', 'runtime_paths.py'):
+            (self.root / name).write_text((REPO / 'defaults/shell' / name).read_text())
         brightness = self.root / 'brightness.sh'
         brightness.write_text('#!/bin/sh\nexit 0\n')
         brightness.chmod(0o755)
@@ -164,6 +213,12 @@ class IdleTests(unittest.TestCase):
         (binary / 'hyprctl').chmod(0o755)
         fake = binary / 'hypridle'
         fake.write_text('#!/usr/bin/env python3\nimport os,sys,time\nfrom pathlib import Path\n'
+                        'pidfile = Path(os.environ["IDLE_TEST_LOG"] + ".pid")\n'
+                        'if pidfile.exists():\n'
+                        ' try: os.kill(int(pidfile.read_text()), 0)\n'
+                        ' except ProcessLookupError: pass\n'
+                        ' else: raise RuntimeError("Second simultaneous idle process")\n'
+                        'pidfile.write_text(str(os.getpid()))\n'
                         'with open(os.environ["IDLE_TEST_LOG"],"a") as f:\n'
                         ' f.write(Path(sys.argv[2]).read_text()+"\\n===START===\\n"); f.flush()\n'
                         'if Path(os.environ["IDLE_TEST_REJECT"]).exists() and "blankweave-idle/hypridle.conf" in sys.argv[2]: sys.exit(1)\n'
@@ -213,7 +268,12 @@ class IdleTests(unittest.TestCase):
             settings['battery']['screen'] = 900
             idle.save(self.policy.config, json.dumps(settings))
             wait_for(lambda: 'could not start' in json.loads((self.policy.runtime / 'status.json').read_text())['error'])
-            count = log.read_text().count('===START===')
+            # The error is recorded before the fallback process has logged its
+            # start, so let the count settle before asserting it stays put.
+            count = -1
+            while count != log.read_text().count('===START==='):
+                count = log.read_text().count('===START===')
+                time.sleep(1)
             time.sleep(2.5)
             self.assertEqual(log.read_text().count('===START==='), count)
             self.assertFalse(self.policy.status()['applied'])
