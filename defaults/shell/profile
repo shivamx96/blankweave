@@ -1,16 +1,98 @@
+# Shell-local, deliberately not exported: each new login shell gets its gate.
+[ "${blankweave_profile_sourced:-}" != 1 ] || return 0
+blankweave_profile_sourced=1
+
 export MOZ_ENABLE_WAYLAND=1
 export QT_QPA_PLATFORM=wayland
 export SDL_VIDEODRIVER=wayland
 export EDITOR=nano
 export TERMINAL=ghostty
 
-# Start the managed graphical session only from a suitable local tty1 login.
+# This file is sourced by profile.d and legacy .zprofile; keep the session wrapper POSIX-compatible.
+# Runtime state normally lasts one boot. Include the boot ID for the fallback
+# used when PAM did not supply XDG_RUNTIME_DIR (and for lingering user managers).
+read -r session_boot_id < /proc/sys/kernel/random/boot_id
+session_failure_marker="${XDG_RUNTIME_DIR:-${XDG_STATE_HOME:-$HOME/.local/state}/blankweave}/blankweave-session-failed-$session_boot_id"
+
+# The recovery card names this instead of asking the user to type the guard's
+# internals: clear the guard and log in again through the checks below.
+start_desktop() {
+    rm -f -- "$session_failure_marker"
+    unset BLANKWEAVE_SESSION_FAILED
+    exec "${SHELL:-/bin/sh}" -l
+}
+
+if [ "${BLANKWEAVE_SESSION_FAILED:-}" = 1 ]; then
+    : # A shell opened from the recovery prompt: stay out of the way.
+elif [ -e "$session_failure_marker" ]; then
+    # A new tty1 login after a failed start (the user typed exit, or getty
+    # respawned): say why there is no desktop instead of a bare prompt.
+    if [ "${XDG_VTNR:-}" = 1 ]; then
+        printf '\033[?25h'
+        printf 'Blankweave: the desktop did not start earlier in this boot.\n'
+        printf 'Run start_desktop to try again, or blankweave doctor to check the installation.\n'
+    fi
 # uwsm performs the tty, login-shell, D-Bus, and active-session checks.
-if uwsm check may-start; then
+elif uwsm check may-start >/dev/null 2>&1; then
     session_log_dir="${XDG_STATE_HOME:-$HOME/.local/state}/blankweave"
     session_log="$session_log_dir/uwsm-session.log"
     mkdir -p "$session_log_dir"
-    : > "$session_log"
-    chmod 600 "$session_log"
-    exec uwsm start -e -D Hyprland hyprland.desktop >> "$session_log" 2>&1
+    if [ -f "$session_log" ]; then
+        mv -f -- "$session_log" "$session_log.1"
+    fi
+    # Create the new log privately, without changing the login shell's umask.
+    (umask 077; : > "$session_log")
+    session_started=$(date +%s)
+    session_started_monotonic=$(awk '{printf "%.0f\n", $1 * 1000000}' /proc/uptime)
+    session_exit_status=0
+    uwsm start -e -D Hyprland hyprland.desktop >> "$session_log" 2>&1 || session_exit_status=$?
+    session_elapsed=$(( $(date +%s) - session_started ))
+
+    # A quick clean stop is valid if this attempt reached systemd readiness.
+    # A zero controller status alone does not prove the compositor started.
+    session_normal=0
+    if [ "$session_elapsed" -ge 60 ]; then
+        # The desktop ran. Whether it was stopped or crashed later, bring it
+        # back the way the former exec did; only a failed start is held here,
+        # and a controller that reports non-zero on a normal stop cannot turn
+        # every logout into a recovery prompt.
+        session_normal=1
+    elif [ "$session_exit_status" -eq 0 ]; then
+        if [ "$session_elapsed" -ge 10 ]; then
+            session_normal=1
+        else
+            session_ready_at=$(systemctl --user show wayland-wm@hyprland.desktop.service \
+                --property=ActiveEnterTimestampMonotonic --value 2>/dev/null) || session_ready_at=
+            session_result=$(systemctl --user show wayland-wm@hyprland.desktop.service \
+                --property=Result --value 2>/dev/null) || session_result=
+            case "$session_ready_at" in
+                ''|*[!0-9]*) ;;
+                *) if [ "$session_ready_at" -ge "$session_started_monotonic" ] &&
+                       [ "$session_result" = success ]; then
+                       session_normal=1
+                   fi ;;
+            esac
+        fi
+    fi
+    if [ "$session_normal" -eq 1 ]; then
+        # Match the former exec: getty respawns (autologin or password prompt).
+        exit 0
+    fi
+
+    # Keep this shell and future login shells on the recovery console. The
+    # exported guard also protects child shells if the runtime directory fails.
+    export BLANKWEAVE_SESSION_FAILED=1
+    (umask 077; mkdir -p "${session_failure_marker%/*}"; : > "$session_failure_marker") 2>/dev/null || :
+    # Same cursor restore as blankweave-cursor.issue, then clear and home.
+    printf '\033[?25h\033[2J\033[H'
+    printf 'Blankweave: the desktop could not start.\n'
+    printf 'Session exited with status %s after %s seconds.\n\n' "$session_exit_status" "$session_elapsed"
+    printf 'Last session log lines (compositor errors are in the user journal):\n'
+    tail -n 8 "$session_log"
+    printf '\nSee why:\njournalctl --user -b -p warning\n'
+    printf '\nCheck the installation:\nblankweave doctor\n'
+    printf '\nReturn to the previous Blankweave release:\nblankweave rollback\n'
+    printf '\nTry the managed session again:\n'
+    printf 'start_desktop\n'
+    printf '\nCtrl+Alt+F2 opens another console. This shell is ready for recovery.\n'
 fi

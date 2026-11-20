@@ -187,6 +187,27 @@ The profile sends the small UWSM controller's stdout/stderr to
 `~/.local/state/blankweave/uwsm-session.log`; compositor and application units
 still log normally through the user journal.
 
+The profile is POSIX-compatible (it is sourced by `.zprofile`) and supervises
+UWSM instead of `exec`ing it. It rotates the controller log to
+`uwsm-session.log.1`, and after the session ends it leaves the login shell
+silently so getty restarts the desktop under automatic sign-in or returns to
+the password prompt, exactly as the former `exec` did. Only a failed start is
+held: a non-zero exit within the first minute, or a zero exit in under ten
+seconds unless `wayland-wm@hyprland.desktop.service` reports
+`Result=success` with an activation from this attempt. A session that ran for
+a minute or more always restarts, whatever its status, so a late compositor
+crash or a controller that reports its stop signal never strands the user at
+a prompt. On a failed start the profile restores the VT cursor, clears the
+screen, prints the last controller-log lines with the recovery commands
+(`journalctl --user -b -p warning`, `blankweave doctor`, `blankweave
+rollback`, `start_desktop`, Ctrl+Alt+F2), and leaves a working shell. A
+boot-scoped marker under `$XDG_RUNTIME_DIR` stops later tty1 logins from
+looping back into the failure; they print a one-line reminder instead, and
+`start_desktop` clears the marker and logs in again. The healthy path prints
+nothing, because any character on tty1 would flash during the Plymouth
+handoff. `tests/session-profile.sh` drives all of this with a stubbed UWSM
+under sh, bash, and zsh; never exercise the developer's live login path.
+
 Do not restore a graphical-startup Hyprlock. The LUKS prompt is the boot-time
 authentication boundary. Hyprlock remains in manual keybindings and in
 Hypridle for idle, suspend, and resume protection.
