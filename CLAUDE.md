@@ -841,6 +841,17 @@ argument vector, and the entry's working directory; `execute()` runs such an
 entry with no terminal attached, so it would do nothing visible. Never
 rebuild a shell string from `execString`. Other entries keep `execute()`.
 
+Rows select on pointer movement, never on hover alone: a list that scrolls,
+re-ranks, or opens under a resting pointer must not change what Enter
+launches. The empty-query order comes from use, not a fixed list:
+`Services/LauncherUsage.qml`, one instance on `ShellRoot`, is the sole
+writer of `~/.local/state/blankweave/launcher-usage.json` (desktop-entry
+ids, counts, and last-launch times only; atomic, bounded, tolerant of a
+missing or corrupt file) and ranks by `log2(1 + count) * 2^(-ageDays / 30)`
+against a shell-start reference time, so consecutive opens never reshuffle.
+With no history it falls back to installed categories (terminal, browser,
+files, Settings), then name. It records nothing else.
+
 Because the surface is per-screen, the open state and the active view live on
 `ShellRoot`, not on the launcher: `toggleLauncher(mode)` switches views when
 the requested one is not already showing and only closes when it is, so the

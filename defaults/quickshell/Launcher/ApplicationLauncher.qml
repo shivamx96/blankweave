@@ -5,6 +5,7 @@ import Quickshell
 import Quickshell.Io
 import Quickshell.Wayland
 import Quickshell.Widgets
+import "../Services/LauncherUsage.js" as Usage
 import "../Components"
 import "Launch.js" as Launch
 
@@ -59,17 +60,24 @@ PanelWindow {
         return String(value || "").toLowerCase().trim()
     }
 
-    function favoriteRank(entry) {
-        const preferred = [
-            "zen", "firefox", "com.mitchellh.ghostty", "thunar", "dev.zed.zed",
-            "t3code", "obsidian", "org.pulseaudio.pavucontrol", "blueman-manager", "steam"
-        ]
-        const id = root.normalized(entry.id).replace(/\.desktop$/, "")
-        for (let index = 0; index < preferred.length; index++) {
-            if (id === preferred[index])
-                return index
+    property var usage: null
+    property point lastPointer: Qt.point(-1, -1)
+    function pointerMoved(x, y) {
+        const moved = lastPointer.x >= 0 && (lastPointer.x !== x || lastPointer.y !== y)
+        lastPointer = Qt.point(x, y)
+        return moved
+    }
+    function pointerRow(x, y, index) {
+        if (pointerMoved(x, y) && index >= 0) root.session.selectedIndex = index
+    }
+    HoverHandler {
+        onPointChanged: {
+            const p = point.position
+            const local = resultList.mapFromItem(root, p.x, p.y)
+            if (local.x < 0 || local.x >= resultList.width || local.y < 0 || local.y >= resultList.height) { root.pointerRow(p.x, p.y, -1); return }
+            const index = resultList.indexAt(local.x + resultList.contentX, local.y + resultList.contentY)
+            root.pointerRow(p.x, p.y, index)
         }
-        return 100
     }
 
     function applicationScore(entry, query) {
@@ -79,7 +87,9 @@ PanelWindow {
         const comment = root.normalized(entry.comment)
         const keywords = root.normalized((entry.keywords || []).join(" "))
         if (!query)
-            return root.favoriteRank(entry) * 1000 + name.charCodeAt(0)
+            return usage && usage.history[entry.id]
+                ? -Usage.score(usage.history[entry.id], usage.referenceTime)
+                : Usage.neutral(entry)
 
         const terms = query.split(/\s+/).filter(term => term !== "")
         const haystack = [name, genericName, id, comment, keywords].join(" ")
@@ -112,6 +122,7 @@ PanelWindow {
             if (left.score !== right.score)
                 return left.score - right.score
             return String(left.entry.name).localeCompare(String(right.entry.name))
+                || String(left.entry.id).localeCompare(String(right.entry.id))
         })
         return ranked.map(item => item.entry)
     }
@@ -196,6 +207,7 @@ PanelWindow {
         }
         Qt.callLater(() => {
             Launch.activate(item, command => Quickshell.execDetached(command))
+            if (root.usage) root.usage.record(String(item.id))
         })
     }
 
@@ -449,7 +461,7 @@ PanelWindow {
                         return root.results.length + " RESULTS"
                     return root.clipboardMode
                         ? "CLIPBOARD HISTORY · NEWEST FIRST"
-                        : "ALL APPLICATIONS · FAVOURITES FIRST"
+                        : "ALL APPLICATIONS · RECENTLY USED FIRST"
                 }
                 color: root.theme.textMuted
                 font.family: root.theme.fontFamily
@@ -600,7 +612,7 @@ PanelWindow {
                             anchors.fill: parent
                             hoverEnabled: true
                             cursorShape: Qt.PointingHandCursor
-                            onEntered: root.session.selectedIndex = resultCard.index
+                            // Selection follows the root pointer tracker, never hover entry.
                             onClicked: root.activate(resultCard.modelData)
                         }
                 }

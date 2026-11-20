@@ -16,6 +16,7 @@ ShellRoot {
     Timer { interval: 30000; running: true; repeat: true; triggeredOnStart: true; onTriggered: { if (!notificationPolicy.running) notificationPolicy.running = true } }
     Process { id: notificationPolicy; command: ["python3", Quickshell.env("HOME") + "/.local/share/blankweave/shell/notification-settings.py", "tick"] }
     property Theme theme: Theme { }
+    property LauncherUsage launcherUsage: LauncherUsage { }
     property ShellPreferences preferences: ShellPreferences { }
     property Voxtype voxtype: Voxtype { }
     property PowerService power: PowerService { }
@@ -79,6 +80,7 @@ ShellRoot {
 
     ApplicationLauncher {
         theme: root.theme
+        usage: root.launcherUsage
         session: launcherSession
         onDismissed: root.closeLauncher()
         onModeRequested: next => launcherSession.mode = next
