@@ -62,11 +62,12 @@ fi
 
 temporary_repository=$(mktemp -d "$blankweave_dir/.repository.XXXXXX")
 printf 'Downloading Blankweave...\n'
-git clone --depth 1 --branch main "$repository_url" "$temporary_repository"
+git clone --branch main "$repository_url" "$temporary_repository"
 git -C "$temporary_repository" fetch --force --tags origin
 release_tag=$("$temporary_repository/scripts/verify-release.sh" \
-    "$temporary_repository" HEAD) \
-    || die "downloaded main is not a tagged Blankweave release"
+    "$temporary_repository" --newest) \
+    || die "no valid annotated release is reachable from main"
+git -C "$temporary_repository" reset --hard "$release_tag^{commit}"
 printf 'Verified %s.\n' "$release_tag"
 mv "$temporary_repository" "$repository"
 temporary_repository=

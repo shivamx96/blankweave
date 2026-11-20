@@ -57,8 +57,12 @@ finds nothing at them.
 
 ### Install and update lifecycle
 
-1. `bootstrap.sh` clones the trusted `main` branch to
-   `~/.local/share/blankweave/repository` and hands off to `blankweave setup`.
+1. `bootstrap.sh` clones the trusted `main` branch with full history to
+   `~/.local/share/blankweave/repository`, selects the newest release (the
+   highest-SemVer annotated `vMAJOR.MINOR.PATCH` tag reachable from
+   `origin/main` whose commit's `VERSION` matches), leaves the checkout
+   exactly at that release, and hands off to `blankweave setup`. With no
+   valid release it stops with a clear message.
 2. Guided setup reviews profiles, theme, optional Git identity, and local SSH
    key generation before saving strict data configs and invoking `install.sh`,
    which deploys the public command to
@@ -69,12 +73,17 @@ finds nothing at them.
    Managed Quickshell and shell-helper trees are staged beside their destination
    and atomically exchanged by `scripts/deploy-tree.sh`; never delete the live
    Quickshell tree before replacement because its watcher reloads immediately.
-4. `blankweave update` validates the origin, branch, clean worktree, target
-   ancestry, matching annotated `v<VERSION>` release tag, installer config, and
-   package manifests before applying a fast-forward-only update. The target
-   version must advance and its rollback floor must include the current release.
-   `--check` only fetches and reports; `--dry-run` also validates and prints the
-   target install plan.
+4. `blankweave update` selects the newest release by the same rule
+   (`scripts/release-version.sh`), so unreleased commits on `main` never
+   block an install or an update; `--check` mentions them in one neutral
+   line. It then validates the origin, branch, clean worktree, target
+   ancestry, matching annotated release tag, installer config, and package
+   manifests, and fast-forwards only to the selected release commit. The
+   target version must advance and its rollback floor must include the
+   current release. `--check` only fetches and reports; `--dry-run` also
+   validates and prints the target install plan. `--to vMAJOR.MINOR.PATCH`
+   picks a specific newer release under the same checks and cannot be
+   combined with `--reapply`; going back is what rollback is for.
 5. A real update writes the previous/target revisions and private diagnostic
    logs under `~/.local/state/blankweave/recovery/`. Recovery metadata pairs
    each revision with its SemVer release and enforces `MIN_ROLLBACK_VERSION`.

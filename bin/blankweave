@@ -374,24 +374,31 @@ command_setup() {
 command_update() {
     local repository branch mode=apply current target current_version target_version
     local current_tag target_tag rollback_floor commit_count update_log doctor_script apply_status
-    local SNAPSHOT_NUMBER=
+    local SNAPSHOT_NUMBER='' option requested_release='' newest_tag
 
-    case "${1:-}" in
-        '') ;;
-        --check) mode=check ;;
-        --dry-run) mode=dry-run ;;
-        --help|-h)
-            cat <<'EOF'
-Usage: blankweave update [--check|--dry-run]
+    while (( $# > 0 )); do
+        option=$1
+        shift
+        case "$option" in
+            --to)
+                (( $# > 0 )) && [[ -z $requested_release && -n $1 && $1 != -* ]] || die "--to requires one release tag"
+                requested_release=$1
+                shift ;;
+            --check|--dry-run)
+                [[ $mode == apply ]] || die "choose only one preview mode"
+                mode=${option#--} ;;
+            --help|-h)
+                cat <<'EOF'
+Usage: blankweave update [--check|--dry-run] [--to vX.Y.Z]
 
-  --check    Fetch and report whether a tagged update is available.
-  --dry-run  Validate the tagged update and print its install plan without applying it.
+  --to       Select a specific newer annotated release reachable from main.
+  --check    Fetch and report tagged releases; no system changes.
+  --dry-run  Validate and print the install plan without applying.
 EOF
-            return 0
-            ;;
-        *) die "update accepts only --check or --dry-run" ;;
-    esac
-    (( $# <= 1 )) || die "update accepts only one option"
+                return 0 ;;
+            *) die "unknown update option: $option" ;;
+        esac
+    done
 
     require_normal_user
     repository=$(configured_repository)
@@ -407,16 +414,26 @@ EOF
     git -C "$repository" merge-base --is-ancestor HEAD origin/main \
         || die "origin/main is not a fast-forward of the local checkout"
     current=$(git -C "$repository" rev-parse HEAD)
-    target=$(git -C "$repository" rev-parse origin/main)
 
     # shellcheck source=scripts/release-version.sh
     source "$repository/scripts/release-version.sh"
+    newest_tag=$(blankweave_release_select "$repository" origin/main) \
+        || die "no valid annotated release is reachable from origin/main"
+    target_tag=$(blankweave_release_select "$repository" origin/main "$requested_release") \
+        || die "requested release is unknown, invalid, or not reachable from origin/main: $requested_release"
+    target=$(git -C "$repository" rev-parse "refs/tags/$target_tag^{commit}")
+    if [[ $mode == check && $(git -C "$repository" rev-parse origin/main) != "$(git -C "$repository" rev-parse "refs/tags/$newest_tag^{commit}")" ]]; then
+        printf 'main has unreleased commits; the newest release is %s\n' "$newest_tag"
+    fi
     current_version=$(blankweave_release_version_at "$repository" "$current") \
         || die "current checkout has an invalid VERSION"
     current_tag=$(blankweave_release_tag_at "$repository" "$current") \
         || die "current checkout is not an annotated release matching VERSION"
 
-    if [[ $current == "$target" ]]; then
+    git -C "$repository" merge-base --is-ancestor "$current" "$target" \
+        || die "selected release is not a fast-forward; use blankweave rollback for a downgrade"
+
+    if [[ $current == "$target" && -z $requested_release ]]; then
         printf 'Blankweave %s (%s) is already up to date at %s.\n' \
             "$current_version" "$current_tag" "${current:0:12}"
         return 0
@@ -427,7 +444,7 @@ EOF
     target_tag=$(blankweave_release_tag_at "$repository" "$target") \
         || die "target revision is not an annotated release matching VERSION"
     blankweave_release_version_greater "$target_version" "$current_version" \
-        || die "target release must advance beyond $current_version (found $target_version)"
+        || die "target release must advance beyond $current_version (found $target_version); use blankweave rollback for a downgrade"
     rollback_floor=$(blankweave_release_floor_at "$repository" "$target") \
         || die "target revision has an invalid MIN_ROLLBACK_VERSION"
     blankweave_release_version_greater_or_equal "$current_version" "$rollback_floor" \
@@ -463,7 +480,7 @@ EOF
 
     create_pre_snapshot "$current" "$target"
     recovery_write "$current" "$current_version" "$target" "$target_version" prepared "$SNAPSHOT_NUMBER"
-    git -C "$repository" merge --ff-only origin/main
+    git -C "$repository" merge --ff-only "$target"
     recovery_update_status applying
 
     update_log=$RECOVERY_DIR/update.log

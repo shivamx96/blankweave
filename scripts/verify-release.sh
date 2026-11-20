@@ -8,6 +8,14 @@ requested_revision=${2:-HEAD}
 # shellcheck source=scripts/release-version.sh
 source "$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)/release-version.sh"
 
+if [[ $requested_revision == --newest ]]; then
+    blankweave_release_select "$repository" origin/main || {
+        printf 'No valid annotated Blankweave release is reachable from origin/main.\n' >&2
+        exit 1
+    }
+    exit 0
+fi
+
 revision=$(git -C "$repository" rev-parse "$requested_revision^{commit}" 2>/dev/null) || {
     printf 'Could not resolve release revision: %s\n' "$requested_revision" >&2
     exit 1

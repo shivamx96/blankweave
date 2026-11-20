@@ -169,3 +169,12 @@ Blankweave release versions.
   deprecation diagnostics, and syntax checks for saved monitor layouts.
 - Validate generated configurations with the real Hyprland parser in CI.
   The minimum supported configuration rollback release remains `0.1.0`.
+
+Install and update select the highest stable SemVer annotated `vX.Y.Z` tag
+reachable from `origin/main` whose commit's `VERSION` matches. Unreleased main
+commits, lightweight tags, mismatched tags, and off-main tags are ignored.
+The managed `main` branch stops exactly at that release. `update --check`
+notes when main has unreleased commits. `update --to vX.Y.Z` selects a specific
+newer release under the same ancestry and rollback-floor rules; it supports
+`--check`, `--dry-run`, and `--yes`, but cannot combine with `--reapply`.
+Downgrades use `blankweave rollback`.
