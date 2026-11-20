@@ -34,9 +34,10 @@ Rectangle {
     property var wifi: null
     property var bluetooth: null
     property string selectedPage: "appearance"
-    readonly property var results: Catalog.pages
+    property var capabilities: null
+    readonly property var results: Catalog.visiblePages(capabilities)
     readonly property bool searching: search.text.trim().length > 0
-    readonly property var searchResults: Catalog.searchSettings(search.text)
+    readonly property var searchResults: Catalog.searchSettings(search.text, capabilities)
     property string highlightedSetting: ""
     property int searchIndex: 0
     property bool followSearchTarget: false
@@ -544,6 +545,7 @@ Rectangle {
                                                     onCopyRequested: text => root.copyRequested(text)
                                                     Layout.fillWidth: true
                                                     theme: root.theme
+                                                    timeFormat: root.appearance && root.appearance.preferences ? root.appearance.preferences.resolvedTimeFormat : "24h"
                                                     setting: settingGroup.modelData
                                                     backend: settingGroup.modelData.kind === "operations" ? (root.operations ? root.operations.provider(settingGroup.modelData.id) : null)
                                                         : settingGroup.modelData.kind === "system-info" ? root.system

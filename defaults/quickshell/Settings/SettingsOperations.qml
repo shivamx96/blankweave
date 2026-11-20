@@ -8,6 +8,7 @@ ColumnLayout {
     required property var theme
     required property string settingId
     required property var backend
+    property string timeFormat: "24h"
     signal settingRequested(string settingId)
     signal copyRequested(string text)
     readonly property var draft: backend ? backend.draft : null
@@ -15,7 +16,7 @@ ColumnLayout {
     readonly property var values: draft ? draft.values : ({})
     readonly property var operations: backend && backend.ready ? backend.data.actions || [] : []
     readonly property var primaryAction: Actions.primary(settingId, operations)
-    readonly property var secondaryActions: operations.filter(action => !primaryAction || action.key !== primaryAction.key)
+    readonly property var secondaryActions: operations.filter(action => (!primaryAction || action.key !== primaryAction.key) && !(settingId === "datetime" && action.key === "ntp") && !(settingId === "updates" && action.key === "restart"))
     readonly property bool canOperate: backend && backend.writable && draft && !draft.pending
     readonly property bool operationBusy: Boolean((backend && (backend.writing || backend.data.writable === false)) || (draft && draft.pending))
     Keys.priority: Keys.AfterItem
@@ -90,10 +91,44 @@ ColumnLayout {
             color: root.theme.text; font.family: root.theme.fontFamily; font.pixelSize: root.theme.smallTextSize
         }
     }
+    SettingsDriveRows { theme: root.theme; backend: root.backend; visible: root.settingId === "drives"; Layout.fillWidth: true }
+    SettingsSwitchRow {
+        theme: root.theme
+        visible: root.settingId === "datetime"
+        text: "Automatic time"
+        readonly property var operation: root.operations.find(a => a.key === "ntp")
+        checked: Boolean(operation && operation.fields[0].value === "yes")
+        enabled: root.canOperate && Boolean(operation)
+        busy: Boolean(root.draft && root.draft.pending)
+        error: root.draft ? root.draft.error : ""
+        description: checked ? "Turn automatic time off to set the date and time manually." : "Set the date and time manually below."
+        onToggled: value => { root.draft.begin(operation); root.draft.setValue("enabled", value ? "yes" : "no"); root.draft.submit() }
+    }
+    SettingsButton {
+        theme: root.theme
+        visible: root.settingId === "datetime" && !root.operations.some(a => a.key === "time")
+        enabled: false
+        text: "Manual date and time — automatic time is on"
+    }
+    SettingsConfirmButton {
+        theme: root.theme
+        visible: root.settingId === "updates" && root.operations.some(a => a.key === "restart")
+        actionText: "Restart"
+        confirmText: "Save your work, then restart"
+        enabled: root.canOperate
+        targetIdentity: root.backend && root.backend.ready ? root.backend.data.revision : ""
+        onConfirmed: { const action = root.operations.find(a => a.key === "restart"); root.draft.begin(action); root.draft.submit() }
+    }
+    SettingsButton {
+        theme: root.theme
+        visible: root.settingId === "updates" && root.backend && root.backend.ready
+        text: "Open updater in Ghostty"
+        onClicked: if (root.backend && typeof root.backend.launchUpdate === "function") root.backend.launchUpdate()
+    }
     Flow {
         Layout.fillWidth: true
         spacing: root.theme.spacing("md")
-        visible: root.operations.length > 0 && root.editing === null
+        visible: !(root.settingId === "drives" && root.backend && root.backend.data.drives !== undefined) && root.operations.length > 0 && root.editing === null
         SettingsButton {
             objectName: "primaryOperation"
             theme: root.theme
@@ -133,7 +168,7 @@ ColumnLayout {
     }
     ColumnLayout {
         Layout.fillWidth: true
-        visible: root.editing !== null
+        visible: root.editing !== null && (root.settingId !== "drives" || root.editing.fields.length > 0)
         Repeater {
             model: root.editing ? root.editing.fields : []
             delegate: ColumnLayout {
@@ -146,11 +181,20 @@ ColumnLayout {
                     color: root.theme.text; font.family: root.theme.fontFamily; font.pixelSize: root.theme.smallTextSize
                     Layout.fillWidth: true; wrapMode: Text.WordWrap
                 }
+                Loader {
+                    Layout.fillWidth: true
+                    active: root.settingId === "datetime" && root.editing && root.editing.key === "time"
+                    sourceComponent: SettingsDateTimeFields {
+                        theme: root.theme
+                        timeFormat: root.timeFormat
+                        onEdited: value => root.draft.setValue("time", value)
+                    }
+                }
                 SettingsTextField {
                     objectName: "operationField_" + formField.modelData.key
                     theme: root.theme
                     Layout.fillWidth: true
-                    visible: formField.modelData.options.length === 0 && !formField.modelData.multiline && formField.modelData.inputType !== "integer"
+                    visible: !(root.settingId === "datetime" && root.editing && root.editing.key === "time") && formField.modelData.options.length === 0 && !formField.modelData.multiline && formField.modelData.inputType !== "integer"
                     text: String(root.values[formField.modelData.key] ?? "")
                     echoMode: formField.modelData.secret ? TextInput.Password : TextInput.Normal
                     Accessible.name: formField.modelData.label

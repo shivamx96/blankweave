@@ -1225,8 +1225,17 @@ must never execute commands or write configuration. `SettingsContent.qml` is the
 and `Services/SettingsAppearance.qml` adapts the existing theme helper and the
 single shared `ShellPreferences` instance. Do not introduce another writer for
 `shell.json` or theme selection. Only controls backed by implemented services
-may be enabled; preview values must remain clearly labeled and never imply
-observed hardware state. Add later page backends independently, and extend the
+may be enabled; an unavailable control stays disabled and never implies
+observed hardware state. Escape is layered and there is no window-level
+`Shortcut` for it, because a shortcut would take the key before a field's own
+handler: a popup or inline editor closes first, a text field clears and then
+releases focus, the search field clears and then closes the window, and only
+an unfocused view closes directly. Search normalises case, hyphens, and
+spacing, requires every query word, prefers word-start matches, and ranks
+title above alias above description; every catalog row carries the aliases
+people type ("wifi", "trackpad", "dnd"), so add them with any new row and
+cover the query in `tst_settings.qml`. Pages carry no status banner; guidance
+the user must act on sits as helper text beside its control. Add later page backends independently, and extend the
 row control types when their functionality becomes available. Settings tests
 run through `tests/settings.sh`, using offscreen Qt tests and isolated Quickshell
 processes so validation cannot modify the developer's desktop.
@@ -1258,6 +1267,26 @@ with the live session; only a caller with no session at all falls back to
 helper, never a literal path, or two writers stop excluding each other.
 Preferences, ledgers, revisions, jobs, and recovery snapshots are durable
 and stay where they are; atomic-replace staging stays beside its target.
+
+`Services/SettingsCapabilities.qml` reads `hardware-capabilities.json` once.
+A Catalog row with `requires` (battery, `display-brightness`, bluetooth,
+`wifi`) is left out of its page, search, and row deep links when the
+capability is absent, a link to a hidden row opens its page, and a missing
+or malformed file shows everything. That is the only reason a row is ever
+hidden. `SettingsComboBox` gains a type-to-filter field at twelve or more
+options (typing filters, Up/Down move, Enter selects, Escape clears the
+filter and then closes) and is unchanged for short menus. Date and time are
+separate controls that follow the shell's time format and are disabled
+while network time is on. Each removable drive has Mount, Unmount, and
+Eject through user-scoped UDisks with identity rechecked before the action
+and state read back after it; a whole disk is read-only if any part of it
+backs `/`, `/boot`, `/home`, the EFI partition, or swap, and serial numbers
+are never shown. Updates has one detached, cancellable check that shows the
+installed and newest release with the `RELEASES.md` sections in between
+(annotated-tag messages as fallback), and applying opens Ghostty on
+`blankweave update`, because it needs sudo and a confirmed plan.
+Notifications is its own page with its row ids unchanged, and the
+Accessibility text-size row links to the canonical one on Appearance.
 
 `SettingsOperationsService` owns the remaining system providers for the window;
 `SettingsOperations` is a pure view so standalone Qt tests can inject a backend.

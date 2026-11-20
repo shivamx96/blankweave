@@ -6,6 +6,7 @@ import QtQuick.Layouts
 ColumnLayout {
     id: root
     required property var theme
+    property string supply: ""
     required property var backend
     readonly property bool ready: backend !== null && backend.ready
     readonly property bool writable: ready && backend.managed && backend.running && !backend.busy
@@ -15,7 +16,7 @@ ColumnLayout {
     spacing: root.theme.spacing("xl")
 
     Repeater {
-        model: root.ready && root.backend.battery ? ["ac", "battery"] : ["ac"]
+        model: root.supply ? [root.supply] : root.ready && root.backend.battery ? ["ac", "battery"] : ["ac"]
         delegate: ColumnLayout {
             id: supplyRow
             required property string modelData

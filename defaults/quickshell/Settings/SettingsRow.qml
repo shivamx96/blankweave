@@ -11,6 +11,7 @@ Item {
     signal settingRequested(string settingId)
     signal copyRequested(string text)
     required property var setting
+    property string timeFormat: "24h"
     property var backend: null
     readonly property bool live: Boolean(setting.live && backend)
     readonly property bool writable: live && backend && Boolean(backend.ready) && !backend.busy
@@ -69,7 +70,8 @@ Item {
             Layout.fillWidth: root.expandedControl
             Layout.preferredWidth: root.expandedControl ? content.width : root.compact ? Math.min(240, content.width) : 190
             Layout.preferredHeight: item ? Math.max(root.expandedControl ? 0 : 36, (item as Item).implicitHeight) : 36
-            sourceComponent: root.setting.kind === "operations" ? operationsControl
+            sourceComponent: root.setting.kind === "link" ? linkControl
+                : root.setting.kind === "operations" ? operationsControl
                 : root.setting.kind === "system-info" ? systemControl
                 : root.setting.kind === "webapps" ? webappsControl
                 : root.setting.kind === "widgets" ? widgetsControl
@@ -105,8 +107,12 @@ Item {
     }
 
     Component {
+        id: linkControl
+        SettingsButton { theme: root.theme; text: "Open Text size"; onClicked: root.settingRequested(root.setting.target) }
+    }
+    Component {
         id: operationsControl
-        SettingsOperations { theme: root.theme; settingId: root.setting.id; backend: root.backend; onSettingRequested: id => root.settingRequested(id); onCopyRequested: text => root.copyRequested(text) }
+        SettingsOperations { timeFormat: root.timeFormat; theme: root.theme; settingId: root.setting.id; backend: root.backend; onSettingRequested: id => root.settingRequested(id); onCopyRequested: text => root.copyRequested(text) }
     }
 
     Component {
@@ -170,7 +176,7 @@ Item {
     }
     Component {
         id: idleControl
-        SettingsIdleControls { theme: root.theme; backend: root.backend }
+        SettingsIdleControls { supply: root.setting.supply || ""; theme: root.theme; backend: root.backend }
     }
     Component {
         id: batteryControl

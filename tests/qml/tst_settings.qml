@@ -296,7 +296,7 @@ TestCase {
         verify(content.searching)
         compare(content.searchResults.length, 0)
         search.text = ""
-        compare(content.results.length, 9)
+        compare(content.results.length, 10)
     }
 
     function test_search_jumps_to_exact_setting() {

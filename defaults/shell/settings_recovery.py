@@ -16,9 +16,11 @@ def can_hibernate():
 
 def status(domain):
     if domain == 'snapshots':
-        if not installed('snapper'): return state('File backups are independent of system snapshots.', notices=[missing('snapper')])
+        if not installed('snapper'): return state('System snapshots are unavailable because Snapper is not installed.', notices=[missing('snapper')])
         filesystem = run(['findmnt', '-n', '-o', 'FSTYPE', '/'])
         configured = Path('/etc/snapper/configs/root').exists()
+        if filesystem != 'btrfs' or not configured:
+            return state('System snapshots are unavailable because ' + ('the root filesystem is not Btrfs.' if filesystem != 'btrfs' else 'no root Snapper configuration exists.'), identity=[filesystem, configured])
         actions = []
         if configured:
             actions = [action('list', 'List system snapshots'), action('create', 'Create system snapshot'),

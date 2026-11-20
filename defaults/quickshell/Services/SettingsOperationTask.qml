@@ -18,6 +18,11 @@ SettingsTask {
         if (active) refresh(true)
         if (!active && arguments[0] === "disk-usage") status.running = false
     }
+    function launchUpdate() {
+        // The service injects the shared launcher callback.
+        if (terminalLauncher) terminalLauncher()
+    }
+    property var terminalLauncher: null
     property string dismissedJobId: ""
     poll.running: root.active || root.draft.pending || Boolean(root.data.job && ["starting", "running"].includes(root.data.job.phase))
 }

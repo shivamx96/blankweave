@@ -21,6 +21,7 @@ QtObject {
                 || !Number.isSafeInteger(Number(value)) || Number(value) < field.minimum || Number(value) > field.maximum))
                 errors[field.key] = "Enter a whole number from " + field.minimum + " to " + field.maximum + "."
         }
+        if (editing && editing.key === "time" && !values.time) errors.time = "Enter a valid date and time."
         return errors
     }
     readonly property bool valid: Object.keys(fieldErrors).length === 0

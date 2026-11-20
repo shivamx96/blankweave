@@ -4,6 +4,7 @@ import json
 from pathlib import Path
 import re
 import subprocess
+from zoneinfo import ZoneInfo
 from settings_operations import missing, notice, action, choice, field, installed, path_value, privileged, require, run, select, state
 
 
@@ -28,9 +29,9 @@ def status(domain):
         locale = run(['localectl', 'status'])
         return state('Time and region changes apply system-wide. Applications may need to restart after a region change.',
                      [f'Timezone: {zone}', f'Network time: {props.get("NTP", "unknown")}', f'Synchronized: {props.get("NTPSynchronized", "unknown")}', locale],
-                     [action('timezone', 'Set timezone', [field('zone', 'Timezone', zone, [choice(z) for z in zones])]),
+                     [action('timezone', 'Set timezone', [field('zone', 'Timezone', zone, [choice(z, z.replace('_', ' ') + ' (UTC' + datetime.datetime.now(ZoneInfo(z)).strftime('%z')[:3] + ':' + datetime.datetime.now(ZoneInfo(z)).strftime('%z')[3:] + ')') for z in zones])]),
                       action('ntp', 'Set clock synchronization', [field('enabled', 'Network time', props.get('NTP', 'yes'), [choice('yes', 'Automatic'), choice('no', 'Manual')])]),
-                      action('time', 'Set date and time', [field('time', 'Local date and time (YYYY-MM-DD HH:MM:SS)')], 'Automatic time must be off. Changing time affects running applications.'),
+                      *([action('time', 'Set date and time', [field('time', 'Date and time')], 'Changing time affects running applications.')] if props.get('NTP') == 'no' else []),
                       action('locale', 'Set system region', [field('locale', 'Generated locale (for example en_US.UTF-8)')], 'Change system-wide date, number, and currency formats. Sign in again to apply.')],
                      [zone, props.get('NTP'), locale])
     if domain == 'printers':

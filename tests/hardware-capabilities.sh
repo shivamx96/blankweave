@@ -30,7 +30,7 @@ assert_no_capability() {
 }
 
 laptop_sys=$test_root/laptop-sys
-mkdir -p "$laptop_sys/class/power_supply/BAT0" \
+mkdir -p "$laptop_sys/class/net/wlan0/wireless" "$laptop_sys/class/power_supply/BAT0" \
     "$laptop_sys/class/backlight/intel_backlight" \
     "$laptop_sys/class/bluetooth/hci0" \
     "$laptop_sys/class/drm/card0-eDP-1"
@@ -46,8 +46,11 @@ assert_capability cpu-intel
 assert_capability gpu-intel
 assert_capability audio-intel
 assert_capability battery
+assert_capability wifi
+[[ $(cat "$repository/packages/capabilities/wifi/packages.txt") == wireless-regdb ]]
 assert_capability internal-display
 assert_capability internal-backlight
+assert_capability display-brightness
 assert_capability bluetooth
 assert_capability gaming
 assert_no_capability gpu-nvidia
@@ -66,9 +69,11 @@ assert_capability cpu-amd
 assert_capability gpu-amd
 assert_capability gpu-nvidia
 assert_capability ddc-display
+assert_capability display-brightness
 assert_capability bluetooth
 assert_capability gaming
 assert_no_capability battery
+assert_no_capability wifi
 assert_no_capability internal-display
 
 capability_file=$test_root/capabilities.json

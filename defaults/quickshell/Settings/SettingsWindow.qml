@@ -64,7 +64,7 @@ FloatingWindow {
 
     property SettingsTask system: SettingsTask { script: "system-settings.py"; active: root.visible && !root.minimized && content.page !== null && content.page.id === "system" }
 
-    property SettingsTask notifications: SettingsTask { script: "notification-settings.py"; active: root.visible && !root.minimized && content.page !== null && content.page.id === "apps" }
+    property SettingsTask notifications: SettingsTask { script: "notification-settings.py"; active: root.visible && !root.minimized && content.page !== null && content.page.id === "alerts" }
 
     property SettingsDefaultApps defaultApps: SettingsDefaultApps {
         active: root.visible && !root.minimized && content.page !== null && content.page.id === "apps"
@@ -116,7 +116,9 @@ FloatingWindow {
         when: root.sound !== null && Boolean(root.sound.microphone)
     }
 
+    SettingsCapabilities { id: hardware }
     SettingsContent {
+        capabilities: hardware.capabilities
         onCopyRequested: text => Quickshell.clipboardText = text
         id: content
         anchors.fill: parent

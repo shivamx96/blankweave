@@ -55,18 +55,13 @@ def status(domain):
                        action('portal-reset', 'Reset portal decisions', [target], 'Forget saved portal decisions for this application. It may ask for access again.')]
         return state('Flatpak controls apply only to sandboxed applications. Audio access includes playback and microphone together. Device restrictions are not a universal camera switch. Native applications remain outside this permission model.', apps, actions, apps, [] if apps else [notice('not-configured', 'No user Flatpak applications installed', 'Open Installed applications to install a user Flatpak. Native packages and system-wide Flatpaks are not managed by these permission controls.', 'installed')])
     if domain == 'updates':
-        version = run([str(COMMAND), 'version']) if COMMAND.is_file() else 'Blankweave command is not installed.'
-        actions = []
-        if COMMAND.is_file():
-            actions += [action('check', 'Check Blankweave updates', cancellable=True),
-                        action('release-notes', 'Read release notes', cancellable=True),
-                        action('update', 'Apply Blankweave update', confirm='Open the existing interactive updater for authorization and progress. It preserves release validation and recovery records.')]
-        if installed('checkupdates'): actions.append(action('package-check', 'Check repository updates', cancellable=True))
-        if installed('pacman', 'ghostty'): actions.append(action('package-update', 'Update system packages', confirm='Open a full pacman system upgrade for transaction review and administrator authorization.'))
-        if installed('flatpak'): actions.append(action('flatpak-update', 'Update user Flatpaks', confirm='Update applications and runtimes in your user installation?'))
-        notices = [] if COMMAND.is_file() else [notice('missing-software', 'Blankweave updater is not installed', 'Complete or repair the Blankweave installation, then refresh. Available package-manager actions can still be used.')]
-        if not actions: notices.append(notice('missing-software', 'No update tools are available', 'Install the Blankweave desktop profile to restore its updater and package-management tools.'))
-        return state('Blankweave configuration rollback does not downgrade Arch packages. Interactive system updates continue in their own terminal when Settings closes.', [version], actions, str(COMMAND), notices)
+        release = release_status()
+        actions = [action('check', 'Check for updates', cancellable=True)] if COMMAND.is_file() else []
+        if release['restartRequired']: actions.append(action('restart', 'Restart', confirm='Restart this computer to finish updating? Save your work first.'))
+        result = state('Applying updates opens Ghostty: the updater needs sudo and prints a plan you must confirm. Blankweave rollback does not downgrade Arch packages.',
+                       ['Installed release: ' + release['installed'], 'Newest release: ' + release['newest']] + (['Restart required to finish updating.'] if release['restartRequired'] else []) + release['notes'], actions, release)
+        result['release'] = release
+        return result
     raise ValueError('Unknown application provider.')
 
 
@@ -112,17 +107,53 @@ def apply(domain, request):
         if command == 'reset': return run(['flatpak', 'override', '--user', '--reset', app])
         if command == 'portal-reset': return run(['flatpak', 'permission-reset', app])
     if domain == 'updates':
-        if command == 'check': return run([str(COMMAND), 'update', '--dry-run'], timeout=180)
-        if command == 'release-notes':
-            import urllib.request
-            request_url = urllib.request.Request('https://api.github.com/repos/shivamx96/blankweave/releases/latest', headers={'Accept': 'application/vnd.github+json', 'User-Agent': 'Blankweave-Settings'})
-            with urllib.request.urlopen(request_url, timeout=30) as response:
-                release = json.loads(response.read(262144))
-            return str(release.get('tag_name', 'Latest release')) + '\n' + str(release.get('body') or 'No published release notes.') + '\n' + str(release.get('html_url', ''))
+        if command == 'check': return run([str(COMMAND), 'update', '--check'], timeout=180)
+        if command == 'restart': return run(['systemctl', 'reboot'])
         if command == 'package-check': return run(['checkupdates'], timeout=180, codes=(0, 2)) or 'No package updates.'
         if command == 'flatpak-update': return run(['flatpak', 'update', '--user', '--noninteractive'], timeout=7200)
-        if command in ('update', 'package-update'):
-            args = [str(COMMAND), 'update'] if command == 'update' else ['sudo', 'pacman', '-Syu']
-            subprocess.Popen(['ghostty', '-e', *args], start_new_session=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-            return 'Updater opened in its own terminal. Review its transaction and completion there; this message does not indicate a successful update.'
     raise ValueError('Unknown application operation.')
+
+
+def release_status():
+    repository = Path(os.environ.get('XDG_DATA_HOME', Path.home() / '.local/share')) / 'blankweave/repository'
+    state_dir = Path(os.environ.get('XDG_STATE_HOME', Path.home() / '.local/state')) / 'blankweave'
+    installed_tag = (read(state_dir / 'installed-release-tag') or 'Unknown').strip()
+    newest = 'Unknown — check for updates'
+    notes = []
+    try:
+        # Reuse the updater's annotated-tag, ancestry and VERSION validation, read-only.
+        newest = run(['bash', '-c', 'source "$1/scripts/release-version.sh"; blankweave_release_select "$1" origin/main', 'settings', str(repository)])
+        notes = release_notes(read(repository / 'RELEASES.md') or '', installed_tag, newest)
+        if not notes and installed_tag != newest:
+            notes = tag_notes(run(['git', '-C', str(repository), 'tag', '-l', '--merged=' + newest, '--format=%(refname:short)%09%(objecttype)%09%(contents)%1e', 'v*']), installed_tag, newest)
+    except (ValueError, OSError): pass
+    runtime = os.environ.get('XDG_RUNTIME_DIR')
+    return dict(installed=installed_tag, newest=newest, notes=notes,
+                restartRequired=bool(runtime and (Path(runtime) / 'blankweave/restart-required').is_file()))
+
+
+def release_notes(text, installed_tag, newest):
+    import re
+    def version(value):
+        match = re.fullmatch(r'v?(\d+)\.(\d+)\.(\d+)', value)
+        return tuple(map(int, match.groups())) if match else None
+    low, high = version(installed_tag), version(newest)
+    if low is None or high is None: return []
+    sections = re.split(r'(?m)^## (?:v)?(\d+\.\d+\.\d+)\s*$', text)
+    return ['Version ' + sections[i] + '\n' + sections[i+1].strip()
+            for i in range(1, len(sections), 2) if low < version(sections[i]) <= high]
+
+
+def tag_notes(text, installed_tag, newest):
+    import re
+    def version(tag):
+        return tuple(map(int, tag.lstrip('v').split('.')))
+    if not re.fullmatch(r'v?\d+\.\d+\.\d+', installed_tag): return []
+    selected = []
+    for record in text.split('\x1e'):
+        fields = record.strip().split('\t', 2)
+        if len(fields) != 3: continue
+        tag, kind, body = fields
+        if kind == 'tag' and re.fullmatch(r'v\d+\.\d+\.\d+', tag) and version(installed_tag) < version(tag) <= version(newest):
+            selected.append((version(tag), tag + '\n' + body))
+    return [note for _, note in sorted(selected)] or ['No release notes available.']

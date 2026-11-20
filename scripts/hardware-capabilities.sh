@@ -163,11 +163,20 @@ hardware_capabilities_detect() {
         *) return 1 ;;
     esac
 
+    for line in "$sys_root"/class/net/*; do
+        if [[ -d $line/wireless || -e $line/phy80211 ]]; then
+            hardware_capability_add wifi
+            break
+        fi
+    done
     bluetooth_adapters=("$sys_root"/class/bluetooth/hci*)
     if (( ${#bluetooth_adapters[@]} > 0 )) \
         || grep -Eiq 'Bluetooth' <<< "$pci_output" \
         || grep -Eiq 'Bluetooth' <<< "$usb_output"; then
         hardware_capability_add bluetooth
+    fi
+    if hardware_capability_has internal-backlight || hardware_capability_has ddc-display; then
+        hardware_capability_add display-brightness
     fi
     shopt -u nullglob
 
@@ -208,7 +217,7 @@ hardware_capabilities_write_json() {
             separator=', '
         done
         printf '],\n'
-        for capability in battery internal-display internal-backlight ddc-display bluetooth gaming; do
+        for capability in battery internal-display internal-backlight ddc-display display-brightness bluetooth wifi gaming; do
             if hardware_capability_has "$capability"; then
                 printf '  "%s": true' "$capability"
             else

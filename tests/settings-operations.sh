@@ -30,3 +30,16 @@ grep -Fxq 'vpn apply' "$test_root/commands"
 grep -Fq 'BLANKWEAVE_STORAGE_VISIBLE=' "$repository/defaults/quickshell/Services/SettingsOperationTask.qml"
 grep -Fq 'arguments[0] === "disk-usage"'  "$repository/defaults/quickshell/Services/SettingsOperationTask.qml"
 
+# Hardware detection is read once; missing and malformed files fail open.
+cp "$repository/defaults/quickshell/Services/SettingsCapabilities.qml" "$test_root/Services/"
+cp "$repository/tests/quickshell/settings-capabilities.qml" "$test_root/shell.qml"
+printf '{"capabilities":["battery","wifi"]}\n' > "$test_root/valid.json"
+printf '{broken\n' > "$test_root/broken.json"
+if ! HOME="$test_root/home" XDG_CONFIG_HOME="$test_root/home/.config" \
+    XDG_RUNTIME_DIR="$test_root/runtime" CAPABILITIES_TEST_ROOT="$test_root" \
+    QT_QPA_PLATFORM=offscreen QT_QUICK_BACKEND=software timeout 10 qs \
+    -p "$test_root" > "$test_root/capabilities.log" 2>&1; then
+    cat "$test_root/capabilities.log"
+    exit 1
+fi
+grep -q SETTINGS_CAPABILITIES_PASSED "$test_root/capabilities.log" || { cat "$test_root/capabilities.log"; exit 1; }
