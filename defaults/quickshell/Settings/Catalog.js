@@ -142,43 +142,53 @@ function search(query) {
     return pages.filter(function(page) { return matches(page, query); });
 }
 
-// Search each setting independently; never combine words from unrelated rows.
-var searchAliases = {
-    "sound-alerts": "system bell beep alert event sounds",
-    "vpn": "vpn tailscale private network tunnel",
-    "datetime": "timezone time zone clock date locale region language ntp",
-    "assistive": "screen reader orca magnifier zoom on screen keyboard accessibility",
-    "backup": "backup backups back up schedule retention restore point restic",
-    "restore": "restore recover recovery backup files",
-    "snapshots": "snapshots snapper system recovery",
-    "disk-usage": "disk space storage usage cleanup free space",
-    "installed": "install uninstall remove software packages applications",
-    "firmware": "firmware bios uefi device update",
-    "printers": "printer scanner print scan",
-    "hibernate": "hibernate hibernation resume swap"
-};
+// Canonical compounds make punctuation and common joined spellings equivalent.
+function normalize(value) {
+    return String(value || "").toLowerCase().replace(/[^a-z0-9]+/g, " ")
+        .replace(/\bwi\s+fi\b/g, "wifi")
+        .replace(/\bnight\s*light\b/g, "nightlight").trim();
+}
 
 function searchSettings(query, capabilities) {
-    var normalized = String(query || "").toLowerCase().trim();
+    var normalized = normalize(query);
     if (!normalized) return [];
     var terms = normalized.split(/\s+/);
-    var matches = [];
-    pages.forEach(function(page) {
-        page.groups.forEach(function(group) {
-            group.rows.forEach(function(row) {
-                if (!available(row, capabilities)) return;
-                var title = row.title.toLowerCase();
-                var own = [row.title, row.description, searchAliases[row.id] || ""].join(" ").toLowerCase();
-                var text = [own, page.title, group.title].join(" ").toLowerCase();
-                if (!terms.every(function(term) { return text.indexOf(term) !== -1; })) return;
-                var score = title === normalized ? 0 : title.indexOf(normalized) !== -1 ? 1
-                    : terms.every(function(term) { return own.indexOf(term) !== -1; }) ? 2 : 3;
-                matches.push({id: row.id, pageId: page.id, title: row.title,
-                    description: row.description, breadcrumb: page.title + " › " + group.title, score: score});
+    function collect(fallback) {
+        var results = [];
+        var order = 0;
+        pages.forEach(function(page) {
+            page.groups.forEach(function(group) {
+                group.rows.forEach(function(row) {
+                    if (!available(row, capabilities)) return;
+                    var fields = [row.title, (row.aliases || []).join(" "), row.description]
+                        .map(function(value) { return normalize(value).split(/\s+/); });
+                    if (/\.[a-z0-9]+$/i.test(String(query).trim())) {
+                        fields.push(normalize([row.file || page.file || "", (row.relatedFiles || []).join(" ")].join(" ")).split(/\s+/));
+                    }
+                    var score = 0;
+                    var matched = terms.every(function(term) {
+                        var best = Infinity;
+                        fields.forEach(function(words, field) {
+                            words.forEach(function(word) {
+                                if (word === term) best = Math.min(best, field * 10);
+                                else if (word.indexOf(term) === 0) best = Math.min(best, field * 10 + 1);
+                                else if (fallback && word.indexOf(term) !== -1) best = Math.min(best, field * 10 + 2);
+                            });
+                        });
+                        score += best;
+                        return best !== Infinity;
+                    });
+                    if (matched) results.push({id: row.id, pageId: page.id, title: row.title,
+                        description: row.description, breadcrumb: page.title + " › " + group.title,
+                        score: score, order: order});
+                    order++;
+                });
             });
         });
-    });
-    return matches.sort(function(a, b) { return a.score - b.score; });
+        return results.sort(function(a, b) { return a.score - b.score || a.order - b.order; });
+    }
+    var primary = collect(false);
+    return primary.length ? primary : collect(true);
 }
 
 // null means detection could not be read: preserve access to all controls.

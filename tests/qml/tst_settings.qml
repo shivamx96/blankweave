@@ -329,6 +329,49 @@ TestCase {
         compare(content.page.id, "system")
         compare(content.highlightedSetting, "datetime")
     }
+    function test_search_vocabulary_data() {
+        return [
+            {query:"repeat delay", row:"layouts"}, {query:"caps", row:"layouts"},
+            {query:"compose", row:"layouts"}, {query:"secondary click", row:"pointer"},
+            {query:"wifi", row:"wifi"}, {query:"trackpad", row:"pointer"},
+            {query:"dnd", row:"dnd"}, {query:"browser", row:"defaults"},
+            {query:"font", row:"fonts"}, {query:"cursor", row:"cursor"},
+            {query:"suspend", row:"screen-off"}, {query:"autostart", row:"startup"},
+            {query:"night shift", row:"night-light"}, {query:"scale", row:"scale"},
+            {query:"Wi-Fi", row:"wifi"}, {query:"  WI  FI! ", row:"wifi"},
+            {query:"nightlight", row:"night-light"}, {query:"night light", row:"night-light"},
+            {query:"blue light", row:"night-light"}, {query:"backup retention", row:"backup"},
+            {query:"default apps", row:"defaults"}, {query:"login items", row:"startup"},
+            {query:"typeface", row:"fonts"}, {query:"sleep", row:"screen-off"},
+            {query:"hidpi", row:"scale"}, {query:"dark mode", row:"mode"},
+            {query:"background", row:"wallpaper"}, {query:"speaker", row:"output"},
+            {query:"microphone", row:"input"}, {query:"bluetooth", row:"bluetooth"},
+            {query:"vpn", row:"vpn"}, {query:"tethering", row:"hotspot"},
+            {query:"charge limit", row:"battery-health"}, {query:"hotkeys", row:"shortcuts"},
+            {query:"upgrade", row:"updates"}, {query:"accounts", row:"accounts"},
+            {query:"zzxqv nonsense", row:null}, {query:"ailscale", row:"vpn"}
+        ].map(entry => ({tag:entry.query, query:entry.query, row:entry.row}))
+    }
+    function test_search_vocabulary(data) {
+        const results = Catalog.searchSettings(data.query)
+        if (data.row === null) compare(results.length, 0)
+        else { verify(results.length > 0); compare(results[0].id, data.row) }
+    }
+    function test_every_row_has_aliases() {
+        for (const page of Catalog.pages)
+            for (const group of page.groups)
+                for (const row of group.rows) verify(row.aliases.length > 0, row.id)
+        verify(!Catalog.searchSettings("scale").some(row => row.id === "vpn"))
+        const first = Catalog.searchSettings("text size").map(row => row.id).join(",")
+        compare(Catalog.searchSettings("text size").map(row => row.id).join(","), first)
+    }
+    function test_display_confirmation_helper() {
+        content.selectedPage = "displays"
+        wait(0)
+        for (const id of ["resolution", "mirroring", "display-presets"])
+            verify(findChild(content, "settingsHelper_" + id).text.includes("20 seconds"))
+    }
+
     function test_search_aliases_and_row_scoping() {
         compare(Catalog.searchSettings("time zone")[0].id, "datetime")
         compare(Catalog.searchSettings("screen reader")[0].id, "assistive")
