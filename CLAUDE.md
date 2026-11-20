@@ -979,6 +979,16 @@ argument vector, and the entry's working directory; `execute()` runs such an
 entry with no terminal attached, so it would do nothing visible. Never
 rebuild a shell string from `execString`. Other entries keep `execute()`.
 
+Both clipboard watchers store through `shell/clipboard-store.sh`, which
+skips anything the source marked sensitive (`CLIPBOARD_STATE=sensitive` or
+the `x-kde-passwordManagerHint` type with value `secret`) and otherwise
+hands stdin straight to `cliphist store` without reading, writing, or
+logging it. In the clipboard view, Delete or Shift+Delete removes the
+selected entry, only while the query cursor sits at the end with nothing
+selected, and Clear history arms first and names the entry count. Both pass
+ids as arguments and update from the completed command, and a reload keeps
+the previous list on screen until the new one arrives.
+
 With a query, the applications view also lists matching Settings rows after
 the applications, then matching system actions: Lock, Suspend, Restart, Shut
 down, the session exit with the power panel's truthful label, Toggle dark

@@ -8,6 +8,7 @@ import Quickshell.Widgets
 import "../Services/LauncherUsage.js" as Usage
 import "../Components"
 import "Launch.js" as Launch
+import "Clipboard.js" as Clipboard
 import "../Settings/Catalog.js" as Catalog
 import "../Services/PowerActions.js" as PowerActions
 
@@ -24,6 +25,15 @@ PanelWindow {
     readonly property string mode: session.mode
     property var clipboardEntries: []
     property bool clipboardAvailable: true
+    property bool clipboardLoaded: false
+    readonly property bool clipboardLoading: clipboardQuery.running
+    readonly property bool showEmpty: Clipboard.showEmpty(root.results.length,
+        root.clipboardMode, root.clipboardLoaded, root.clipboardLoading)
+    property int deletionIndex: -1
+    property var runClipboardMutation: command => {
+        clipboardMutation.command = command
+        clipboardMutation.running = true
+    }
     readonly property var applicationEntries: DesktopEntries.applications
         ? DesktopEntries.applications.values
         : []
@@ -292,10 +302,50 @@ PanelWindow {
     // Read the authoritative mode directly when starting a clipboard query.
     function refresh() {
         if (root.session.mode === "clipboard" && !clipboardQuery.running) {
-            root.clipboardEntries = []
             clipboardQuery.running = true
         }
         Qt.callLater(() => searchField.forceActiveFocus())
+    }
+
+    function canDeleteClipboard(cursor, length, selectionStart, selectionEnd) {
+        return root.clipboardMode && Clipboard.canDelete(cursor, length, selectionStart, selectionEnd)
+    }
+
+    function deleteClipboard() {
+        if (!root.clipboardMode || clipboardMutation.running || clipboardQuery.running) return
+        const item = root.results[root.session.selectedIndex]
+        if (!item) return
+        root.armedAction = ""
+        root.deletionIndex = root.session.selectedIndex
+        root.runClipboardMutation(["sh", "-c", 'cliphist delete "$1"', "sh", String(item.clipboardId)])
+    }
+
+    function clearClipboard() {
+        if (!root.clipboardMode || clipboardMutation.running || clipboardQuery.running || !root.clipboardEntries.length) return
+        if (root.armedAction !== "clipboard-clear") {
+            root.armedAction = "clipboard-clear"
+            return
+        }
+        root.armedAction = ""
+        root.deletionIndex = 0
+        root.runClipboardMutation(["cliphist", "wipe"])
+    }
+
+    function completeClipboardLoad(text) {
+        root.clipboardEntries = root.parseClipboard(text)
+        root.clipboardLoaded = true
+        if (root.deletionIndex >= 0) {
+            root.session.selectedIndex = root.clampSelection(root.deletionIndex)
+            root.deletionIndex = -1
+        } else root.session.selectedIndex = root.clampSelection(root.session.selectedIndex)
+    }
+
+    Process {
+        id: clipboardMutation
+        onExited: (exitCode, exitStatus) => {
+            if (exitCode === 0) root.refresh()
+            else root.deletionIndex = -1
+        }
     }
 
     Connections {
@@ -315,7 +365,7 @@ PanelWindow {
         command: ["cliphist", "list"]
         stdout: StdioCollector {
             waitForEnd: true
-            onStreamFinished: root.clipboardEntries = root.parseClipboard(text)
+            onStreamFinished: root.completeClipboardLoad(text)
         }
         onExited: (exitCode, exitStatus) => {
             root.clipboardAvailable = exitCode === 0
@@ -473,6 +523,14 @@ PanelWindow {
                         root.closeLauncher()
                         event.accepted = true
                     }
+                    else if (event.key === Qt.Key_Delete
+                        && !(event.modifiers & (Qt.ControlModifier | Qt.AltModifier | Qt.MetaModifier))
+                        && root.canDeleteClipboard(
+                        searchField.cursorPosition, searchField.length,
+                        searchField.selectionStart, searchField.selectionEnd)) {
+                        root.deleteClipboard()
+                        event.accepted = true
+                    }
                     else if (event.key === Qt.Key_Down) {
                         root.moveSelection(1)
                         event.accepted = true
@@ -533,6 +591,25 @@ PanelWindow {
                 font.weight: Font.DemiBold
                 font.letterSpacing: 1.1
                 renderType: Text.NativeRendering
+            }
+
+            RowLayout {
+                visible: root.clipboardMode
+                Layout.fillWidth: true
+                Text {
+                    Layout.fillWidth: true
+                    text: "ENTER copy · DEL / SHIFT+DEL delete at query end"
+                    color: root.theme.textMuted
+                    font.family: root.theme.monoFontFamily
+                    font.pixelSize: root.theme.microTextSize
+                }
+                Button {
+                    text: root.armedAction === "clipboard-clear"
+                        ? "Confirm clear " + root.clipboardEntries.length + " entries" : "Clear history"
+                    enabled: root.clipboardEntries.length > 0 && !clipboardMutation.running && !clipboardQuery.running
+                    onClicked: root.clearClipboard()
+                    onActiveFocusChanged: if (!activeFocus && root.armedAction === "clipboard-clear") root.armedAction = ""
+                }
             }
 
             ListView {
@@ -683,7 +760,7 @@ PanelWindow {
             }
 
             ColumnLayout {
-                visible: root.results.length === 0
+                visible: root.showEmpty
                 Layout.fillWidth: true
                 Layout.fillHeight: true
                 spacing: 6

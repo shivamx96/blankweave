@@ -6,8 +6,8 @@ local startup_commands = {
     "quickshell -n -p ~/.local/share/blankweave/quickshell",
     "dunst",
     "~/.local/share/blankweave/shell/idle-policy.sh",
-    "wl-paste --type text --watch cliphist store",
-    "wl-paste --type image --watch cliphist store",
+    "wl-paste --type text --watch ~/.local/share/blankweave/shell/clipboard-store.sh",
+    "wl-paste --type image --watch ~/.local/share/blankweave/shell/clipboard-store.sh",
     "/usr/lib/polkit-gnome/polkit-gnome-authentication-agent-1",
 }
 
