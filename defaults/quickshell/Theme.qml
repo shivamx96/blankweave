@@ -124,6 +124,7 @@ QtObject {
     readonly property int headingWeight: designValue("typography", "headingWeight", 600)
     readonly property int headingSize: Math.round(designValue("typography", "headingSize", 22) * textScale)
     readonly property real borderWidth: Math.max(highContrast ? 1 : 0, designValue("shape", "borderWidth", 1))
+    readonly property color sliderTrack: highContrast ? cssColor("#767676") : outlineStrong
     readonly property int motionDuration: reducedMotion ? 0 : designValue("motion", "duration", 150)
     readonly property int motionEasing: {
         const name = designValue("motion", "easing", "outCubic")

@@ -371,7 +371,7 @@ PanelWindow {
                 text: root.session.searchText
                 color: root.theme.text
                 placeholderTextColor: root.theme.textMuted
-                selectionColor: root.theme.accent
+                selectionColor: root.theme.accentBright
                 selectedTextColor: root.theme.surfaceRaised
                 font.family: root.theme.fontFamily
                 font.pixelSize: root.theme.textSize + 1

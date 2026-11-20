@@ -961,9 +961,37 @@ public entry point and delegates to the deployed script, adding the sudo
 step after `set`. The display panel hosts the same choice: its theme row is
 built from `theme-apply.sh list` (whose entries carry each mode's accent for
 the swatch), runs `theme-apply.sh set <id>`, and shows a hint while `status`
-reports `system.pending`. Fonts, geometry, translucency, animations, and the
-cursor size are deliberately not part of a theme; they are the rice's
-identity and stay in `Theme.qml`, `hyprland.lua`, and `env.lua`.
+reports `system.pending`. Shell fonts, geometry, and motion come from `design`
+tokens through `Theme.qml`; palette alpha controls surface translucency and
+`design.materials` controls optional gradients. User text scale, cursor size,
+and accessibility preferences stay outside the theme (`interface.json` and
+`accessibility.json`); high contrast and reduced motion take precedence over
+theme values. Compositor gaps, opacity, and animations remain in the
+Hyprland configs, not in `design`.
+
+Shape reaches every surface through tokens, so a theme's corners are one
+decision. `panelRadius`, `controlRadius`, and `borderWidth` drive the shell,
+the Hyprlock panel and its borders, and Dunst's frame; `windowRadius` and
+`windowBorderWidth` drive Hyprland windows, `notificationRadius` Dunst's
+corners, and `lockFieldRadius` the Hyprlock input. Their defaults are the
+values Obsidian and Moss have always rendered (windows 10 and 2,
+notifications square, lock field 10), and `tests/theme_render_checks.py`
+asserts those stay put; Aurora sets its own. The rendered `theme.lua` also
+carries a per-mode window shadow (a low-alpha canvas tint in dark mode, a
+much lighter neutral in light mode), because Hyprland's default shadow draws
+a black keyline around every light-mode window; `hyprland.lua` keeps its
+`pcall` and per-field fallbacks.
+
+Colour roles the shell relies on: secondary text is `textMuted` with no
+extra opacity (stacking opacity on it fell below 2:1 in light mode); accent
+text and text selection use `accentBright`; `divider` is only a decorative
+grouping line and never a foreground; slider tracks, bar separators, and
+small inactive marks use `outlineStrong`; a slider's filled range and handle
+stay `accent`. `tests/theme-apply.sh` runs `tests/theme_contrast.py` over
+every bundled theme and mode with alpha compositing: text, secondary,
+status, lock, notification, and accent text need 4.5:1; slider track and
+fill against their surface, bar separators, and active bar marks need 3:1;
+decorative dividers 1.5:1. A new or retuned theme has to pass it.
 
 ### Web apps
 

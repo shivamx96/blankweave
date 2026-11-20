@@ -55,7 +55,7 @@ RowLayout {
                     Layout.preferredWidth: Math.max(16, badgeLabel.implicitWidth + 8)
                     Layout.preferredHeight: 16
                     radius: height / 2
-                    color: tab.current ? root.theme.accentBright : root.theme.divider
+                    color: tab.current ? root.theme.accentBright : root.theme.textMuted
 
                     Text {
                         id: badgeLabel

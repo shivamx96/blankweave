@@ -38,7 +38,7 @@ Item {
         anchors.verticalCenter: parent.verticalCenter
         width: 2
         height: root.active ? 24 : 12
-        color: root.active ? root.theme.accentBright : root.theme.divider
+        color: root.active ? root.theme.accentBright : root.theme.outlineStrong
 
         Behavior on height { NumberAnimation { duration: Math.round(root.theme.motionDuration * 140 / 150) } }
     }

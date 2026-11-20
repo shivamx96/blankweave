@@ -13,8 +13,8 @@ Rectangle {
     gradient: Gradient {
         orientation: Gradient.Vertical
         GradientStop { position: 0; color: "transparent" }
-        GradientStop { position: 0.22; color: theme.divider }
-        GradientStop { position: 0.78; color: theme.divider }
+        GradientStop { position: 0.22; color: theme.outlineStrong }
+        GradientStop { position: 0.78; color: theme.outlineStrong }
         GradientStop { position: 1; color: "transparent" }
     }
 }

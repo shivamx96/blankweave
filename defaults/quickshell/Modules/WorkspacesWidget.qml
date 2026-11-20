@@ -96,7 +96,6 @@ Item {
                     color: workspaceButton.activeWorkspace
                         ? theme.accentBright
                         : (workspaceButton.occupied ? theme.text : theme.textMuted)
-                    opacity: workspaceButton.occupied || workspaceButton.activeWorkspace ? 1 : 0.55
                     font.family: theme.fontFamily
                     font.pixelSize: theme.smallTextSize
                     font.weight: Font.DemiBold

@@ -29,7 +29,7 @@ hl.config({
     general = {
         gaps_in = 2,
         gaps_out = 4,
-        border_size = 2,
+        border_size = theme.border_size or 2,
         col = {
             active_border = {
                 colors = theme.active_border,
@@ -64,7 +64,12 @@ hl.config({
         force_zero_scaling = true,
     },
     decoration = {
-        rounding = 10,
+        rounding = theme.rounding or 10,
+        shadow = {
+            color = theme.shadow_color or "rgba(05080f55)",
+            range = theme.shadow_range or 8,
+            offset = theme.shadow_offset or { 0, 2 },
+        },
         active_opacity = 1.0,
         inactive_opacity = 1.0,
         blur = {

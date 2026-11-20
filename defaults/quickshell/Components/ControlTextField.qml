@@ -12,7 +12,7 @@ TextField {
     rightPadding: root.theme.spacing("lg")
     color: theme.text
     placeholderTextColor: theme.textMuted
-    selectionColor: theme.accent
+    selectionColor: theme.accentBright
     selectedTextColor: theme.surfaceRaised
     echoMode: secret ? TextInput.Password : TextInput.Normal
     font.family: theme.fontFamily

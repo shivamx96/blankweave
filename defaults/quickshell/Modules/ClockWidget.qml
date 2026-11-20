@@ -221,19 +221,18 @@ WidgetFrame {
                             if (calendarCell.isDate && !Boolean(calendarCell.modelData.inMonth))
                                 return root.theme.textMuted
                             if (calendarCell.isWeek || calendarCell.modelData.kind === "weekHeader")
-                                return root.theme.divider
+                                return root.theme.textMuted
                             if (calendarCell.modelData.kind === "dayHeader")
                                 return root.theme.textMuted
                             return root.theme.text
                         }
-                        opacity: calendarCell.isDate && !Boolean(calendarCell.modelData.inMonth) ? 0.5 : 1
                         font.family: calendarCell.isWeek || calendarCell.modelData.kind === "weekHeader"
                             ? root.theme.monoFontFamily
                             : root.theme.fontFamily
                         font.pixelSize: calendarCell.modelData.kind === "dayHeader"
                             || calendarCell.modelData.kind === "weekHeader"
                             ? root.theme.microTextSize
-                            : root.theme.smallTextSize
+                            : root.theme.textSize
                         font.weight: calendarCell.isDate && (Boolean(calendarCell.modelData.today)
                             || Boolean(calendarCell.modelData.selected))
                             ? Font.Bold
@@ -277,7 +276,7 @@ WidgetFrame {
                     ? root.theme.accentBright
                     : root.theme.text
                 font.family: root.theme.fontFamily
-                font.pixelSize: root.theme.smallTextSize
+                font.pixelSize: root.theme.textSize
                 font.weight: Font.DemiBold
                 renderType: Text.NativeRendering
             }

@@ -160,6 +160,9 @@ resolve_theme() {
             theme: $id,
             mode: $mode,
             design: $design,
+            windowShadow: (if $mode == "light"
+                then {color: ($variant.colors.text[0:7] + "18"), range: 12, x: 0, y: 2}
+                else {color: ($variant.colors.canvas[0:7] + "55"), range: 8, x: 0, y: 2} end),
             name: .name,
             wallpaper: ($variant.wallpaper | path_in_theme),
             folderColor: (.folderColor // null),

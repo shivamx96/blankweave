@@ -235,6 +235,7 @@ for theme_file in "$data"/themes/*/theme.json; do
         "$script" set "$theme_id"
         "$script" mode "$theme_mode"
         assert_rendered
+        python3 "$repository/tests/theme_contrast.py" "$state"
         [[ $(jq -r '.theme' "$state") == "$theme_id" ]]
         [[ $(jq -r '.mode' "$state") == "$theme_mode" ]]
         [[ -f $(jq -r '.wallpaper' "$state") ]]
