@@ -530,9 +530,10 @@ monitor with focus following, so repeated presses cycle a workspace through
 the displays; the keybinding is a Lua function (`summon_workspace` in
 `keybindings.lua`) and the bar mirrors that logic in `activateWorkspace`,
 so keep the two in step. Each bar's
-`WorkspacesWidget` therefore lists only the workspaces on its own monitor
-(the 1–5 placeholders plus anything else living there, minus anything shown on
-another monitor). Under the Lua config, `hyprctl dispatch` takes Lua and the
+`WorkspacesWidget` starts with the 1–5 placeholders and adds existing ids 6–10
+on its monitor (or with no monitor name), omitting any workspace assigned to
+another monitor whether visible or not, and all ids outside 1–10. Under the Lua
+config, `hyprctl dispatch` takes Lua and the
 Hyprlang dispatcher names are rejected; the Lua option table is not validated,
 so confirm a new option behaviourally (a headless output plus
 `hyprctl workspaces -j`) rather than trusting an "ok".
@@ -615,12 +616,13 @@ it into the command string, because a preview is arbitrary clipboard content.
 ### Theme system
 
 A theme is a directory holding `theme.json` with two modes, `dark` and
-`light`. `Super+D` flips the mode of the active theme and never changes the
+`light`. `Super+T` flips the mode of the active theme and never changes the
 theme itself. Bundled themes live in `defaults/themes/<id>/` (mirrored to
 `~/.local/share/blankweave/themes/`), and a user theme in
 `~/.config/blankweave/themes/<id>/` shadows a bundled one with the same id. The
 default is `obsidian`: Obsidian in dark mode, Porcelain in light; `moss` is
-the bundled green counterpart (Moss and Sage).
+the bundled green counterpart (Moss and Sage), and `aurora` pairs Aurora Night
+with Aurora Day.
 
 Each mode carries:
 
@@ -639,8 +641,17 @@ Each mode carries:
   the bundled themes pair Bibata Modern Ice with dark and Modern Classic with
   light), and `label` (the mode's display name).
 
-Two things belong to the theme rather than a mode: `folderColor`, a Papirus
-folder colour name applied to every installed Papirus variant, and
+An optional `design` block can appear at the theme root and in each mode.
+`theme-apply.sh` validates and merges `defaults/themes/design-defaults.json`,
+the root overrides, then the active mode's overrides. Only the defaults' known
+tokens are accepted: `spacing`, `shape` (shell, window, notification, and
+lock-field radii and border widths), `typography` (families, sizes, weights),
+`sizes` (bar, widget, and icon dimensions), `motion` (duration and easing), and
+`materials` (gradient enablement, colours, and direction). Aurora uses root
+shape, spacing, motion, and gradient settings with per-mode gradient colours.
+
+Two system treatments belong to the theme rather than a mode: `folderColor`,
+a Papirus folder colour name applied to every installed Papirus variant, and
 `plymouth`, the `logo` and `progressBar` PNGs (relative to the theme
 directory) for the boot splash, which always uses the dark mode's canvas and
 accent because the firmware and console around it are dark. Both need root,
@@ -990,7 +1001,10 @@ never mutate host input settings from automated tests.
 1. Copy `defaults/themes/obsidian/` to `defaults/themes/<id>/`, or to
    `~/.config/blankweave/themes/<id>/` for a personal theme, and edit
    `theme.json`. Both modes and every palette token are required; wallpaper
-   paths are relative to the theme directory.
+   paths are relative to the theme directory. Optionally add root and/or
+   per-mode `design` overrides using the tokens in
+   `defaults/themes/design-defaults.json`; omitted tokens inherit defaults,
+   and mode overrides win over root overrides.
 2. Render the wallpapers with `scripts/render-wallpaper.py <theme.json>
    <dark|light> <output>` (runs under `uv`, needs no install). The
    composition is fixed — a tilted field with a luminous ribbon and fine
@@ -1042,15 +1056,16 @@ never mutate host input settings from automated tests.
   `#rrggbb`), `plymouth` (`r, g, b` as 0–1 floats for
   `Window.SetBackground*Color`). Hyprlock needs `##` before a Pango hex colour, so that template
   writes `#{{lock.placeholder:rgb}}`
-- Quickshell colours come from the resolved theme through `Theme.qml`;
-  geometry and fonts stay in `Theme.qml`
+- Quickshell colours and design tokens come from the resolved theme through
+  `Theme.qml`; geometry, fonts, motion, and gradients inherit shared defaults
+  with root and per-mode overrides, subject to user sizing and accessibility
 - GTK3 apps (Thunar) don't react to live gsettings changes on Hyprland — only libadwaita apps do
 - Never switch `gtk-theme` between `Adwaita` and `Adwaita-dark` to express the
   mode. Chromium, and so every Electron app, derives the colour scheme it
   gives the page from the window background of the GTK theme it has loaded
   and recomputes it on every `gtk-theme-name` change; `Adwaita-dark`
   evaluates light there and overrides the portal's `color-scheme`, so
-  Obsidian and T3 Code followed the first `Super+D` after launch and ignored
+  Obsidian and T3 Code followed the first `Super+T` after launch and ignored
   every later one. The name stays `Adwaita` and the portal's `SetDarkTheme`
   flips GTK's prefer-dark-theme itself. GTK 3 never restyled on the name
   flip anyway. Verify Electron behaviour by launching the app with

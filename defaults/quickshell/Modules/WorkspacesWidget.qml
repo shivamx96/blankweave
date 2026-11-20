@@ -8,10 +8,10 @@ Item {
     required property var bar
     required property var theme
 
-    // Workspaces follow focus between monitors, so each bar lists the ones
-    // living on its own monitor: the 1-5 placeholders plus whatever else is
-    // here, minus anything currently shown on another monitor (its bar has
-    // it). Super+N or a click pulls a workspace over from elsewhere, and
+    // Each bar starts with the 1-5 placeholders and adds existing ids 6-10
+    // on its own monitor (or with no monitor name), omitting any workspace
+    // assigned to another monitor whether visible or not, and ids outside 1-10.
+    // Super+N or a click pulls a workspace over from elsewhere, and
     // clicking the one already showing here sends it on to the next monitor.
     readonly property var workspaceIds: {
         const ids = [1, 2, 3, 4, 5]
