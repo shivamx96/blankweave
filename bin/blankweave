@@ -399,7 +399,8 @@ command_theme() {
         list|status|set|mode|toggle|sync|lint) ;;
         *) unknown_command "$1" 'list status set mode toggle sync lint'; return 2 ;;
     esac
-    require_normal_user
+    # Lint only reads themes, so it also runs in root-only contexts such as CI.
+    [[ $1 == lint ]] || require_normal_user
     [[ -x "$script" ]] || die "theme support is not deployed yet; run: blankweave update --reapply"
     case "${1:-}" in
         lint)
