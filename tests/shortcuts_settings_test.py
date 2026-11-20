@@ -124,6 +124,54 @@ class ShortcutTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError,'preserved'):self.helper.apply(request)
         self.assertEqual(target.read_text(),'personal')
 
+    def test_feedback_commands_and_silent_fallback(self):
+        script = """
+local dispatcher = setmetatable({}, {__index=function(self, key) return self end, __call=function() return function() end end})
+dispatcher.exec_cmd = function(command) return command end
+hl = {dsp=dispatcher, bind=function(keys, action, options)
+ if type(action) == "string" then print(options.description .. "\\t" .. action) end
+end}
+dofile(arg[0]); os.exit(0)
+"""
+        result = subprocess.run(['lua', '-e', script, str(REPO/'defaults/hypr/keybindings.lua')], check=True, text=True, capture_output=True)
+        commands = dict(line.split('\t', 1) for line in result.stdout.splitlines())
+        prefix = 'qs ipc -n -p "$HOME/.local/share/blankweave/quickshell" call blankweave '
+        expected = {
+            'volume-up': 'volume up || wpctl set-volume -l 1.0 @DEFAULT_AUDIO_SINK@ 5%+',
+            'volume-down': 'volume down || wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-',
+            'volume-mute': 'volume mute || wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle',
+            'mic-mute': 'micMute || wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle',
+        }
+        for action, command in expected.items():
+            self.assertEqual(commands['blankweave:' + action], prefix + command)
+        connector = "\"$(hyprctl monitors -j | jq -r '.[] | select(.focused) | .name')\""
+        for action in ['up', 'down']:
+            self.assertEqual(commands['blankweave:brightness-' + action], prefix + 'brightness ' + action + ' || ~/.local/share/blankweave/shell/brightness.sh ' + action + ' 5 ' + connector)
+        self.assertEqual(commands['blankweave:media-stop'], '~/.local/share/blankweave/shell/open-default.sh command playerctl stop')
+        for action, mode in [('screenshot-print', 'screen'), ('screenshot', 'screen'), ('screenshot-region', 'region'), ('screenshot-window', 'window')]:
+            self.assertEqual(commands['blankweave:' + action], '~/.local/share/blankweave/shell/screenshot.sh ' + mode)
+        self.assertNotIn('notify-send', (REPO/'defaults/shell/brightness.sh').read_text())
+
+    def test_retired_monitor_binding_preserves_other_preferences(self):
+        old = {'version': 1, 'bindings': {'move-monitor': 'SUPER + SHIFT + K',
+                                        'terminal': 'SUPER + CTRL + F8'}}
+        normalized = m.validate(old)
+        self.assertEqual(normalized['bindings'], {'terminal': 'SUPER + CTRL + F8'})
+        self.assertNotIn('move-monitor', m.render(old))
+        self.assertIn('move-monitor', old['bindings'])
+
+    def test_new_defaults_have_no_conflicts(self):
+        rows = self.bindings({})
+        # Optional voice profile reserves Super+D and both F12 events.
+        rows += [dict(description='voice', key=k, modmask=mask, keycode=0, submap='')
+                 for k, mask in [('d', 64), ('F12', 0), ('F12', 0)]]
+        self.assertNotIn('move-monitor', {r['id'] for r in m.catalog()})
+        for row in m.catalog():
+            self.assertFalse(self.helper.conflict(rows, row['id'], row['default']), row['id'])
+        for key in ['mouse:272', 'mouse:273']:
+            with self.assertRaises(ValueError):
+                m.chord('SUPER + ' + key)
+
     def test_lua_catalog_and_callbacks(self):
         # Execute the real file with harmless dispatcher stubs; its declarations
         # must match the catalog, including workspace callbacks and repeat flags.

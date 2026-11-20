@@ -21,8 +21,8 @@ KEYS = list('ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789') + ['F' + str(i) for i in ran
     'Return', 'Tab', 'Escape', 'space', 'comma', 'period', 'slash', 'minus', 'equal',
     'bracketleft', 'bracketright', 'backslash', 'grave', 'Left', 'Right', 'Up', 'Down',
     'Home', 'End', 'Page_Up', 'Page_Down', 'Insert', 'Delete', 'BackSpace', 'Print',
-    'XF86AudioRaiseVolume', 'XF86AudioLowerVolume', 'XF86AudioMute', 'XF86AudioPlay',
-    'XF86AudioPause', 'XF86AudioNext', 'XF86AudioPrev', 'XF86MonBrightnessUp', 'XF86MonBrightnessDown', 'XF86PowerOff']
+    'XF86PowerOff', 'XF86AudioRaiseVolume', 'XF86AudioLowerVolume', 'XF86AudioMute', 'XF86AudioPlay',
+    'XF86AudioMicMute', 'XF86AudioStop', 'XF86AudioPause', 'XF86AudioNext', 'XF86AudioPrev', 'XF86MonBrightnessUp', 'XF86MonBrightnessDown']
 
 
 def catalog():

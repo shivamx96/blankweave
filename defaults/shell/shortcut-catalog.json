@@ -110,63 +110,88 @@
     "label": "Raise volume",
     "group": "Media & brightness",
     "default": "XF86AudioRaiseVolume",
-    "repeat": true
+    "repeat": true,
+    "locked": true
   },
   {
     "id": "volume-down",
     "label": "Lower volume",
     "group": "Media & brightness",
     "default": "XF86AudioLowerVolume",
-    "repeat": true
+    "repeat": true,
+    "locked": true
   },
   {
     "id": "volume-mute",
     "label": "Mute audio",
     "group": "Media & brightness",
     "default": "XF86AudioMute",
-    "repeat": false
+    "repeat": false,
+    "locked": true
+  },
+  {
+    "id": "mic-mute",
+    "label": "Mute microphone",
+    "group": "Media & brightness",
+    "default": "XF86AudioMicMute",
+    "repeat": false,
+    "locked": true
   },
   {
     "id": "media-play",
     "label": "Play / pause media",
     "group": "Media & brightness",
     "default": "XF86AudioPlay",
-    "repeat": false
+    "repeat": false,
+    "locked": true
   },
   {
     "id": "media-pause",
     "label": "Pause media",
     "group": "Media & brightness",
     "default": "XF86AudioPause",
-    "repeat": false
+    "repeat": false,
+    "locked": true
   },
   {
     "id": "media-next",
     "label": "Next track",
     "group": "Media & brightness",
     "default": "XF86AudioNext",
-    "repeat": false
+    "repeat": false,
+    "locked": true
   },
   {
     "id": "media-previous",
     "label": "Previous track",
     "group": "Media & brightness",
     "default": "XF86AudioPrev",
-    "repeat": false
+    "repeat": false,
+    "locked": true
+  },
+  {
+    "id": "media-stop",
+    "label": "Stop media",
+    "group": "Media & brightness",
+    "default": "XF86AudioStop",
+    "repeat": false,
+    "locked": true
   },
   {
     "id": "brightness-up",
     "label": "Raise brightness",
     "group": "Media & brightness",
     "default": "XF86MonBrightnessUp",
-    "repeat": true
+    "repeat": true,
+    "locked": true
   },
   {
     "id": "brightness-down",
     "label": "Lower brightness",
     "group": "Media & brightness",
     "default": "XF86MonBrightnessDown",
-    "repeat": true
+    "repeat": true,
+    "locked": true
   },
   {
     "id": "close-window",

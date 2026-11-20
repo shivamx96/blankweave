@@ -110,6 +110,32 @@ require(os.getenv("HOME") .. "/.config/hypr/hyprland")
                         str(self.config)], env=self.environment, check=True, timeout=10)
         self.verify()
 
+    def test_lock_recovery_options_and_binding(self):
+        # Capture the real defaults as they are passed to the compositor parser.
+        source = self.wrapper.read_text()
+        self.wrapper.write_text('''
+local config, bind = hl.config, hl.bind
+local locked, recovery = 0, false
+hl.config = function(options)
+    if options.misc and options.misc.allow_session_lock_restore ~= nil then
+        recovery = true
+        assert(options.misc.allow_session_lock_restore == true)
+        assert(options.misc.key_press_enables_dpms == true)
+        assert(options.misc.mouse_move_enables_dpms == true)
+    end
+    return config(options)
+end
+hl.bind = function(keys, action, options)
+    if options and options.locked then
+        locked = locked + 1
+        local allowed = {["blankweave:brightness-down"] = true, ["blankweave:brightness-up"] = true, ["blankweave:lock"] = true, ["blankweave:media-next"] = true, ["blankweave:media-pause"] = true, ["blankweave:media-play"] = true, ["blankweave:media-previous"] = true, ["blankweave:media-stop"] = true, ["blankweave:mic-mute"] = true, ["blankweave:volume-down"] = true, ["blankweave:volume-mute"] = true, ["blankweave:volume-up"] = true}
+        assert(allowed[options.description])
+    end
+    return bind(keys, action, options)
+end
+''' + source + '\nassert(recovery and locked == 12)\n')
+        self.verify()
+
     def test_motion_and_layer_defaults(self):
         source = self.wrapper.read_text()
         namespaces = set()
