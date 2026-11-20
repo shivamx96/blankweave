@@ -24,9 +24,7 @@ Item {
     readonly property bool internal: /^(eDP|LVDS|DSI)-/.test(connector)
     readonly property string displayName: internal
         ? "Built-in display"
-        : (reportedModel === "LG HDR 4K"
-            ? "LG UltraFine 27UL850"
-            : (reportedModel || connector || "Display"))
+        : (reportedModel || connector || "Display")
     readonly property string backendName: backend === "ddc" ? "DDC/CI" : "Hardware backlight"
     readonly property bool available: confirmedPercentage >= 0
 

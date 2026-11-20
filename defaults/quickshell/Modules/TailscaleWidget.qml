@@ -186,7 +186,7 @@ WidgetFrame {
     iconMark: root.tailscaleMark
     iconOnly: true
     active: tailscalePanel.open
-    attention: running && !connected
+    attention: running && (!loggedIn || String(status.error || "") !== "")
     tooltip: !loggedIn
         ? "Tailscale sign-in required\nClick to authenticate"
         : (connected

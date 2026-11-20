@@ -531,6 +531,15 @@ per-theme image file or build an image source by hand. Because marks now honour
 genuinely transient — a steady-state condition such as "the daemon is running"
 would leave the mark permanently accented.
 
+A bar entry's `attention` (critical red) is reserved for faults and
+conditions that need the user: low battery, thermal or memory pressure, an
+enabled service that is unavailable, required sign-in, queued notifications,
+low agent allowance. A state the user chose — muted, radio off, VPN
+disconnected, Do Not Disturb — is carried by its glyph or mark and never by
+`attention`; charging and "a device is connected" never set `active`; waiting
+pull-request reviews are the count beside the Git mark. The one deliberate
+exception is dictation: a live microphone stays red while recording.
+
 Every bar panel opens and works from the keyboard. Widgets declare a stable
 `ControlPopup.panelId` and register with one `Launcher/PanelSession.qml` on
 `ShellRoot` (focused-output selection and hotplug fallback as for the

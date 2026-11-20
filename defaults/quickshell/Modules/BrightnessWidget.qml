@@ -113,14 +113,17 @@ WidgetFrame {
         root.displays = list
     }
 
-    visible: display.available
-    icon: display.percentage < 34 ? "󰃞" : (display.percentage < 67 ? "󰃟" : "󰃠")
+    Component.onDestruction: bar.shell.osd.panel(root, "brightness", false)
+
+    visible: true
+    iconMark: !display.available ? "display" : "brightness-" + (display.percentage < 34 ? 0 : display.percentage < 67 ? 1 : 2)
+    icon: !display.available ? "󰍹" : display.percentage < 34 ? "󰃞" : (display.percentage < 67 ? "󰃟" : "󰃠")
     iconPixelSize: theme.barIconSize - 2
     label: display.available ? display.percentage + "%" : ""
     scrollHint: display.available ? "adjust brightness" : ""
     tooltip: display.available
-        ? display.displayName + ": " + display.percentage + "%\nClick for controls · Scroll to adjust"
-        : ""
+        ? display.displayName + ": " + display.percentage + "%\nClick for controls"
+        : display.displayName + "\nClick for display controls"
 
     DisplayBrightness {
         id: ownDisplay
@@ -229,6 +232,8 @@ WidgetFrame {
         }
     }
 
+    active: brightnessPanel.open
+
     onScrolled: delta => {
         if (display.available)
             display.queuePercentage(display.percentage + (delta > 0 ? 2 : -2))
@@ -256,7 +261,7 @@ WidgetFrame {
             title: "DISPLAY"
             subtitle: root.displays.length > 1
                 ? root.displays.length + " displays"
-                : root.display.displayName + " · " + root.display.backendName
+                : root.display.displayName + (root.display.available ? " · " + root.display.backendName : "")
             actions: [
                 { "id": "theme", "label": "Switch color theme", "icon": root.theme.dark ? "󰖙" : "󰖔" }
             ]
@@ -298,14 +303,14 @@ WidgetFrame {
 
                 Layout.fillWidth: true
                 spacing: 10
-                visible: modelData.available || placement !== null
+                visible: true
 
                 ControlSectionLabel {
                     theme: root.theme
                     text: root.displays.length > 1
                         ? displayRow.modelData.displayName.toUpperCase()
                             + (displayRow.modelData.available ? " · " + displayRow.modelData.backendName.toUpperCase() : "")
-                        : "BUILT-IN DISPLAY"
+                        : displayRow.modelData.displayName.toUpperCase()
                 }
 
                 ControlValueRow {
@@ -320,6 +325,16 @@ WidgetFrame {
                     valueText: displayRow.modelData.percentage + "%"
                     onValueMoved: value => displayRow.modelData.queuePercentage(value)
                     onValueCommitted: value => displayRow.modelData.commitPercentage(value)
+                }
+
+                Text {
+                    visible: !displayRow.modelData.available
+                    Layout.fillWidth: true
+                    text: "Brightness is not available for this display"
+                    color: root.theme.textMuted
+                    font.family: root.theme.fontFamily
+                    font.pixelSize: root.theme.smallTextSize
+                    wrapMode: Text.WordWrap
                 }
 
                 Binding {

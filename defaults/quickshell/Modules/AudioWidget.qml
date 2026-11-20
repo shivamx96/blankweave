@@ -11,14 +11,15 @@ WidgetFrame {
     readonly property int percentage: Math.round(audio.volume * 100)
 
     visible: audio.outputKey !== ""
+    iconMark: muted ? "audio-muted" : "audio-" + (percentage < 35 ? 0 : percentage < 70 ? 1 : 2)
     icon: muted ? "󰝟" : (percentage < 35 ? "󰕿" : (percentage < 70 ? "󰖀" : "󰕾"))
     iconPixelSize: theme.barIconSize + 3
     label: muted ? "Muted" : percentage + "%"
     rightClickHint: audio.available ? (audio.muted ? "unmute" : "mute") : ""
     scrollHint: audio.available ? "adjust volume" : ""
     tooltip: audio.outputLabel
-        + "\nClick for controls · Scroll to adjust · Right-click to mute"
-    attention: muted
+        + "\nClick for controls"
+    active: audioPanel.open
 
     onPressed: button => {
         if (button === Qt.LeftButton) {

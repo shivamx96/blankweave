@@ -131,7 +131,8 @@ WidgetFrame {
     icon: "󰊢"
     iconOnly: root.reviewCount === 0
     label: root.reviewCount > 0 ? String(root.reviewCount) : ""
-    active: root.reviewCount > 0 || gitPanel.open
+    active: gitPanel.open
+    // Waiting reviews show as the count beside the mark; they are not a fault.
     tooltip: {
         const lines = []
         if (root.reviewCount > 0)

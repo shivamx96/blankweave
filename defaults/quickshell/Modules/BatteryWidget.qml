@@ -75,13 +75,14 @@ WidgetFrame {
     }
 
     visible: batteryAvailable
+    iconMark: charging ? "battery-charging" : "battery-" + (full || percentage >= 95 ? 5 : percentage >= 80 ? 4 : percentage >= 60 ? 3 : percentage >= 40 ? 2 : percentage >= 20 ? 1 : 0)
     icon: batteryIcon()
     label: full ? "Full" : percentage + "%"
     tooltip: stateLabel() + " · " + percentage + "%"
         + (remainingSeconds > 0 ? "\n" + timeLabel() : "")
         + (root.power.ready && root.power.available ? "\n" + root.power.profileName : "")
-    attention: !charging && percentage <= 15
-    active: charging || batteryPanel.open
+    attention: batteryAvailable && !charging && percentage <= 15
+    active: batteryPanel.open
 
     onPressed: button => {
         if (button === Qt.LeftButton) {

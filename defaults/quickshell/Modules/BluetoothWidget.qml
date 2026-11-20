@@ -113,6 +113,7 @@ WidgetFrame {
     }
 
     visible: adapter !== null
+    iconMark: !enabled ? "bluetooth-off" : connectedDevices.length > 0 ? "bluetooth-connected" : "bluetooth"
     icon: !enabled ? "󰂲" : (connectedDevices.length > 0 ? "󰂱" : "󰂯")
     label: !enabled ? "Off" : (connectedDevices.length > 0 ? String(connectedDevices.length) : "")
     rightClickHint: root.bluetooth.busy ? "" : (enabled ? "turn Bluetooth off" : "turn Bluetooth on")
@@ -121,7 +122,7 @@ WidgetFrame {
         : (connectedDevices.length > 0
             ? connectedDevices.map(device => device.name).join("\n") + "\nClick for controls"
             : "Bluetooth enabled · No connected devices\nClick to scan")
-    active: connectedDevices.length > 0
+    active: bluetoothPanel.open
 
     onDeviceRowsChanged: root.syncDeviceModel()
 

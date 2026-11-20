@@ -205,11 +205,12 @@ WidgetFrame {
             ? signalStrength + "% signal"
             : (wifiDevice && root.wifi.enabled ? "Scanning for networks" : "Disconnected"))
 
+    iconMark: kind === "ethernet" ? "ethernet" : kind === "wifi" ? "wifi-" + (signalStrength < 20 ? 0 : signalStrength < 40 ? 1 : signalStrength < 60 ? 2 : signalStrength < 80 ? 3 : 4) : "network-disconnected"
     icon: root.networkIcon
     iconPixelSize: theme.barIconSize - 2
     label: String(info.text || "")
     tooltip: String(info.tooltip || "No network connection") + "\nClick for controls"
-    attention: kind === "disconnected"
+    active: networkPanel.open
 
     SharedPoller {
         id: metricPoller

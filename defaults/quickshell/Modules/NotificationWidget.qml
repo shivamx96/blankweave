@@ -45,6 +45,7 @@ WidgetFrame {
         refreshTimer.restart()
     }
 
+    iconMark: Boolean(status.paused) ? "notifications-paused" : "notifications"
     icon: Boolean(status.paused) ? "󰂛" : "󰂚"
     iconOnly: true
     active: notificationPanel.open
