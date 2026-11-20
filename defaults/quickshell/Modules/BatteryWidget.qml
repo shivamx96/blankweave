@@ -12,7 +12,7 @@ WidgetFrame {
     readonly property string holdsLabel: power.holds.map(hold => (hold.application || "An application") + " · " + hold.reason).join("; ")
     Component.onDestruction: power.setActive(root, false)
 
-    readonly property var device: UPower.displayDevice
+    property var device: UPower.displayDevice
     readonly property bool batteryAvailable: Boolean(
         device && device.ready && device.isPresent && device.isLaptopBattery
     )

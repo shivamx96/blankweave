@@ -1254,6 +1254,20 @@ manual profile changes release holds according to the daemon's own policy.
 All mutation tests use an injected helper or fake bus; never switch the host's
 power profile during validation. This control does not change idle or lock policy.
 
+`PowerService` also owns the low-battery warning (`LowBatteryWatcher`), fed by
+the native UPower aggregate battery and independent of bar visibility and
+automatic profiles. Fixed 20%, 10%, and 5% thresholds fire once per discharge;
+a charging or full state, or a five-point recovery, re-arms them. Empty and
+pending-discharge states count as on battery; unknown, invalid, absent, or
+non-system-battery data never triggers a warning or implies AC. Startup below a
+threshold and jumps across several show only the most severe. The warning is a
+per-screen overlay toast on the focused monitor (`LowBatteryToast`), drawn by
+the shell so fullscreen and Do Not Disturb cannot hide it, never through Dunst
+and never taking keyboard focus. 20% and 10% expire after eight seconds; 5%
+stays until dismissed, charging, or its Suspend action, which shares
+`PowerActions.js` with the power panel. Tests inject the battery device and
+power actions and never read the host battery.
+
 `power_policy.py` owns opt-in automatic profiles in `power-profiles.json`, with
 atomic writes and a shared lock for preference changes, manual choices, and ticks.
 The shell runs ticks every ten seconds while enabled, including with Settings

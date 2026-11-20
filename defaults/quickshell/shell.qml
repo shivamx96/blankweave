@@ -98,6 +98,15 @@ ShellRoot {
         }
     }
 
+    Variants {
+        model: Quickshell.screens
+        delegate: LowBatteryToast {
+            modelData: modelData
+            theme: root.theme
+            power: root.power
+        }
+    }
+
     ApplicationLauncher {
         theme: root.theme
         usage: root.launcherUsage

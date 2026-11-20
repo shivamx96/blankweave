@@ -498,6 +498,25 @@ if ! grep -q POWER_MENU_PASSED "$test_root/power-menu.log" \
     exit 1
 fi
 
+# Native low-battery watcher/toast: fake aggregate device and power action only.
+mkdir -p "$test_root/low-battery"
+cp -R "$repository/defaults/quickshell/"{Services,Settings,Components,Assets,Modules,Launcher} "$test_root/low-battery/"
+cp "$repository/defaults/quickshell/Theme.qml" "$test_root/low-battery/"
+cp "$repository/tests/quickshell/low-battery.qml" "$test_root/low-battery/shell.qml"
+printf 'print("{}")\n' > "$test_root/low-battery-helper.py"
+if ! HOME="$test_root/home" XDG_CONFIG_HOME="$test_root/home/.config" \
+    XDG_RUNTIME_DIR="$test_root/runtime" QT_QPA_PLATFORM=offscreen \
+    LOW_BATTERY_HELPER="$test_root/low-battery-helper.py" \
+    QT_QUICK_BACKEND=software timeout 15 qs -p "$test_root/low-battery" > "$test_root/low-battery.log" 2>&1; then
+    cat "$test_root/low-battery.log"
+    exit 1
+fi
+if ! grep -q LOW_BATTERY_PASSED "$test_root/low-battery.log" \
+    || grep -Eq '(TypeError|ReferenceError|Binding loop|Unable to assign|Failed to load|Error:)' "$test_root/low-battery.log"; then
+    cat "$test_root/low-battery.log"
+    exit 1
+fi
+
 printf 'Settings command and interface tests passed.\n'
 # Poller lifecycle, shared collectors, and stale rendering use fake scripts only.
 bash "$repository/tests/script-poller.sh" </dev/null

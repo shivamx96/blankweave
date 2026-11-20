@@ -1,9 +1,16 @@
 import QtQuick
 import Quickshell
 import Quickshell.Io
+import Quickshell.Services.UPower
+import "PowerActions.js" as PowerActions
 
 QtObject {
     id: root
+    // Native aggregate battery updates run even when every bar/panel is hidden.
+    property var batteryDevice: UPower.displayDevice
+    readonly property LowBatteryWatcher lowBattery: LowBatteryWatcher { device: root.batteryDevice }
+    function suspend() { Quickshell.execDetached(PowerActions.suspendCommand()) }
+
     property string helper: Quickshell.env("HOME") + "/.local/share/blankweave/shell/power-profiles.py"
     property bool settingsActive: false
     property bool menuOpen: false
