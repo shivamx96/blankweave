@@ -6,6 +6,7 @@ import Quickshell.Io
 import Quickshell.Wayland
 import Quickshell.Widgets
 import "../Components"
+import "Launch.js" as Launch
 
 PanelWindow {
     id: root
@@ -32,6 +33,8 @@ PanelWindow {
         ? root.filterClipboard(root.session.searchText)
         : root.rankApplications(root.session.searchText)
 
+    // Injectable executor keeps isolated tests from running desktop actions.
+    property var executeCommand: command => Quickshell.execDetached(command)
     signal dismissed
     signal modeRequested(string mode)
 
@@ -191,7 +194,9 @@ PanelWindow {
             clipboardCopy.running = true
             return
         }
-        Qt.callLater(() => item.execute())
+        Qt.callLater(() => {
+            Launch.activate(item, command => Quickshell.execDetached(command))
+        })
     }
 
     function closeLauncher() {

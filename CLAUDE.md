@@ -835,6 +835,12 @@ button — `Super+Space` and `Super+Shift+V` are the entry points, and both go
 through the `blankweave` IPC handler (`launcher`, `clipboard`) rather than
 spawning anything.
 
+A desktop entry marked `runInTerminal` is launched detached in Ghostty with
+`-e` (`Launcher/Launch.js`), using `DesktopEntry.command`, Quickshell's parsed
+argument vector, and the entry's working directory; `execute()` runs such an
+entry with no terminal attached, so it would do nothing visible. Never
+rebuild a shell string from `execString`. Other entries keep `execute()`.
+
 Because the surface is per-screen, the open state and the active view live on
 `ShellRoot`, not on the launcher: `toggleLauncher(mode)` switches views when
 the requested one is not already showing and only closes when it is, so the

@@ -94,7 +94,7 @@ diff -u "$test_root/expected-voice" "$SETTINGS_VOICE_LOG"
 
 # Power changes use a fixture, never the host power-profile daemon.
 mkdir -p "$test_root/power"
-cp -R "$repository/defaults/quickshell/"{Services,Settings,Components,Assets,Modules} "$test_root/power/"
+cp -R "$repository/defaults/quickshell/"{Services,Settings,Components,Assets,Modules,Launcher} "$test_root/power/"
 cp "$repository/defaults/quickshell/Theme.qml" "$test_root/power/"
 cp "$repository/tests/quickshell/settings-power.qml" "$test_root/power/shell.qml"
 cp "$repository/tests/fixtures/settings-power.py" "$test_root/power/power.py"
@@ -126,7 +126,7 @@ fi
 
 # Battery limit mutations use fake devices and never change host charging policy.
 mkdir -p "$test_root/battery"
-cp -R "$repository/defaults/quickshell/"{Services,Settings,Components,Assets} "$test_root/battery/"
+cp -R "$repository/defaults/quickshell/"{Services,Settings,Components,Assets,Launcher} "$test_root/battery/"
 cp "$repository/defaults/quickshell/Theme.qml" "$test_root/battery/"
 cp "$repository/tests/quickshell/settings-battery.qml" "$test_root/battery/shell.qml"
 cp "$repository/tests/fixtures/settings-battery.py" "$test_root/battery/battery.py"
@@ -161,7 +161,7 @@ fi
 
 # Native networking is supplied with fake devices: never scan or change host Wi-Fi.
 mkdir -p "$test_root/wifi"
-cp -R "$repository/defaults/quickshell/"{Services,Settings,Components,Assets,Modules} "$test_root/wifi/"
+cp -R "$repository/defaults/quickshell/"{Services,Settings,Components,Assets,Modules,Launcher} "$test_root/wifi/"
 cp "$repository/defaults/quickshell/Theme.qml" "$test_root/wifi/"
 mkdir -p "$test_root/home/.local/share/blankweave/shell"
 cat > "$test_root/home/.local/share/blankweave/shell/network-status.sh" <<'EOF'
@@ -185,7 +185,7 @@ fi
 
 # Ethernet and DNS actions are isolated from host NetworkManager.
 mkdir -p "$test_root/network"
-cp -R "$repository/defaults/quickshell/"{Services,Settings,Components,Assets} "$test_root/network/"
+cp -R "$repository/defaults/quickshell/"{Services,Settings,Components,Assets,Launcher} "$test_root/network/"
 cp "$repository/defaults/quickshell/Theme.qml" "$test_root/network/"
 cp "$repository/tests/quickshell/settings-network.qml" "$test_root/network/shell.qml"
 cp "$repository/tests/fixtures/settings-network.py" "$test_root/network/network.py"
@@ -203,7 +203,7 @@ fi
 
 # Radio and hotspot actions use an isolated helper; never block host radios.
 mkdir -p "$test_root/wireless"
-cp -R "$repository/defaults/quickshell/"{Services,Settings,Components,Assets} "$test_root/wireless/"
+cp -R "$repository/defaults/quickshell/"{Services,Settings,Components,Assets,Launcher} "$test_root/wireless/"
 cp "$repository/defaults/quickshell/Theme.qml" "$test_root/wireless/"
 cp "$repository/tests/quickshell/settings-wireless.qml" "$test_root/wireless/shell.qml"
 cp "$repository/tests/fixtures/settings-wireless.py" "$test_root/wireless/wireless.py"
@@ -221,7 +221,7 @@ fi
 
 # Bluetooth uses fake BlueZ objects and a JSON helper, never host pairing or rfkill.
 mkdir -p "$test_root/bluetooth"
-cp -R "$repository/defaults/quickshell/"{Services,Settings,Components,Assets,Modules} "$test_root/bluetooth/"
+cp -R "$repository/defaults/quickshell/"{Services,Settings,Components,Assets,Modules,Launcher} "$test_root/bluetooth/"
 cp "$repository/defaults/quickshell/Theme.qml" "$test_root/bluetooth/"
 cp "$repository/tests/quickshell/settings-bluetooth.qml" "$test_root/bluetooth/shell.qml"
 cp "$repository/tests/fixtures/settings-bluetooth.py" "$test_root/bluetooth/action.py"
@@ -280,7 +280,7 @@ diff -u "$test_root/expected-brightness" "$SETTINGS_BRIGHTNESS_DIR/commands"
 # catches shell-only types and lifecycle errors that qmltestrunner cannot load.
 mkdir -p "$test_root/window" "$test_root/home/.local/share/blankweave/shell" \
     "$test_root/home/.local/share/blankweave/themes/obsidian" "$test_root/home/.config/blankweave"
-cp -R "$repository/defaults/quickshell/"{Settings,Services,Components,Assets} "$test_root/window/"
+cp -R "$repository/defaults/quickshell/"{Settings,Services,Components,Assets,Launcher} "$test_root/window/"
 cp "$repository/defaults/quickshell/Theme.qml" "$test_root/window/"
 cp "$repository/tests/quickshell/settings-window.qml" "$test_root/window/shell.qml"
 cp "$repository/tests/fixtures/settings-theme.sh" "$test_root/home/.local/share/blankweave/shell/theme-apply.sh"
@@ -329,7 +329,7 @@ fi
 # Idle controls use a fixture; never restart the host idle daemon or suspend.
 export SETTINGS_IDLE_STATE="$test_root/idle-state"
 mkdir -p "$test_root/idle"
-cp -R "$repository/defaults/quickshell/"{Services,Settings,Components,Assets,Modules} "$test_root/idle/"
+cp -R "$repository/defaults/quickshell/"{Services,Settings,Components,Assets,Modules,Launcher} "$test_root/idle/"
 cp "$repository/defaults/quickshell/Theme.qml" "$test_root/idle/"
 cp "$repository/tests/quickshell/settings-idle.qml" "$test_root/idle/shell.qml"
 cp "$repository/tests/fixtures/settings-idle.py" "$test_root/idle/idle.py"
@@ -349,7 +349,7 @@ fi
 # Pointer actions use a fixture, never the host compositor or input devices.
 export SETTINGS_POINTER_STATE="$test_root/pointer-state"
 mkdir -p "$test_root/pointer"
-cp -R "$repository/defaults/quickshell/"{Services,Settings,Components,Assets,Modules} "$test_root/pointer/"
+cp -R "$repository/defaults/quickshell/"{Services,Settings,Components,Assets,Modules,Launcher} "$test_root/pointer/"
 cp "$repository/defaults/quickshell/Theme.qml" "$test_root/pointer/"
 cp "$repository/tests/quickshell/settings-pointer.qml" "$test_root/pointer/shell.qml"
 cp "$repository/tests/fixtures/settings-pointer.py" "$test_root/pointer/pointer.py"
@@ -368,7 +368,7 @@ fi
 # Keyboard actions use a fixture, never the host compositor or input devices.
 export SETTINGS_KEYBOARD_STATE="$test_root/keyboard-state"
 mkdir -p "$test_root/keyboard"
-cp -R "$repository/defaults/quickshell/"{Services,Settings,Components,Assets,Modules} "$test_root/keyboard/"
+cp -R "$repository/defaults/quickshell/"{Services,Settings,Components,Assets,Modules,Launcher} "$test_root/keyboard/"
 cp "$repository/defaults/quickshell/Theme.qml" "$test_root/keyboard/"
 cp "$repository/tests/quickshell/settings-keyboard.qml" "$test_root/keyboard/shell.qml"
 cp "$repository/tests/fixtures/settings-keyboard.py" "$test_root/keyboard/keyboard.py"
@@ -387,7 +387,7 @@ fi
 # Shortcuts actions use a fixture, never the host compositor or input devices.
 export SETTINGS_SHORTCUTS_STATE="$test_root/shortcuts-state"
 mkdir -p "$test_root/shortcuts"
-cp -R "$repository/defaults/quickshell/"{Services,Settings,Components,Assets,Modules} "$test_root/shortcuts/"
+cp -R "$repository/defaults/quickshell/"{Services,Settings,Components,Assets,Modules,Launcher} "$test_root/shortcuts/"
 cp "$repository/defaults/quickshell/Theme.qml" "$test_root/shortcuts/"
 cp "$repository/tests/quickshell/settings-shortcuts.qml" "$test_root/shortcuts/shell.qml"
 cp "$repository/tests/fixtures/settings-shortcuts.py" "$test_root/shortcuts/shortcuts.py"
@@ -406,7 +406,7 @@ fi
 # Interface actions use a fixture, never the host compositor or input devices.
 export SETTINGS_INTERFACE_STATE="$test_root/interface-state"
 mkdir -p "$test_root/interface"
-cp -R "$repository/defaults/quickshell/"{Services,Settings,Components,Assets,Modules} "$test_root/interface/"
+cp -R "$repository/defaults/quickshell/"{Services,Settings,Components,Assets,Modules,Launcher} "$test_root/interface/"
 cp "$repository/defaults/quickshell/Theme.qml" "$test_root/interface/"
 cp "$repository/tests/quickshell/settings-interface.qml" "$test_root/interface/shell.qml"
 cp "$repository/tests/fixtures/settings-interface.py" "$test_root/interface/interface.py"
@@ -425,7 +425,7 @@ fi
 # Accessibility actions use a fixture, never the host compositor or input devices.
 export SETTINGS_ACCESSIBILITY_STATE="$test_root/accessibility-state"
 mkdir -p "$test_root/accessibility"
-cp -R "$repository/defaults/quickshell/"{Services,Settings,Components,Assets,Modules} "$test_root/accessibility/"
+cp -R "$repository/defaults/quickshell/"{Services,Settings,Components,Assets,Modules,Launcher} "$test_root/accessibility/"
 cp "$repository/defaults/quickshell/Theme.qml" "$test_root/accessibility/"
 cp "$repository/tests/quickshell/settings-accessibility.qml" "$test_root/accessibility/shell.qml"
 cp "$repository/tests/fixtures/settings-accessibility.py" "$test_root/accessibility/accessibility.py"
@@ -444,7 +444,7 @@ fi
 # Default application actions use a fixture, never the host compositor or input devices.
 export SETTINGS_DEFAULT_APPS_STATE="$test_root/default-apps-state"
 mkdir -p "$test_root/default-apps"
-cp -R "$repository/defaults/quickshell/"{Services,Settings,Components,Assets,Modules} "$test_root/default-apps/"
+cp -R "$repository/defaults/quickshell/"{Services,Settings,Components,Assets,Modules,Launcher} "$test_root/default-apps/"
 cp "$repository/defaults/quickshell/Theme.qml" "$test_root/default-apps/"
 cp "$repository/tests/quickshell/settings-default-apps.qml" "$test_root/default-apps/shell.qml"
 cp "$repository/tests/fixtures/settings-default-apps.py" "$test_root/default-apps/default-apps.py"
@@ -463,7 +463,7 @@ fi
 # Shared task backend actions use a fixture, never the host compositor or input devices.
 export SETTINGS_TASK_STATE="$test_root/task-state"
 mkdir -p "$test_root/task"
-cp -R "$repository/defaults/quickshell/"{Services,Settings,Components,Assets,Modules} "$test_root/task/"
+cp -R "$repository/defaults/quickshell/"{Services,Settings,Components,Assets,Modules,Launcher} "$test_root/task/"
 cp "$repository/defaults/quickshell/Theme.qml" "$test_root/task/"
 cp "$repository/tests/quickshell/settings-task.qml" "$test_root/task/shell.qml"
 cp "$repository/tests/fixtures/settings-task.py" "$test_root/task/task.py"
