@@ -18,7 +18,7 @@ ColumnLayout {
     function sameTarget(a, b) { return a.scope === b.scope && a.name === b.name && a.address === b.address }
     function label(key) {
         return {sensitivity: "Pointer speed", accel_profile: "Acceleration", natural_scroll: "Natural scrolling",
-            left_handed: "Left-handed buttons", tap_to_click: "Tap to click", disable_while_typing: "Disable touchpad while typing"}[key]
+            clickfinger_behavior: "Secondary click (three fingers: middle click)", left_handed: "Left-handed buttons", tap_to_click: "Tap to click", disable_while_typing: "Disable touchpad while typing"}[key]
     }
     spacing: root.theme.spacing("xl")
 
@@ -80,6 +80,7 @@ ColumnLayout {
             }
             SettingsComboBox {
                 id: optionChoice
+                visible: root.target.scope === "device" || ["sensitivity", "accel_profile", "clickfinger_behavior"].includes(optionRow.modelData)
                 objectName: "pointer_" + optionRow.modelData
                 Layout.preferredWidth: root.width < 480 ? Math.min(240, root.width) : 175
                 theme: root.theme

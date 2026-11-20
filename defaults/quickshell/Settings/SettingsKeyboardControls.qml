@@ -85,6 +85,80 @@ ColumnLayout {
                 (root.currentKeyboard.active_layout_index + 1) % root.currentKeyboard.layout.split(",").length)
         }
     }
+    Repeater {
+        model: [
+            {key: "repeat_delay", label: "Repeat delay", values: [100, 200, 300, 400, 500, 600, 750, 1000, 1500, 2000]},
+            {key: "repeat_rate", label: "Repeat rate", values: [1, 10, 15, 20, 25, 30, 40, 50, 75, 100]},
+            {key: "caps:", label: "Caps Lock behaviour", values: ["", "caps:escape", "caps:swapescape", "caps:ctrl_modifier", "caps:none"],
+                labels: ["Caps Lock", "Additional Escape", "Swap with Escape", "Additional Control", "Disabled"]},
+            {key: "compose:", label: "Compose key", values: ["", "compose:ralt", "compose:rctrl", "compose:menu", "compose:caps"],
+                labels: ["None", "Right Alt", "Right Control", "Menu", "Caps Lock"]}
+        ]
+        delegate: ColumnLayout {
+            id: extra
+            required property var modelData
+            property var menuChoices: []
+            property bool choosing: false
+            readonly property var visibleChoices: choosing ? menuChoices : choices
+            property var snapshot: ({})
+            property string revision: ""
+            property string session: ""
+            readonly property bool numeric: !modelData.key.endsWith(":")
+            readonly property var choices: modelData.values.filter(v => modelData.key !== "compose:" || v !== "compose:caps"
+                || !(root.backend && root.backend.values.kb_options || "").split(",").some(o => o.startsWith("caps:")))
+            readonly property var current: !root.ready ? null : numeric ? root.backend.values[modelData.key]
+                : root.backend.values.kb_options.split(",").find(o => o.startsWith(modelData.key)) || ""
+            Layout.fillWidth: true
+            Text {
+                text: extra.modelData.label
+                color: root.theme.text; font.family: root.theme.fontFamily; font.pixelSize: root.theme.smallTextSize
+            }
+            SettingsComboBox {
+                id: extraChoice
+                objectName: "keyboard_" + extra.modelData.key
+                theme: root.theme
+                Layout.fillWidth: true
+                model: extra.visibleChoices.map(v => extra.numeric ? String(v) + (extra.modelData.key === "repeat_delay" ? " ms" : " / sec")
+                    : extra.modelData.labels[extra.modelData.values.indexOf(v)])
+                currentIndex: extra.choices.indexOf(extra.current)
+                enabled: root.ready && root.backend.writable && !root.editing
+                Accessible.name: extra.modelData.label
+                onActivated: index => {
+                    const value = extra.visibleChoices[index]
+                    if (extra.numeric) root.backend.change(extra.modelData.key, value, extra.snapshot, extra.revision, extra.session)
+                    else {
+                        let opts = extra.snapshot.kb_options.split(",").filter(o => o && !o.startsWith(extra.modelData.key))
+                        if (extra.modelData.key === "caps:" && value) opts = opts.filter(o => o !== "compose:caps")
+                        if (value) opts.push(value)
+                        root.backend.change("kb_options", opts.join(","), extra.snapshot, extra.revision, extra.session, extra.modelData.key)
+                    }
+                    currentIndex = Qt.binding(() => extra.choices.indexOf(extra.current))
+                }
+            }
+            Text {
+                Layout.fillWidth: true
+                visible: root.backend && root.backend.control === extra.modelData.key && Boolean(Errors.message(root.backend.error))
+                text: visible ? Errors.message(root.backend.error) : ""
+                color: root.theme.critical; font.family: root.theme.fontFamily; font.pixelSize: root.theme.smallTextSize
+                wrapMode: Text.WordWrap
+            }
+            Connections {
+                target: extraChoice.popup
+                function onAboutToShow() {
+                    extra.menuChoices = extra.choices.slice(); extra.choosing = true
+                    extra.snapshot = Object.assign({}, root.backend.values)
+                    extra.revision = root.backend.revision; extra.session = root.backend.session
+                }
+                function onClosed() { Qt.callLater(() => { if (!extraChoice.popup.visible) extra.choosing = false }) }
+            }
+        }
+    }
+    Text {
+        Layout.fillWidth: true
+        text: "Caps Lock is offered as Compose only with default Caps Lock behaviour. Changing Caps Lock behaviour clears Compose on Caps Lock."
+        color: root.theme.textMuted; font.family: root.theme.fontFamily; font.pixelSize: root.theme.smallTextSize
+        wrapMode: Text.WordWrap
+    }
     SettingsButton {
         objectName: "keyboardEdit"
         theme: root.theme; text: "Edit layouts"

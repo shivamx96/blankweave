@@ -1558,6 +1558,16 @@ Per-device layout switching checks name, address, layout list, and session befor
 switching; it does not persist device overrides. Input-method installation is out
 of scope. Tests use `tests/fixtures/settings-keyboard.py`, never real input devices.
 
+Keyboard Settings also owns repeat delay (100–2000 ms) and rate (1–100 per
+second), a Caps Lock behaviour menu, and a compose-key menu, all through
+`keyboard-settings.py` with the layout editor's guarantees. The XKB options
+are validated against the installed rules and merged without disturbing
+unrelated options or the group-switch option; compose on Caps Lock needs the
+default Caps Lock behaviour, and choosing another clears it. Pointer
+Settings offers "Secondary click" for touchpads through
+`clickfinger_behavior`, globally and as a saved per-device override: off
+keeps button areas, on makes a two-finger press the secondary click.
+
 `Services/SettingsShortcuts.qml` exposes the bundled desktop actions through
 `shortcuts-settings.py` and `shortcut-catalog.json`. Stable IDs in
 `hypr/keybindings.lua` attach `blankweave:<id>` descriptions to live bindings;

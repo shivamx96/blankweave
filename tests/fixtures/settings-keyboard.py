@@ -7,7 +7,7 @@ path = Path(os.environ['SETTINGS_KEYBOARD_STATE'])
 state = json.loads(path.read_text()) if path.exists() else {
     'saved': {'version': 1, 'values': {}}, 'revision': 'initial', 'session': 'fixture',
     'installed': True, 'synced': True, 'message': '',
-    'values': dict(kb_layout='us', kb_variant='', kb_options='caps:escape', kb_file='', kb_rules='', kb_model=''),
+    'values': dict(kb_layout='us', kb_variant='', kb_options='caps:escape', kb_file='', kb_rules='', kb_model='', repeat_delay=600, repeat_rate=25),
     'devices': [dict(name='keyboard', address='0x1', layout='us', variant='', active_keymap='English (US)', active_layout_index=0)],
     'catalog': [dict(layout='us', variant='', label='English (US)'), dict(layout='de', variant='', label='German')], 'writes': 0}
 if sys.argv[1:] == ['status']:
