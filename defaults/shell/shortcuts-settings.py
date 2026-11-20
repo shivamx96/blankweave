@@ -59,6 +59,10 @@ def validate(data):
             or type(data['version']) is not int or data['version'] != 1
             or not isinstance(data['bindings'], dict)):
         raise ValueError('Invalid shortcut preferences.')
+    # Retired by directional movement. Preserve all other user choices while
+    # allowing preferences written by the previous catalog to load.
+    data = copy.deepcopy(data)
+    data['bindings'].pop('move-monitor', None)
     known = {r['id'] for r in catalog()}
     if any(k not in known for k in data['bindings']):
         raise ValueError('Unknown saved shortcut action.')
@@ -72,7 +76,7 @@ def revision(data):
 
 
 def render(data):
-    validate(data)
+    data = validate(data)
     fields = ', '.join('[' + lua(k) + '] = ' + lua(v) for k, v in sorted(data['bindings'].items()))
     return HEADER + '_G.blankweave_shortcuts_revision = ' + lua(revision(data)) + '\nreturn { ' + fields + ' }\n'
 

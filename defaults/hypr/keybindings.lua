@@ -24,7 +24,7 @@ bind("settings", main_mod .. " + comma", hl.dsp.exec_cmd("~/.local/bin/blankweav
 bind("terminal", main_mod .. " + Return", hl.dsp.exec_cmd("~/.local/share/blankweave/shell/open-default.sh terminal"))
 bind("browser", main_mod .. " + B", hl.dsp.exec_cmd("~/.local/share/blankweave/shell/open-default.sh browser"))
 bind("bluetooth", main_mod .. " + SHIFT + B", hl.dsp.exec_cmd("blueman-manager"))
-bind("files", main_mod .. " + F", hl.dsp.exec_cmd("~/.local/share/blankweave/shell/open-default.sh files"))
+bind("files", main_mod .. " + E", hl.dsp.exec_cmd("~/.local/share/blankweave/shell/open-default.sh files"))
 bind("launcher", main_mod .. " + space", hl.dsp.exec_cmd([[qs ipc -n -p "$HOME/.local/share/blankweave/quickshell" call blankweave launcher]]))
 bind("lock", main_mod .. " + L", hl.dsp.exec_cmd("hyprlock"))
 bind("theme", main_mod .. " + T", hl.dsp.exec_cmd("~/.local/share/blankweave/shell/theme-apply.sh toggle"))
@@ -61,8 +61,17 @@ bind("focus-right", main_mod .. " + right", hl.dsp.focus({ direction = "r" }))
 bind("focus-up", main_mod .. " + up", hl.dsp.focus({ direction = "u" }))
 bind("focus-down", main_mod .. " + down", hl.dsp.focus({ direction = "d" }))
 
--- Move window to monitor
-bind("move-monitor", main_mod .. " + SHIFT + K", hl.dsp.window.move({ monitor = "+1" }))
+-- Directional movement swaps tiled neighbours and crosses monitor edges.
+bind("fullscreen-window", main_mod .. " + F", hl.dsp.window.fullscreen({ mode = "fullscreen", action = "toggle" }))
+bind("maximize-window", main_mod .. " + SHIFT + F", hl.dsp.window.fullscreen({ mode = "maximized", action = "toggle" }))
+bind("move-left", main_mod .. " + SHIFT + left", hl.dsp.window.move({ direction = "l" }))
+bind("move-right", main_mod .. " + SHIFT + right", hl.dsp.window.move({ direction = "r" }))
+bind("move-up", main_mod .. " + SHIFT + up", hl.dsp.window.move({ direction = "u" }))
+bind("move-down", main_mod .. " + SHIFT + down", hl.dsp.window.move({ direction = "d" }))
+bind("resize-left", main_mod .. " + ALT + left", hl.dsp.window.resize({ x = -40, y = 0, relative = true }), { repeating = true })
+bind("resize-right", main_mod .. " + ALT + right", hl.dsp.window.resize({ x = 40, y = 0, relative = true }), { repeating = true })
+bind("resize-up", main_mod .. " + ALT + up", hl.dsp.window.resize({ x = 0, y = -40, relative = true }), { repeating = true })
+bind("resize-down", main_mod .. " + ALT + down", hl.dsp.window.resize({ x = 0, y = 40, relative = true }), { repeating = true })
 
 -- Scroll workspaces
 bind("workspace-next", main_mod .. " + CTRL + right", hl.dsp.focus({ workspace = "e+1" }))
@@ -96,3 +105,8 @@ end
 bind("assistive-reader", "SUPER + CTRL + R", hl.dsp.exec_cmd("python3 ~/.local/share/blankweave/shell/settings_session.py reader"))
 bind("assistive-keyboard", "SUPER + CTRL + K", hl.dsp.exec_cmd("python3 ~/.local/share/blankweave/shell/settings_session.py keyboard"))
 bind("assistive-zoom-reset", "SUPER + CTRL + M", hl.dsp.exec_cmd("python3 ~/.local/share/blankweave/shell/settings_session.py zoom"))
+
+-- Fixed pointer gestures: the Settings editor only accepts keyboard keysyms.
+hl.bind("SUPER + mouse:272", hl.dsp.window.drag(), { mouse = true, description = "blankweave:drag-move" })
+hl.bind("SUPER + mouse:273", hl.dsp.window.resize(), { mouse = true, description = "blankweave:drag-resize" })
+hl.bind("SUPER + SHIFT + mouse:272", hl.dsp.window.resize(), { mouse = true, description = "blankweave:drag-resize-left" })

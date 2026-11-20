@@ -31,7 +31,7 @@
     "id": "files",
     "label": "Open file manager",
     "group": "Applications",
-    "default": "SUPER + F",
+    "default": "SUPER + E",
     "repeat": false
   },
   {
@@ -224,11 +224,74 @@
     "repeat": false
   },
   {
-    "id": "move-monitor",
-    "label": "Move window to next monitor",
-    "group": "Windows",
-    "default": "SUPER + SHIFT + K",
+    "id": "fullscreen-window",
+    "label": "Toggle fullscreen",
+    "group": "Window management",
+    "default": "SUPER + F",
     "repeat": false
+  },
+  {
+    "id": "maximize-window",
+    "label": "Toggle maximize",
+    "group": "Window management",
+    "default": "SUPER + SHIFT + F",
+    "repeat": false
+  },
+  {
+    "id": "move-left",
+    "label": "Move window left",
+    "group": "Window management",
+    "default": "SUPER + SHIFT + left",
+    "repeat": false
+  },
+  {
+    "id": "move-right",
+    "label": "Move window right",
+    "group": "Window management",
+    "default": "SUPER + SHIFT + right",
+    "repeat": false
+  },
+  {
+    "id": "move-up",
+    "label": "Move window up",
+    "group": "Window management",
+    "default": "SUPER + SHIFT + up",
+    "repeat": false
+  },
+  {
+    "id": "move-down",
+    "label": "Move window down",
+    "group": "Window management",
+    "default": "SUPER + SHIFT + down",
+    "repeat": false
+  },
+  {
+    "id": "resize-left",
+    "label": "Resize window left",
+    "group": "Window management",
+    "default": "SUPER + ALT + left",
+    "repeat": true
+  },
+  {
+    "id": "resize-right",
+    "label": "Resize window right",
+    "group": "Window management",
+    "default": "SUPER + ALT + right",
+    "repeat": true
+  },
+  {
+    "id": "resize-up",
+    "label": "Resize window up",
+    "group": "Window management",
+    "default": "SUPER + ALT + up",
+    "repeat": true
+  },
+  {
+    "id": "resize-down",
+    "label": "Resize window down",
+    "group": "Window management",
+    "default": "SUPER + ALT + down",
+    "repeat": true
   },
   {
     "id": "workspace-next",

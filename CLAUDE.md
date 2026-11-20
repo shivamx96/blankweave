@@ -712,6 +712,20 @@ only through QML and `design.motion`; `tests/hyprland-motion.py` derives the
 namespace list from the QML, so a new layer surface without a rule fails.
 Saved accessibility preferences still load after these defaults.
 
+Window controls: `Super+F` fullscreen, `Super+Shift+F` maximize (keeps the
+bar), `Super+Shift+arrows` move the window and cross to the neighbouring
+monitor at an edge, `Super+Alt+arrows` resize and repeat, `Super+E` opens
+files. `Super+left drag` moves and `Super+right drag` or `Super+Shift+left
+drag` resizes; those pointer gestures carry stable descriptions but stay
+outside the shortcut catalog, because the Settings editor accepts keyboard
+keysyms only. `windowrules.lua` floats and centres utility windows
+(pavucontrol, Blueman, the portal file choosers, the polkit agent, and the
+Blankweave Settings window, matched by class and title) so they never
+re-tile the workspace, and floats Picture-in-Picture pinned in a corner
+without initial focus. The Lua option table is not validated, so a parser
+pass does not prove behaviour: when the live compositor may not be touched,
+record each new binding and rule as a manual check instead.
+
 Monitor arrangement and scaling are display-panel choices, persisted by
 `defaults/shell/monitor-layout.sh`, the sole writer of
 `~/.config/blankweave/monitors.json` (source of truth) and of the
