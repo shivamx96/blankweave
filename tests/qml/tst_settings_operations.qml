@@ -15,7 +15,7 @@ TestCase {
         spacing: function(name) { return ({xxs:2,xs:4,sm:6,md:8,lg:10,xl:12,section:14,panel:18,content:32,labelGap:5,descriptionGap:9,group:16,page:20,controlInset:24,rowInset:28})[name] },
         designValue: function(group, name, fallback) { return fallback },surface:"#112233",panelSurface:"#112233",surfaceRaised:"#223344",surfaceHover:"#334455",surfacePressed:"#445566",
         text:"#ffffff",textMuted:"#aabbcc",accent:"#77aaff",accentBright:"#77aaff",accentSurface:"#223355",outline:"#445566",
-        warning:"#ffaa33",fontFamily:"sans-serif",textSize:13,smallTextSize:12,widgetRadius:4,reducedMotion:true})
+        critical:"#ff7777",warning:"#ffaa33",fontFamily:"sans-serif",textSize:13,smallTextSize:12,widgetRadius:4,reducedMotion:true})
     QtObject {
         id: fakeBackend
         property bool active: true
@@ -49,6 +49,45 @@ TestCase {
             key:"eject",label:"Eject",confirm:"Eject this device?",cancellable:false,
             fields:[{key:"device",label:"Device",value:"old-device",options:[{value:"old-device",label:"USB drive"}],secret:false}]
         }]}
+    }
+    function test_automatic_time_explains_disabled_manual_controls() {
+        fakeBackend.data = {revision:"clock",actions:[{key:"ntp",label:"Automatic time",confirm:"",cancellable:false,fields:[{key:"enabled",label:"Network time",value:"yes",options:[{value:"yes",label:"Automatic"},{value:"no",label:"Manual"}],secret:false,inputType:"toggle"}]}]}
+        const item = createTemporaryObject(view,test,{settingId:"datetime"})
+        const manual = button(item,"Manual date and time — automatic time is on")
+        verify(manual.visible); verify(!manual.enabled)
+    }
+
+    function test_backend_field_error_is_under_input_and_clears_on_edit() {
+        const item = createTemporaryObject(view, test)
+        item.begin(fakeBackend.data.actions[0])
+        item.submit()
+        fakeBackend.applyFinished(false, {error:{message:"Enter a valid server address.",detail:"Rejected address",field:"device"}})
+        const message = findChild(item,"operationFieldError_device")
+        compare(message.text,"Enter a valid server address.")
+        compare(message.color,themePalette.critical)
+        item.draft.setValue("device","old-device")
+        compare(message.text,"")
+    }
+    function test_input_change_clears_control_error() {
+        const item = createTemporaryObject(view, test)
+        item.begin(fakeBackend.data.actions[0])
+        fakeBackend.draft.error = "Could not apply this change. Try again."
+        fakeBackend.error = "Could not apply this change. Try again."
+        fakeBackend.draft.setValue("device", "old-device")
+        compare(fakeBackend.draft.error, "")
+        compare(fakeBackend.error, "")
+    }
+    function test_no_input_action_arms_then_confirms() {
+        const item = createTemporaryObject(view, test)
+        const operation = {key:"cleanup",label:"Clean old cache versions",confirm:"Keep recent versions",fields:[],cancellable:false}
+        fakeBackend.data = Object.assign({},fakeBackend.data,{actions:[operation]})
+        item.activate(operation,"original")
+        const submit = button(item,"Clean old cache versions")
+        tryCompare(submit,"armed",true)
+        compare(fakeBackend.request,null)
+        submit.clicked()
+        compare(fakeBackend.request.action,"cleanup")
+        verify(fakeBackend.request.confirmed)
     }
     function test_catalog_has_real_provider_kinds_for_all_remaining_rows() {
         let count = 0
@@ -362,7 +401,7 @@ TestCase {
         verify(toggle.visible)
         verify(toggle.checked)
         verify(!findChild(item, "operationFieldChoice").visible)
-        toggle.forceActiveFocus()
+        findChild(toggle,"switchControl").forceActiveFocus()
         keyClick(Qt.Key_Space)
         compare(item.values.enabled, "no")
         compare(fakeBackend.request, null)
@@ -370,6 +409,49 @@ TestCase {
         verify(toggle.checked)
         item.submit()
         compare(fakeBackend.request.enabled, "yes")
+    }
+
+    function test_new_password_confirmation_lifecycle() {
+        const item = createTemporaryObject(view, test, {width:550})
+        const operation = action("create", [{key:"password",label:"Password",value:"",options:[],secret:true,confirm:true}])
+        item.begin(operation)
+        verify(!button(item, "create").enabled)
+        item.draft.setValue("password", "secret")
+        const confirmation = findChild(item, "operationConfirmation_password")
+        compare(confirmation.echoMode, TextInput.Password)
+        confirmation.forceActiveFocus(); for (const ch of "typo") keyClick(ch)
+        verify(findChild(item, "operationMismatch_password").visible)
+        verify(!button(item, "create").enabled)
+        item.submit(); compare(fakeBackend.request, null)
+        keyClick(Qt.Key_A, Qt.ControlModifier); for (const ch of "secret") keyClick(ch)
+        verify(button(item, "create").enabled)
+        verify(!findChild(item, "operationMismatch_password").visible)
+        findChild(item, "operationField_password").forceActiveFocus()
+        keyClick(Qt.Key_Tab)
+        verify(confirmation.activeFocus)
+        keyClick(Qt.Key_Tab)
+        verify(button(item, "create").activeFocus)
+        confirmation.forceActiveFocus()
+        keyClick(Qt.Key_Return)
+        compare(fakeBackend.request, {action:"create",confirmed:true,password:"secret"})
+        compare(item.values.password, "")
+        compare(confirmation.text, "")
+        fakeBackend.draft.pending = false
+        for (const reset of ["cancel", "action", "close", "target"]) {
+            item.begin(operation)
+            item.draft.setValue("password", "secret")
+            item.confirmations = {password:"secret"}
+            if (reset === "cancel") button(item, "Cancel").clicked()
+            if (reset === "action") item.begin(operation)
+            if (reset === "close") fakeBackend.active = false
+            if (reset === "target") {
+                item.draft.editing.fields.push({key:"account",label:"Account",value:"",secret:false,options:[{value:"other",label:"Other"}]})
+                item.draft.setValue("account", "other")
+            }
+            compare(item.confirmations, {})
+            verify(!item.values.password)
+            fakeBackend.active = true
+        }
     }
 
 }

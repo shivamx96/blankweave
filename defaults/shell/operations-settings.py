@@ -83,6 +83,12 @@ def start(domain, request):
         keys = {f['key'] for f in operation['fields']} | {'action', 'revision', 'confirmed'}
         keys |= {f['key'] + '_confirm' for f in operation['fields'] if f.get('confirm')}
         if set(request) - keys: raise ValueError('Unexpected operation fields.')
+        for field in operation['fields']:
+            companion = field['key'] + '_confirm'
+            if field.get('confirm') and companion in request:
+                if request[companion] != request.get(field['key']):
+                    raise ValueError('Passwords do not match.')
+                request = {key: value for key, value in request.items() if key != companion}
         token = uuid.uuid4().hex
         child = subprocess.Popen([sys.executable, str(Path(__file__).resolve()), domain, 'worker', token],
                                  stdin=subprocess.PIPE, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,

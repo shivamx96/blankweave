@@ -29,12 +29,24 @@ ColumnLayout {
     readonly property var job: backend && backend.ready ? backend.data.job || null : null
     spacing: root.theme.spacing("lg")
     function begin(operation) { draft.begin(operation) }
-    function submit() { draft.submit() }
+    property var confirmations: ({})
+    readonly property bool confirmationsValid: (editing ? editing.fields : []).every(field => {
+        if (!field.secret || !field.confirm) return true
+        const value = String(values[field.key] ?? "")
+        const confirmation = String(confirmations[field.key] ?? "")
+        return (field.confirmOptional && !value && !confirmation) || (value.length > 0 && value === confirmation)
+    })
+    Connections {
+        target: root.draft
+        function onSecretsReset() { root.confirmations = ({}) }
+    }
+    function submit() { if (confirmationsValid) draft.submit() }
     function activate(operation, capturedRevision) {
         if (!canOperate || editing !== null) return
         draft.begin(operation)
         draft.revision = capturedRevision
         if (!draft.stale && Actions.direct(settingId, operation)) draft.submit()
+        else if (!draft.stale && operation.confirm && operation.fields.length === 0) Qt.callLater(() => submitButton.arm())
     }
     Component.onDestruction: if (draft) draft.clearSecrets()
     onVisibleChanged: if (!visible) { actionMenu.close(); if (draft) draft.clearSecrets() }
@@ -144,6 +156,33 @@ ColumnLayout {
                     Accessible.name: formField.modelData.label
                     onTextEdited: root.draft.setValue(formField.modelData.key, text)
                 }
+                Text {
+                    visible: Boolean(formField.modelData.secret && formField.modelData.confirm)
+                    text: "Confirm " + formField.modelData.label
+                    textFormat: Text.PlainText
+                    Layout.fillWidth: true; wrapMode: Text.WordWrap
+                    color: root.theme.text; font.family: root.theme.fontFamily; font.pixelSize: root.theme.smallTextSize
+                }
+                SettingsTextField {
+                    objectName: "operationConfirmation_" + formField.modelData.key
+                    theme: root.theme
+                    Layout.fillWidth: true
+                    visible: Boolean(formField.modelData.secret && formField.modelData.confirm)
+                    echoMode: TextInput.Password
+                    Accessible.name: "Confirm " + formField.modelData.label
+                    text: String(root.confirmations[formField.modelData.key] ?? "")
+                    onTextEdited: root.confirmations = Object.assign({}, root.confirmations, {[formField.modelData.key]: text})
+                    onAccepted: if (submitButton.enabled) root.submit()
+                }
+                Text {
+                    objectName: "operationMismatch_" + formField.modelData.key
+                    visible: Boolean(formField.modelData.confirm && root.confirmations[formField.modelData.key]
+                        && root.confirmations[formField.modelData.key] !== root.values[formField.modelData.key])
+                    text: "Passwords do not match"
+                    Layout.fillWidth: true; wrapMode: Text.WordWrap
+                    color: root.theme.critical; font.family: root.theme.fontFamily; font.pixelSize: root.theme.smallTextSize
+                    Accessible.role: Accessible.StaticText
+                }
                 SettingsNumberField {
                     objectName: "operationNumber_" + formField.modelData.key
                     theme: root.theme
@@ -155,17 +194,15 @@ ColumnLayout {
                     maximum: formField.modelData.maximum ?? 0
                     onEdited: value => root.draft.setValue(formField.modelData.key, value)
                 }
-                SettingsSwitch {
+                SettingsSwitchRow {
                     objectName: "operationToggle_" + formField.modelData.key
                     theme: root.theme
                     visible: formField.modelData.inputType === "toggle"
                     checked: root.values[formField.modelData.key] === "yes"
-                    text: checked ? "Enabled" : "Disabled"
+                    text: formField.modelData.label
+                    description: formField.modelData.options.map(option => (option.value === "yes" ? "On: " : "Off: ") + option.label).join(" · ")
                     Accessible.name: formField.modelData.label
-                    onToggled: {
-                        root.draft.setValue(formField.modelData.key, checked ? "yes" : "no")
-                        checked = Qt.binding(() => root.values[formField.modelData.key] === "yes")
-                    }
+                    onClicked: root.draft.setValue(formField.modelData.key, checked ? "no" : "yes")
                 }
                 SettingsTextArea {
                     theme: root.theme
@@ -208,7 +245,7 @@ ColumnLayout {
         }
         Text {
             Layout.fillWidth: true
-            text: root.editing ? root.editing.confirm : ""
+            text: root.editing && root.editing.fields.length > 0 ? root.editing.confirm : ""
             visible: text !== ""; textFormat: Text.PlainText; wrapMode: Text.WordWrap
             color: root.theme.warning; font.family: root.theme.fontFamily; font.pixelSize: root.theme.smallTextSize
         }
@@ -244,11 +281,14 @@ ColumnLayout {
             color: root.theme.warning; font.family: root.theme.fontFamily; font.pixelSize: root.theme.smallTextSize
         }
         RowLayout {
-            SettingsButton {
+            SettingsConfirmButton {
                 theme: root.theme
-                text: root.draft && root.draft.pending ? "Working…" : root.editing && root.draft && root.draft.error ? "Retry " + root.editing.label : root.editing ? root.editing.label : "Apply"
-                enabled: root.backend && root.backend.writable && root.draft && !root.draft.pending && !root.draft.stale && root.draft.valid
-                onClicked: root.submit()
+                id: submitButton
+                confirmationRequired: Boolean(root.editing && root.editing.confirm && root.editing.fields.length === 0)
+                targetIdentity: root.editing ? JSON.stringify(root.editing) + root.draft.revision : ""
+                actionText: root.draft && root.draft.pending ? "Working…" : root.editing && root.draft && root.draft.error ? "Retry " + root.editing.label : root.editing ? root.editing.label : "Apply"
+                enabled: root.backend && root.backend.writable && root.draft && !root.draft.pending && !root.draft.stale && root.draft.valid && root.confirmationsValid
+                onConfirmed: root.submit()
             }
             SettingsButton {
                 theme: root.theme; text: "Review current settings"
@@ -256,7 +296,7 @@ ColumnLayout {
                 enabled: root.backend && root.backend.writable
                 onClicked: root.draft.review()
             }
-            SettingsButton { theme: root.theme; text: "Cancel"; enabled: root.draft && !root.draft.pending; onClicked: root.draft.discard() }
+            SettingsButton { theme: root.theme; text: "Cancel"; visible: Boolean(root.editing && root.editing.fields.length > 0); enabled: root.draft && !root.draft.pending; onClicked: root.draft.discard() }
         }
     }
     SettingsJobReport {

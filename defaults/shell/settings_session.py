@@ -25,10 +25,10 @@ def status(domain):
         rows = accounts()
         admins = set(grp.getgrnam('wheel').gr_mem) if any(g.gr_name == 'wheel' for g in grp.getgrall()) else set()
         options = [choice(p.pw_name) for p in rows]
-        actions = [action('create', 'Create local account', [field('name', 'Username'), field('password', 'Initial password', secret=True)], 'Create a standard local account with its own home directory.')]
+        actions = [action('create', 'Create local account', [field('name', 'Username'), field('password', 'Initial password', secret=True, confirm=True)], 'Create a standard local account with its own home directory.')]
         if options:
             target = field('name', 'Account', options[0]['value'], options)
-            actions += [action('password', 'Change password', [target, field('password', 'New password', secret=True)], 'Change this local account’s password?'),
+            actions += [action('password', 'Change password', [target, field('password', 'New password', secret=True, confirm=True)], 'Change this local account’s password?'),
                         action('role', 'Change account type', [target, field('role', 'Account type', 'standard', [choice('standard'), choice('admin')])], 'Change membership of the administrator group?'),
                         action('delete', 'Remove account', [target], 'Remove this account. Its home directory is retained. Current and last administrator accounts cannot be removed.'),
                         action('signin', 'Set automatic sign-in', [field('enabled', 'Sign-in', 'no', [choice('no', 'Require account password'), choice('yes', 'Automatic sign-in')])], 'Change tty1 sign-in for the current account at next boot. Disk encryption and screen locking are unchanged.')]

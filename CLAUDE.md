@@ -1269,6 +1269,11 @@ uses the isolated, root-owned `/usr/lib/blankweave/settings-system` helper and
 its administrator polkit action; it must never import user-writable modules.
 Keep its JSON operations strictly allowlisted. Backend tests mock all host
 mutations; the restic round-trip test uses only a temporary local repository.
+A field that sets a new secret which cannot be read back (account, sharing,
+and backup-repository passwords) declares `confirm=True`; fields that enter an
+existing secret to authenticate do not. The confirmation value stays in the
+view: Settings disables submit until both match, and the dispatcher rejects a
+mismatched `<key>_confirm` companion and strips it before any worker runs.
 Hibernation boot preparation is limited to the layouts documented in README;
 never expand that support without rollback tests and real resume validation.
 

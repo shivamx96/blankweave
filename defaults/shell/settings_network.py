@@ -111,7 +111,7 @@ def sharing_status():
         except ValueError as error:
             message = str(error) + ' '
             notices.append(notice('service-unavailable', 'Network sharing is not ready', 'Choose Set up authenticated sharing. If already configured, check the Samba service and sign in again to refresh group access.'))
-        actions += [action('setup', 'Set up authenticated sharing', [field('password', 'Network sharing password for your account', secret=True)],
+        actions += [action('setup', 'Set up authenticated sharing', [field('password', 'Network sharing password for your account', secret=True, confirm=True)],
                            'Enable Samba network sharing for this computer and set your network password. Other devices on reachable networks can contact Samba. Sign in again after setup to gain usershare access.'),
                     action('share', 'Share a folder', [field('name', 'Share name'), field('folder', 'Folder (absolute path)')],
                            'Allow your authenticated Samba account to read this folder on the network. Folder permissions still apply.')]

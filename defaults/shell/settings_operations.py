@@ -22,8 +22,11 @@ def installed(*commands):
 
 
 def field(key, label, value='', options=None, secret=False, multiline=False,
-          input_type='text', minimum=None, maximum=None, hint=''):
+          input_type='text', minimum=None, maximum=None, hint='', confirm=False, confirm_optional=False):
+    if options and {str(o['value']) for o in options} == {'yes', 'no'}: input_type = 'toggle'
     result = dict(key=key, label=label, value=str(value), options=options or [], secret=secret, multiline=multiline)
+    if confirm: result['confirm'] = True
+    if confirm_optional: result['confirmOptional'] = True
     if input_type != 'text': result['inputType'] = input_type
     if minimum is not None: result['minimum'] = minimum
     if maximum is not None: result['maximum'] = maximum

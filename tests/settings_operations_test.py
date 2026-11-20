@@ -34,6 +34,38 @@ system = module('system_settings_root', ROOT / 'scripts/settings-system.py')
 
 
 class Validation(unittest.TestCase):
+    def test_confirmation_schema_and_dispatch_guard(self):
+        self.assertNotIn('confirm', common.field('password', 'Password', secret=True))
+        self.assertTrue(common.field('password', 'Password', secret=True, confirm=True)['confirm'])
+        dispatcher = module('confirmation_dispatcher', ROOT / 'defaults/shell/operations-settings.py')
+        operation = common.action('create', 'Create', [common.field('password', 'Password', secret=True, confirm=True)])
+        data = dict(revision='test', writable=True, actions=[operation])
+        with patch.object(dispatcher, 'status', return_value=data), patch.object(dispatcher, 'locked'), patch.object(dispatcher.subprocess, 'Popen') as spawn:
+            with self.assertRaisesRegex(ValueError, 'Passwords do not match'):
+                dispatcher.start('accounts', dict(action='create', revision='test', password='secret', password_confirm='typo'))
+            spawn.assert_not_called()
+            spawn.return_value.pid = 12345
+            with patch.object(dispatcher, 'atomic') as persist, patch.object(dispatcher, 'STATE'), patch.object(dispatcher, 'identity', return_value='fixture'):
+                dispatcher.start('accounts', dict(action='create', revision='test', password='secret', password_confirm='secret'))
+            sent = json.loads(spawn.return_value.stdin.write.call_args.args[0])
+            self.assertNotIn('password_confirm', sent)
+            self.assertEqual(sent['password'], 'secret')
+            self.assertNotIn('secret', str(persist.call_args))
+            self.assertNotIn('secret', str(spawn.call_args))
+
+    def test_account_and_backup_catalog_confirmation(self):
+        account = Mock(pw_name='fixture', pw_uid=1001, pw_gecos='')
+        with patch.object(session, 'accounts', return_value=[account]), patch.object(session.grp, 'getgrall', return_value=[]):
+            actions = session.status('accounts')['actions']
+        for key in ('create', 'password'):
+            operation = next(a for a in actions if a['key'] == key)
+            self.assertTrue(next(f for f in operation['fields'] if f['key'] == 'password')['confirm'])
+        with patch.object(backup, 'installed', return_value=True), patch.object(backup, 'config', return_value=None):
+            fields = backup.status('backup')['actions'][0]['fields']
+        password = next(f for f in fields if f['key'] == 'password')
+        self.assertTrue(password['confirm'])
+        self.assertTrue(password['confirmOptional'])
+
     def test_field_validation(self):
         for value in ('', '\n', 'bad\0value', 2, None):
             with self.subTest(value=value), self.assertRaises(ValueError): common.require({'name': value}, 'name')

@@ -24,17 +24,26 @@ QtObject {
         return errors
     }
     readonly property bool valid: Object.keys(fieldErrors).length === 0
+    signal secretsReset()
     function begin(operation) {
         if (pending) return
+        secretsReset()
         editing = JSON.parse(JSON.stringify(operation))
         revision = backend.data.revision
         let initial = {}
         for (const field of editing.fields) initial[field.key] = field.value
         values = initial
-        error = ""; jobId = ""; secretsCleared = false
+        error = ""; backendFieldErrors = ({}); jobId = ""; secretsCleared = false
     }
-    function setValue(key, value) { values = Object.assign({}, values, {[key]: value}) }
+    function setValue(key, value) {
+        backendFieldErrors = ({})
+        error = ""
+        if (backend.error) backend.error = ""
+        if (editing && editing.fields.some(field => field.key === key && !field.secret && field.options && field.options.length > 0) && values[key] !== value) clearSecrets()
+        values = Object.assign({}, values, {[key]: value})
+    }
     function clearSecrets() {
+        secretsReset()
         if (!editing) return
         let next = Object.assign({}, values)
         let operation = JSON.parse(JSON.stringify(editing))
@@ -50,7 +59,8 @@ QtObject {
     }
     function discard() {
         if (pending) return
-        editing = null; values = ({}); error = ""; jobId = ""; secretsCleared = false
+        secretsReset()
+        editing = null; values = ({}); error = ""; backendFieldErrors = ({}); jobId = ""; secretsCleared = false
     }
     function submit() {
         if (!editing || pending || !backend.writable || stale || !valid) return
