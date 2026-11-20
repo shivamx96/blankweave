@@ -234,6 +234,7 @@ WidgetFrame {
     }
 
     ControlPopup {
+        panelId: "display"
         id: brightnessPanel
         bar: root.bar
         theme: root.theme
@@ -306,6 +307,7 @@ WidgetFrame {
                 }
 
                 ControlValueRow {
+                    accessibleName: "Brightness for " + displayRow.modelData.displayName
                     id: brightnessControl
                     visible: displayRow.modelData.available
                     theme: root.theme

@@ -75,6 +75,7 @@ WidgetFrame {
     }
 
     ControlPopup {
+        panelId: "cpu"
         id: cpuPanel
         bar: root.bar
         theme: root.theme

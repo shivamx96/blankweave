@@ -118,6 +118,7 @@ WidgetFrame {
     }
 
     ControlPopup {
+        panelId: "clock"
         id: calendarPanel
         bar: root.bar
         theme: root.theme
@@ -251,7 +252,10 @@ WidgetFrame {
                         color: root.theme.accentBright
                     }
 
-                    MouseArea {
+                    ControlMouseArea {
+                        theme: root.theme
+                        accessibleName: String(calendarCell.modelData.timestamp)
+                        focusIdentity: String(calendarCell.modelData.timestamp) + ":" + accessibleName
                         id: calendarMouse
                         anchors.fill: parent
                         enabled: calendarCell.isDate

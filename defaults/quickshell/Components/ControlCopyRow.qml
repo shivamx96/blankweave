@@ -60,7 +60,9 @@ RowLayout {
             Behavior on width { NumberAnimation { duration: Math.round(root.theme.motionDuration * 120 / 150) } }
         }
 
-        MouseArea {
+        ControlMouseArea {
+            theme: root.theme
+            accessibleName: "Copy " + root.label
             id: copyMouse
             anchors.fill: parent
             enabled: root.copyText !== ""

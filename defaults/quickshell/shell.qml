@@ -34,8 +34,26 @@ ShellRoot {
         focusedScreenName: Hyprland.focusedMonitor ? Hyprland.focusedMonitor.name : ""
     }
 
-    function openSettings() {
+    // Reuse the launcher's focused-output selection and hotplug fallback policy.
+    property PanelSession panels: PanelSession {
+        onOpenChanged: if (open) root.closeLauncher()
+        screens: Quickshell.screens
+        focusedScreenName: Hyprland.focusedMonitor ? Hyprland.focusedMonitor.name : ""
+    }
+
+    readonly property var powerMenu: panels
+
+    function togglePanel(id) {
+        root.panels.request(id)
+        if (root.panels.open) root.closeLauncher()
+    }
+
+    function togglePower() {
         root.closeLauncher()
+        root.togglePanel("power")
+    }
+
+    function openSettings() {
         settingsWindow.openSettings()
     }
 
@@ -53,6 +71,7 @@ ShellRoot {
     }
 
     function toggleLauncher(mode) {
+        root.panels.dismiss()
         launcherSession.toggle(mode || "applications")
     }
 
@@ -100,6 +119,12 @@ ShellRoot {
 
         function clipboard() {
             root.toggleLauncher("clipboard")
+        }
+
+        function panel(id: string): void { root.togglePanel(id) }
+
+        function power() {
+            root.togglePower()
         }
 
         function settings() {

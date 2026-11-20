@@ -479,6 +479,25 @@ if ! grep -q SETTINGS_TASK_PASSED "$test_root/task.log" \
     exit 1
 fi
 
+
+mkdir -p "$test_root/power-menu" "$test_root/home/.local/share/blankweave/shell"
+cp -R "$repository/defaults/quickshell/"{Services,Settings,Components,Assets,Modules,Launcher} "$test_root/power-menu/"
+cp "$repository/defaults/quickshell/Theme.qml" "$test_root/power-menu/"
+cp "$repository/tests/quickshell/power-menu.qml" "$test_root/power-menu/shell.qml"
+printf 'import json\nprint(json.dumps({"revision": "fixture", "actions": []}))\n' \
+    > "$test_root/home/.local/share/blankweave/shell/operations-settings.py"
+if ! HOME="$test_root/home" XDG_CONFIG_HOME="$test_root/home/.config" \
+    XDG_RUNTIME_DIR="$test_root/runtime" QT_QPA_PLATFORM=offscreen \
+    QT_QUICK_BACKEND=software timeout 15 qs -p "$test_root/power-menu" > "$test_root/power-menu.log" 2>&1; then
+    cat "$test_root/power-menu.log"
+    exit 1
+fi
+if ! grep -q POWER_MENU_PASSED "$test_root/power-menu.log" \
+    || grep -Eq '(TypeError|ReferenceError|Binding loop|Unable to assign|Failed to load|Error:)' "$test_root/power-menu.log"; then
+    cat "$test_root/power-menu.log"
+    exit 1
+fi
+
 printf 'Settings command and interface tests passed.\n'
 # Poller lifecycle, shared collectors, and stale rendering use fake scripts only.
 bash "$repository/tests/script-poller.sh" </dev/null

@@ -98,7 +98,9 @@ Item {
         }
     }
 
-    MouseArea {
+    ControlMouseArea {
+        theme: root.theme
+        accessibleName: root.title
         id: headerMouse
         anchors.fill: parent
         hoverEnabled: true

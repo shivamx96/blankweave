@@ -80,6 +80,7 @@ WidgetFrame {
     }
 
     ControlPopup {
+        panelId: "memory"
         id: memoryPanel
         bar: root.bar
         theme: root.theme

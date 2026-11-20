@@ -80,6 +80,7 @@ WidgetFrame {
     }
 
     ControlPopup {
+        panelId: "notifications"
         id: notificationPanel
         bar: root.bar
         theme: root.theme

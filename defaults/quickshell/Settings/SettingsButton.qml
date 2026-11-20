@@ -1,8 +1,30 @@
 import QtQuick
+import "../Components/PanelNavigation.js" as Navigation
+import "../Components"
 import QtQuick.Controls.Basic
 
 Button {
     id: root
+    property bool keyPressed: false
+    readonly property bool controlDown: down || keyPressed
+    Accessible.pressed: pressed || keyPressed
+    onActiveFocusChanged: if (!activeFocus) keyPressed = false
+    Keys.onPressed: event => {
+        if (Navigation.route(root, event)) return
+        if ([Qt.Key_Return, Qt.Key_Enter].includes(event.key)) {
+            if (!event.isAutoRepeat) keyPressed = true
+            event.accepted = true
+        }
+    }
+    Keys.onReleased: event => {
+        if ([Qt.Key_Return, Qt.Key_Enter].includes(event.key)) {
+            const activate = keyPressed && enabled
+            keyPressed = false
+            if (activate && !event.isAutoRepeat) { clicked() }
+            event.accepted = true
+        }
+    }
+    FocusRing { theme: root.theme }
     required property var theme
     property bool selected: false
 
@@ -26,7 +48,7 @@ Button {
     }
     background: Rectangle {
         radius: root.theme.widgetRadius
-        color: root.down ? root.theme.surfacePressed
+        color: root.controlDown ? root.theme.surfacePressed
             : root.selected ? root.theme.accentSurface
             : root.hovered ? root.theme.surfaceHover : root.theme.surfaceRaised
         border.width: root.activeFocus ? Math.max(1, root.theme.borderWidth) : root.theme.borderWidth

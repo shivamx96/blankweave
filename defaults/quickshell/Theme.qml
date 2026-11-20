@@ -4,6 +4,7 @@ import Quickshell.Io
 
 QtObject {
     id: root
+    readonly property color focusIndicator: text
 
     // The palette is resolved by theme-apply.sh into ~/.config/blankweave/theme.json,
     // the only file it is read from. Until the first apply has run, the bundled

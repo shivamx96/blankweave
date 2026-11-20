@@ -41,6 +41,7 @@ WidgetFrame {
     }
 
     ControlPopup {
+        panelId: "dictation"
         id: dictationPanel
         bar: root.bar
         theme: root.theme

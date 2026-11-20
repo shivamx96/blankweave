@@ -122,6 +122,7 @@ WidgetFrame {
     }
 
     ControlPopup {
+        panelId: "gpu"
         id: gpuPanel
         bar: root.bar
         theme: root.theme

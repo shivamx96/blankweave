@@ -1,8 +1,17 @@
 import QtQuick
+import "PanelNavigation.js" as Navigation
 import QtQuick.Controls.Basic
 
 Slider {
     id: root
+    Keys.onPressed: event => {
+        if (Navigation.route(root, event)) return
+        if ([Qt.Key_Return, Qt.Key_Enter, Qt.Key_Space].includes(event.key)) { pressed = true; event.accepted = true }
+    }
+    Keys.onReleased: event => {
+        if ([Qt.Key_Return, Qt.Key_Enter, Qt.Key_Space].includes(event.key)) { pressed = false; event.accepted = true }
+    }
+    FocusRing { theme: root.theme }
 
     required property var theme
 

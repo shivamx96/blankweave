@@ -55,7 +55,7 @@ bind("close-window", main_mod .. " + Q", hl.dsp.window.close())
 bind("float-window", main_mod .. " + V", hl.dsp.window.float({ action = "toggle" }))
 bind("pseudo-window", main_mod .. " + P", hl.dsp.window.pseudo({ action = "toggle" }))
 bind("split", main_mod .. " + J", hl.dsp.layout("togglesplit"))
-bind("logout", main_mod .. " + M", hl.dsp.exec_cmd("uwsm stop"))
+bind("logout", main_mod .. " + Escape", hl.dsp.exec_cmd('qs ipc -n -p "$HOME/.local/share/blankweave/quickshell" call blankweave power'))
 
 -- Focus with arrow keys
 bind("focus-left", main_mod .. " + left", hl.dsp.focus({ direction = "l" }))
@@ -124,3 +124,10 @@ if capabilities then
         hl.bind("switch:off:Lid Switch", hl.dsp.exec_cmd("~/.local/share/blankweave/shell/monitor-layout.sh lid open"), { locked = true })
     end
 end
+
+-- Bar panels on the focused output.
+bind("panel-audio", "SUPER + CTRL + A", hl.dsp.exec_cmd('qs ipc -n -p "$HOME/.local/share/blankweave/quickshell" call blankweave panel audio'))
+bind("panel-network", "SUPER + CTRL + N", hl.dsp.exec_cmd('qs ipc -n -p "$HOME/.local/share/blankweave/quickshell" call blankweave panel network'))
+bind("panel-bluetooth", "SUPER + CTRL + B", hl.dsp.exec_cmd('qs ipc -n -p "$HOME/.local/share/blankweave/quickshell" call blankweave panel bluetooth'))
+bind("panel-notifications", "SUPER + CTRL + I", hl.dsp.exec_cmd('qs ipc -n -p "$HOME/.local/share/blankweave/quickshell" call blankweave panel notifications'))
+bind("panel-display", "SUPER + CTRL + D", hl.dsp.exec_cmd('qs ipc -n -p "$HOME/.local/share/blankweave/quickshell" call blankweave panel display'))

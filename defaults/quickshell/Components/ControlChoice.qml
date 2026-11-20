@@ -17,6 +17,7 @@ Item {
     implicitWidth: content.implicitWidth + root.theme.spacing("section")
     implicitHeight: Math.max(28, content.implicitHeight + root.theme.spacing("xs") * 2)
     Layout.preferredHeight: implicitHeight
+    enabled: !busy
     opacity: enabled ? 1 : 0.45
 
     Rectangle {
@@ -64,7 +65,11 @@ Item {
         }
     }
 
-    MouseArea {
+    ControlMouseArea {
+        theme: root.theme
+        accessibleName: root.text
+        checkable: true
+        checked: root.selected
         id: choiceMouse
         anchors.fill: parent
         enabled: root.enabled && !root.busy

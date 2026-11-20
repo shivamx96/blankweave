@@ -258,6 +258,7 @@ WidgetFrame {
     }
 
     ControlPopup {
+        panelId: "tailscale"
         id: tailscalePanel
         bar: root.bar
         theme: root.theme

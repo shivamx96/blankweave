@@ -198,9 +198,9 @@
   },
   {
     "id": "logout",
-    "label": "Log out",
+    "label": "Open power menu",
     "group": "Windows",
-    "default": "SUPER + M",
+    "default": "SUPER + Escape",
     "repeat": false
   },
   {
@@ -474,6 +474,41 @@
     "label": "Reset magnification",
     "group": "Accessibility",
     "default": "SUPER + CTRL + M",
+    "repeat": false
+  },
+  {
+    "id": "panel-audio",
+    "label": "Open audio panel",
+    "group": "Panels",
+    "default": "SUPER + CTRL + A",
+    "repeat": false
+  },
+  {
+    "id": "panel-network",
+    "label": "Open network panel",
+    "group": "Panels",
+    "default": "SUPER + CTRL + N",
+    "repeat": false
+  },
+  {
+    "id": "panel-bluetooth",
+    "label": "Open bluetooth panel",
+    "group": "Panels",
+    "default": "SUPER + CTRL + B",
+    "repeat": false
+  },
+  {
+    "id": "panel-notifications",
+    "label": "Open notifications panel",
+    "group": "Panels",
+    "default": "SUPER + CTRL + I",
+    "repeat": false
+  },
+  {
+    "id": "panel-display",
+    "label": "Open display panel",
+    "group": "Panels",
+    "default": "SUPER + CTRL + D",
     "repeat": false
   }
 ]

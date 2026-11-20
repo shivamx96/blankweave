@@ -30,6 +30,7 @@ WidgetFrame {
     onScrolled: delta => audio.setVolume(audio.volume + (delta > 0 ? 0.02 : -0.02))
 
     ControlPopup {
+        panelId: "audio"
         id: audioPanel
         bar: root.bar
         theme: root.theme
@@ -140,7 +141,12 @@ WidgetFrame {
                     font.pixelSize: root.theme.iconSize
                 }
 
-                MouseArea {
+                ControlMouseArea {
+                    theme: root.theme
+                    accessibleName: sinkRow.modelData.label
+                    checkable: true
+                    checked: sinkRow.selected
+                    focusIdentity: String(sinkRow.modelData.key)
                     id: sinkMouse
                     anchors.fill: parent
                     hoverEnabled: true

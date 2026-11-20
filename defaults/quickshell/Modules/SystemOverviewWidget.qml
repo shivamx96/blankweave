@@ -108,6 +108,7 @@ WidgetFrame {
     }
 
     ControlPopup {
+        panelId: "system"
         id: systemPanel
         bar: root.bar
         theme: root.theme

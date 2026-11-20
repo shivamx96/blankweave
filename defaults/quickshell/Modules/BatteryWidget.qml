@@ -91,6 +91,7 @@ WidgetFrame {
     }
 
     ControlPopup {
+        panelId: "battery"
         id: batteryPanel
         bar: root.bar
         theme: root.theme

@@ -158,6 +158,7 @@ WidgetFrame {
     }
 
     ControlPopup {
+        panelId: "docker"
         id: dockerPanel
         bar: root.bar
         theme: root.theme

@@ -1,8 +1,10 @@
 import QtQuick
+import "../Components"
 import QtQuick.Controls.Basic
 
 TextArea {
     id: root
+    FocusRing { theme: root.theme }
     required property var theme
     padding: root.theme.spacing("xl")
     color: enabled ? theme.text : theme.textMuted

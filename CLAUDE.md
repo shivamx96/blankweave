@@ -531,6 +531,27 @@ per-theme image file or build an image source by hand. Because marks now honour
 genuinely transient — a steady-state condition such as "the daemon is running"
 would leave the mark permanently accented.
 
+Every bar panel opens and works from the keyboard. Widgets declare a stable
+`ControlPopup.panelId` and register with one `Launcher/PanelSession.qml` on
+`ShellRoot` (focused-output selection and hotplug fallback as for the
+launcher); the `panel(id)` IPC method toggles one, closes any other panel
+and the launcher, and reveals a concealed bar, and an unknown or unavailable
+id is a no-op. `power()` routes through the same session. `Super+Ctrl+A`,
+`N`, `B`, `I`, and `D` open audio, network, Bluetooth, notifications, and
+display; the rest are reachable by IPC, and none is `locked`. Inside a panel
+the shared `PanelNavigation.js` and `ControlMouseArea.qml` give every
+primitive focus, a pressed state, and Enter/Space activation: Tab and
+Shift+Tab walk the controls, Up/Down move between rows, Home/End jump to the
+ends, Left/Right adjust a slider, switch tabs, or move between adjacent
+controls, text fields keep their editing keys, and Escape closes an inline
+editor before the panel. A keyboard open focuses the first control; a mouse
+open shows no ring until a key is pressed. Scanned rows keep focus by their
+snapshot identity and refuse an activation if the item changed under the
+key. `Components/FocusRing.qml` is the one focus indicator for the bar and
+the Settings controls: an inset outline with corner marks in
+`Theme.focusIndicator`, never colour alone and never animated, held to 3:1
+by `tests/theme_contrast.py`.
+
 `Components/ControlPopup.qml` provides the anchored, keyboard-dismissible panel
 surface used by interactive status widgets. `ControlSlider.qml` provides the
 shared angular slider treatment. Interactive panels compose
@@ -580,7 +601,15 @@ steady state, so it changes a widget's form, never its `active` accent.
 
 The rightmost power control is a native panel. Lock and suspend are immediate;
 logout, reboot, and shutdown require a second confirmation click and must clear
-their armed state whenever the panel closes.
+their armed state whenever the panel closes. `Super+Escape` toggles it through the `power` IPC method; nothing binds a key
+straight to `uwsm stop`, because under tty1 automatic sign-in that restarts
+the session empty and discards unsaved work. The invocation state is a second
+`LauncherSession` on `ShellRoot` (`powerMenu`), so the panel opens on the
+focused monitor and follows the same hotplug fallback; a bar click routes
+through that state too. Arrows and Tab move between actions, Enter activates,
+Escape closes. The session-exit action reads `/etc/blankweave/signin.conf` and
+is labelled "Restart session" unless the saved policy is password sign-in.
+
 
 Brightness is also runtime-selected: internal eDP/LVDS/DSI panels use
 `brightnessctl`, while external displays use DDC/CI VCP `0x10`. Pass the

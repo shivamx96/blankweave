@@ -34,6 +34,7 @@ WidgetFrame {
     }
 
     ControlPopup {
+        panelId: "agent-usage"
         id: usagePanel
         bar: root.bar
         theme: root.theme

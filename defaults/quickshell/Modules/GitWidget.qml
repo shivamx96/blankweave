@@ -178,6 +178,7 @@ WidgetFrame {
     }
 
     ControlPopup {
+        panelId: "git"
         id: gitPanel
         bar: root.bar
         theme: root.theme

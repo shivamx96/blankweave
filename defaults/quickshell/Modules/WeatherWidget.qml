@@ -278,6 +278,7 @@ WidgetFrame {
     }
 
     ControlPopup {
+        panelId: "weather"
         id: weatherPanel
         bar: root.bar
         theme: root.theme

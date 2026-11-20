@@ -139,6 +139,7 @@ WidgetFrame {
     }
 
     ControlPopup {
+        panelId: "bluetooth"
         id: bluetoothPanel
         bar: root.bar
         theme: root.theme
@@ -342,7 +343,10 @@ WidgetFrame {
                                 Behavior on width { NumberAnimation { duration: root.theme.reducedMotion ? 0 : 140 } }
                             }
 
-                            MouseArea {
+                            ControlMouseArea {
+                                theme: root.theme
+                                accessibleName: "Forget " + deviceDelegate.row.name
+                                focusIdentity: String(deviceDelegate.row.key) + ":forget"
                                 id: forgetMouse
                                 enabled: !root.bluetooth.busy
                                 anchors.fill: parent
@@ -385,7 +389,10 @@ WidgetFrame {
                                 Behavior on width { NumberAnimation { duration: root.theme.reducedMotion ? 0 : 140 } }
                             }
 
-                            MouseArea {
+                            ControlMouseArea {
+                                theme: root.theme
+                                accessibleName: root.primaryActionText(deviceDelegate.row) + " " + deviceDelegate.row.name
+                                focusIdentity: String(deviceDelegate.row.key) + ":primary"
                                 id: primaryMouse
                                 anchors.fill: parent
                                 enabled: !root.bluetooth.busy || deviceDelegate.pending === "pairing"

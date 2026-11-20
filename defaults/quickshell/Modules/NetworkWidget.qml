@@ -64,6 +64,7 @@ WidgetFrame {
     function flattenedWifiRow(row) {
         return {
             "ssid": row.ssid,
+            "networkKey": String(row.key || JSON.stringify([root.wifiDevice ? root.wifiDevice.name : "", row.ssid, row.security])),
             "connected": row.connected,
             "known": row.known,
             "stateChanging": row.stateChanging,
@@ -273,6 +274,7 @@ WidgetFrame {
     }
 
     ControlPopup {
+        panelId: "network"
         id: networkPanel
         bar: root.bar
         theme: root.theme
@@ -452,6 +454,7 @@ WidgetFrame {
                 id: networkDelegate
 
                 required property int index
+                required property string networkKey
                 required property string ssid
                 required property bool connected
                 required property bool known
@@ -580,7 +583,10 @@ WidgetFrame {
                                 font.weight: Font.Medium
                             }
 
-                            MouseArea {
+                            ControlMouseArea {
+                                theme: root.theme
+                                accessibleName: "Forget " + networkDelegate.ssid
+                                focusIdentity: networkDelegate.networkKey + ":forget"
                                 anchors.fill: parent
                                 hoverEnabled: true
                                 cursorShape: Qt.PointingHandCursor
@@ -623,7 +629,10 @@ WidgetFrame {
                                 Behavior on width { NumberAnimation { duration: root.theme.reducedMotion ? 0 : 140 } }
                             }
 
-                            MouseArea {
+                            ControlMouseArea {
+                                theme: root.theme
+                                accessibleName: (networkDelegate.connected ? "Disconnect " : "Connect ") + networkDelegate.ssid
+                                focusIdentity: networkDelegate.networkKey + ":primary"
                                 id: networkActionMouse
                                 anchors.fill: parent
                                 enabled: !root.busy
@@ -699,7 +708,10 @@ WidgetFrame {
                                 font.pixelSize: root.theme.iconSize
                             }
 
-                            MouseArea {
+                            ControlMouseArea {
+                                theme: root.theme
+                                accessibleName: "Join " + networkDelegate.ssid
+                                focusIdentity: networkDelegate.networkKey + ":join"
                                 anchors.fill: parent
                                 enabled: root.passwordText !== ""
                                     && (!networkDelegate.enterprise || root.identityText !== "")

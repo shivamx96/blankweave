@@ -154,7 +154,10 @@ Item {
                         Behavior on width { NumberAnimation { duration: Math.round(root.theme.motionDuration * 120 / 150) } }
                     }
 
-                    MouseArea {
+                    ControlMouseArea {
+                        theme: root.theme
+                        accessibleName: root.title + " " + String(actionItem.modelData.label || actionItem.modelData.id)
+                        focusIdentity: root.title + ":" + String(actionItem.modelData.id)
                         id: actionMouse
                         anchors.fill: parent
                         enabled: !root.busy && actionItem.actionEnabled

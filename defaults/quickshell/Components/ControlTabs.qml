@@ -14,13 +14,25 @@ RowLayout {
     Layout.fillWidth: true
     spacing: root.theme.spacing("xxs")
 
+    function move(index, delta) {
+        const next = (index + delta + tabs.length) % tabs.length
+        const item = tabRepeater.itemAt(next)
+        if (item) item.focusTab()
+        selected(tabs[next].id)
+    }
     Repeater {
+        id: tabRepeater
         model: root.tabs
 
         delegate: Item {
             id: tab
 
+            required property int index
             required property var modelData
+            function focusTab() {
+                if (tabMouse.panel) { tabMouse.panel.keyboardMode = true; tabMouse.panel.focusIdentity = tabMouse.focusIdentity }
+                tabMouse.forceActiveFocus(Qt.TabFocusReason)
+            }
             readonly property string tabId: String(modelData.id || "")
             readonly property bool current: tabId === root.currentId
             readonly property int badge: Number(modelData.badge || 0)
@@ -82,7 +94,15 @@ RowLayout {
                 }
             }
 
-            MouseArea {
+            ControlMouseArea {
+                theme: root.theme
+                accessibleName: String(tab.modelData.label)
+                accessibleRole: Accessible.PageTab
+                checkable: true
+                checked: tab.current
+                focusIdentity: "tab:" + tab.tabId
+                Keys.onLeftPressed: root.move(tab.index, -1)
+                Keys.onRightPressed: root.move(tab.index, 1)
                 id: tabMouse
                 anchors.fill: parent
                 hoverEnabled: true

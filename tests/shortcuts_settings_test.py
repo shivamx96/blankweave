@@ -29,7 +29,7 @@ class ShortcutTests(unittest.TestCase):
         rows=[]
         for r in m.catalog():
             _,mask,key=m.chord(saved.get(r['id'],r['default']))
-            rows.append(dict(description='blankweave:'+r['id'],key=key,modmask=mask,keycode=0,submap='',repeat=r['repeat']))
+            rows.append(dict(description='blankweave:'+r['id'],key=key,modmask=mask,keycode=0,submap='',repeat=r['repeat'],locked=r.get('locked',False)))
         return rows
 
     def ipc(self,*args):
@@ -129,9 +129,26 @@ class ShortcutTests(unittest.TestCase):
         # must match the catalog, including workspace callbacks and repeat flags.
         script='''
 local dispatcher = setmetatable({}, {__index=function(self, key) return self end, __call=function() return function() end end})
+dispatcher.exec_cmd = function(command) return command end
+local power_command = 'qs ipc -n -p "$HOME/.local/share/blankweave/quickshell" call blankweave power'
 local workspace_action
 hl = {dsp=dispatcher, bind=function(keys, action, options)
- print(options.description .. "\\t" .. keys .. "\\t" .. tostring(options.repeating == true))
+ if options.mouse then
+  local fixed = { ["blankweave:drag-move"] = "SUPER + mouse:272", ["blankweave:drag-resize"] = "SUPER + mouse:273", ["blankweave:drag-resize-left"] = "SUPER + SHIFT + mouse:272" }
+  assert(keys == fixed[options.description])
+  assert(not options.locked and not options.repeating)
+  return
+ end
+ if options.description == "blankweave:logout" or options.description == "blankweave:power-menu" then
+  assert(action == power_command, "Power shortcuts must open the confirmation panel")
+ end
+ if options.description == "blankweave:lock" then
+  assert(action == "~/.local/share/blankweave/shell/lock.sh", "Manual lock must call the helper directly")
+ end
+ local allowed = {["blankweave:brightness-down"] = true, ["blankweave:brightness-up"] = true, ["blankweave:lock"] = true, ["blankweave:media-next"] = true, ["blankweave:media-pause"] = true, ["blankweave:media-play"] = true, ["blankweave:media-previous"] = true, ["blankweave:media-stop"] = true, ["blankweave:mic-mute"] = true, ["blankweave:volume-down"] = true, ["blankweave:volume-mute"] = true, ["blankweave:volume-up"] = true}
+ assert((options.locked == true) == (allowed[options.description] == true), "Exact locked set")
+ assert(keys ~= "SUPER + M", "Old unguarded session shortcut must remain free")
+ print(options.description .. "\\t" .. keys .. "\\t" .. tostring(options.repeating == true) .. "\\t" .. tostring(options.locked == true))
  if options.description == "blankweave:workspace-3" then workspace_action=action end
 end, get_active_monitor=function() return {active_workspace={id=3}} end,
 get_monitors=function() return {{},{}} end, dispatch=function() end}
@@ -139,7 +156,7 @@ dofile(arg[0]); assert(type(workspace_action)=="function"); workspace_action(); 
 '''
         result=subprocess.run(['lua','-e',script,str(REPO/'defaults/hypr/keybindings.lua')],check=True,text=True,capture_output=True)
         captured=[line.split('\t') for line in result.stdout.splitlines()]
-        expected=[['blankweave:'+r['id'],r['default'],str(r['repeat']).lower()] for r in m.catalog()]
+        expected=[['blankweave:'+r['id'],r['default'],str(r['repeat']).lower(),str(r.get('locked',False)).lower()] for r in m.catalog()]
         self.assertEqual(captured,expected)
         self.helper.apply(self.request())
         # Saved bindings are applied by Lua without changing the catalog action.

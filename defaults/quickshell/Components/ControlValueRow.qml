@@ -5,6 +5,7 @@ RowLayout {
     id: root
 
     required property var theme
+    property string accessibleName: "Brightness"
     property string icon: ""
     property real from: 0
     property real to: 100
@@ -31,13 +32,14 @@ RowLayout {
 
     ControlSlider {
         id: control
+        Accessible.name: root.accessibleName
         theme: root.theme
         Layout.fillWidth: true
         from: root.from
         to: root.to
         value: root.value
         stepSize: root.stepSize
-        onMoved: root.valueMoved(value)
+        onMoved: { root.valueMoved(value); if (!pressed) root.valueCommitted(value) }
         onPressedChanged: {
             if (pressed) {
                 root.interactionActive = true
