@@ -7,6 +7,7 @@ import "../Services"
 
 WidgetFrame {
     id: root
+    dataSources: [metricPoller]
 
     readonly property string shellDir: Quickshell.env("HOME") + "/.local/share/blankweave/shell"
     readonly property string statusScript: shellDir + "/network-status.sh"
@@ -209,7 +210,10 @@ WidgetFrame {
     tooltip: String(info.tooltip || "No network connection") + "\nClick for controls"
     attention: kind === "disconnected"
 
-    ScriptPoller {
+    SharedPoller {
+        id: metricPoller
+        service: root.bar.shell.pollers
+        key: "NetworkWidget:metricPoller"
         command: root.statusScript
         interval: 2500
         onUpdated: payload => {

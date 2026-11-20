@@ -7,6 +7,7 @@ import "../Services"
 
 WidgetFrame {
     id: root
+    dataSources: [placementPoller, themePoller, themeStatusPoller]
 
     readonly property string shellDir: Quickshell.env("HOME") + "/.local/share/blankweave/shell"
 
@@ -137,8 +138,10 @@ WidgetFrame {
         onObjectRemoved: (index, object) => root.syncDisplays()
     }
 
-    ScriptPoller {
+    SharedPoller {
         id: placementPoller
+        service: root.bar.shell.pollers
+        key: "BrightnessWidget:placementPoller"
         command: root.shellDir + "/monitor-layout.sh status"
         interval: 0
         onUpdated: payload => {
@@ -166,8 +169,10 @@ WidgetFrame {
         }
     }
 
-    ScriptPoller {
+    SharedPoller {
         id: themePoller
+        service: root.bar.shell.pollers
+        key: "BrightnessWidget:themePoller"
         command: root.shellDir + "/theme-apply.sh list"
         interval: 0
         onUpdated: payload => {
@@ -190,8 +195,10 @@ WidgetFrame {
         }
     }
 
-    ScriptPoller {
+    SharedPoller {
         id: themeStatusPoller
+        service: root.bar.shell.pollers
+        key: "BrightnessWidget:themeStatusPoller"
         command: root.shellDir + "/theme-apply.sh status"
         interval: 0
         onUpdated: payload => {

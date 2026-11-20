@@ -809,6 +809,20 @@ are compared as strings, not JavaScript numbers. `tests/active-window.sh`
 covers widget recreation, shell initialization, and startup/event races without
 contacting the running compositor.
 
+Process-backed data is collected once per shell, not once per bar: widgets
+hold a process-free `SharedPoller` subscription to `bar.shell.pollers`, and
+the single `PollerService` in `shell.qml` runs one `ScriptPoller` per data
+key at the fastest interval any requesting view asks for, stopping when the
+last view goes away. Keep panel-open demand and the Git widget's search
+budget when adding one. `ScriptPoller` runs `bash -c`, never a login shell
+(a profile that prints would corrupt the JSON), with the session `PATH` plus
+`~/.local/bin` and `BASH_ENV` disabled, and bounds every run with `timeout`
+on the process group; give a helper that legitimately samples for longer an
+explicit timeout. A run that times out, fails, or returns unparsable output
+marks the data `stale`: the last value stays, drawn in muted text with a
+"Last updated" tooltip line, never in `attention`, and the next good result
+restores it. Widgets declare what they read in `WidgetFrame.dataSources`.
+
 Process-backed modules (CPU, GPU, memory, network) use scripts that output JSON:
 
 ```json

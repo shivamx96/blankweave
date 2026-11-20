@@ -181,6 +181,7 @@ Item {
 
     ScriptPoller {
         id: healthPoller
+        jsonOutput: false
         command: root.featureEnabled
             ? root.healthCommand
             : ""

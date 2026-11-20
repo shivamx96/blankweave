@@ -6,6 +6,7 @@ import "../Services"
 
 WidgetFrame {
     id: root
+    dataSources: [reposPoller, prPoller]
 
     readonly property string shellDir: Quickshell.env("HOME") + "/.local/share/blankweave/shell"
 
@@ -143,8 +144,10 @@ WidgetFrame {
         return lines.join("\n")
     }
 
-    ScriptPoller {
+    SharedPoller {
         id: reposPoller
+        service: root.bar.shell.pollers
+        key: "GitWidget:reposPoller"
         command: root.shellDir + "/git-repos.sh"
         // Local scanning only runs while the panel is open; the startup pass is
         // enough to decide whether the widget belongs on the bar at all.
@@ -152,8 +155,12 @@ WidgetFrame {
         onUpdated: payload => root.updateRepos(payload)
     }
 
-    ScriptPoller {
+    SharedPoller {
         id: prPoller
+        service: root.bar.shell.pollers
+        key: "GitWidget:prPoller"
+        // Two auth calls and two searches already have individual deadlines.
+        timeout: 45000
         command: root.prCommand(300)
         // Keeps the review badge live without spending a search request per tick.
         interval: gitPanel.open ? 120000 : 600000

@@ -26,6 +26,7 @@ ShellRoot {
     property NetworkConnections connections: NetworkConnections { }
     property NetworkWifi wifi: NetworkWifi { }
     property BluetoothService bluetooth: BluetoothService { }
+    property PollerService pollers: PollerService { }
     property AgentUsage agentUsage: AgentUsage { }
     LauncherSession {
         id: launcherSession

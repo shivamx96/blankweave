@@ -7,6 +7,7 @@ import "../Services"
 
 WidgetFrame {
     id: root
+    dataSources: [statusPoller]
 
     readonly property string shellDir: Quickshell.env("HOME") + "/.local/share/blankweave/shell"
     property var status: ({
@@ -192,8 +193,10 @@ WidgetFrame {
         ? "Tailscale connected · " + Number(status.onlinePeerCount || 0) + " peers online\nClick for mesh controls"
         : "Tailscale " + String(status.backend || "stopped") + "\nClick for controls")
 
-    ScriptPoller {
+    SharedPoller {
         id: statusPoller
+        service: root.bar.shell.pollers
+        key: "TailscaleWidget:statusPoller"
         command: root.shellDir + "/tailscale-status.sh"
         interval: root.actionKind === "login" ? 1000 : (tailscalePanel.open ? 4000 : 10000)
         onUpdated: payload => root.updateStatus(payload)

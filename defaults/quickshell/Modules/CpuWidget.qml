@@ -6,6 +6,7 @@ import "../Services"
 
 WidgetFrame {
     id: root
+    dataSources: [statusPoller]
 
     readonly property string shellDir: Quickshell.env("HOME") + "/.local/share/blankweave/shell"
     readonly property string cpuMark: "cpu"
@@ -57,8 +58,10 @@ WidgetFrame {
     attention: Number(status.temperature || 0) >= 90
     tooltip: String(status.tooltip || "CPU information unavailable") + "\nClick for live details"
 
-    ScriptPoller {
+    SharedPoller {
         id: statusPoller
+        service: root.bar.shell.pollers
+        key: "CpuWidget:statusPoller"
         command: root.shellDir + "/cpu-usage.sh"
         interval: cpuPanel.open ? 1500 : 5000
         onUpdated: payload => root.updateStatus(payload)

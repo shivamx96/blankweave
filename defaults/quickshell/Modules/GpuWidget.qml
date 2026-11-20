@@ -6,6 +6,7 @@ import "../Services"
 
 WidgetFrame {
     id: root
+    dataSources: [statusPoller]
 
     readonly property string shellDir: Quickshell.env("HOME") + "/.local/share/blankweave/shell"
     readonly property string gpuMark: "gpu"
@@ -102,8 +103,12 @@ WidgetFrame {
     attention: Number(status.temperature || 0) >= 85
     tooltip: String(status.tooltip || "GPU telemetry unavailable") + "\nClick for live details"
 
-    ScriptPoller {
+    SharedPoller {
         id: statusPoller
+        service: root.bar.shell.pollers
+        key: "GpuWidget:statusPoller"
+        // intel_gpu_top has its own four-second sample plus one-second kill grace.
+        timeout: 7000
         command: root.shellDir + "/gpu-usage.sh " + (gpuPanel.open ? "detail" : "summary")
         interval: gpuPanel.open ? 2500 : 5000
         onUpdated: payload => root.updateStatus(payload)

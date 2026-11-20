@@ -6,6 +6,7 @@ import "../Services"
 
 WidgetFrame {
     id: root
+    dataSources: [statusPoller]
 
     readonly property string shellDir: Quickshell.env("HOME") + "/.local/share/blankweave/shell"
     readonly property string memoryMark: "memory"
@@ -62,8 +63,10 @@ WidgetFrame {
     attention: Number(status.usage || 0) >= 90 || Number(status.pressure10 || 0) >= 10
     tooltip: String(status.tooltip || "Memory information unavailable") + "\nClick for live details"
 
-    ScriptPoller {
+    SharedPoller {
         id: statusPoller
+        service: root.bar.shell.pollers
+        key: "MemoryWidget:statusPoller"
         command: root.shellDir + "/memory-usage.sh"
         interval: memoryPanel.open ? 2000 : 5000
         onUpdated: payload => root.updateStatus(payload)

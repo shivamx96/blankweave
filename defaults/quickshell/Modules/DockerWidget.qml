@@ -6,6 +6,7 @@ import "../Services"
 
 WidgetFrame {
     id: root
+    dataSources: [statusPoller]
 
     readonly property string shellDir: Quickshell.env("HOME") + "/.local/share/blankweave/shell"
     readonly property string dockerMark: "docker"
@@ -136,8 +137,10 @@ WidgetFrame {
         ? "Docker · " + Number(status.runningContainers || 0) + " containers running\nClick for workloads"
         : "Docker Engine running · No active containers\nClick for workloads"
 
-    ScriptPoller {
+    SharedPoller {
         id: statusPoller
+        service: root.bar.shell.pollers
+        key: "DockerWidget:statusPoller"
         command: root.shellDir + "/docker-status.sh"
         interval: dockerPanel.open ? 4000 : 12000
         onUpdated: payload => root.updateStatus(payload)

@@ -7,6 +7,7 @@ import "../Services"
 
 WidgetFrame {
     id: root
+    dataSources: [statusPoller]
 
     readonly property string shellDir: Quickshell.env("HOME") + "/.local/share/blankweave/shell"
     readonly property string weatherScript: shellDir + "/weather-status.sh"
@@ -226,8 +227,10 @@ WidgetFrame {
         }
     }
 
-    ScriptPoller {
+    SharedPoller {
         id: statusPoller
+        service: root.bar.shell.pollers
+        key: "WeatherWidget:statusPoller"
         command: root.weatherScript + " status"
         interval: weatherPanel.open ? 300000 : 900000
         onUpdated: payload => root.updateStatus(payload)

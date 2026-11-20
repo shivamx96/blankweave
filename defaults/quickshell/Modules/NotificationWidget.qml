@@ -7,6 +7,7 @@ import "../Services"
 
 WidgetFrame {
     id: root
+    dataSources: [statusPoller]
 
     readonly property string shellDir: Quickshell.env("HOME") + "/.local/share/blankweave/shell"
     property var status: ({
@@ -63,8 +64,10 @@ WidgetFrame {
             root.runControl(["set-paused", "toggle"])
     }
 
-    ScriptPoller {
+    SharedPoller {
         id: statusPoller
+        service: root.bar.shell.pollers
+        key: "NotificationWidget:statusPoller"
         command: root.shellDir + "/notifications-status.sh"
         interval: notificationPanel.open ? 1500 : 5000
         onUpdated: payload => root.updateStatus(payload)

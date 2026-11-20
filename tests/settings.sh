@@ -73,7 +73,7 @@ fi
 
 # Dictation actions use a fake service and never record or restart host audio.
 mkdir -p "$test_root/voice/Services"
-cp "$repository/defaults/quickshell/Services/"{Voxtype,ScriptPoller}.qml "$test_root/voice/Services/"
+cp "$repository/defaults/quickshell/Services/"{Voxtype.qml,ScriptPoller.qml,PollerOutput.js} "$test_root/voice/Services/"
 cp "$repository/tests/quickshell/settings-voice.qml" "$test_root/voice/shell.qml"
 cp "$repository/tests/fixtures/settings-voice.sh" "$test_root/voice/voice.sh"
 printf 'profiles=voice-dictation\n' > "$test_root/voice/install.conf"
@@ -480,3 +480,6 @@ if ! grep -q SETTINGS_TASK_PASSED "$test_root/task.log" \
 fi
 
 printf 'Settings command and interface tests passed.\n'
+# Poller lifecycle, shared collectors, and stale rendering use fake scripts only.
+bash "$repository/tests/script-poller.sh" </dev/null
+

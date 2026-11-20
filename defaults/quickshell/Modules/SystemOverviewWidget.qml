@@ -6,6 +6,7 @@ import "../Services"
 
 WidgetFrame {
     id: root
+    dataSources: [systemPoller]
 
     readonly property string shellDir: Quickshell.env("HOME") + "/.local/share/blankweave/shell"
     readonly property var preferences: root.bar.shell.preferences
@@ -97,8 +98,10 @@ WidgetFrame {
         }
     }
 
-    ScriptPoller {
+    SharedPoller {
         id: systemPoller
+        service: root.bar.shell.pollers
+        key: "SystemOverviewWidget:systemPoller"
         command: root.shellDir + "/system-overview.sh"
         interval: systemPanel.open ? 30000 : 120000
         onUpdated: payload => root.updateSystemInfo(payload)
