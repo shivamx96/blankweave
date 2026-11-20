@@ -1,345 +1,322 @@
-# blankweave
+# Blankweave
 
-Arch + Hyprland bootstrap with automatic hardware detection.
+Blankweave configures an installed Arch Linux system as a Hyprland desktop with
+Quickshell, Ghostty, Dunst and capability-selected hardware support. It manages
+system configuration and application defaults as well as appearance. It is not
+an operating-system installer or a package rollback tool; use Archinstall first
+if you need a base system, and keep backups of existing configuration.
 
-Blankweave boots through Limine on UEFI systems. It imports the proven Linux
-kernel, initramfs, and command line from Archinstall's Boot Loader Specification
-entries, so LUKS unlocking remains an initramfs/Plymouth concern rather than a
-boot-manager concern. Existing systemd-boot files and its `Linux Boot Manager`
-firmware entry are deliberately retained as a recovery path.
+## Screenshots
 
-Hardware support is capability-based rather than tied to machine labels. The
-installer detects Intel and AMD CPUs, Intel, AMD, and NVIDIA GPUs, batteries,
-internal panels and backlights, DDC/CI displays, Bluetooth controllers, and
-gaming-driver support. It installs the matching CPU microcode and GPU stack,
-plus the baseline device firmware used by modern Linux hardware.
+**Owner action required: add these images. No screenshots are supplied yet.**
+
+- `docs/screenshots/desktop.png` — desktop, bar and application launcher.
+- `docs/screenshots/settings.png` — native Settings and a bar control panel.
+- `docs/screenshots/lock-screen.png` — manual lock screen.
+
+These are planned image paths, not existing assets.
+
+## What you get
+
+- A multi-monitor bar with keyboard-accessible device and system panels.
+- An application launcher, clipboard history, Settings search and system actions.
+- Native Settings for appearance, devices, networking and system maintenance.
+- Bundled dark/light themes and personal theme support.
+- Manual and idle lock-screen protection with Hyprlock.
+- Release updates, diagnostics and bounded configuration rollback.
+- Hardware adaptation for Intel, AMD and NVIDIA graphics, batteries, internal
+  displays, DDC/CI brightness and Bluetooth.
+
+## Requirements
+
+Use an installed Arch Linux system booted in UEFI mode, a normal account with
+sudo access, and working Internet access for Git, package downloads and AUR
+builds. Preflight requires sudo, pacman, Git and Python 3, an unlocked package database,
+and disabled Secure Boot when its status is readable. Bootstrap can install
+Git through sudo if missing. Full upgrades require network access.
+
+The boot helpers support direct Linux Boot Loader Specification entries with
+kernel and initramfs files on a FAT EFI System Partition, using systemd-boot
+or Limine. Blankweave installs Limine and preserves systemd-boot recovery.
+GRUB, UKI-only layouts, legacy BIOS and signed Secure Boot are unsupported.
+There is no distribution-derivative compatibility promise. GPU detection covers
+Intel, AMD and NVIDIA; hardware-dependent controls need device/driver support.
+
+LUKS root encryption is recommended. If encryption cannot be confirmed, setup
+defaults to password sign-in and skips passwordless keyring provisioning.
+Automatic sign-in can be selected explicitly: anyone who can unlock the disk
+gets the desktop and its saved secrets. No display manager or boot-time lock
+screen is installed. Hyprlock protects manual locking, idle, suspend and resume.
 
 ## Install
 
-For a new machine starting from the Arch live USB, use the reusable
-[Archinstall baseline](archinstall/README.md) first. It keeps disk selection and
-LUKS/user credentials interactive, then hands the installed system to this
-bootstrap.
-
-Run the bootstrap as your normal user after the Archinstall stage:
+For a new system, review the [Archinstall baseline](archinstall/README.md).
+Run this as your normal user in an interactive terminal:
 
 ```bash
 curl --proto '=https' --tlsv1.2 -fsSL \
   https://raw.githubusercontent.com/shivamx96/blankweave/refs/heads/main/bootstrap.sh | sh
 ```
 
-It clones the managed repository to
-`~/.local/share/blankweave/repository`, installs the `blankweave` command in
-`~/.local/bin`, and opens the guided setup before applying system configuration.
-The bootstrap requires an interactive terminal so profiles, theme, and optional
-Git/SSH choices can be reviewed before package or system changes begin.
+Bootstrap selects the newest valid annotated release reachable from main and
+creates `~/.local/share/blankweave/repository`. Guided setup asks for optional
+application profiles, theme/mode, optional global Git identity, local Ed25519
+key generation and sign-in policy. It never uploads keys or asks for credentials.
+Review the package list before applying. Installation includes a full Arch
+upgrade, package/AUR builds, hardware configuration, boot manager, services,
+login policy, managed data and config entry points. Duration depends on downloads,
+AUR builds and selected profiles; no fixed completion time is guaranteed. Stages
+show elapsed time. Optional package failures are listed with retry commands.
 
-After the first install, use:
+A cancelled setup prints its resume command. Run
+`~/.local/share/blankweave/repository/bin/blankweave setup` again; after a failed
+apply with saved choices, add `--non-interactive`. That retries convergence
+rather than resuming at the failed stage. Non-interactive setup requires both
+`~/.config/blankweave/install.conf` and `~/.config/blankweave/setup.conf`.
 
-```bash
-blankweave version
-blankweave setup
-blankweave update
-blankweave doctor
-```
+Restart when the installer says to. Automatic sign-in uses the disk passphrase
+as the login; password sign-in additionally asks for the account password.
+The first desktop login offers a dismissible welcome card. Five starting keys
+are Super+Return (terminal), Super+Space (launcher), Super+comma (Settings),
+Super+slash (all shortcuts), and Super+Escape (power panel). `blankweave welcome` shows the
+card again. Run `blankweave doctor` after installation.
 
-`blankweave update` refuses dirty, divergent, or non-`main` managed checkouts. It
-only fast-forwards from the expected GitHub repository, applies the new version,
-and then records successful one-time migrations.
+## Daily use
 
-## Releases
+Default keys come from `defaults/shell/shortcut-catalog.json`. Settings can
+change them; these are the bundled defaults:
 
-Blankweave releases are stable SemVer versions with two matching markers:
-`VERSION` in the commit and an annotated `v<VERSION>` Git tag pointing to that
-exact commit. An untagged checkout is shown as `unreleased` and remains usable
-for local development, but `blankweave update` will never install it. The first
-supported rollback boundary is the tagged `v0.1.0` known-working baseline.
+| Key | Action |
+| --- | --- |
+| `Super+Return` | Open terminal <!-- shortcut:terminal --> |
+| `Super+space` | Open launcher <!-- shortcut:launcher --> |
+| `Super+comma` | Open Settings <!-- shortcut:settings --> |
+| `Super+slash` | Keyboard shortcuts <!-- shortcut:settings-shortcuts --> |
+| `Super+B` | Open web browser <!-- shortcut:browser --> |
+| `Super+E` | Open file manager <!-- shortcut:files --> |
+| `Super+L` | Lock screen <!-- shortcut:lock --> |
+| `Super+T` | Toggle theme <!-- shortcut:theme --> |
+| `Super+Shift+V` | Open clipboard <!-- shortcut:clipboard --> |
+| `Super+Q` | Close window <!-- shortcut:close-window --> |
+| `Super+F` | Toggle fullscreen <!-- shortcut:fullscreen-window --> |
+| `Super+Shift+F` | Toggle maximize <!-- shortcut:maximize-window --> |
+| `Super+S` | Copy screenshot <!-- shortcut:screenshot --> |
+| `Super+Escape` | Open power menu <!-- shortcut:logout --> |
+| `Super+Ctrl+A` | Open audio panel <!-- shortcut:panel-audio --> |
+| `Super+Ctrl+N` | Open network panel <!-- shortcut:panel-network --> |
+| `Super+Ctrl+B` | Open bluetooth panel <!-- shortcut:panel-bluetooth --> |
+| `Super+Ctrl+I` | Open notifications panel <!-- shortcut:panel-notifications --> |
+| `Super+Ctrl+D` | Open display panel <!-- shortcut:panel-display --> |
 
-See [RELEASES.md](RELEASES.md) for the release and tagging procedure.
+The bar exposes workspaces, device controls, notifications, hardware meters and
+power, with optional profile/application indicators. Click an entry to open its
+panel; the Super+Ctrl keys above open common panels on the focused display.
+Tab/Shift+Tab move through controls, arrows adjust or navigate, Enter/Space
+activate, and Escape closes. Power actions that discard work require confirmation.
 
-Updates can be inspected before they are applied:
+The launcher searches installed desktop entries, Settings rows and a fixed set
+of system actions; it also offers clipboard history with Ctrl+Tab to switch
+views. It is not a general shell-command runner. Browser and file keys use the
+effective default applications; a base install without a browser is supported.
 
-```bash
-blankweave update --check
-blankweave update --dry-run
-```
+Open Settings from the launcher or with `blankweave settings`. Use
+`blankweave settings --list` for page/row ids, then `blankweave settings <id>`
+to open a particular control. `blankweave help <command>` describes each command.
+Zsh completion installs to `~/.local/share/zsh/site-functions`, on the managed
+zshrc's fpath before compinit. Bash completion is installed under
+`~/.local/share/bash-completion/completions/blankweave` for bash-completion users. A fresh installation seeds GCR's SSH agent socket
+once; it works with the existing GNOME Keyring Secret Service. The profile only
+sets SSH_AUTH_SOCK when unset and the GCR socket exists. Add keys yourself; no forwarding or SSH config
+changes are made. Existing installations preserve their prior agent choice.
+Printer Settings offers discovered IPP/IPPS devices from a bounded read-only
+CUPS query alongside manual URI entry; no discovery daemon is installed.
 
-An apply records the previous and target revisions, saves preflight and
-postflight doctor reports plus the installer log under
-`~/.local/state/blankweave/recovery/`, and runs a final health check. If a root
-Snapper configuration already exists, Blankweave also creates paired pre/post
-snapshots. `blankweave rollback` restores the previous repository revision and
-reconverges its managed configuration; it deliberately does not downgrade Arch
-packages or reverse completed one-time migrations. A recorded Snapper snapshot
-remains available for manual full-system recovery.
+## Updating
 
-Recovery records both release versions and Git revisions, verifies that they
-still match their annotated tags, and will not cross `MIN_ROLLBACK_VERSION`.
-Recovery protection begins with updates initiated by `v0.2.0` or newer. An
-upgrade initiated by an older client—including a direct `v0.1.0` to `v0.2.0`
-upgrade—cannot have a rollback point reconstructed safely; the next tagged
-update creates the first one before making changes.
+`blankweave update` fetches releases and applies the newest valid annotated
+SemVer tag reachable from main whose VERSION agrees. Unreleased main commits
+are ignored. The managed checkout must be clean, on main, and use the trusted
+origin. `blankweave update --check` fetches and reports without applying;
+`blankweave update --dry-run` also validates and prints the target package plan.
+`blankweave update --to vX.Y.Z` selects a specific newer release.
+`blankweave update --reapply` repairs the current revision with a full system
+upgrade; it cannot combine with --to. Removing a profile never removes packages.
 
-`blankweave doctor` performs read-only checks of the managed checkout, runtime
-commands, generated Hyprland configuration, tty1/UWSM session, keyring, and
-Plymouth boot handoff. In a terminal it offers a full scan by default, using
-sudo only for protected boot files; choose `--normal` to never elevate or
-`--full` to request the complete scan without the choice. Non-interactive use
-defaults to the normal scan. It also verifies the Limine executable and Linux
-entries, UEFI boot order, and systemd-boot recovery path. Add `--report` to
-either mode for package and system versions with usernames, hostnames, network
-addresses, disk identifiers, and hardware serial numbers deliberately omitted.
+The confirmation shows the release transition and upgrades known to local
+pacman databases, calling out kernel, GPU drivers, Hyprland and Quickshell.
+The final package transaction may differ after database refresh. `--yes` skips
+the terminal question; update scripts without a terminal already proceed.
+Apply inhibits shutdown, sleep and idle when supported. A removed running
+kernel's modules trigger a restart-required message, a power-panel hint and a
+confirmed Restart action in Settings; restart when ready.
 
-In an active Hyprland session, doctor also compares the running and installed
-compositor versions and reports deprecated options when the compositor supports
-that query. Shareable reports include only the deprecation count; inspect
-`hyprctl deprecated-config` locally for details. Saved monitor Lua is checked
-for syntax errors separately because startup deliberately tolerates a broken
-saved layout. These checks do not reload or change the desktop.
+## When something goes wrong
 
-Limine is installed as `Blankweave Boot Manager` and placed first in UEFI
-`BootOrder` only after its executable and configuration have been staged. Limine
-shows its menu on every boot: for three seconds on Linux-only systems and five
-seconds when another installed operating system is detected. This keeps the
-current kernel, LTS kernel, recovery path, and alternate operating systems
-discoverable. Active operating-system EFI entries are added without mounting or
-copying their EFI System Partitions or maintaining a distribution allowlist.
-Selecting one uses that operating system's existing UEFI entry. The menu also
-contains `Blankweave recovery (systemd-boot)`.
+Run `blankweave doctor` for read-only checks and the remedy printed beside each
+warning/failure. `blankweave doctor --normal` never elevates; `--full` requests
+sudo for protected boot checks only. `--report` omits identifying information
+and is suitable for sharing. Doctor also warns about non-loopback listening
+ports when it can confirm no input firewall, without changing firewall state;
+if rules cannot be read it reports that the state is unknown.
 
-When firmware provides a generic `EFI USB Device` record, Limine also offers a
-`Boot from USB` handoff. That record is commonly persistent even when no drive
-is inserted, so its presence is not treated as proof of attached media. The
-visible menu and the machine's firmware boot menu both remain available.
+A failed session start leaves a recovery card and working shell on tty1:
+inspect `~/.local/state/blankweave/uwsm-session.log` (previous log: the same name
+with .1), run doctor, and use `start_desktop` to retry after fixing the cause.
+Ctrl+Alt+F2 opens the ordinary tty2 recovery login. User service diagnostics are
+in `journalctl --user -b -p warning`. Setup logs live under
+`~/.local/state/blankweave/setup/`; update/reapply logs and diagnostic reports
+live under `~/.local/state/blankweave/recovery/` (repairs use its reapply directory).
 
-If Limine cannot boot Blankweave, open the machine's firmware boot menu and
-select `Linux Boot Manager`. That is the untouched systemd-boot installation
-created by the Archinstall baseline. Secure Boot must remain disabled until
-Blankweave gains a signed-boot flow; the installer refuses to activate unsigned
-Limine when Secure Boot is enabled.
+`blankweave rollback` restores the recorded previous release and reconverges
+managed configuration within MIN_ROLLBACK_VERSION. It never downgrades packages
+or reverses migrations; normally only missing packages are installed offline
+from local databases/cache. For an older installer that cannot avoid a full
+upgrade, confirm on a terminal or use `blankweave rollback --allow-upgrade`.
+Snapper snapshots are recorded only when a root configuration already exists;
+full-system restoration is manual. Updates started before v0.2.0 cannot record
+a protected rollback point. If Limine fails, choose Linux Boot Manager in the
+firmware menu for the preserved systemd-boot path.
 
-The script will:
-- Detect hardware
-- Install packages (Hyprland, Quickshell, Dunst, Ghostty, etc.)
-- Configure tty1 automatic login and launch Hyprland through UWSM
-- Install Limine while preserving systemd-boot as boot recovery
-- Set up defaults in `~/.local/share/blankweave/`
-- Generate user configs in `~/.config/`
-- Capture a sanitized hardware inventory for the native system panel
+## Customising
 
-For development, a local checkout can still be applied with `./install.sh`.
-That path installs the same command and records the checkout as the active
-Blankweave source.
+Choose appearance in Settings or use `blankweave theme list`,
+`blankweave theme set <id>`, `blankweave theme mode light` and
+`blankweave theme sync`. Bare `blankweave theme` shows theme, mode and pending
+system sync. System appearance needs authorization. Personal themes under
+`~/.config/blankweave/themes/` shadow bundled ids. Use `blankweave theme lint`
+to validate themes before applying them.
 
-For configuration development, `python3 tests/hyprland_parser_test.py` checks
-installer-generated Lua with a real Hyprland 0.57.1-or-newer parser. It uses a
-temporary home and runtime directory, disconnected session buses, and no live
-display connection. CI runs it as an unprivileged user against the current Arch
-package, including saved preferences and deliberately invalid configurations.
-This verifies configuration compatibility, not rendered desktop behavior.
+Put personal snippets in `~/.config/blankweave/overrides/`: hyprland.lua,
+ghostty.conf, dunst.conf and zsh.zsh load after managed defaults. Missing starter
+files are seeded once. Managed data under `~/.local/share/blankweave/` is replaced
+on update. Fully custom entry points are preserved but must load snippets
+themselves. The Files list below records Settings storage and editing rules.
 
-The hardware inventory stores motherboard, display, and DIMM model/specification
-fields, but excludes hardware serial numbers and machine UUIDs. Refresh it after
-changing RAM or displays without reinstalling:
+### Files
 
-```bash
-sudo ~/.local/share/blankweave/shell/hardware-inventory.sh "$USER"
-```
+Settings names its storage below each control. `~/.config` below means
+`${XDG_CONFIG_HOME:-~/.config}`; Copy path resolves the current location.
+Keep a backup before hand editing; generated Lua files should be regenerated
+through Settings. External edits are read back, validated, or rejected as stale.
 
-The live shell never needs elevated privileges; it only reads this cached file.
+<!-- settings-files:start -->
+- `~/.config/blankweave/accessibility.json` — accessibility preferences; writer: accessibility-settings.py; hand editing supported with the existing schema (close Settings first).
+- `~/.config/blankweave/accessibility.lua` — accessibility generated compositor rules; writer: accessibility-settings.py; generated, do not hand edit.
+- `~/.config/blankweave/backup.json` — backup preferences; writer: settings_backup.py; hand editing supported with the existing schema (close Settings first).
+- `~/.config/blankweave/idle.json` — idle preferences; writer: idle-policy.py; hand editing supported with the existing schema (close Settings first).
+- `~/.config/blankweave/interface.json` — interface preferences; writer: interface-settings.py; hand editing supported with the existing schema (close Settings first).
+- `~/.config/blankweave/interface.lua` — interface generated compositor rules; writer: interface-settings.py; generated, do not hand edit.
+- `~/.config/blankweave/keyboard.json` — keyboard preferences; writer: keyboard-settings.py; hand editing supported with the existing schema (close Settings first).
+- `~/.config/blankweave/keyboard.lua` — keyboard generated compositor rules; writer: keyboard-settings.py; generated, do not hand edit.
+- `~/.config/blankweave/monitor-setups.json` — monitor setups preferences; writer: monitor-layout.sh (monitor-setups.py); hand editing supported with the existing schema (close Settings first).
+- `~/.config/blankweave/monitors.json` — monitors preferences; writer: monitor-layout.sh; hand editing supported with the existing schema (close Settings first).
+- `~/.config/blankweave/monitors.lua` — monitors generated compositor rules; writer: monitor-layout.sh; generated, do not hand edit.
+- `~/.config/blankweave/night-light.json` — night light preferences; writer: night-light.py; hand editing supported with the existing schema (close Settings first).
+- `~/.config/blankweave/notifications.json` — notifications preferences; writer: notification-settings.py; hand editing supported with the existing schema (close Settings first).
+- `~/.config/blankweave/pointer.json` — pointer preferences; writer: pointer-settings.py; hand editing supported with the existing schema (close Settings first).
+- `~/.config/blankweave/pointer.lua` — pointer generated compositor rules; writer: pointer-settings.py; generated, do not hand edit.
+- `~/.config/blankweave/power-profiles.json` — power profiles preferences; writer: power_policy.py; hand editing supported with the existing schema (close Settings first).
+- `~/.config/blankweave/shell.json` — shell preferences; writer: ShellPreferences; hand editing supported with the existing schema (close Settings first).
+- `~/.config/blankweave/shortcuts.json` — shortcuts preferences; writer: shortcuts-settings.py; hand editing supported with the existing schema (close Settings first).
+- `~/.config/blankweave/shortcuts.lua` — shortcuts generated compositor rules; writer: shortcuts-settings.py; generated, do not hand edit.
+- `~/.config/blankweave/theme.json` — resolved theme selection and palette; writer: theme-apply.sh; use Settings or theme-apply.sh, edit personal themes instead.
+- `~/.config/blankweave/theme.lua` — theme generated compositor rules; writer: theme-apply.sh; generated, do not hand edit.
+- `~/.config/blankweave/wallpapers.json` — wallpapers preferences; writer: wallpaper-settings.py; hand editing supported with the existing schema (close Settings first).
+- `~/.config/mimeapps.list` — mimeapps preferences; writer: default-apps.py; hand editing supported with the existing schema (close Settings first).
+- `~/.config/blankweave/magnifier.lua` — magnifier shortcuts; writer: settings_session.py; managed file, use Settings or personal Hyprland overrides.
+- `~/.config/blankweave/idle-hibernate` — idle sleep selects suspend or hibernate; writer: settings_recovery.py; hand editing supported (`yes` or `no`).
+<!-- settings-files:end -->
 
-## Installer profiles
+Other contents of the Blankweave configuration directory:
 
-The required Blankweave environment and detected hardware support are always
-installed. Optional applications and features are grouped into five additive
-profiles:
+- `~/.config/blankweave/install.conf` — package profile choices; writer: installer choices parser; hand editing supported (strict key=value).
+- `~/.config/blankweave/setup.conf` — non-secret first-run choices; writer: guided setup; hand editing supported (strict key=value).
+- `~/.config/blankweave/weather.json` — weather location; writer: weather-status.sh; hand editing supported with its schema.
+- `~/.config/blankweave/interface.lua` — generated sizing defaults; writer: interface-settings.py; do not hand edit.
+- `~/.config/blankweave/accessibility.lua` — generated animations; writer: accessibility-settings.py; do not hand edit.
+- `~/.config/blankweave/system-bell.json` — desktop bell preference; writer: system_bell.py; hand editing supported with its schema.
+- `~/.config/blankweave/system-bell.lua` — generated bell rules; writer: system_bell.py; do not hand edit.
+- `~/.config/blankweave/overrides/` — personal Hyprland, Ghostty, Dunst and Zsh snippets; seeded by install.sh, then user-owned; hand editing supported.
+- `~/.config/blankweave/wallpapers/` — personal wallpaper images; writer: user; add or remove images by hand.
+- `~/.config/blankweave/themes/` — personal themes shadowing bundled IDs; writer: user; hand editing supported.
+- `~/.config/blankweave/color-profiles/` — imported display ICC profiles; writer: display_color.py; manage through Settings.
 
-- `desktop` — browsers, notes, and personal desktop utilities;
-- `development` — editors, containers, language tooling, and coding tools;
-- `communication` — messaging and local sharing applications;
-- `gaming` — Steam, Proton, overlays, and host-appropriate 32-bit GPU support;
-- `voice-dictation` — fully local VoxType dictation, its verified `small.en`
-  model, compositor bindings, compact themed OSD, and bar controls.
+Locks and transient Settings scratch files live in `$XDG_RUNTIME_DIR/blankweave/`
+(private mode 0700), or `${XDG_STATE_HOME:-~/.local/state}/blankweave/locks/`
+without a session runtime directory. Saved ledgers, job records, revisions,
+and recovery snapshots remain in their persistent state locations.
 
-Selections can be stored in `~/.config/blankweave/install.conf`:
+## Uninstalling
 
-```ini
-version=1
-profiles=desktop development communication
-```
+Run `blankweave uninstall` to preview the footprint. `blankweave uninstall --apply`
+requires terminal confirmation, or `--yes` without a terminal. Packages are
+listed by manifest and never removed. The root-owned before/after ledger in
+`/var/lib/blankweave/uninstall/` records installer changes: unchanged deployed
+files can be removed, and recorded originals restored. Modified files, unknown
+ownership, recovery state/cache and the managed checkout are retained and reported.
+An older installation without a ledger is preview-only until changes can be
+recorded; reapplying cannot reconstruct its original state.
 
-The config is parsed as data and is never sourced as shell code. Profile order
-does not matter, duplicate names are ignored, and unknown keys, versions, or
-profiles stop the installer before package changes begin.
+Personal preferences, overrides, themes and wallpapers under
+`~/.config/blankweave/` stay unless `--purge-config` is given. Review that option
+carefully. Running shared services, installed packages, keyrings, login shell, groups,
+GPU capabilities and boot loader configuration require manual review; only
+recorded added styling tokens are removed from boot entries. The
+uninstaller does not remove Limine or change firmware boot order. Set up a
+display manager or another session before rebooting: automatic sign-in is going
+away. Review retained items and test removal in a VM before relying on it.
 
-`blankweave setup` guides these profile choices, the initial theme and mode, an
-optional global Git identity, and optional local Ed25519 key generation. It
-shows a final review before writing anything, never asks for credentials, and
-never uploads the public key. Removing a profile only stops Blankweave from
-requesting those packages in future runs—it does not uninstall software already
-present.
+## Engineering reference
 
-Non-secret first-run choices are saved separately in
-`~/.config/blankweave/setup.conf`; both files are strict data formats and are
-never sourced as shell. For repeatable provisioning, review those files and run:
+See [RELEASES.md](RELEASES.md) for annotated-tag release policy and
+[CLAUDE.md](CLAUDE.md) for the architecture and deployment contract.
+Optional profiles are desktop, development, communication, gaming and
+voice-dictation. Core and detected hardware packages are mandatory. Profiles
+are additive and install.conf is parsed as data. Defaults are desktop,
+development and communication, plus gaming on gaming-capable battery-free
+hardware. Local source applies use the internal `install.sh` engine.
 
-```bash
-blankweave setup --non-interactive
-```
+### Profiles, voice and application indicators
 
-This mode requires both configs, validates them, prints the same review, and
-then applies without prompting. A missing profile config enables desktop,
-development, and communication; gaming is also enabled on a gaming-capable
-machine without a battery. Ordinary updates consume the saved package/Git/SSH
-choices but preserve any theme selected after setup.
+Profiles are selected in guided setup or the space-separated profiles= line in
+`~/.config/blankweave/install.conf`; use `blankweave update --reapply` after
+changing them. desktop adds browsers and personal utilities; development adds
+editors, containers and coding tools; communication adds messaging/local sharing;
+gaming adds Steam/Proton and compatible 32-bit graphics; voice-dictation adds
+local VoxType, wtype, accessibility bindings and a verified small.en model.
+The model lives under `~/.local/share/voxtype/models/`. Voice audio and
+transcripts stay local. Non-editable targets use clipboard fallback; the latest
+transcript is retained in `~/.local/state/blankweave/voxtype-last-transcript.json`.
+The voice panel exposes status and recovery; F12 is reserved for push-to-talk
+while the profile is enabled; it replaces the focused application F12 binding
+(including browser DevTools). Optional package failures do not bypass checksums
+or signatures and do not stop other optional applications from being attempted.
 
-At the setup review, enter `profiles`, `theme`, or `git` to revise that section before applying. Setup saves installation output in private log files under `${XDG_STATE_HOME:-~/.local/state}/blankweave/setup/`. If installation fails, it prints the log path and a command to retry with your saved choices; the retry reapplies configuration rather than resuming at the failed step.
+The coding agent indicator appears for locally installed, signed-in Codex or
+Claude Code. Provider allowance checks use their local interfaces, cache for five
+minutes and mark old readings stale; refresh has a 15-second minimum interval.
+A fresh remaining allowance at 20% or below is highlighted. Cache contains quota
+fields and hashed account identity, never prompts, credentials or project paths.
+API-key subscriptions and incompatible CLI interfaces are reported unavailable.
+The bar has no system tray and no manual idle-inhibitor control.
 
-The review shows package target counts; enter `packages` to inspect the full list for your selections and detected hardware. Before applying, basic checks catch unsupported systems, missing tools, an existing package-manager lock, and enabled Secure Boot when readable. Installation displays numbered stages, elapsed time, and the active stage if it stops.
+### Boot and deployment reference
 
-Required core and hardware packages, plus deliberate dependency providers, must install successfully. Optional profile applications are attempted individually; a failed download or build is reported while the other applications and desktop setup continue. The final summary lists failed packages with individual retry commands. Source checksum and signature checks remain enabled. A checksum mismatch can mean a corrupt cached download or an upstream packaging problem; do not bypass verification. If an optional feature such as voice dictation could not be configured, rerun setup after resolving its error.
+Limine becomes Blankweave Boot Manager only after staging succeeds. Its menu is
+shown for three seconds on Linux-only systems and five when another operating
+system is detected. Other systems use their existing firmware entries; their
+partitions are not mounted or copied. Firmware USB handoff is offered when a
+matching firmware record exists, which does not prove a USB drive is inserted.
+The systemd-boot recovery entry and Linux Boot Manager remain available.
+Plymouth owns the disk passphrase prompt; press Esc for text if graphics hide it.
 
-## Voice dictation
-
-Add `voice-dictation` to the space-separated `profiles=` line in
-`~/.config/blankweave/install.conf`, then run `blankweave update` (or select it
-during `blankweave setup`). The profile performs this exact local setup:
-
-1. Installs `voxtype-bin`, `wtype`, and the AT-SPI Python bindings used for
-   best-effort editable-focus detection.
-2. Downloads `ggml-small.en.bin` into
-   `~/.local/share/voxtype/models/` and rejects it unless it matches the pinned
-   SHA-256 digest.
-3. Installs VoxType's Quickshell frontend, renders the active Blankweave colours
-   into `~/.local/share/blankweave/voxtype/config.toml`, and links that file at
-   `~/.config/voxtype/config.toml` unless a user-owned config already exists.
-4. Enables `voxtype.service`, reloads Hyprland, and exposes the themed status
-   and recovery panel in the bar.
-5. Binds `Super+D` for toggle dictation and F12 press/release for push-to-talk.
-
-Audio and transcripts stay on the machine. A definite missing/non-editable
-target routes the result to the clipboard and shows a brief bottom preview.
-Apps that do not publish accessibility state continue through normal typing so
-Blankweave never overwrites the clipboard based on a guess; their preview offers
-one-click copy if insertion did not happen. Either way, only the latest
-transcript is retained at
-`~/.local/state/blankweave/voxtype-last-transcript.json`; it can be copied from
-the voice panel in the bar.
-
-Verify the installation with:
-
-```bash
-systemctl --user is-active voxtype.service
-voxtype status --format json --extended
-test -L ~/.config/voxtype/config.toml
-test -f ~/.local/share/voxtype/models/ggml-small.en.bin
-```
-
-## Keybindings
-
-### System
-- `Super + L` – lock screen
-- `Super + T` – toggle dark/light mode of the active theme
-- `Super + D` – toggle local voice dictation when `voice-dictation` is enabled
-- `F12` (hold/release) – profile-gated push-to-talk; when enabled, this
-  replaces the focused application F12 binding (including browser DevTools)
-- `Super + Shift + W` – cycle the theme wallpaper and any user extras
-- `Super + Y` – reload the desktop shell
-- `Super + M` – exit Hyprland
-
-### Applications
-- `Super + Return` – terminal (ghostty)
-- `Super + B` – web browser (Zen)
-- `Super + Shift + B` – Bluetooth manager
-- `Super + F` – file manager (Thunar)
-- `Super + Space` – native application launcher
-
-The launcher stays on the display where it was opened, even when pointer focus
-moves elsewhere. If that display disconnects, it moves to a remaining display
-without clearing the search or selection. Application and clipboard modes share
-this behavior; closing and reopening starts a fresh search.
-
-### Window Management
-- `Super + Arrow Keys` – focus windows
-- `Super + Q` – close window
-- `Super + V` – toggle floating
-- `Super + J` – toggle split direction
-- `Super + P` – pseudo-tile
-
-### Workspaces
-- `Super + 1-9/0` – bring workspace 1-10 to the focused monitor; press again to send it to the next monitor
-- `Super + Shift + 1-9/0` – move window to workspace
-
-### Screenshots
-- `Print` – full screen screenshot to clipboard
-- `Super + S` – full screen screenshot to clipboard
-- `Super + Shift + S` – select region screenshot to clipboard
-
-### Clipboard
-- `Super + Shift + V` – clipboard history (pick from past copies)
-
-### Multimedia
-- `Fn + Volume Up/Down` – adjust volume (with OSD)
-- `Fn + Mute` – toggle mute
-- `Fn + Brightness Up/Down` – adjust brightness (with OSD)
-- Media play/pause, previous, and next keys – control the active MPRIS player
-
-## Features
-
-- **Capability-based hardware** with Intel, AMD, and NVIDIA graphics support
-- **Audio support** via PipeWire with Pavucontrol GUI
-- **Bluetooth** with Blueman GUI manager
-- **Power management** via Hypridle (auto-lock, brightness control, suspend)
-- **Clean notifications** via Dunst
-- **Native Quickshell bar** with multi-monitor workspaces, audio, brightness,
-  display scaling and placement, network throughput, Bluetooth, hardware
-  metrics, battery, and power controls;
-  place it at the top or bottom and keep it visible, hide it for fullscreen
-  windows, or reveal it from the screen edge
-- **Themes** — each theme provides the shell palette, lock-screen treatment, and
-  wallpapers for both dark and light modes; `blankweave theme` switches them and
-  personal themes live under `~/.config/blankweave/themes/`
-- **Web apps** — sites as standalone windows through Helium's app mode, with
-  launcher entries managed by `blankweave webapp`
-- **Coding agent usage** — a bar popup shows Codex and Claude Code subscription
-  allowance, reset countdowns, and stale readings for installed agents with a
-  local login
-
-## Coding agent usage
-
-The robot icon appears when Codex or Claude Code is installed and signed in.
-Click it for each provider's remaining allowance and reset times. The icon
-highlights when a fresh allowance falls to 20% or less. An expired window shows
-“Awaiting update” until the provider reports new data; it never assumes a reset
-means a full allowance.
-
-Sign in through the agents' own CLIs (`codex login` or `claude auth login`);
-there is no separate widget connection or status-line setup. Both providers
-refresh every five minutes. The refresh button can request an earlier check,
-with a 15-second minimum interval. Readings older than ten minutes are marked
-stale. API-key logins display an unsupported subscription-allowance state.
-
-Codex uses its local app-server account interface. Claude Code uses its
-experimental `get_usage` control request (verified with 2.1.270), in safe mode
-with tools, MCP servers, and session persistence disabled. It sends no user
-prompt or inference request. Older or incompatible CLIs show an unavailable
-state rather than estimated values. Claude's session, weekly **All models**,
-and model-specific weekly limits such as **Fable only** are separate meters.
-Server-provided model labels are preserved. **Max 5×** or **Max 20×** is shown
-when Claude's non-secret profile metadata matches the signed-in account and
-identifies the tier; otherwise the label remains **Max**.
-
-The helper stores only allowance values, timestamps, and hashed account
-identifiers under `${XDG_CACHE_HOME:-~/.cache}/blankweave/agent-usage/`.
-It does not read credential files or store prompts, transcripts, or project paths.
-
-## Renamed from hyprarch
-
-If you installed this as hyprarch, run `hyprarch update` once. It fetches this
-revision, moves `~/.local/share/hyprarch`, `~/.config/hyprarch`, and the
-state and cache directories to their blankweave names (keeping your theme,
-preferences, and wallpapers), and installs the `blankweave` command; the old
-one is removed.
+The hardware inventory contains model/specification fields but excludes serial
+numbers and machine UUIDs. Quickshell reads the cached inventory without root.
+Configuration changes are capability-based, without machine-name branches.
+User config entry points link to deployed defaults; edited files and foreign
+symlinks are preserved. Application-rewritten settings such as Thunar actions
+are seeded as regular files. Quickshell and shell helpers deploy by atomic tree
+exchange so a running watcher does not see a missing tree.
 
 ## Settings application
 
@@ -544,7 +521,7 @@ Use `Ctrl+F` to search, Tab to move between controls, and arrow keys plus Enter
 to navigate the category list. Escape clears a search or closes the window;
 `Ctrl+W` closes it directly.
 
-## Themes
+## Theme reference
 
 A theme bundles the shell palette, the lock-screen treatment, a wallpaper,
 the cursor and icon themes for each of its two modes, dark and light, plus
@@ -613,7 +590,7 @@ or mode switch. `Super + Shift + W` cycles that wallpaper together with extras
 in `~/.config/blankweave/wallpapers/`; updates do not touch that folder. With
 no extras, the key restores the theme wallpaper.
 
-## Customize
+## Configuration reference
 
 Put personal settings in `~/.config/blankweave/overrides/`. Setup creates
 commented starter files only when they are missing; updates and theme switches
@@ -747,3 +724,12 @@ one Dunst drop-in; wallpapers use `wallpapers.json`; bar widgets use `shell.json
 under `~/.config/blankweave`. Startup overrides live in `~/.config/autostart` and
 web-app entries in `~/.local/share/applications`. Diagnostics reports are stored
 privately under `~/.local/state/blankweave`.
+
+Install and update select the highest stable SemVer annotated `vX.Y.Z` tag
+reachable from `origin/main` whose commit's `VERSION` matches. Unreleased main
+commits, lightweight tags, mismatched tags, and off-main tags are ignored.
+The managed `main` branch stops exactly at that release. `update --check`
+notes when main has unreleased commits. `update --to vX.Y.Z` selects a specific
+newer release under the same ancestry and rollback-floor rules; it supports
+`--check`, `--dry-run`, and `--yes`, but cannot combine with `--reapply`.
+Downgrades use `blankweave rollback`.
