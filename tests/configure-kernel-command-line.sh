@@ -32,6 +32,11 @@ efi /EFI/Microsoft/Boot/bootmgfw.efi
 EOF
 windows_checksum=$(sha256sum "$entries/windows.conf")
 
+before_check=$(sha256sum "$entries"/*.conf)
+"$configure" --check "$entries" > /dev/null
+[[ $(sha256sum "$entries"/*.conf) == "$before_check" ]]
+mkdir "$test_root/empty"
+if "$configure" --check "$test_root/empty" > /dev/null 2>&1; then exit 1; fi
 "$configure" "$entries" > /dev/null
 
 managed='quiet splash loglevel=3 systemd.show_status=false rd.systemd.show_status=false udev.log_level=3 rd.udev.log_level=3 vt.global_cursor_default=0'

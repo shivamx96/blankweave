@@ -1,6 +1,17 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+installer_check_boot_layout() {
+    local scripts=$1 failed=false
+    shift
+    if ! "$@" "$scripts/configure-limine.sh" --check; then
+        printf '  FAIL: Unsupported boot layout. Requires direct Linux BLS entries with kernel and initrd on a FAT ESP (systemd-boot/Limine); GRUB and UKI-only layouts are unsupported.\n' >&2
+        failed=true
+    fi
+    "$@" "$scripts/configure-kernel-command-line.sh" --check "${BLANKWEAVE_BLS_ENTRIES_DIR:-/boot/loader/entries}" || failed=true
+    [[ $failed == false ]]
+}
+
 installer_preflight() {
     local root=${1:-} tool variable value failed=false
     printf '\nChecking installation prerequisites...\n'
