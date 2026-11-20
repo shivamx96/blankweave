@@ -49,6 +49,9 @@ hl.config({
         force_default_wallpaper = 0,
         disable_hyprland_logo = true,
         focus_on_activate = true,
+        allow_session_lock_restore = true,
+        key_press_enables_dpms = true,
+        mouse_move_enables_dpms = true,
     },
     -- XWayland cannot scale itself, so on a scaled display Hyprland would
     -- otherwise stretch its 1x output into a blurry window and hand the

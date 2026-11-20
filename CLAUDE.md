@@ -233,6 +233,23 @@ Do not restore a graphical-startup Hyprlock. The LUKS prompt is the boot-time
 authentication boundary. Hyprlock remains in manual keybindings and in
 Hypridle for idle, suspend, and resume protection.
 
+Every managed Hyprlock launch goes through `shell/lock.sh`, which returns
+immediately and serializes startup so repeated requests never create a second
+client. Manual locking (the key and the power panel) calls it directly and
+must work without Hypridle; the managed Hypridle configs use it as `lock_cmd`
+behind their `loginctl lock-session` idle and before-sleep paths. The lock
+shortcut and the hardware media controls carry `locked = true` (`lock`,
+`volume-up`, `volume-down`, `volume-mute`, `mic-mute`, `media-play`,
+`media-pause`, `media-next`, `media-previous`, `media-stop`, `brightness-up`,
+`brightness-down`) and nothing else does: the launcher and session exit stay
+unavailable while locked. With `misc.allow_session_lock_restore`, pressing
+the lock shortcut on Hyprland's "lock screen died" page starts a fresh
+Hyprlock instead of forcing a trip to tty2. Keep that exact set consistent
+between the Lua, the shortcut catalog, Settings verification, and the parser
+test.
+`misc.key_press_enables_dpms` and
+`misc.mouse_move_enables_dpms` wake a display that idle turned off.
+
 ### Config deployment flow
 
 1. `hardware-capabilities.sh` detects GPU vendors, battery/display controls,

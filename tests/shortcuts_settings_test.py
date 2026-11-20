@@ -56,6 +56,16 @@ class ShortcutTests(unittest.TestCase):
         self.helper.apply(self.request(value=None));self.assertEqual(self.helper.settings()['bindings'],{})
         self.assertTrue(self.helper.verified(self.rows,'terminal','SUPER + Return'))
 
+    def test_lock_remap_preserves_locked_flag(self):
+        self.helper.apply(self.request(action='lock', value='SUPER + CTRL + F9'))
+        self.assertTrue(self.helper.verified(self.rows, 'lock', 'SUPER + CTRL + F9'))
+        for action in ('lock', 'terminal'):
+            rows = copy.deepcopy(self.rows)
+            row = next(r for r in rows if r['description'] == 'blankweave:' + action)
+            row['locked'] = not row['locked']
+            self.assertFalse(self.helper.verified(rows, action,
+                'SUPER + CTRL + F9' if action == 'lock' else 'SUPER + Return'))
+
     def test_managed_conflict(self):
         with self.assertRaisesRegex(ValueError,'conflicts'):self.helper.apply(self.request(value='SUPER + b'))
         self.assertFalse(self.helper.config.exists())

@@ -156,6 +156,7 @@ class Shortcuts:
                 and matches[0]['key'].lower() == key and not matches[0]['submap']
                 and not matches[0].get('release') and not matches[0].get('mouse')
                 and bool(matches[0].get('repeat')) == next(r['repeat'] for r in catalog() if r['id'] == action)
+                and bool(matches[0].get('locked')) == next(r.get('locked', False) for r in catalog() if r['id'] == action)
                 and not self.conflict(rows, action, value))
 
     def marker(self):

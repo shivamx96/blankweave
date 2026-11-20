@@ -46,7 +46,8 @@
     "label": "Lock screen",
     "group": "Applications",
     "default": "SUPER + L",
-    "repeat": false
+    "repeat": false,
+    "locked": true
   },
   {
     "id": "theme",

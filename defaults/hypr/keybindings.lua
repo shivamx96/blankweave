@@ -26,7 +26,7 @@ bind("browser", main_mod .. " + B", hl.dsp.exec_cmd("~/.local/share/blankweave/s
 bind("bluetooth", main_mod .. " + SHIFT + B", hl.dsp.exec_cmd("blueman-manager"))
 bind("files", main_mod .. " + E", hl.dsp.exec_cmd("~/.local/share/blankweave/shell/open-default.sh files"))
 bind("launcher", main_mod .. " + space", hl.dsp.exec_cmd([[qs ipc -n -p "$HOME/.local/share/blankweave/quickshell" call blankweave launcher]]))
-bind("lock", main_mod .. " + L", hl.dsp.exec_cmd("hyprlock"))
+bind("lock", main_mod .. " + L", hl.dsp.exec_cmd("~/.local/share/blankweave/shell/lock.sh"), { locked = true })
 bind("theme", main_mod .. " + T", hl.dsp.exec_cmd("~/.local/share/blankweave/shell/theme-apply.sh toggle"))
 bind("wallpaper", main_mod .. " + SHIFT + W", hl.dsp.exec_cmd("~/.local/share/blankweave/shell/wallpaper.sh cycle"))
 bind("clipboard", main_mod .. " + SHIFT + V", hl.dsp.exec_cmd([[qs ipc -n -p "$HOME/.local/share/blankweave/quickshell" call blankweave clipboard]]))

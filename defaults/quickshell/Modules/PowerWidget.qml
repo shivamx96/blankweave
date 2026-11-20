@@ -4,6 +4,7 @@ import Quickshell
 import Quickshell.Io
 import "../Components"
 import "../Services"
+import "../Services/PowerActions.js" as PowerActions
 
 WidgetFrame {
     id: root
@@ -114,7 +115,7 @@ WidgetFrame {
                 theme: root.theme
                 icon: "󰌾"
                 label: "Lock"
-                onPressed: root.execute(["hyprlock"])
+                onPressed: root.execute(PowerActions.lockCommand())
             }
 
             ControlAction {

@@ -8,6 +8,11 @@ hypr=$repository/defaults/hypr
 # XWayland stays unscaled so games see the display's native resolution.
 grep -q 'force_zero_scaling = true' "$hypr/hyprland.lua"
 
+# Recovery and input wake options belong to misc, beside existing booleans.
+for option in allow_session_lock_restore key_press_enables_dpms mouse_move_enables_dpms; do
+    awk '/    misc = {/,/    },/' "$hypr/hyprland.lua" | grep -q "$option = true"
+done
+
 # Games keep rendering while another workspace is on screen; the class match
 # covers every Steam game window (steam_app_<appid>).
 grep -q 'match = { class = "^steam_app_\[0-9\]+$" }' "$hypr/windowrules.lua"
