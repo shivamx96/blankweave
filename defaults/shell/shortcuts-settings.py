@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 """Managed desktop shortcut preferences, conflict checks, and verified rollback."""
+from runtime_paths import runtime_path
+from settings_support import file_refusal
 from contextlib import contextmanager
 import copy
 import fcntl
@@ -108,7 +110,7 @@ class Shortcuts:
     @contextmanager
     def locked(self):
         self.directory.mkdir(parents=True, exist_ok=True)
-        with (self.directory / '.shortcuts.lock').open('a') as stream:
+        with (runtime_path('.shortcuts.lock')).open('a') as stream:
             try:
                 fcntl.flock(stream, fcntl.LOCK_EX | fcntl.LOCK_NB)
             except BlockingIOError as error:
@@ -191,7 +193,7 @@ class Shortcuts:
         value = chord(request['value'] if request['value'] is not None else known[action]['default'])[0]
         with self.locked():
             if self.config.is_symlink() or self.rules.is_symlink():
-                raise ValueError('Shortcuts preference symlinks are user-owned and cannot be edited here.')
+                raise file_refusal('Shortcuts preference symlinks are user-owned and cannot be edited here.', self.config, self.rules)
             previous = self.settings()
             if request['revision'] != revision(previous) or request['session'] != self.session or not self.session:
                 raise ValueError('Shortcuts settings or the desktop session changed. Refresh and try again.')
@@ -206,7 +208,7 @@ class Shortcuts:
                 raise ValueError('Live shortcuts changed. Refresh and try again.')
             current = previous['bindings'].get(action, known[action]['default'])
             if not self.verified(bindings, action, current):
-                raise ValueError('This shortcut was removed or overridden outside Settings. Resolve it in your personal configuration.')
+                raise file_refusal('This shortcut was removed or overridden outside Settings. Resolve it in your personal configuration.', self.directory / 'overrides/hyprland.lua', self.directory.parent / 'hypr/hyprland.lua')
             conflict = self.conflict(bindings, action, value)
             if conflict:
                 raise ValueError('Shortcut conflicts with ' + conflict + '. Choose another combination.')
@@ -234,7 +236,7 @@ class Shortcuts:
                 if self.marker() != revision(updated):
                     raise ValueError('The desktop configuration did not load the saved shortcuts rules.')
                 if not self.verified(self.bindings(), action, value):
-                    raise ValueError('A personal configuration overrides or conflicts with this shortcut. The change was reverted.')
+                    raise file_refusal('A personal configuration overrides or conflicts with this shortcut. The change was reverted.', self.directory / 'overrides/hyprland.lua', self.directory.parent / 'hypr/hyprland.lua')
             except (OSError, ValueError, subprocess.SubprocessError) as failure:
                 # Restore only our own writes, never a concurrent external edit.
                 restored = True

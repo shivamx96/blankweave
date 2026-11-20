@@ -30,11 +30,14 @@
 
 set -euo pipefail
 
+# shellcheck source=defaults/shell/runtime-paths.sh
+source "$(dirname -- "${BASH_SOURCE[0]}")/runtime-paths.sh"
+
 config_home=${XDG_CONFIG_HOME:-"$HOME/.config"}
 config_dir="$config_home/blankweave"
 config_file="$config_dir/monitors.json"
 rules_file="$config_dir/monitors.lua"
-pending_file="$config_dir/.monitor-mode-preview.json"
+pending_file=$(blankweave_runtime_path .monitor-mode-preview.json)
 setups_helper="$(dirname -- "$0")/monitor-setups.py"
 
 setups() { python3 "$setups_helper" "$config_dir" "$0" "$@"; }
@@ -297,7 +300,7 @@ cmd_set_scale() {
 # changes remain live-only until confirmation, so logout/reboot also discards them.
 lock_layout() {
     mkdir -p "$config_dir"
-    exec 9>"$config_dir/.monitor-layout.lock"
+    exec 9>"$(blankweave_runtime_path .monitor-layout.lock)"
     flock -x 9
 }
 
@@ -385,7 +388,7 @@ cmd_mode_preview() {
     ' <<< "$entries")
     token=$(cat /proc/sys/kernel/random/uuid)
     deadline=$(( $(date +%s) + 20 ))
-    staged=$(mktemp "$config_dir/.mode-preview.XXXXXX")
+    staged=$(mktemp "$(blankweave_runtime_path .mode-preview.XXXXXX)")
     jq -n --arg token "$token" --arg connector "$connector" --arg description "$description" \
         --arg mode "$choice" --arg previousMode "$previous_mode" --argjson previousScale "$scale" \
         --arg previousPosition "$position" --argjson entry "$entry" --argjson deadline "$deadline" \
@@ -394,7 +397,7 @@ cmd_mode_preview() {
     mv -f "$staged" "$pending_file"
     # Detach before touching the screen. Closing/crashing Settings cannot kill
     # the watchdog, and its inherited lock fd must not keep our lock held.
-    nohup setsid bash "$0" mode-watch "$token" </dev/null >"$config_dir/.mode-preview.log" 2>&1 9>&- &
+    nohup setsid bash "$0" mode-watch "$token" </dev/null >"$(blankweave_runtime_path .mode-preview.log)" 2>&1 9>&- &
     scale=$(jq -r '.scale | if . == "auto" then "\"auto\"" else tostring end' <<< "$entry")
     if ! apply_mode "$description" "$choice" "$scale" "$position" || ! verify_mode "$description" "$choice"; then
         cmd_mode_revert "$token"

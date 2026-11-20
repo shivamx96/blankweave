@@ -3,6 +3,7 @@
 from contextlib import contextmanager
 import fcntl
 import hashlib
+from settings_support import file_refusal, display_path
 import json
 import os
 from pathlib import Path
@@ -165,7 +166,7 @@ class Policy:
         fresh = running and 0 <= time.monotonic() - state.get('time', 0) < 15
         managed = self.managed()
         applied = fresh and state.get('revision') == self.revision() and not state.get('error')
-        message = ('Your custom Hypridle configuration controls idle behavior.' if not managed else
+        message = (f'Your custom Hypridle configuration ({display_path(self.entry)}) controls idle behavior.' if not managed else
                    'Sign out and back in to start the updated idle service.' if not running else
                    state.get('error', '') if fresh and state.get('error') else
                    'Idle settings are active.' if applied else 'Waiting for the idle service to apply saved settings…')
@@ -179,7 +180,7 @@ class Policy:
         settings = validate(request['settings'])
         with self.locked('write.lock'):
             if not self.managed():
-                raise ValueError('A custom Hypridle configuration is active; it has not been changed.')
+                raise file_refusal('A custom Hypridle configuration is active; it has not been changed.', self.entry)
             if not self.running():
                 raise ValueError('The idle service is not running. Sign out and back in first.')
             if request['revision'] != self.revision():

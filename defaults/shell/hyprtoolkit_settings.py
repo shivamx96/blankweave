@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Render a complete, owned Hyprtoolkit 0.6 configuration (no sourced fragments)."""
 import hashlib
+from settings_support import display_path
 import json
 import math
 import os
@@ -100,7 +101,7 @@ def ownership_message():
     except (OSError, UnicodeError):
         personal = True
     if personal:
-        return 'The screen-sharing picker uses your personal Hyprtoolkit configuration; its appearance is not changed by Settings.'
+        return f'The screen-sharing picker uses your personal Hyprtoolkit configuration ({display_path(path)}); its appearance is not changed by Settings.'
     return ''
 
 

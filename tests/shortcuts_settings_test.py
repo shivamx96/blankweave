@@ -10,6 +10,9 @@ import unittest
 from unittest.mock import patch
 
 REPO = Path(__file__).resolve().parents[1]
+import sys
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'defaults/shell'))
+
 SPEC = importlib.util.spec_from_file_location('shortcuts', REPO / 'defaults/shell/shortcuts-settings.py')
 m = importlib.util.module_from_spec(SPEC); SPEC.loader.exec_module(m)
 

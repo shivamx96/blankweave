@@ -411,7 +411,7 @@ class Jobs(unittest.TestCase):
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory(); self.directory = Path(self.temp.name)
         self.env = {**os.environ, 'HOME': self.temp.name, 'XDG_CONFIG_HOME': str(self.directory / 'config'), 'XDG_STATE_HOME': str(self.directory / 'state'), 'PYTHONDONTWRITEBYTECODE': '1'}
-        for name in ('operations-settings.py', 'settings_support.py', 'settings_operations.py'):
+        for name in ('operations-settings.py', 'settings_support.py', 'settings_operations.py', 'runtime_paths.py'):
             shutil.copy(ROOT / 'defaults/shell' / name, self.directory)
         (self.directory / 'settings_network.py').write_text('''import time
 from pathlib import Path

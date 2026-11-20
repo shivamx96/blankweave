@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 """Discover effective GIO defaults and atomically edit user MIME preferences."""
+from runtime_paths import runtime_path
+from settings_support import display_path
 from contextlib import contextmanager
 import configparser
 import fcntl
@@ -109,7 +111,7 @@ class Defaults:
     def locked(self):
         directory = self.config / 'blankweave'
         directory.mkdir(parents=True, exist_ok=True)
-        with (directory / 'default-apps.lock').open('a') as stream:
+        with (runtime_path('default-apps.lock')).open('a') as stream:
             try: fcntl.flock(stream, fcntl.LOCK_EX | fcntl.LOCK_NB)
             except BlockingIOError as error: raise ValueError('Another default-app change is in progress. Try again.') from error
             yield
@@ -134,7 +136,7 @@ class Defaults:
                          'local': any(parser.has_option(SECTION, mime) for mime in types)})
         return {'rows': rows, 'revision': digest([text, rows]), 'context': self.context,
                 'writable': not self.path.is_symlink(),
-                'message': 'mimeapps.list is a user-owned symlink. Manage it at its source.' if self.path.is_symlink() else ''}
+                'message': f'{display_path(self.path)} is a user-owned symlink. Manage it at its source.' if self.path.is_symlink() else ''}
 
     def fresh_status(self):
         # GIO caches MIME data in-process. Verify in a fresh process after the

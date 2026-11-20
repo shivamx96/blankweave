@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 """Persistent XKB layout defaults and identity-checked live layout switching."""
+from runtime_paths import runtime_path
+from settings_support import file_refusal
 from contextlib import contextmanager
 import copy
 import fcntl
@@ -99,7 +101,7 @@ class Keyboard:
     @contextmanager
     def locked(self):
         self.directory.mkdir(parents=True, exist_ok=True)
-        with (self.directory / '.keyboard.lock').open('a') as stream:
+        with (runtime_path('.keyboard.lock')).open('a') as stream:
             try:
                 fcntl.flock(stream, fcntl.LOCK_EX | fcntl.LOCK_NB)
             except BlockingIOError as error:
@@ -152,7 +154,7 @@ class Keyboard:
         updated = validate({'version': 1, 'values': request['values']})
         with self.locked():
             if self.config.is_symlink() or self.rules.is_symlink():
-                raise ValueError('Keyboard preference symlinks are user-owned and cannot be edited here.')
+                raise file_refusal('Keyboard preference symlinks are user-owned and cannot be edited here.', self.config, self.rules)
             previous = self.settings()
             if request['revision'] != revision(previous) or request['session'] != self.session or not self.session:
                 raise ValueError('Keyboard settings or the desktop session changed. Refresh and try again.')
@@ -165,7 +167,7 @@ class Keyboard:
             if live != request['expected']:
                 raise ValueError('Keyboard configuration changed. Refresh and try again.')
             if live['kb_file'] or live['kb_rules'] not in ('', 'evdev', 'base'):
-                raise ValueError('A custom keymap or rules file is active. Manage it in your personal configuration.')
+                raise file_refusal('A custom keymap or rules file is active. Manage it in your personal configuration.', Path(live['kb_file']).expanduser() if live['kb_file'] else self.directory.parent / 'hypr/hyprland.lua')
             if updated['values']:
                 known = {(r['layout'], r['variant']) for r in catalog()}
                 pairs = list(zip(updated['values']['kb_layout'].split(','), updated['values']['kb_variant'].split(',')))
@@ -193,7 +195,7 @@ class Keyboard:
                     raise ValueError('The desktop configuration did not load the saved keyboard rules.')
                 effective = self.values()
                 if updated['values'] and any(effective[k] != v for k, v in updated['values'].items()):
-                    raise ValueError('A personal configuration overrides this setting. The change was reverted.')
+                    raise file_refusal('A personal configuration overrides this setting. The change was reverted.', self.directory / 'overrides/hyprland.lua', self.directory.parent / 'hypr/hyprland.lua')
             except (OSError, ValueError, subprocess.SubprocessError) as failure:
                 # Restore only our own writes, never a concurrent external edit.
                 restored = True

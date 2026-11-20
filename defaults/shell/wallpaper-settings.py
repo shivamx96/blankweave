@@ -4,7 +4,7 @@ import json
 from pathlib import Path
 import re
 import sys
-from settings_support import atomic, check_revision, cli, config_home, digest, locked, read, restore, run
+from settings_support import file_refusal, atomic, check_revision, cli, config_home, digest, locked, read, restore, run
 
 PATH = config_home() / 'blankweave/wallpapers.json'
 FITS = ['crop', 'fit', 'stretch', 'no']
@@ -68,7 +68,7 @@ def paint(name, path, fit):
 def apply(request):
     with locked('wallpaper'):
         state = status(); check_revision(request, state)
-        if not state['writable']: raise ValueError('Wallpaper preferences are symlinked; edit their source.')
+        if not state['writable']: raise file_refusal('Wallpaper preferences are symlinked; edit their source.', PATH)
         row = next((r for r in state['rows'] if r['id'] == request.get('id')), None)
         if not row: raise ValueError('Display disconnected. Refresh and try again.')
         saved = preferences()

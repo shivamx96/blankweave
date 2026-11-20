@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Merge Blankweave's GTK settings without discarding unrelated preferences."""
+from runtime_paths import runtime_path
 import configparser
 import contextlib
 import fcntl
@@ -19,7 +20,7 @@ def config_root():
 def locked():
     directory = config_root() / "blankweave"
     directory.mkdir(parents=True, exist_ok=True)
-    with (directory / "gtk-settings.lock").open("a") as lock:
+    with (runtime_path("gtk-settings.lock")).open("a") as lock:
         fcntl.flock(lock, fcntl.LOCK_EX)
         yield
 

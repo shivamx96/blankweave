@@ -4,6 +4,7 @@ import os
 from pathlib import Path
 import shutil
 import subprocess
+from settings_support import file_refusal
 from settings_operations import missing, notice, action, choice, field, installed, path_value, privileged, require, run, select, state
 
 
@@ -43,7 +44,7 @@ def health_disks(rows):
 def thumbnail_cache():
     base = Path(os.environ.get('XDG_CACHE_HOME', Path.home() / '.cache'))
     target = base / 'thumbnails'
-    if base.is_symlink() or target.is_symlink(): raise ValueError('Thumbnail cache is symlinked; manage it at its source.')
+    if base.is_symlink() or target.is_symlink(): raise file_refusal('Thumbnail cache is symlinked; manage it at its source.', base if base.is_symlink() else target)
     return target
 
 

@@ -30,6 +30,9 @@
 
 set -euo pipefail
 
+# shellcheck source=defaults/shell/runtime-paths.sh
+source "$(dirname -- "${BASH_SOURCE[0]}")/runtime-paths.sh"
+
 DOTS_DIR=$HOME/.local/share/blankweave
 CONFIG_DIR=${XDG_CONFIG_HOME:-$HOME/.config}
 BLANKWEAVE_CONFIG_DIR=$CONFIG_DIR/blankweave
@@ -399,7 +402,7 @@ main() {
     # cursor size over a concurrent Settings write. Read-only queries need no lock.
     if [[ $command == apply || $command == set || $command == mode || $command == toggle ]]; then
         mkdir -p "$BLANKWEAVE_CONFIG_DIR"
-        exec {interface_lock}> "$BLANKWEAVE_CONFIG_DIR/interface.lock"
+        exec {interface_lock}> "$(blankweave_runtime_path interface.lock)"
         flock -x "$interface_lock"
         trap 'flock -u "$interface_lock"' EXIT
         if [[ -e $BLANKWEAVE_CONFIG_DIR/interface.json ]]; then

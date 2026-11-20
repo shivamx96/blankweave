@@ -8,6 +8,9 @@ from unittest.mock import patch
 from gi.repository import Gio, GLib
 from power_profiles_test import Bus, power, SERVICE
 
+import sys
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'defaults/shell'))
+
 SPEC = importlib.util.spec_from_file_location('policy', Path(__file__).resolve().parents[1] / 'defaults/shell/power_policy.py')
 policy = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(policy)

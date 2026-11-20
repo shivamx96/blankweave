@@ -5,7 +5,7 @@ import os
 from pathlib import Path
 import pwd
 import re
-from settings_support import atomic, config_home, read, restore
+from settings_support import file_refusal, atomic, config_home, read, restore
 from settings_operations import missing, notice, action, choice, field, installed, privileged, require, run, select, state
 
 TOOLS = {'reader': ('orca', 'Screen reader'), 'keyboard': ('wvkbd-mobintl', 'On-screen keyboard')}
@@ -78,7 +78,7 @@ def apply(domain, request):
         unit = 'blankweave-' + command + '.service'
         target = UNITS / unit
         old = read(target)
-        if old is not None and not old.startswith('# Blankweave assistive tool\n'): raise ValueError('A custom service exists; edit it at its source.')
+        if old is not None and not old.startswith('# Blankweave assistive tool\n'): raise file_refusal('A custom service exists; edit it at its source.', target)
         text = '# Blankweave assistive tool\n[Unit]\nDescription=' + label + '\nPartOf=graphical-session.target\nAfter=graphical-session-pre.target\n\n[Service]\nExecStart=/usr/bin/' + executable + '\nRestart=on-failure\n\n[Install]\nWantedBy=graphical-session.target\n'
         atomic(target, text)
         run(['systemctl', '--user', 'daemon-reload'])

@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Persist night-light settings and run a Quickshell-owned hyprsunset instance."""
+from runtime_paths import runtime_path
 import fcntl
 import hashlib
 import json
@@ -85,7 +86,7 @@ def main():
         if not binary:
             raise ValueError("Install hyprsunset to enable night light")
         directory.mkdir(parents=True, exist_ok=True)
-        lock = os.open(directory / ".night-light.lock", os.O_CREAT | os.O_RDWR, 0o600)
+        lock = os.open(runtime_path(".night-light.lock"), os.O_CREAT | os.O_RDWR, 0o600)
         for attempt in range(20):
             try:
                 fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
@@ -99,7 +100,7 @@ def main():
         # hyprsunset 0.4.0's --config parser fails to consume its argument.
         # Use its normal XDG lookup inside a private config root instead, without
         # overwriting the user's ~/.config/hypr/hyprsunset.conf.
-        config_root = directory / "night-light-runtime"
+        config_root = runtime_path("night-light-runtime")
         config = config_root / "hypr/hyprsunset.conf"
         config.parent.mkdir(parents=True, exist_ok=True)
         atomic_write(config, configuration(value))

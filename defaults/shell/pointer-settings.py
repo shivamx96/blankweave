@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 """Persistent Hyprland pointer defaults and explicitly selected device overrides."""
+from runtime_paths import runtime_path
+from settings_support import file_refusal
 from contextlib import contextmanager
 import copy
 import fcntl
@@ -188,7 +190,7 @@ class Pointer:
             raise ValueError('Invalid pointer scope.')
         with self.locked():
             if self.config.is_symlink() or self.rules.is_symlink():
-                raise ValueError('Pointer preference symlinks are user-owned and cannot be edited here.')
+                raise file_refusal('Pointer preference symlinks are user-owned and cannot be edited here.', self.config, self.rules)
             previous = self.settings()
             if request['revision'] != revision(previous) or request['session'] != self.session or not self.session:
                 raise ValueError('Pointer settings or the desktop session changed. Refresh and try again.')
@@ -230,7 +232,7 @@ class Pointer:
                 if self.marker() != revision(updated):
                     raise ValueError('The desktop configuration did not load the saved pointer rules.')
                 if scope != 'device' and value is not None and self.values()[scope][key] != value:
-                    raise ValueError('A personal configuration overrides this setting. The change was reverted.')
+                    raise file_refusal('A personal configuration overrides this setting. The change was reverted.', self.directory / 'overrides/hyprland.lua', self.directory.parent / 'hypr/hyprland.lua')
                 if scope == 'device' and not any(d['name'] == request['device'] and d['address'] == request['address'] for d in self.devices()):
                     raise ValueError('The selected device disconnected during the change.')
             except (OSError, ValueError, subprocess.SubprocessError) as failure:

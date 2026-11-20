@@ -805,6 +805,17 @@ row control types when their functionality becomes available. Settings tests
 run through `tests/settings.sh`, using offscreen Qt tests and isolated Quickshell
 processes so validation cannot modify the developer's desktop.
 
+`~/.config/blankweave` holds configuration only. Locks and transient
+scratch go through `shell/runtime_paths.py` (`runtime-paths.sh` for bash):
+`$XDG_RUNTIME_DIR/blankweave/`, mode 0700. A caller that lost the variable
+but runs with the account's real home, which is how the installer runs
+helpers through sudo, resolves the same `/run/user/<uid>` so it shares locks
+with the live session; only a caller with no session at all falls back to
+`~/.local/state/blankweave/locks/`. Every holder of a lock must use the
+helper, never a literal path, or two writers stop excluding each other.
+Preferences, ledgers, revisions, jobs, and recovery snapshots are durable
+and stay where they are; atomic-replace staging stays beside its target.
+
 `SettingsOperationsService` owns the remaining system providers for the window;
 `SettingsOperations` is a pure view so standalone Qt tests can inject a backend.
 `operations-settings.py` dispatches only registered domains and actions, validates
