@@ -204,7 +204,10 @@ for id in '' shortcuts unknown-id; do
         [[ $(tail -n 2 "$SETTINGS_CLI_LOG") == "$(printf 'settingsTarget\n%s' "$id")" ]]
     fi
 done
-BLANKWEAVE_DATA_DIR="$test_root/settings-data" "$repository/bin/blankweave" settings --list > "$test_root/settings-ids"
+# --list parses the deployed catalog read-only; deploy the repository copy to a fake home.
+mkdir -p "$test_root/settings-home/.local/share/blankweave"
+ln -s "$repository/defaults/quickshell" "$test_root/settings-home/.local/share/blankweave/quickshell"
+HOME="$test_root/settings-home" "$repository/bin/blankweave" settings --list > "$test_root/settings-ids"
 grep -Fxq $'shortcuts\tKeyboard shortcuts' "$test_root/settings-ids"
 grep -Fxq $'sound/input\tMicrophone & input level' "$test_root/settings-ids"
 grep -Fxq $'appearance\tAppearance' "$test_root/settings-ids"
