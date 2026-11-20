@@ -15,5 +15,4 @@ snapper
 orca
 networkmanager-openvpn
 samba
-pacman-contrib
 flatpak

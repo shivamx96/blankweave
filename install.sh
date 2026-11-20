@@ -217,6 +217,10 @@ else
     echo "No Bluetooth controller detected; skipping the Bluetooth service."
 fi
 
+echo "Setting up package cache retention (last three versions)..."
+systemctl enable paccache.timer
+systemctl start paccache.timer || warn "Could not start package cache retention timer."
+
 echo "Setting up NetworkManager..."
 systemctl enable NetworkManager.service
 systemctl start NetworkManager.service || warn "Could not start NetworkManager."

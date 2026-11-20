@@ -519,4 +519,50 @@ def apply(domain, request):
         self.assertGreaterEqual(cancelled['finished'], cancelled['started'])
 
 
+class CacheCleanup(unittest.TestCase):
+    def test_privileged_retention_and_no_arguments(self):
+        with patch.object(system, 'run', return_value='done') as run, patch.object(system.Path, 'exists', return_value=False):
+            system.execute('package-cache-clean', {}, 1000)
+            self.assertEqual([c.args[0] for c in run.call_args_list],
+                             [['/usr/bin/paccache', '-rk3'], ['/usr/bin/paccache', '-ruk1']])
+            with self.assertRaises(ValueError): system.execute('package-cache-clean', {'flags': '-rk0'}, 1000)
+        with patch.object(storage, 'privileged', return_value='done') as privileged:
+            storage.apply('disk-usage', {'action': 'pacman-clean'})
+            privileged.assert_called_once_with('package-cache-clean')
+
+    def test_paru_cleanup_and_refusals(self):
+        with tempfile.TemporaryDirectory() as tmp, patch.object(storage.Path, 'home', return_value=Path(tmp)):
+            cache = Path(tmp) / '.cache/paru'
+            clone = cache / 'clone'
+            clone.mkdir(parents=True)
+            (clone / 'source').write_text('build')
+            outside = Path(tmp) / 'keep'; outside.mkdir(); (outside / 'file').write_text('keep')
+            (clone / 'link').symlink_to(outside, target_is_directory=True)
+            (cache / 'metadata').write_text('keep')
+            storage.clean_paru()
+            self.assertFalse(clone.exists()); self.assertTrue((outside / 'file').exists())
+            self.assertTrue((cache / 'metadata').exists())
+            clone.symlink_to(outside, target_is_directory=True)
+            with self.assertRaises(ValueError): storage.clean_paru()
+            clone.unlink(); cache.rename(cache.with_name('old')); cache.symlink_to(outside)
+            with self.assertRaises(ValueError): storage.clean_paru()
+            cache.unlink(); cache.mkdir()
+            with patch.object(storage.os, 'getuid', return_value=os.getuid() + 1):
+                with self.assertRaises(ValueError): storage.clean_paru()
+
+    def test_cache_reads_and_actions(self):
+        with tempfile.TemporaryDirectory() as tmp, patch.dict(os.environ, BLANKWEAVE_STORAGE_VISIBLE='1'), patch.object(storage.Path, 'home', return_value=Path(tmp)):
+            path = Path(tmp) / 'file'; path.write_bytes(b'x' * 4096)
+            self.assertIn('MiB', storage.cache_size(Path(tmp)))
+            with patch.object(storage, 'cache_size', return_value='1 MiB'):
+                data = storage.status('disk-usage')
+            actions = {a['key']: a for a in data['actions']}
+            for key in ['pacman-clean', 'paru-clean']:
+                self.assertTrue(actions[key]['confirm']); self.assertFalse(actions[key]['cancellable'])
+            self.assertIn('Pacman package cache: 1 MiB', data['details'])
+            self.assertIn('Paru cache: 1 MiB', data['details'])
+        with patch.dict(os.environ, BLANKWEAVE_STORAGE_VISIBLE='0'), patch.object(storage.os, 'walk', side_effect=AssertionError('hidden read')):
+            self.assertIn('Open Storage', storage.cache_size(Path('/unused')))
+
+
 if __name__ == '__main__': unittest.main()

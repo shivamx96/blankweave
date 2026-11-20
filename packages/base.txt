@@ -90,3 +90,6 @@ satty
 libnotify
 coreutils
 bash
+
+# Bounded package-cache retention for offline repair and rollback
+pacman-contrib

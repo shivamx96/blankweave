@@ -709,7 +709,7 @@ check_intel_gpu_monitoring() {
 
 check_services() {
     local repository=$1 unit validation
-    local -a system_units=(NetworkManager.service)
+    local -a system_units=(NetworkManager.service paccache.timer)
 
     # shellcheck source=scripts/hardware-capabilities.sh
     source "$repository/scripts/hardware-capabilities.sh"

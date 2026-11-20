@@ -117,6 +117,7 @@ chmod +x "$fake_bin/getcap"
 
 cat > "$fake_bin/systemctl" <<'EOF'
 #!/usr/bin/env bash
+if [[ "$*" == 'is-enabled paccache.timer' ]]; then printf 'disabled\n'; exit 1; fi
 exit 0
 EOF
 chmod +x "$fake_bin/systemctl"
@@ -400,3 +401,7 @@ else
 fi
 
 printf 'Doctor tests passed.\n'
+
+# Cache retention is a read-only service check, with no private paths in its label.
+grep -Fq 'system_units=(NetworkManager.service paccache.timer)' "$repository/scripts/doctor.sh"
+

@@ -4,6 +4,8 @@ import os
 from pathlib import Path
 import shutil
 import subprocess
+import stat
+import time
 from settings_support import file_refusal
 from settings_operations import missing, notice, action, choice, field, installed, path_value, privileged, require, run, select, state
 
@@ -48,14 +50,84 @@ def thumbnail_cache():
     return target
 
 
+def paru_cache():
+    # Use the documented default only, never an arbitrary request path or XDG override.
+    base = Path.home() / '.cache'
+    target = base / 'paru'
+    for path in (base, target):
+        if path.is_symlink(): raise file_refusal('Paru cache path is symlinked.', path)
+        if path.exists() and (not path.is_dir() or path.stat().st_uid != os.getuid()):
+            raise ValueError('Paru cache must be a directory owned by the current user.')
+    return target
+
+
+def size_text(total):
+    return f'{total / 2**30:.1f} GiB' if total >= 2**30 else f'{total / 2**20:.1f} MiB'
+
+
+def cache_size(path):
+    """Bound each visible-page refresh to 500 ms / 200000 entries, never follow links."""
+    if os.environ.get('BLANKWEAVE_STORAGE_VISIBLE') != '1': return 'Open Storage to measure'
+    total = count = 0
+    deadline = time.monotonic() + .5
+    try:
+        if not path.exists(): return '0 B'
+        if path.is_symlink(): return 'Unavailable (symlink)'
+        pending = [path]
+        while pending:
+            with os.scandir(pending.pop()) as entries:
+                for entry in entries:
+                    info = entry.stat(follow_symlinks=False)
+                    if stat.S_ISDIR(info.st_mode): pending.append(Path(entry.path))
+                    if not stat.S_ISLNK(info.st_mode): total += info.st_blocks * 512
+                    count += 1
+                    if count >= 200000 or time.monotonic() >= deadline:
+                        return f'At least {size_text(total)} (still counting)'
+        return size_text(total)
+    except OSError:
+        return 'Unavailable (could not read cache)'
+
+
+def clean_paru():
+    cache = paru_cache()
+    if not cache.exists(): return 'No Paru cache exists.'
+    # Descriptor-relative deletion cannot follow a swapped cache/clone symlink.
+    parent = os.open(cache.parent, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
+    try:
+        if os.fstat(parent).st_uid != os.getuid(): raise ValueError('Paru cache parent ownership changed.')
+        fd = os.open('paru', os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW, dir_fd=parent)
+    finally:
+        os.close(parent)
+    try:
+        if os.fstat(fd).st_uid != os.getuid(): raise ValueError('Paru cache ownership changed.')
+        try: info = os.stat('clone', dir_fd=fd, follow_symlinks=False)
+        except FileNotFoundError: return 'No Paru build cache exists.'
+        if not stat.S_ISDIR(info.st_mode) or info.st_uid != os.getuid():
+            raise file_refusal('Paru clone cache must be an owned directory, not a symlink.', cache / 'clone')
+        # Refuse foreign-owned contents before deleting anything. Symlinks are only unlinked.
+        clone = cache / 'clone'
+        for directory, dirs, files in os.walk(clone, followlinks=False):
+            for name in ['.', *dirs, *files]:
+                if (Path(directory) / name).lstat().st_uid != os.getuid():
+                    raise ValueError('Paru build cache contains files owned by another user.')
+        shutil.rmtree('clone', dir_fd=fd)
+    finally:
+        os.close(fd)
+    return 'Paru build directories and downloaded sources cleared. Future builds will download sources again.'
+
+
 def status(domain):
     if domain == 'disk-usage':
         usage = shutil.disk_usage(Path.home())
         cache = thumbnail_cache()
         stamp = cache.stat().st_mtime_ns if cache.exists() else None
-        return state('Scans run only when requested and stay on one filesystem. Cleanup removes only this user’s generated thumbnail cache.',
-                     [f'Home filesystem: {usage.used / 2**30:.1f} GiB used / {usage.total / 2**30:.1f} GiB total; {usage.free / 2**30:.1f} GiB free'],
-                     [action('scan', 'Scan directory usage', [field('folder', 'Directory', str(Path.home()))], cancellable=True),
+        return state('Directory scans run only when requested and stay on one filesystem. Cache sizes are bounded estimates. Cleanup requires confirmation; package versions are retained for rollback and offline repair.',
+                     [f'Pacman package cache: {cache_size(Path("/var/cache/pacman/pkg"))}',
+                      f'Paru cache: {cache_size(paru_cache())}',
+                      f'Home filesystem: {usage.used / 2**30:.1f} GiB used / {usage.total / 2**30:.1f} GiB total; {usage.free / 2**30:.1f} GiB free'],
+                     [action('pacman-clean', 'Clean pacman package cache', confirm='Keep the last three package versions and one version of uninstalled packages. Never empty this cache: rollback and offline repair depend on it.'),
+                      action('paru-clean', 'Clean Paru build cache', confirm='Delete Paru clone build directories, downloaded sources (including VCS sources), and locally built packages? Future builds must download them again. Installed packages are unchanged.'),
+                      action('scan', 'Scan directory usage', [field('folder', 'Directory', str(Path.home()))], cancellable=True),
                       action('preview-cleanup', 'Review thumbnail cleanup', cancellable=True)] +
                      ([action('cleanup', 'Clear thumbnail cache', confirm=f'Delete generated thumbnails in {cache}? Applications will recreate them.')] if cache.exists() else []),
                      [str(cache), stamp])
@@ -89,6 +161,8 @@ def status(domain):
 def apply(domain, request):
     command = request['action']
     if domain == 'disk-usage':
+        if command == 'pacman-clean': return privileged('package-cache-clean')
+        if command == 'paru-clean': return clean_paru()
         if command == 'scan':
             folder = path_value(request, 'folder', directory=True)
             result = subprocess.run(['du', '-x', '-h', '--max-depth=1', '--', str(folder)], capture_output=True, text=True, timeout=3600)

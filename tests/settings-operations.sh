@@ -25,3 +25,8 @@ if ! grep -q SETTINGS_OPERATIONS_PASSED "$test_root/output" \
     exit 1
 fi
 grep -Fxq 'vpn apply' "$test_root/commands"
+
+# Cache measurement is gated by Storage visibility; cleanup uses the confirmed schema.
+grep -Fq 'BLANKWEAVE_STORAGE_VISIBLE=' "$repository/defaults/quickshell/Services/SettingsOperationTask.qml"
+grep -Fq 'arguments[0] === "disk-usage"'  "$repository/defaults/quickshell/Services/SettingsOperationTask.qml"
+

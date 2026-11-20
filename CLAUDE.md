@@ -1274,6 +1274,15 @@ and backup-repository passwords) declares `confirm=True`; fields that enter an
 existing secret to authenticate do not. The confirmation value stays in the
 view: Settings disables submit until both match, and the dispatcher rejects a
 mismatched `<key>_confirm` companion and strips it before any worker runs.
+`pacman-contrib` is required and the apply enables the packaged
+`paccache.timer` (three versions kept per package); doctor warns when it is
+off. Storage offers two confirmed cleanups: the allowlisted
+`package-cache-clean` system operation, which takes only `{}` and runs
+`paccache -rk3` then `paccache -ruk1`, and a user-scoped Paru cleanup that
+removes only `~/.cache/paru/clone`, refuses a symlinked or foreign-owned
+path, and never touches the network. Never empty the pacman cache: rollback
+and offline repair install from it. Cache sizes are read only while Storage
+is visible, within a time and entry bound, and say so when the bound is hit.
 Hibernation boot preparation is limited to the layouts documented in README;
 never expand that support without rollback tests and real resume validation.
 

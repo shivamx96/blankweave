@@ -145,6 +145,11 @@ def hibernate_revert():
 
 
 def execute(command, data, caller):
+    if command == 'package-cache-clean':
+        exact(data, [])
+        if Path('/var/lib/pacman/db.lck').exists(): raise ValueError('Wait for the package transaction to finish.')
+        run(['/usr/bin/paccache', '-rk3'])
+        return run(['/usr/bin/paccache', '-ruk1']) or 'Package cache pruned; rollback versions retained.'
     if command == 'package':
         exact(data, ['kind', 'package', 'packages'])
         kind = text(data, 'kind', r'install|remove')

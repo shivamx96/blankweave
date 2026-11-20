@@ -174,6 +174,11 @@ TestCase {
         SettingsNumberField { theme: test.palette; value: "42"; label: "Test"; minimum: 1; maximum: 100 }
     }
     Component { id: areaFactory; SettingsTextArea { theme: test.palette } }
+    function test_cache_search_aliases() {
+        for (const alias of ["cache", "disk space", "clean up", "paccache"])
+            verify(Catalog.searchSettings(alias).some(row => row.id === "disk-usage"))
+    }
+
     function test_escape_reaches_inner_password_handler() {
         const field = createTemporaryObject(escapeFieldFactory, content)
         field.text = "half typed password"

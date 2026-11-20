@@ -13,6 +13,11 @@ SettingsTask {
         jobOutcomes = next
     }
     readonly property SettingsOperationDraft draft: SettingsOperationDraft { backend: root }
+    status.command: ["env", "BLANKWEAVE_STORAGE_VISIBLE=" + (root.active ? "1" : "0"), "python3", root.helper].concat(root.arguments, ["status"])
+    onActiveChanged: {
+        if (active) refresh(true)
+        if (!active && arguments[0] === "disk-usage") status.running = false
+    }
     property string dismissedJobId: ""
     poll.running: root.active || root.draft.pending || Boolean(root.data.job && ["starting", "running"].includes(root.data.job.phase))
 }
