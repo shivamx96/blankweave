@@ -32,20 +32,16 @@ trap cleanup EXIT HUP INT TERM
 mkdir -p "$dropin_dir"
 staged=$(mktemp "$dropin_dir/.autologin.XXXXXX")
 if [[ -f "$system_root/etc/blankweave/signin.conf" ]] && [[ $(cat "$system_root/etc/blankweave/signin.conf") == no ]]; then
-    cat > "$staged" <<'EOF'
-[Service]
-ExecStart=
-ExecStart=-/usr/bin/agetty --noclear - ${TERM}
-EOF
+    rm -f -- "$dropin_file" "$staged"
 else
 cat > "$staged" <<EOF
 [Service]
 ExecStart=
 ExecStart=-/usr/bin/agetty --skip-login --nonewline --noissue --autologin $username --noreset --noclear - \${TERM}
 EOF
+    chmod 0644 "$staged"
+    mv -f "$staged" "$dropin_file"
 fi
-chmod 0644 "$staged"
-mv -f "$staged" "$dropin_file"
 staged=
 
 # The boot command line hides the VT cursor during the graphical handoff.

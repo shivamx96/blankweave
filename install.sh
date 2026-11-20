@@ -36,6 +36,7 @@ trap 'install_progress_exit "$?"' EXIT
 
 section "CHECKING PREREQUISITES"
 "$REPO_DIR/scripts/installer-preflight.sh"
+"$REPO_DIR/scripts/configure-signin-policy.sh" "$SUDO_USER"
 
 WARNINGS=()
 

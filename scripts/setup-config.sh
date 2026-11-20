@@ -9,6 +9,7 @@ SETUP_MODE=dark
 SETUP_GIT_IDENTITY=skip
 SETUP_GIT_NAME=
 SETUP_GIT_EMAIL=
+SETUP_AUTOMATIC_SIGNIN=
 SETUP_SSH_KEY=skip
 
 setup_config_error() {
@@ -32,6 +33,10 @@ setup_config_valid_text() {
 }
 
 setup_config_validate() {
+    [[ -z $SETUP_AUTOMATIC_SIGNIN || $SETUP_AUTOMATIC_SIGNIN == yes || $SETUP_AUTOMATIC_SIGNIN == no ]] || {
+        setup_config_error "automatic_signin must be yes or no"
+        return 1
+    }
     [[ $SETUP_THEME =~ ^[a-z0-9][a-z0-9-]*$ ]] || {
         setup_config_error "invalid theme id: $SETUP_THEME"
         return 1
@@ -81,6 +86,7 @@ setup_config_load() {
     SETUP_GIT_IDENTITY=skip
     SETUP_GIT_NAME=
     SETUP_GIT_EMAIL=
+    SETUP_AUTOMATIC_SIGNIN=
     SETUP_SSH_KEY=skip
 
     if [[ ! -e $config_file && ! -L $config_file ]]; then
@@ -124,6 +130,7 @@ setup_config_load() {
             git_identity) SETUP_GIT_IDENTITY=$value ;;
             git_name) SETUP_GIT_NAME=$value ;;
             git_email) SETUP_GIT_EMAIL=$value ;;
+            automatic_signin) SETUP_AUTOMATIC_SIGNIN=$value ;;
             ssh_key) SETUP_SSH_KEY=$value ;;
             *)
                 setup_config_error "unknown key: $key"

@@ -92,7 +92,7 @@ fi
 # requires for its confirmation prompts.
 cancel_home=$test_root/cancel-home
 mkdir -p "$cancel_home"
-printf '\n\n\n\n\n\n\nn\nn\nn\n' | \
+printf '\n\n\n\n\n\n\nn\nn\nn\nn\n' | \
     HOME=$cancel_home \
     XDG_CONFIG_HOME=$cancel_home/config \
     BLANKWEAVE_SETUP_APPLY_COMMAND=$fake_apply \
@@ -105,7 +105,7 @@ grep -Fq "$repository/bin/blankweave setup" "$test_root/cancel.out"
 
 guided_home=$test_root/guided-home
 mkdir -p "$guided_home"
-printf '\n\n\n\n\nmoss\nlight\ny\nAda Lovelace\nada@example.com\ny\ny\n' | \
+printf '\n\n\n\n\nmoss\nlight\ny\nAda Lovelace\nada@example.com\ny\ny\ny\n' | \
     HOME=$guided_home \
     XDG_CONFIG_HOME=$guided_home/config \
     BLANKWEAVE_SETUP_APPLY_COMMAND=$fake_apply \
@@ -129,7 +129,7 @@ mapfile -t guided_apply < "$guided_home/apply-called"
 # The review can revisit a section without restarting or saving partial choices.
 edit_home=$test_root/edit-home
 mkdir -p "$edit_home"
-printf '\n\n\n\n\nmoss\nlight\nn\nn\npackages\ntheme\nobsidian\ndark\ny\n' | \
+printf '\n\n\n\n\nmoss\nlight\nn\nn\nn\npackages\ntheme\nobsidian\ndark\ny\n' | \
     HOME=$edit_home \
     XDG_CONFIG_HOME=$edit_home/config \
     BLANKWEAVE_SETUP_APPLY_COMMAND=$fake_apply \

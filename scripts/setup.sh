@@ -42,6 +42,33 @@ resume_setup() {
     printf "Resume setup with:\n  %q setup\n" "$REPOSITORY/bin/blankweave" >&2
 }
 
+choose_signin() {
+    # shellcheck source=scripts/root-encryption.sh
+    source "$REPOSITORY/scripts/root-encryption.sh"
+    # Settings owns policy on an installed system; setup must not override it.
+    if [[ -r /etc/blankweave/signin.conf ]]; then
+        SETUP_AUTOMATIC_SIGNIN=$(cat /etc/blankweave/signin.conf)
+        printf 'Existing sign-in policy retained; change it in Settings.\n'
+        return
+    elif [[ -s ${XDG_STATE_HOME:-$HOME/.local/state}/blankweave/installed-revision ]]; then
+        SETUP_AUTOMATIC_SIGNIN=yes
+        printf 'Existing automatic sign-in policy retained; change it in Settings.\n'
+        return
+    fi
+    if ! root_is_encrypted; then
+        printf "WARNING: Root disk encryption could not be confirmed. Password sign-in is the safe default.\n"
+        printf "Without disk encryption, automatic sign-in lets anyone who powers on the machine reach the desktop and saved secrets.\n"
+        [[ -n $SETUP_AUTOMATIC_SIGNIN ]] || SETUP_AUTOMATIC_SIGNIN=no
+    fi
+    if [[ -z $SETUP_AUTOMATIC_SIGNIN ]]; then SETUP_AUTOMATIC_SIGNIN=yes; fi
+    if [[ $NON_INTERACTIVE == false ]]; then
+        prompt_yes_no "Use automatic sign-in? Anyone who can unlock the disk gets the desktop" "$SETUP_AUTOMATIC_SIGNIN"
+        SETUP_AUTOMATIC_SIGNIN=$REPLY
+    else
+        printf "Sign-in policy: automatic_signin=%s (saved choice or detected default).\n" "$SETUP_AUTOMATIC_SIGNIN"
+    fi
+}
+
 prompt_line() {
     local prompt=$1 default=${2:-}
 
@@ -237,6 +264,9 @@ print_review() {
     printf '\n[4/4] Setup review\n'
     printf '  Capabilities: %s (detected)\n' "${CAPABILITIES:-none}"
     printf '  Profiles:     %s\n' "${INSTALLER_PROFILES[*]:-none}"
+    printf '  Automatic sign-in: %s\n' "$SETUP_AUTOMATIC_SIGNIN"
+    printf 'With automatic sign-in: Your disk passphrase is the login. Anyone who can unlock the disk gets the desktop.\n'
+    printf 'With password sign-in, the account password is required; no passwordless keyring is created.\n'
     printf '  Theme:        %s / %s\n' "$SETUP_THEME" "$SETUP_MODE"
     printf '  Git identity: %s\n' "$git_summary"
     printf '  SSH key:      %s\n' "$ssh_summary"
@@ -244,7 +274,7 @@ print_review() {
         "${#repository_packages[@]}" "${#aur_packages[@]}" "${#providers[@]}"
     printf '                Includes installed targets; dependencies and sizes are resolved during installation.\n'
     printf '\nApplying installs packages and configures the desktop, services, boot manager,\n'
-    printf 'and automatic login. Administrator authentication is required.\n'
+    printf 'and the selected sign-in policy. Administrator authentication is required.\n'
     printf 'Installation includes a full system upgrade. AUR builds and model downloads can take longer.\n'
 }
 
@@ -305,7 +335,8 @@ save_choices() {
         "git_identity=$SETUP_GIT_IDENTITY" \
         "git_name=$SETUP_GIT_NAME" \
         "git_email=$SETUP_GIT_EMAIL" \
-        "ssh_key=$SETUP_SSH_KEY")
+        "ssh_key=$SETUP_SSH_KEY" \
+        "automatic_signin=$SETUP_AUTOMATIC_SIGNIN")
     REPLY+=$'\n'
     write_atomic "$SETUP_CONFIG" 600
 }
@@ -395,6 +426,7 @@ main() {
         choose_git
     fi
 
+    choose_signin
     theme_available "$SETUP_THEME" || die "theme is not available: $SETUP_THEME"
     setup_config_validate
     if [[ $NON_INTERACTIVE == false ]]; then

@@ -59,7 +59,7 @@ mkdir -p "$system_root/etc/blankweave"
 printf 'no\n' > "$system_root/etc/blankweave/signin.conf"
 PATH="$fake_bin:$PATH" BLANKWEAVE_SYSTEM_ROOT="$system_root" BLANKWEAVE_TEST_LOG="$command_log" \
     "$repository/scripts/configure-console-autologin.sh" blankweave
-if grep -q -- '--autologin' "$dropin"; then
+if [[ -e $dropin ]]; then
     printf 'Installer overwrote the saved sign-in preference.\n' >&2
     exit 1
 fi
@@ -75,8 +75,11 @@ fi
 
 # The deployed profile follows UWSM's guarded tty1 integration and the lock
 # screen remains available without being forced at graphical-session startup.
-grep -Fxq 'if uwsm check may-start; then' "$repository/defaults/shell/profile"
-grep -Fxq "    exec uwsm start -e -D Hyprland hyprland.desktop >> \"\$session_log\" 2>&1" "$repository/defaults/shell/profile"
+# Session lifecycle, failure recovery, and the may-start gate are exercised by
+# tests/session-profile.sh across sh, bash, and zsh.
+grep -Fq 'uwsm check may-start >/dev/null 2>&1; then' "$repository/defaults/shell/profile"
+# shellcheck disable=SC2016
+grep -Fxq '    uwsm start -e -D Hyprland hyprland.desktop >> "$session_log" 2>&1 || session_exit_status=$?' "$repository/defaults/shell/profile"
 if grep -Fq 'start-hyprland' "$repository/defaults/shell/profile"; then
     printf 'The profile still bypasses direct UWSM session startup.\n' >&2
     exit 1
@@ -101,3 +104,32 @@ clear_boot_console "$tty_fixture"
 grep -Fq 'clear-boot-console.sh' "$repository/defaults/hypr/autostart.lua"
 
 printf 'Console automatic-login configuration tests passed.\n'
+
+# Resolve first-install policy before keyring/session configuration.
+policy_home=$test_root/policy-home
+policy_root=$test_root/policy-root
+mkdir -p "$policy_home/.config/blankweave" "$policy_root"
+cat > "$fake_bin/findmnt" <<'EOF_FIXTURE'
+#!/bin/sh
+printf '/dev/fixture[/@]\n'
+EOF_FIXTURE
+cat > "$fake_bin/lsblk" <<'EOF_FIXTURE'
+#!/bin/sh
+printf '%s\n' "$FIXTURE_TYPES"
+EOF_FIXTURE
+chmod +x "$fake_bin/findmnt" "$fake_bin/lsblk"
+for spec in encrypted plain explicit; do
+    rm -rf "${policy_root:?}/etc"
+    rm -f "$policy_home/.config/blankweave/setup.conf"
+    expected=no
+    types=$'part\ndisk'
+    if [[ $spec == encrypted ]]; then types=$'lvm\ncrypt\npart\ndisk'; expected=yes; fi
+    if [[ $spec == explicit ]]; then
+        printf '%s\n' version=1 theme=moss mode=dark git_identity=skip git_name= git_email= ssh_key=skip automatic_signin=yes \
+            > "$policy_home/.config/blankweave/setup.conf"
+        expected=yes
+    fi
+    PATH="$fake_bin:$PATH" FIXTURE_TYPES="$types" BLANKWEAVE_SYSTEM_ROOT="$policy_root" \
+        "$repository/scripts/configure-signin-policy.sh" fixture "$policy_home"
+    [[ $(cat "$policy_root/etc/blankweave/signin.conf") == "$expected" ]]
+done

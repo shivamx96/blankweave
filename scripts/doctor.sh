@@ -236,6 +236,11 @@ check_console_session() {
 
     if [[ -r "$autologin" ]] && grep -Fq -- '--autologin' "$autologin"; then
         pass 'tty1 automatic login' 'configured'
+        # shellcheck source=scripts/root-encryption.sh
+        source "$(dirname "${BASH_SOURCE[0]}")/root-encryption.sh"
+        if ! root_is_encrypted; then
+            warn 'root encryption' 'automatic sign-in is active but root encryption could not be confirmed; select password sign-in in Settings'
+        fi
     else
         fail 'tty1 automatic login' 'getty override is missing or invalid'
     fi

@@ -70,3 +70,10 @@ run_configure "$migrated_home"
 [[ $(sha256sum "$migrated_dir/login.keyring") == "$migrated_checksum" ]]
 
 printf 'Default keyring configuration tests passed.\n'
+
+password_home=$test_root/password-home
+mkdir -p "$test_root/policy/etc/blankweave" "$password_home"
+printf 'no\n' > "$test_root/policy/etc/blankweave/signin.conf"
+HOME="$password_home" XDG_DATA_HOME="$password_home/data" BLANKWEAVE_SYSTEM_ROOT="$test_root/policy" \
+    "$repository/scripts/configure-default-keyring.sh"
+[[ ! -e $password_home/data/keyrings ]]
