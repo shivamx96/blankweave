@@ -231,8 +231,14 @@ write_state() {
 }
 
 apply_desktop_preferences() {
-    local scheme gtk_theme prefer_dark icon_theme cursor_theme
+    local scheme gtk_theme prefer_dark icon_theme cursor_theme font_name mono_font_name point_size
 
+    # Only the typeface follows the theme. The size stays at the 11 pt that GTK
+    # and browser interfaces are laid out around; the shell's own textSize is a
+    # bar-density choice, and text scale is owned by interface-settings.py.
+    point_size=11
+    font_name="$(jq -r '.design.typography.fontFamily' <<< "$RESOLVED") $point_size"
+    mono_font_name="$(jq -r '.design.typography.monoFontFamily' <<< "$RESOLVED") $point_size"
     icon_theme=$(jq -r '.iconTheme' <<< "$RESOLVED")
     cursor_theme=$(jq -r '.cursorTheme' <<< "$RESOLVED")
     if [[ $MODE == light ]]; then
@@ -260,6 +266,8 @@ apply_desktop_preferences() {
         gsettings set org.gnome.desktop.interface gtk-theme "$gtk_theme" 2> /dev/null || true
         gsettings set org.gnome.desktop.interface icon-theme "$icon_theme" 2> /dev/null || true
         gsettings set org.gnome.desktop.interface cursor-theme "$cursor_theme" 2> /dev/null || true
+        gsettings set org.gnome.desktop.interface font-name "$font_name" 2> /dev/null || true
+        gsettings set org.gnome.desktop.interface monospace-font-name "$mono_font_name" 2> /dev/null || true
         gsettings set org.gnome.desktop.interface cursor-size "$CURSOR_SIZE" 2> /dev/null || true
     fi
 
@@ -268,7 +276,7 @@ apply_desktop_preferences() {
     python3 "$DOTS_DIR/shell/gtk_settings.py" \
         "gtk-application-prefer-dark-theme=$prefer_dark" "gtk-theme-name=Adwaita" \
         "gtk-icon-theme-name=$icon_theme" "gtk-cursor-theme-name=$cursor_theme" \
-        "gtk-cursor-theme-size=$CURSOR_SIZE"
+        "gtk-cursor-theme-size=$CURSOR_SIZE" "gtk-font-name=$font_name"
 }
 
 apply_wallpaper() {

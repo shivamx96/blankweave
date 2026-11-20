@@ -303,6 +303,19 @@ for profiles that already opened it. Trash, removable drives, and thumbnails
 come from `gvfs`, `udisks2`, and `tumbler` in the required manifest; without
 `gvfs`, Thunar's Delete is permanent.
 
+Fontconfig is linked as `~/.config/fontconfig/conf.d/50-blankweave.conf`:
+fontconfig loads only `conf.d` names that start with a digit, so the former
+`local.conf` was never read. The file maps the toolkit aliases (`system-ui`,
+`ui-sans-serif`, `ui-monospace`) onto the generics and prefers the rice's
+typefaces with `binding="strong"`; a weak alias loses to the system defaults
+for sans-serif. Check any change with `tests/fontconfig.sh`, which runs
+`fc-match` in a sandboxed config tree. GTK applications ignore the generic
+alias for their interface font, so `theme-apply.sh` also writes the resolved
+`design.typography` families to GSettings `font-name` and
+`monospace-font-name` and merges `gtk-font-name` through `gtk_settings.py`.
+Only the family follows the theme; the size stays at GTK's 11 pt and text
+scale remains with `interface-settings.py`.
+
 Core keys never name an optional application. `shell/open-default.sh
 <role>` delegates to `default-apps.py`, which shares the Settings resolver:
 `Super+B` opens the effective handler for `https`, `Super+E` the handler

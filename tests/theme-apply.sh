@@ -76,7 +76,7 @@ assert_rendered() {
     for version in gtk-3.0 gtk-4.0; do
         grep -Fxq 'gtk-enable-event-sounds=false' "$XDG_CONFIG_HOME/$version/settings.ini"
         grep -Fxq 'gtk-sound-theme-name=custom' "$XDG_CONFIG_HOME/$version/settings.ini"
-        grep -Fxq 'gtk-font-name=Custom 12' "$XDG_CONFIG_HOME/$version/settings.ini"
+        grep -Fxq 'gtk-font-name=Atkinson Hyperlegible Next 11' "$XDG_CONFIG_HOME/$version/settings.ini"
     done
     [[ -f "$XDG_CONFIG_HOME/hypr/hyprtoolkit.conf" && ! -L "$XDG_CONFIG_HOME/hypr/hyprtoolkit.conf" ]]
     grep -Fxq 'font_family = Atkinson Hyperlegible Next' "$XDG_CONFIG_HOME/hypr/hyprtoolkit.conf"
@@ -258,6 +258,34 @@ bundled_themes=("$data"/themes/*/theme.json)
 [[ $(jq -r '.theme' <<< "$("$script" status)") == ember ]]
 # Nothing root-owned is present in the sandbox, so nothing can be pending.
 [[ $(jq -r '.system.pending' <<< "$("$script" status)") == false ]]
+
+# GTK fonts follow resolved root/mode typography; sizing stays independent.
+font_theme=$XDG_CONFIG_HOME/blankweave/themes/font-test
+mkdir -p "$font_theme"
+cp -R "$data/themes/obsidian/." "$font_theme/"
+jq '.design.typography = {fontFamily: "Noto Sans", monoFontFamily: "JetBrains Mono", textSize: 16}
+    | .modes.light.design.typography = {fontFamily: "Noto Serif", textSize: 14}' \
+    "$data/themes/obsidian/theme.json" > "$font_theme/theme.json"
+: > "$FAKE_LOG"
+"$script" set font-test
+"$script" mode light
+for version in gtk-3.0 gtk-4.0; do
+    grep -Fxq 'gtk-font-name=Noto Serif 11' "$XDG_CONFIG_HOME/$version/settings.ini"
+    grep -Fxq 'gtk-sound-theme-name=custom' "$XDG_CONFIG_HOME/$version/settings.ini"
+done
+grep -Fxq 'gsettings set org.gnome.desktop.interface font-name Noto Serif 11' "$FAKE_LOG"
+grep -Fxq 'gsettings set org.gnome.desktop.interface monospace-font-name JetBrains Mono 11' "$FAKE_LOG"
+"$script" mode dark
+for version in gtk-3.0 gtk-4.0; do
+    grep -Fxq 'gtk-font-name=Noto Sans 11' "$XDG_CONFIG_HOME/$version/settings.ini"
+done
+grep -Fxq 'gsettings set org.gnome.desktop.interface font-name Noto Sans 11' "$FAKE_LOG"
+grep -Fxq 'gsettings set org.gnome.desktop.interface monospace-font-name JetBrains Mono 11' "$FAKE_LOG"
+expect_failure grep -Fq 'text-scaling-factor' "$FAKE_LOG"
+"$script" set ember
+# Default fonts are restored along with the theme.
+grep -Fxq 'gsettings set org.gnome.desktop.interface font-name Atkinson Hyperlegible Next 11' "$FAKE_LOG"
+grep -Fxq 'gsettings set org.gnome.desktop.interface monospace-font-name JetBrainsMono Nerd Font 11' "$FAKE_LOG"
 
 # Invalid requests fail before anything is touched.
 before=$(cat "$state" "$dunstrc")

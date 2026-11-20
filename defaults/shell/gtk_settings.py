@@ -84,7 +84,7 @@ if __name__ == "__main__":
     try:
         updates = dict(argument.split("=", 1) for argument in sys.argv[1:])
         allowed = {"gtk-application-prefer-dark-theme", "gtk-theme-name", "gtk-icon-theme-name",
-                   "gtk-cursor-theme-name", "gtk-cursor-theme-size"}
+                   "gtk-cursor-theme-name", "gtk-cursor-theme-size", "gtk-font-name"}
         if not updates or set(updates) - allowed or any("\n" in value or "\r" in value for value in updates.values()):
             raise ValueError("Invalid GTK appearance settings")
         with locked():

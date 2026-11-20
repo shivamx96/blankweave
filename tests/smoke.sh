@@ -133,6 +133,37 @@ HOME="$test_root/home" XDG_CONFIG_HOME="$test_root/home/.config" \
     "$repository/migrations/20261112-thunar-terminal-action.sh"
 grep -Fq '<command>kitty -d %f</command>' "$thunar_dir/uca.xml"
 
+# Fontconfig migration removes only our exact old link, including dangling links.
+fontconfig_dir=$test_root/home/.config/fontconfig/conf.d
+mkdir -p "$fontconfig_dir"
+legacy_fontconfig=$fontconfig_dir/local.conf
+fontconfig_migration=$repository/migrations/20261112-fontconfig-digit-prefix.sh
+ln -s "$test_root/home/.local/share/blankweave/fontconfig/local.conf" "$legacy_fontconfig"
+for _ in 1 2; do
+    HOME="$test_root/home" XDG_CONFIG_HOME="$test_root/home/.config" "$fontconfig_migration"
+done
+[[ ! -L $legacy_fontconfig && ! -e $legacy_fontconfig ]]
+# A live managed link is removed without deleting the deployed source.
+managed_font=$test_root/home/.local/share/blankweave/fontconfig/local.conf
+mkdir -p "$(dirname "$managed_font")"
+printf 'managed fonts\n' > "$managed_font"
+ln -s "$managed_font" "$legacy_fontconfig"
+HOME="$test_root/home" XDG_CONFIG_HOME="$test_root/home/.config" "$fontconfig_migration"
+[[ ! -L $legacy_fontconfig && -f $managed_font ]]
+printf 'personal fonts\n' > "$legacy_fontconfig"
+HOME="$test_root/home" XDG_CONFIG_HOME="$test_root/home/.config" "$fontconfig_migration"
+[[ $(< "$legacy_fontconfig") == 'personal fonts' ]]
+rm "$legacy_fontconfig"
+for target in /foreign/fontconfig/local.conf ../missing.conf; do
+    ln -s "$target" "$legacy_fontconfig"
+    HOME="$test_root/home" XDG_CONFIG_HOME="$test_root/home/.config" "$fontconfig_migration"
+    [[ $(readlink "$legacy_fontconfig") == "$target" ]]
+    rm "$legacy_fontconfig"
+done
+mkdir "$legacy_fontconfig"
+HOME="$test_root/home" XDG_CONFIG_HOME="$test_root/home/.config" "$fontconfig_migration"
+[[ -d $legacy_fontconfig ]]
+
 state_dir=$test_root/state/blankweave
 [[ $(< "$state_dir/repository") == "$migration_repository" ]]
 [[ $(< "$state_dir/installed-revision") == "$(git -C "$migration_repository" rev-parse HEAD)" ]]

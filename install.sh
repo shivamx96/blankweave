@@ -439,8 +439,8 @@ sudo -H -u "$SUDO_USER" mkdir -p "$CONFIG_DIR/ghostty"
 user_config_link "$DOTS_DIR/ghostty/config" "$CONFIG_DIR/ghostty/config"
 
 # Fontconfig
-mkdir -p "$CONFIG_DIR/fontconfig/conf.d"
-user_config_link "$DOTS_DIR/fontconfig/local.conf" "$CONFIG_DIR/fontconfig/conf.d/local.conf"
+sudo -H -u "$SUDO_USER" mkdir -p "$CONFIG_DIR/fontconfig/conf.d"
+user_config_link "$DOTS_DIR/fontconfig/50-blankweave.conf" "$CONFIG_DIR/fontconfig/conf.d/50-blankweave.conf"
 
 # Optional local voice dictation. A regular file is a deliberate user override;
 # only create or replace Blankweave's own symlink.
@@ -488,9 +488,22 @@ section "APPLYING THEME"
 # Renders every themed config from its template and records the selection in
 # ~/.config/blankweave/theme.json. Runs as the user once ownership is fixed so
 # the rendered files and the state are user-owned from the start.
+# The desktop settings database is reached over the session bus, which sudo
+# strips. With a session running, hand its address back so the toolkit
+# preferences (interface font, icons, cursor) land now instead of at the next
+# theme switch. No display variables are passed, so the compositor, wallpaper,
+# and notification side effects stay off as before.
+THEME_SESSION_ENV=()
+if [[ -S $USER_RUNTIME_DIR/bus ]]; then
+    THEME_SESSION_ENV=(
+        XDG_RUNTIME_DIR="$USER_RUNTIME_DIR"
+        DBUS_SESSION_BUS_ADDRESS="unix:path=$USER_RUNTIME_DIR/bus"
+    )
+fi
 if ! sudo -H -u "$SUDO_USER" env \
     HOME="$USER_HOME" \
     XDG_CONFIG_HOME="$CONFIG_DIR" \
+    "${THEME_SESSION_ENV[@]}" \
     BLANKWEAVE_SETUP_THEME="${BLANKWEAVE_SETUP_THEME:-}" \
     BLANKWEAVE_SETUP_MODE="${BLANKWEAVE_SETUP_MODE:-}" \
     "$DOTS_DIR/shell/theme-apply.sh"; then
