@@ -14,6 +14,8 @@ WidgetFrame {
     icon: muted ? "󰝟" : (percentage < 35 ? "󰕿" : (percentage < 70 ? "󰖀" : "󰕾"))
     iconPixelSize: theme.barIconSize + 3
     label: muted ? "Muted" : percentage + "%"
+    rightClickHint: audio.available ? (audio.muted ? "unmute" : "mute") : ""
+    scrollHint: audio.available ? "adjust volume" : ""
     tooltip: audio.outputLabel
         + "\nClick for controls · Scroll to adjust · Right-click to mute"
     attention: muted
@@ -39,12 +41,13 @@ WidgetFrame {
 
         ControlPanelHeader {
             theme: root.theme
+            atBottom: root.bar.atBottom
             icon: "󰎆"
             title: "SOUND"
             subtitle: root.audio.outputLabel
             actions: [
-                { "id": "mixer", "icon": "󰒓" },
-                { "id": "mute", "icon": root.muted ? "󰝟" : "󰕾", "attention": root.muted }
+                { "id": "mixer", "label": "Open audio mixer", "icon": "󰒕" },
+                { "id": "mute", "label": "Toggle mute", "icon": root.muted ? "󰝟" : "󰕾", "attention": root.muted }
             ]
             onActionPressed: actionId => {
                 if (actionId === "mixer") {

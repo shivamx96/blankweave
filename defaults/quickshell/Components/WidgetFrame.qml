@@ -1,6 +1,7 @@
 import QtQuick
 import QtQuick.Layouts
 import Quickshell.Widgets
+import "TooltipHints.js" as TooltipHints
 
 Item {
     id: root
@@ -25,6 +26,13 @@ Item {
     readonly property bool dataStale: dataSources.some(source => source.stale)
     readonly property string staleDetail: dataSources.filter(source => source.stale)
         .map(source => source.staleText).filter((line, index, lines) => lines.indexOf(line) === index).join("\n")
+    property string rightClickHint: ""
+    property string scrollHint: ""
+    readonly property string tooltipText: TooltipHints.text(tooltip + (staleDetail ? "\n" + staleDetail : ""), rightClickHint, scrollHint)
+    onTooltipTextChanged: {
+        if (mouse.containsMouse && root.tooltipText)
+            root.bar.showTooltip(root, root.tooltipText)
+    }
     property bool active: false
     property bool attention: false
     property bool iconOnly: false
@@ -108,10 +116,12 @@ Item {
         cursorShape: Qt.PointingHandCursor
 
         onEntered: {
-            if (root.tooltip)
-                root.bar.showTooltip(root, root.tooltip)
+            if (root.tooltipText)
+                root.bar.showTooltip(root, root.tooltipText)
         }
-        onExited: root.bar.hideTooltip(root)
+        onExited: {
+            root.bar.hideTooltip(root)
+        }
         onClicked: mouse => root.pressed(mouse.button)
         onWheel: wheel => root.scrolled(wheel.angleDelta.y)
     }

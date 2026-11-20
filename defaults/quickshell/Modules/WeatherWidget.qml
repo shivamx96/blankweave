@@ -289,6 +289,7 @@ WidgetFrame {
 
         ControlPanelHeader {
             theme: root.theme
+            atBottom: root.bar.atBottom
             iconMark: root.weatherMark
             title: root.configured ? String(root.status.location || "WEATHER").toUpperCase() : "WEATHER"
             subtitle: root.available
@@ -296,8 +297,8 @@ WidgetFrame {
                     + (root.stale ? " · Cached" : "")
                 : (root.configured ? String(root.status.error || "Loading forecast…") : "Choose a forecast location")
             actions: [
-                { "id": "refresh", "icon": "󰑐" },
-                { "id": "location", "icon": "󰍎", "active": root.editingLocation }
+                { "id": "refresh", "label": "Refresh", "icon": "󰑐" },
+                { "id": "location", "label": "Change location", "icon": "󰍎", "active": root.editingLocation }
             ]
             onActionPressed: actionId => {
                 if (actionId === "refresh")

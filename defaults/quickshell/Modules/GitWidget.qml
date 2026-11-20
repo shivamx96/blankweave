@@ -195,13 +195,14 @@ WidgetFrame {
 
         ControlPanelHeader {
             theme: root.theme
+            atBottom: root.bar.atBottom
             icon: "󰊢"
             title: "GIT"
             subtitle: root.signedIn
                 ? "@" + String(root.prs.login || "github")
                     + (root.prs.stale ? "  ·  showing cached results" : "")
                 : "Not signed in to GitHub"
-            actions: [{ "id": "refresh", "icon": "󰑐" }]
+            actions: [{ "id": "refresh", "label": "Refresh", "icon": "󰑐" }]
             onActionPressed: actionId => {
                 if (actionId !== "refresh")
                     return

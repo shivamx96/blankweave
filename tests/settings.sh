@@ -518,6 +518,9 @@ if ! grep -q LOW_BATTERY_PASSED "$test_root/low-battery.log" \
 fi
 
 printf 'Settings command and interface tests passed.\n'
+# Header action metadata is checked without instantiating host services.
+python3 "$repository/tests/header_actions_test.py" </dev/null
+
 # Poller lifecycle, shared collectors, and stale rendering use fake scripts only.
 bash "$repository/tests/script-poller.sh" </dev/null
 

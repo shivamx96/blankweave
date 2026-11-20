@@ -115,8 +115,9 @@ WidgetFrame {
     visible: adapter !== null
     icon: !enabled ? "󰂲" : (connectedDevices.length > 0 ? "󰂱" : "󰂯")
     label: !enabled ? "Off" : (connectedDevices.length > 0 ? String(connectedDevices.length) : "")
+    rightClickHint: root.bluetooth.busy ? "" : (enabled ? "turn Bluetooth off" : "turn Bluetooth on")
     tooltip: !enabled
-        ? "Bluetooth disabled\nClick for controls · Right-click to enable"
+        ? "Bluetooth disabled\nClick for controls"
         : (connectedDevices.length > 0
             ? connectedDevices.map(device => device.name).join("\n") + "\nClick for controls"
             : "Bluetooth enabled · No connected devices\nClick to scan")
@@ -154,6 +155,7 @@ WidgetFrame {
 
         ControlPanelHeader {
             theme: root.theme
+            atBottom: root.bar.atBottom
             icon: root.icon
             title: "BLUETOOTH"
             subtitle: !root.adapter
@@ -167,11 +169,11 @@ WidgetFrame {
                             : "Ready")))
             actions: root.enabled
                 ? [
-                    { "id": "scan", "icon": "󰂰", "active": !root.scanPaused && root.enabled },
-                    { "id": "power", "icon": "󰂯" }
+                    { "id": "scan", "label": root.scanPaused ? "Resume scanning" : "Pause scanning", "icon": "󰂰", "active": !root.scanPaused && root.enabled },
+                    {"id": "power", "label": root.enabled ? "Turn Bluetooth off" : "Turn Bluetooth on", "kind": "switch", "checked": root.enabled, "pending": root.bluetooth.busy}
                 ]
                 : [
-                    { "id": "power", "icon": "󰂲", "attention": true }
+                    {"id": "power", "label": root.enabled ? "Turn Bluetooth off" : "Turn Bluetooth on", "kind": "switch", "checked": root.enabled, "pending": root.bluetooth.busy}
                 ]
             onActionPressed: actionId => {
                 if (actionId === "power") {

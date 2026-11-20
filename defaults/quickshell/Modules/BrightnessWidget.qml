@@ -117,6 +117,7 @@ WidgetFrame {
     icon: display.percentage < 34 ? "󰃞" : (display.percentage < 67 ? "󰃟" : "󰃠")
     iconPixelSize: theme.barIconSize - 2
     label: display.available ? display.percentage + "%" : ""
+    scrollHint: display.available ? "adjust brightness" : ""
     tooltip: display.available
         ? display.displayName + ": " + display.percentage + "%\nClick for controls · Scroll to adjust"
         : ""
@@ -250,13 +251,14 @@ WidgetFrame {
 
         ControlPanelHeader {
             theme: root.theme
+            atBottom: root.bar.atBottom
             icon: "󰃠"
             title: "DISPLAY"
             subtitle: root.displays.length > 1
                 ? root.displays.length + " displays"
                 : root.display.displayName + " · " + root.display.backendName
             actions: [
-                { "id": "theme", "icon": root.theme.dark ? "󰖙" : "󰖔" }
+                { "id": "theme", "label": "Switch color theme", "icon": root.theme.dark ? "󰖙" : "󰖔" }
             ]
             onActionPressed: actionId => {
                 if (actionId === "theme") {

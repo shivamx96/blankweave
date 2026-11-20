@@ -94,11 +94,12 @@ WidgetFrame {
 
         ControlPanelHeader {
             theme: root.theme
+            atBottom: root.bar.atBottom
             iconMark: root.memoryMark
             title: "MEMORY"
             subtitle: root.formatBytes(root.status.totalBytes) + " usable"
             actions: [
-                { "id": "monitor", "icon": "" }
+                { "id": "monitor", "label": "Open system monitor", "icon": "" }
             ]
             onActionPressed: actionId => {
                 if (actionId === "monitor") {

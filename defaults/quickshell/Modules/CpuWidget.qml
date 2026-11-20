@@ -89,11 +89,12 @@ WidgetFrame {
 
         ControlPanelHeader {
             theme: root.theme
+            atBottom: root.bar.atBottom
             iconMark: root.cpuMark
             title: "PROCESSOR"
             subtitle: String(root.status.model || "Processor")
             actions: [
-                { "id": "monitor", "icon": "" }
+                { "id": "monitor", "label": "Open system monitor", "icon": "" }
             ]
             onActionPressed: actionId => {
                 if (actionId === "monitor") {

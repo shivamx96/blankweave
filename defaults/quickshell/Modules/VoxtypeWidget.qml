@@ -23,6 +23,7 @@ WidgetFrame {
     foreground: recording
         ? theme.critical
         : (transcribing ? theme.warning : (dictationPanel.open ? theme.accentBright : theme.text))
+    rightClickHint: voice.available ? (recording ? "stop recording" : "start recording") : ""
     tooltip: !voice.available
         ? "Voice dictation unavailable\nClick for recovery controls"
         : (recording
@@ -50,14 +51,15 @@ WidgetFrame {
 
         ControlPanelHeader {
             theme: root.theme
+            atBottom: root.bar.atBottom
             icon: root.voice.available ? "󰍬" : "󰍭"
             title: "VOICE DICTATION"
             subtitle: root.recording
                 ? "Listening on " + String(root.voice.device || "default")
                 : (root.transcribing ? "Processing entirely on this device" : root.stateLabel)
             actions: root.voice.canCancel
-                ? [{ "id": "cancel", "icon": "󰜺", "attention": true }]
-                : root.voice.canRestart ? [{ "id": "restart", "icon": "󰑐", "attention": !root.voice.available }] : []
+                ? [{ "id": "cancel", "label": "Cancel dictation", "icon": "󰏤", "attention": true }]
+                : root.voice.canRestart ? [{ "id": "restart", "label": "Restart dictation service", "icon": "󰑐", "attention": !root.voice.available }] : []
             onActionPressed: actionId => {
                 if (actionId === "cancel")
                     root.record("cancel")

@@ -296,17 +296,14 @@ WidgetFrame {
 
         ControlPanelHeader {
             theme: root.theme
+            atBottom: root.bar.atBottom
             icon: root.networkIcon
             title: root.headerTitle
             subtitle: root.headerSubtitle
             actions: root.wifiDevice
                 ? [
-                    { "id": "scan", "icon": "󰑓", "active": !root.scanPaused && root.wifi.usable },
-                    {
-                        "id": "power",
-                        "icon": root.wifi.enabled ? "󰤨" : "󰤭",
-                        "attention": !root.wifi.enabled
-                    }
+                    { "id": "scan", "label": root.scanPaused ? "Resume scanning" : "Pause scanning", "icon": "󰑓", "active": !root.scanPaused && root.wifi.usable },
+                    {"id": "power", "label": root.wifi.enabled ? "Turn Wi-Fi off" : "Turn Wi-Fi on", "kind": "switch", "checked": root.wifi.enabled, "pending": root.wifi.busy}
                 ]
                 : []
             onActionPressed: actionId => {

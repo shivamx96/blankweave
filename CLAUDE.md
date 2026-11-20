@@ -552,6 +552,18 @@ the Settings controls: an inset outline with corner marks in
 `Theme.focusIndicator`, never colour alone and never animated, held to 3:1
 by `tests/theme_contrast.py`.
 
+Every `ControlPanelHeader.actions` entry needs an `id` and a human `label`,
+shown as its hover and keyboard-focus tooltip and exposed as its accessible
+name; `tests/header_actions_test.py` scans the modules for unlabelled
+actions. A control that turns the feature itself on or off (Wi-Fi,
+Bluetooth, Tailscale, Do Not Disturb) is `kind: "switch"` with a
+backend-owned `checked`, drawn with the `SettingsSwitch` look, and bound to
+the widget's `pending` state so it cannot be activated twice. A close or X
+glyph only ever closes something. Bar widgets declare their gestures through
+`WidgetFrame.rightClickHint` and `scrollHint`, and the tooltip ends with one
+generated line (`Right-click: mute · Scroll: adjust volume`) that is omitted
+when neither applies, so a tooltip never misstates what a gesture does.
+
 `Components/ControlPopup.qml` provides the anchored, keyboard-dismissible panel
 surface used by interactive status widgets. `ControlSlider.qml` provides the
 shared angular slider treatment. Interactive panels compose

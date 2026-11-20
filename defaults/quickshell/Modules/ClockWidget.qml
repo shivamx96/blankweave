@@ -128,13 +128,14 @@ WidgetFrame {
 
         ControlPanelHeader {
             theme: root.theme
+            atBottom: root.bar.atBottom
             icon: "󰃭"
             title: "TIME & DATE"
             subtitle: Qt.formatDateTime(clock.date, "dddd, d MMMM yyyy · HH:mm:ss t")
             actions: [
-                { "id": "previous", "icon": "󰁍" },
-                { "id": "today", "icon": "󰃭", "active": root.todayKey === root.selectedKey },
-                { "id": "next", "icon": "󰁔" }
+                { "id": "previous", "label": "Previous month", "icon": "󰁍" },
+                { "id": "today", "label": "Go to today", "icon": "󰃭", "active": root.todayKey === root.selectedKey },
+                { "id": "next", "label": "Next month", "icon": "󰁔" }
             ]
             onActionPressed: actionId => {
                 if (actionId === "previous")

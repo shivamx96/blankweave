@@ -140,11 +140,12 @@ WidgetFrame {
 
         ControlPanelHeader {
             theme: root.theme
+            atBottom: root.bar.atBottom
             iconMark: root.gpuMark
             title: "GRAPHICS"
             subtitle: String(root.status.name || "Graphics processor")
             actions: [
-                { "id": "monitor", "icon": "" }
+                { "id": "monitor", "label": "Open system monitor", "icon": "" }
             ]
             onActionPressed: actionId => {
                 if (actionId === "monitor") {

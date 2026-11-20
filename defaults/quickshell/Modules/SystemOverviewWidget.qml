@@ -83,7 +83,8 @@ WidgetFrame {
     iconMark: "blankweave"
     iconOnly: true
     active: systemPanel.open
-    tooltip: "System overview\nRight-click: full terminal report"
+    rightClickHint: "open terminal report"
+    tooltip: "System overview"
     horizontalPadding: 10
 
     onPressed: button => {
@@ -117,15 +118,16 @@ WidgetFrame {
 
         ControlPanelHeader {
             theme: root.theme
+            atBottom: root.bar.atBottom
             iconMark: "blankweave"
             title: "SYSTEM OVERVIEW"
             subtitle: root.systemInfo.available
                 ? String(root.systemInfo.hostname || "System") + " · " + String(root.systemInfo.os || "Linux")
                 : "Blankweave machine snapshot"
             actions: [
-                { "id": "settings", "icon": "󰒓" },
-                { "id": "refresh", "icon": "󰑐" },
-                { "id": "report", "icon": "󰋊" }
+                { "id": "settings", "label": "Open Settings", "icon": "󰒓" },
+                { "id": "refresh", "label": "Refresh", "icon": "󰑐" },
+                { "id": "report", "label": "Open terminal report", "icon": "󰋊" }
             ]
             onActionPressed: actionId => {
                 if (actionId === "settings") {

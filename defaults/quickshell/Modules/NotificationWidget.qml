@@ -49,9 +49,10 @@ WidgetFrame {
     iconOnly: true
     active: notificationPanel.open
     attention: Number(status.waitingCount || 0) > 0
+    rightClickHint: status.paused ? "resume notifications" : "pause notifications"
     tooltip: Boolean(status.paused)
-        ? "Do not disturb · " + Number(status.waitingCount || 0) + " waiting\nRight-click: resume notifications"
-        : Number(status.historyCount || 0) + " archived notifications\nRight-click: pause notifications"
+        ? "Do not disturb · " + Number(status.waitingCount || 0) + " waiting"
+        : Number(status.historyCount || 0) + " archived notifications"
 
     onPressed: button => {
         if (button === Qt.LeftButton) {
@@ -94,19 +95,16 @@ WidgetFrame {
 
         ControlPanelHeader {
             theme: root.theme
+            atBottom: root.bar.atBottom
             icon: Boolean(root.status.paused) ? "󰂛" : "󰂚"
             title: "NOTIFICATIONS"
             subtitle: Boolean(root.status.paused)
                 ? "Do not disturb · " + Number(root.status.waitingCount || 0) + " waiting"
                 : "Dunst notification archive"
             actions: [
+                {"id": "dnd", "label": root.status.paused ? "Turn Do Not Disturb off" : "Turn Do Not Disturb on", "kind": "switch", "checked": Boolean(root.status.paused)},
                 {
-                    "id": "dnd",
-                    "icon": Boolean(root.status.paused) ? "󰂛" : "󰂚",
-                    "active": Boolean(root.status.paused)
-                },
-                {
-                    "id": "clear",
+                    "id": "clear", "label": "Clear notification history",
                     "icon": "󰎟",
                     "attention": Number(root.status.historyCount || 0) > 0
                 }

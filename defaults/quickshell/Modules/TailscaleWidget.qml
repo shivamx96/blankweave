@@ -278,6 +278,7 @@ WidgetFrame {
 
         ControlPanelHeader {
             theme: root.theme
+            atBottom: root.bar.atBottom
             iconMark: root.tailscaleMark
             title: "TAILSCALE"
             subtitle: root.logoutArmed
@@ -291,20 +292,16 @@ WidgetFrame {
                     : String(root.status.backend || "Stopped"))))
             actions: root.loggedIn
                 ? [
-                    { "id": "admin", "icon": "󰖟" },
+                    { "id": "admin", "label": "Open Tailscale admin console", "icon": "󰖟" },
+                    {"id": "power", "label": root.connected ? "Disconnect Tailscale" : "Connect Tailscale", "kind": "switch", "checked": root.connected, "pending": root.busy},
                     {
-                        "id": "power",
-                        "icon": root.connected ? "󰅖" : "󰐥",
-                        "active": root.connected
-                    },
-                    {
-                        "id": "logout",
+                        "id": "logout", "label": "Log out of Tailscale",
                         "icon": "󰍃",
                         "attention": root.logoutArmed
                     }
                 ]
                 : [
-                    { "id": "login", "icon": "󰍂", "attention": true }
+                    { "id": "login", "label": "Sign in to Tailscale", "icon": "󰍂", "attention": true }
                 ]
             onActionPressed: actionId => {
                 if (actionId === "admin") {
