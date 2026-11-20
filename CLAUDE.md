@@ -105,6 +105,16 @@ The temporary installer sudo rule is limited to `/usr/bin/pacman`. Doctor
 warns when automatic sign-in is active without confirmed root encryption
 and fails on a leftover installer sudo rule, without naming devices.
 
+A first install ends on one plain block and nothing technical after it:
+the restart command, what sign-in will ask for under the chosen policy,
+five keys, and `blankweave doctor`. Only a first install writes the
+user-state `welcome-eligible` marker; with it and the `welcomeShown`
+preference unset, the shell shows a one-time welcome card on the focused
+monitor (`Modules/WelcomeCard.qml`), which never takes focus from an active
+application, yields to the low-battery warning, and is completed by
+dismissal or by opening the launcher or Settings. An update never shows it.
+`blankweave welcome` and the About page show it again.
+
 `blankweave doctor` delegates to `scripts/doctor.sh` and is strictly read-only:
 checks may report warnings or failures but must not repair files, restart
 services, or contact the network. Interactive use offers a full scan by default

@@ -63,7 +63,9 @@ FloatingWindow {
 
     property SettingsTask webapps: SettingsTask { script: "webapps-settings.py"; active: root.visible && !root.minimized && content.page !== null && content.page.id === "apps" }
 
-    property SettingsTask system: SettingsTask { script: "system-settings.py"; active: root.visible && !root.minimized && content.page !== null && content.page.id === "system" }
+    property SettingsTask system: SettingsTask {
+        function showWelcome() { root.visible = false; Quickshell.execDetached(["blankweave", "welcome"]) }
+        script: "system-settings.py"; active: root.visible && !root.minimized && content.page !== null && content.page.id === "system" }
 
     property SettingsTask notifications: SettingsTask { script: "notification-settings.py"; active: root.visible && !root.minimized && content.page !== null && content.page.id === "alerts" }
 

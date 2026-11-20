@@ -101,6 +101,13 @@ rm -f /etc/pam.d/hyprarch-lock
 USER_RUNTIME_DIR="/run/user/$USER_UID"
 USER_STATE_HOME="${BLANKWEAVE_USER_STATE_HOME:-$USER_HOME/.local/state}"
 PARU_BUILD_DIR=""
+LEGACY_SESSION_CONFIG=false
+if [[ -f $USER_HOME/.config/hypr/hyprland.conf && ! -e $USER_HOME/.config/hypr/hyprland.lua ]]; then
+    LEGACY_SESSION_CONFIG=true
+fi
+FIRST_INSTALL=false
+[[ -s $USER_STATE_HOME/blankweave/installed-revision ]] || FIRST_INSTALL=true
+
 # shellcheck source=scripts/installer-choices.sh
 source "$REPO_DIR/scripts/installer-choices.sh"
 installer_choices_init
@@ -174,6 +181,12 @@ if [[ ${BLANKWEAVE_PACKAGE_POLICY:-upgrade} == upgrade ]] && ! command -v paru &
     sudo -H -u "$SUDO_USER" bash -c 'cd "$1" && makepkg -si --noconfirm' _ "$PARU_BUILD_DIR"
     rm -rf -- "$PARU_BUILD_DIR"
     PARU_BUILD_DIR=""
+LEGACY_SESSION_CONFIG=false
+if [[ -f $USER_HOME/.config/hypr/hyprland.conf && ! -e $USER_HOME/.config/hypr/hyprland.lua ]]; then
+    LEGACY_SESSION_CONFIG=true
+fi
+FIRST_INSTALL=false
+[[ -s $USER_STATE_HOME/blankweave/installed-revision ]] || FIRST_INSTALL=true
 fi
 
 section "INSTALLING PACKAGES"
@@ -704,39 +717,23 @@ sudo -H -u "$SUDO_USER" env \
 
 section "DONE"
 
-if [ "${#WARNINGS[@]}" -gt 0 ]; then
-    echo "Desktop configuration complete, with items needing attention."
-else
-    echo "Installation complete!"
-fi
-echo "  Capabilities: ${CAPABILITIES:-none}"
-echo "  Defaults: ~/.local/share/blankweave"
-echo "  User configs: ~/.config"
-echo "  Auto-login and Hyprland auto-start configured"
-if hardware_capability_has gpu-nvidia; then
-    echo "  NVIDIA DRM modeset and early KMS configured"
-fi
-echo ""
 if [ "$SSH_KEY_GENERATED" = true ] && [ -f "$SSH_KEY.pub" ]; then
-    echo "── GitHub SSH Key ──"
-    echo "Add this to https://github.com/settings/ssh/new"
-    echo ""
+    echo "Add this SSH key to https://github.com/settings/ssh/new"
     cat "$SSH_KEY.pub"
-    echo ""
 fi
-echo "── Tailscale ──"
-if ! tailscale status &>/dev/null; then
-    echo "Not logged in yet. Run:  tailscale up"
-    echo ""
-fi
-echo "Reboot to launch into Hyprland."
-echo "If Hyprland was running during this install, a full session restart is required."
-echo "A hyprctl reload cannot switch an existing legacy .conf session to Lua."
-
 if [ "${#WARNINGS[@]}" -gt 0 ]; then
-    echo ""
     echo "Completed with ${#WARNINGS[@]} warning(s):"
     printf '  - %s\n' "${WARNINGS[@]}"
 fi
-
 print_optional_package_retries
+
+# shellcheck source=scripts/install-finish.sh
+source "$REPO_DIR/scripts/install-finish.sh"
+if [[ $FIRST_INSTALL == true ]]; then
+    # Only fresh installs receive eligibility; old installs never gain this marker.
+    sudo -H -u "$SUDO_USER" mkdir -p "$USER_STATE_HOME/blankweave"
+    printf "eligible\n" | sudo -H -u "$SUDO_USER" tee "$USER_STATE_HOME/blankweave/welcome-eligible" >/dev/null
+    install_welcome "$(cat /etc/blankweave/signin.conf)"
+else
+    install_update_summary "$LEGACY_SESSION_CONFIG"
+fi

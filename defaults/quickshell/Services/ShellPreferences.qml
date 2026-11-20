@@ -27,6 +27,7 @@ QtObject {
     readonly property var sessionLocale: Qt.locale()
     readonly property string resolvedTimeFormat: Formats.timeMode(preferences.timeFormat, sessionLocale)
     readonly property string resolvedTemperatureUnit: Formats.temperatureUnit(preferences.temperatureUnit, sessionLocale)
+    property alias welcomeShown: preferences.welcomeShown
     property alias timeFormat: preferences.timeFormat
     property alias temperatureUnit: preferences.temperatureUnit
 
@@ -93,6 +94,7 @@ QtObject {
         JsonAdapter {
             id: preferences
 
+            property bool welcomeShown: false
             property string timeFormat: "auto"
             property string temperatureUnit: "auto"
             onTimeFormatChanged: {

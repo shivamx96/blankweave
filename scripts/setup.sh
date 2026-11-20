@@ -370,9 +370,7 @@ run_installation() {
     # apply_setup returns the external installer's status; pipefail also catches
     # failures to write the log, rather than reporting a successful setup.
     if apply_setup 2>&1 | tee "$log_file"; then
-        printf '\nSetup completed. Log: %s\n' "$log_file"
-        printf 'After restarting your session, open Settings with Super+, and the launcher with Super+Space.\n'
-        printf 'Check system health with: %q doctor\n' "$REPOSITORY/bin/blankweave"
+        : # The installer owns the final welcome block.
     else
         install_status=$?
         printf '\nSetup did not complete (exit %s). Some changes may already be applied.\n' "$install_status" >&2

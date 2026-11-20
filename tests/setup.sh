@@ -177,3 +177,30 @@ grep -q 'Some changes may already be applied' "$test_root/failure.out"
 [[ $(sha256sum "$replay_config/setup.conf") == "$setup_before" ]]
 
 printf 'Guided setup and setup config tests passed.\n'
+
+grep -Fq 'Your disk passphrase is the login. Anyone who can unlock the disk gets the desktop.' "$repository/scripts/setup.sh"
+# Exercise review defaults with synthetic root ancestry; never consult a host disk.
+(
+    source "$repository/scripts/setup.sh"
+    # choose_signin sources the production detector, so supply its command inputs.
+    findmnt() { printf '/dev/fixture[/@]\n'; }
+    lsblk() { if [[ $fixture_encrypted == yes ]]; then printf 'lvm\ncrypt\npart\ndisk\n'; else printf 'part\ndisk\n'; fi; }
+    NON_INTERACTIVE=true
+    HOME=$test_root/choice-home
+    XDG_STATE_HOME=$test_root/choice-state
+    mkdir -p "$HOME"
+    for fixture_encrypted in yes no; do
+        SETUP_AUTOMATIC_SIGNIN=
+        choose_signin > "$test_root/choice.out"
+        [[ $SETUP_AUTOMATIC_SIGNIN == "$fixture_encrypted" ]]
+        if [[ $fixture_encrypted == no ]]; then grep -q 'WARNING: Root disk encryption' "$test_root/choice.out"; fi
+        SETUP_AUTOMATIC_SIGNIN=yes
+        choose_signin > "$test_root/explicit.out"
+        [[ $SETUP_AUTOMATIC_SIGNIN == yes ]]
+    done
+)
+
+# The successful apply owns the closing block; setup must not append technical
+# success text after the five-key welcome.
+if grep -q 'Setup completed. Log:' "$(dirname -- "${BASH_SOURCE[0]}")/../scripts/setup.sh"; then exit 1; fi
+grep -Fq ': # The installer owns the final welcome block.' "$(dirname -- "${BASH_SOURCE[0]}")/../scripts/setup.sh"

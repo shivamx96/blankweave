@@ -270,6 +270,16 @@ git -C "$release_fixture" tag -d v0.9.0 v0.10.0 >/dev/null
 if "$repository/scripts/verify-release.sh" "$release_fixture" --newest > "$test_root/no-release" 2>&1; then exit 1; fi
 grep -Fq 'No valid annotated Blankweave release' "$test_root/no-release"
 
+# Welcome uses the same shell IPC, with no application launch in this fixture.
+mkdir -p "$test_root/welcome-bin"
+cat > "$test_root/welcome-bin/qs" <<'EOF_QS'
+#!/usr/bin/env bash
+printf '%s\n' "$@" > "$WELCOME_TEST_LOG"
+EOF_QS
+chmod +x "$test_root/welcome-bin/qs"
+HOME="$test_root/home" PATH="$test_root/welcome-bin:$PATH" WELCOME_TEST_LOG="$test_root/welcome-ipc"     "$repository/bin/blankweave" welcome
+[[ $(tail -n 1 "$test_root/welcome-ipc") == welcome ]]
+
 # Banner repair is byte-preserving outside exact consecutive separator copies.
 python3 - "$repository" "$test_root" <<'PYTEST'
 import os, pathlib, subprocess, sys

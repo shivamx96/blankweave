@@ -18,13 +18,28 @@ ShellRoot {
     property Theme theme: Theme { }
     property LauncherUsage launcherUsage: LauncherUsage { }
     property ShellPreferences preferences: ShellPreferences { }
+    FileView {
+        id: welcomeMarker
+        path: (Quickshell.env("XDG_STATE_HOME") || Quickshell.env("HOME") + "/.local/state") + "/blankweave/welcome-eligible"
+        printErrors: false
+        onLoaded: root.welcome.eligible = text().trim() === "eligible"
+    }
+    property WelcomeState welcome: WelcomeState {
+        preferences: root.preferences
+        busy: Hyprland.activeToplevel !== null
+        blocked: root.power.lowBattery.warningLevel > 0 || launcherSession.open || settingsWindow.visible || root.panels.open
+    }
+    Variants {
+        model: Quickshell.screens
+        delegate: WelcomeToast { modelData: modelData; theme: root.theme; welcome: root.welcome }
+    }
     property Voxtype voxtype: Voxtype { }
     property PowerService power: PowerService { }
     property AudioService audio: AudioService { }
     property OsdService osd: OsdService {
         audio: root.audio
         focusedScreenName: Hyprland.focusedMonitor ? Hyprland.focusedMonitor.name : (Quickshell.screens[0]?.name || "")
-        blocked: root.power.lowBattery.warningLevel > 0 || root.osd.panels.some(p => p.kind === "dictation")
+        blocked: root.welcome.visible || root.power.lowBattery.warningLevel > 0 || root.osd.panels.some(p => p.kind === "dictation")
     }
     property BrightnessRouter brightness: BrightnessRouter {
         osd: root.osd
@@ -68,6 +83,7 @@ ShellRoot {
     }
 
     function openSettings(target) {
+        root.welcome.activity()
         root.closeLauncher()
         settingsWindow.openSettings(target || "")
     }
@@ -86,6 +102,7 @@ ShellRoot {
     }
 
     function toggleLauncher(mode) {
+        root.welcome.activity()
         root.panels.dismiss()
         launcherSession.toggle(mode || "applications")
     }
@@ -111,7 +128,7 @@ ShellRoot {
             theme: root.theme
             voice: root.voxtype
             osd: root.osd
-            suppressed: root.power.lowBattery.warningLevel > 0
+            suppressed: root.welcome.visible || root.power.lowBattery.warningLevel > 0
         }
     }
 
@@ -139,6 +156,8 @@ ShellRoot {
         function volume(action: string): void { root.osd.volume(action) }
         function micMute(): void { root.osd.micMute() }
         function brightness(action: string): void { root.brightness.adjust(action) }
+
+        function welcome() { settingsWindow.visible = false; root.closeLauncher(); root.panels.dismiss(); root.welcome.reopen() }
 
         function reload() {
             Quickshell.reload(true)

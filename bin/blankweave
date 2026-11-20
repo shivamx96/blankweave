@@ -710,6 +710,7 @@ print_help() {
 Usage: blankweave <command>
 
 Commands:
+  welcome   Show the desktop welcome card again
   version   Show the CLI version and installed/repository revisions
   setup     Guide first-install choices; use --non-interactive with saved configs
   settings [<id>|--list]  Open Settings at a page/row, or list valid ids
@@ -736,6 +737,11 @@ main() {
             ;;
         setup)
             command_setup "$@"
+            ;;
+        welcome)
+            [[ $# -eq 0 ]] || die "usage: blankweave welcome"
+            qs ipc -n -p "$BLANKWEAVE_DATA_DIR/quickshell" call blankweave welcome \
+                || die "could not open welcome; start the Blankweave desktop first"
             ;;
         settings)
             [[ $# -le 1 ]] || die "usage: blankweave settings [<id>|--list]"
