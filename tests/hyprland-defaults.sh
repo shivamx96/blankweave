@@ -19,3 +19,10 @@ if command -v luac > /dev/null 2>&1; then
         luac -p "$lua_file"
     done
 fi
+
+python3 "$repository/tests/hyprland-motion.py"
+grep -q 'switch:on:Lid Switch' "$hypr/keybindings.lua"
+grep -q 'switch:off:Lid Switch' "$hypr/keybindings.lua"
+
+# Lock visuals must use the rendered font/time; the minute clock never forks.
+if grep -q 'cmd\[.*date.*%H\|cmd\[.*date.*%I' "$hypr/hyprlock.conf"; then exit 1; fi

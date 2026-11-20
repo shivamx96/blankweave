@@ -704,6 +704,14 @@ Hyprlang dispatcher names are rejected; the Lua option table is not validated,
 so confirm a new option behaviourally (a headless output plus
 `hyprctl workspaces -j`) rather than trusting an "ok".
 
+Compositor animations use one non-overshooting `easeOut` curve at 200–250 ms
+with a 96% window pop-in; `animations.lua` also sets
+`ecosystem.no_update_news` and `no_donation_nag`. Every Blankweave layer
+namespace has an exact, anchored `no_anim` rule, so shell surfaces animate
+only through QML and `design.motion`; `tests/hyprland-motion.py` derives the
+namespace list from the QML, so a new layer surface without a rule fails.
+Saved accessibility preferences still load after these defaults.
+
 Monitor arrangement and scaling are display-panel choices, persisted by
 `defaults/shell/monitor-layout.sh`, the sole writer of
 `~/.config/blankweave/monitors.json` (source of truth) and of the

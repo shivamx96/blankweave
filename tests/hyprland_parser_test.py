@@ -110,6 +110,15 @@ require(os.getenv("HOME") .. "/.config/hypr/hyprland")
                         str(self.config)], env=self.environment, check=True, timeout=10)
         self.verify()
 
+    def test_motion_and_layer_defaults(self):
+        source = self.wrapper.read_text()
+        namespaces = set()
+        for path in (REPOSITORY / 'defaults/quickshell').rglob('*.qml'):
+            namespaces.update(re.findall(r'WlrLayershell.namespace:\s*"(blankweave-[^"]+)"', path.read_text()))
+        self.wrapper.write_text('\nlocal curve, animation, layer, config = hl.curve, hl.animation, hl.layer_rule, hl.config\nlocal rules, ecosystem = {}, false\nhl.curve = function(name, v)\n    if v.type == "bezier" then\n        for _, p in ipairs(v.points) do assert(p[2] >= 0 and p[2] <= 1) end\n    end\n    return curve(name, v)\nend\nhl.animation = function(v)\n    assert(v.speed >= 2 and v.speed <= 3)\n    return animation(v)\nend\nhl.layer_rule = function(v)\n    if v.no_anim then rules[v.match.namespace] = true end\n    return layer(v)\nend\nhl.config = function(v)\n    if v.ecosystem then\n        assert(v.ecosystem.no_update_news and v.ecosystem.no_donation_nag)\n        ecosystem = true\n    end\n    return config(v)\nend\n' + source + '\nassert(ecosystem)\n' +
+            '\n'.join('assert(rules["^' + name + '$"])' for name in sorted(namespaces)))
+        self.verify()
+
     def test_generated_saved_preferences(self):
         examples = {
             'pointer': {'version': 1, 'global': {'sensitivity': 0.2, 'accel_profile': 'flat'},
