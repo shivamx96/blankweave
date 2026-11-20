@@ -10,6 +10,8 @@ pacman() { [[ ${docker_installed:-false} == true ]]; }
 systemctl() { printf 'systemctl %s\n' "$*" >> "$test_root/calls"; }
 usermod() { printf 'usermod %s\n' "$*" >> "$test_root/calls"; }
 chsh() { printf 'chsh %s\n' "$*" >> "$test_root/calls"; }
+# Marker ownership is handed back only when the apply runs as root (CI does).
+chown() { printf '%s\n' "$*" >> "$test_root/marker-chowns"; }
 warn() { printf '%s\n' "$*" >&2; }
 SUDO_USER=fixture
 apply_choices() {
@@ -52,6 +54,15 @@ if installer_seed failed-choice false; then exit 1; fi
 # Future defaults have independent markers, even on existing installs.
 installer_seed future-default systemctl enable future.service
 [[ -e $CHOICES_DIR/future-default ]]
+
+if (( EUID == 0 )); then
+    grep -Fxq -e "-h fixture: $CHOICES_DIR" "$test_root/marker-chowns"
+    grep -Fxq -e "-h fixture: $CHOICES_DIR/future-default" "$test_root/marker-chowns"
+    if grep -v -e '^-h fixture: ' "$test_root/marker-chowns"; then exit 1; fi
+else
+    [[ ! -e $test_root/marker-chowns ]]
+fi
+unset -f chown
 
 # Exercise the installer's exact ownership block against a disposable tree.
 mkdir -p "$test_root/bin"

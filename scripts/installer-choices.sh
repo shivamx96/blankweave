@@ -25,7 +25,7 @@ installer_choices_init() {
 # root-owned. Links are never followed.
 installer_choices_own() {
     local marker
-    (( EUID == 0 )) || return 0
+    (( EUID == 0 )) && [[ -n ${SUDO_USER:-} ]] || return 0
     chown -h "$SUDO_USER:" "$CHOICES_DIR"
     for marker in "$CHOICES_DIR"/*; do
         if [[ -f $marker && ! -L $marker ]]; then
