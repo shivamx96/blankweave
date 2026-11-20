@@ -495,6 +495,8 @@ elif [[ -L $MANGOHUD_CONFIG && $(readlink "$MANGOHUD_CONFIG") == "$DOTS_DIR/mang
     rm -f "$MANGOHUD_CONFIG"
 fi
 
+installer_seed ssh-agent installer_seed_ssh_agent
+
 section "SETTING UP ZSH"
 installer_seed login-shell chsh -s /usr/bin/zsh "$SUDO_USER"
 

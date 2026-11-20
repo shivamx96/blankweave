@@ -792,6 +792,36 @@ check_install_sudoers() {
     fi
 }
 
+check_firewall() {
+    local ports rules
+    command -v ss >/dev/null 2>&1 || { skip 'firewall' 'ss unavailable'; return; }
+    # An active firewall manager is sufficient. Never elevate to inspect rules.
+    if systemctl is-active --quiet firewalld.service || systemctl is-active --quiet ufw.service || systemctl is-active --quiet nftables.service; then
+        pass 'firewall' 'firewall service active'
+        return
+    fi
+    # Unknown rules are not evidence that no firewall exists.
+    if command -v nft >/dev/null 2>&1; then
+        if ! rules=$(nft list ruleset 2>/dev/null); then
+            skip 'firewall' 'rules inaccessible; firewall state unknown'
+            return
+        fi
+        if [[ $rules == *'hook input'* || $rules == *'hook ingress'* ]]; then
+            pass 'firewall' 'input rules present'
+            return
+        fi
+    else
+        skip 'firewall' 'rules tool unavailable; firewall state unknown'
+        return
+    fi
+    ports=$(ss -H -lntu 2>/dev/null | python3 "$(dirname -- "${BASH_SOURCE[0]}")/doctor-firewall.py")
+    if [[ -n $ports ]]; then
+        warn 'firewall' "no input firewall detected; listening ports: $ports"
+    else
+        pass 'firewall' 'no non-loopback listeners detected'
+    fi
+}
+
 main() {
     local repository
 
@@ -861,6 +891,7 @@ main() {
     check_cpu_microcode "$repository"
     check_intel_gpu_monitoring "$repository"
     check_services "$repository"
+    check_firewall
 
     printf '\nSummary: %d passed, %d warnings, %d failures, %d skipped\n' \
         "$PASSED" "$WARNED" "$FAILED" "$SKIPPED"

@@ -405,3 +405,43 @@ printf 'Doctor tests passed.\n'
 # Cache retention is a read-only service check, with no private paths in its label.
 grep -Fq 'system_units=(NetworkManager.service paccache.timer)' "$repository/scripts/doctor.sh"
 
+# Firewall inspection uses only fixture output; no host rule or socket query.
+cat > "$fake_bin/nft" <<'EOF_NFT'
+#!/bin/sh
+[ "${FIREWALL_RULES_MODE:-empty}" != unreadable ] || exit 1
+[ "${FIREWALL_RULES_MODE:-empty}" != active ] || printf 'chain input { type filter hook input priority 0; policy drop; }\n'
+EOF_NFT
+cat > "$fake_bin/ss" <<'EOF_SS'
+#!/bin/sh
+printf '%s\n' \
+ 'tcp LISTEN 0 4096 0.0.0.0:8080 0.0.0.0:*' \
+ 'tcp LISTEN 0 4096 127.0.0.1:9999 0.0.0.0:*' \
+ 'udp UNCONN 0 0 [::]:5353 [::]:*' \
+ 'tcp LISTEN 0 10 [::1]:7777 [::]:*'
+EOF_SS
+chmod +x "$fake_bin/nft" "$fake_bin/ss"
+# Extract just the check, so unrelated doctor checks cannot mask its result.
+sed -n '/^check_firewall() {/,/^}/p' "$repository/scripts/doctor.sh" > "$test_root/firewall-check"
+# The sourced check calls these fixture callbacks dynamically.
+# shellcheck disable=SC2329
+firewall_fixture() (
+    export PATH="$fake_bin:/usr/bin"
+    # shellcheck source=/dev/null
+    source "$test_root/firewall-check"
+    systemctl() { return 1; }
+    pass() { printf 'PASS %s %s\n' "$1" "$2"; }
+    warn() { printf 'WARN %s %s\n' "$1" "$2"; }
+    skip() { printf 'SKIP %s %s\n' "$1" "$2"; }
+    # BASH_SOURCE in the extracted function needs its colocated parser.
+    cp "$repository/scripts/doctor-firewall.py" "$test_root/doctor-firewall.py"
+    check_firewall
+)
+firewall_fixture > "$test_root/firewall-output"
+grep -Fq 'tcp/8080' "$test_root/firewall-output"
+grep -Fq 'udp/5353' "$test_root/firewall-output"
+if grep -Eq '9999|7777|127\.0|0\.0\.0|::|users:|pid=' "$test_root/firewall-output"; then exit 1; fi
+FIREWALL_RULES_MODE=active firewall_fixture > "$test_root/firewall-active"
+grep -Fq PASS "$test_root/firewall-active"
+FIREWALL_RULES_MODE=unreadable firewall_fixture > "$test_root/firewall-unknown"
+grep -Fq 'state unknown' "$test_root/firewall-unknown"
+printf 'Read-only firewall privacy tests passed.\n'

@@ -151,7 +151,10 @@ than applying. Zsh and bash completions install under
 `~/.local/share/zsh/site-functions` and
 `~/.local/share/bash-completion/completions`; `tests/readme.sh` fails when
 the README or the completion disagrees with the commands, flags, keys, or
-paths that exist.
+paths that exist. The GCR SSH agent socket is a seeded-once default, and
+the managed profile exports it only when `SSH_AUTH_SOCK` is unset. Doctor
+lists non-loopback listening ports when no firewall is active and never
+changes firewall state.
 
 `blankweave rollback` is deliberately a Blankweave configuration rollback. It
 resets only the already-validated, clean managed checkout to the recorded

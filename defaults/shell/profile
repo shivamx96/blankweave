@@ -1,3 +1,9 @@
+# Respect an explicitly configured agent, including an explicitly empty value.
+if [ "${SSH_AUTH_SOCK+x}" != x ] && [ -n "${XDG_RUNTIME_DIR:-}" ] && [ -S "$XDG_RUNTIME_DIR/gcr/ssh" ]; then
+    SSH_AUTH_SOCK=$XDG_RUNTIME_DIR/gcr/ssh
+    export SSH_AUTH_SOCK
+fi
+
 # Shell-local, deliberately not exported: each new login shell gets its gate.
 [ "${blankweave_profile_sourced:-}" != 1 ] || return 0
 blankweave_profile_sourced=1

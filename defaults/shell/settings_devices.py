@@ -16,6 +16,29 @@ def printers():
     return [line.split()[1] for line in run(['lpstat', '-p'], codes=(0, 1)).splitlines() if line.startswith('printer ')]
 
 
+def discovered_printers():
+    if not installed('lpinfo'):
+        return []
+    try:
+        output = run(['lpinfo', '-v'], timeout=3)
+    except (subprocess.SubprocessError, ValueError, RuntimeError, OSError):
+        return []
+    from urllib.parse import urlsplit
+    result = set()
+    for line in output.splitlines():
+        parts = line.split()
+        if len(parts) != 2:
+            continue
+        uri = parts[1]
+        try:
+            parsed = urlsplit(uri)
+        except ValueError:
+            continue
+        if parsed.scheme in ('ipp', 'ipps') and parsed.hostname and not parsed.username and not parsed.password:
+            result.add(uri)
+    return sorted(result)
+
+
 def devices():
     return json.loads(run(['fwupdmgr', 'get-devices', '--json'], codes=(0, 2))).get('Devices', [])
 
@@ -40,6 +63,9 @@ def status(domain):
             names = printers()
             details.append(run(['lpstat', '-t'], codes=(0, 1)) or 'No printers configured.')
             actions.append(action('add', 'Add IPP printer', [field('name', 'Printer name'), field('uri', 'IPP device URI (ipp:// or ipps://)')], 'Add and enable this printer for this computer.'))
+            discovered = discovered_printers()
+            if discovered:
+                actions.append(action('add-discovered', 'Add discovered IPP printer', [field('name', 'Printer name'), field('uri', 'Discovered printer', discovered[0], [choice(uri) for uri in discovered])], 'Add and enable this printer for this computer.'))
             if names:
                 target = field('printer', 'Printer', names[0], [choice(n) for n in names])
                 actions += [action('default', 'Set default printer', [target]),
@@ -103,7 +129,7 @@ def apply(domain, request):
             except Exception:
                 target.unlink(missing_ok=True); raise
             return 'Scan saved to ' + str(target)
-        if command == 'add':
+        if command in ('add', 'add-discovered'):
             name = require(request, 'name', r'[A-Za-z0-9][A-Za-z0-9_-]{0,63}')
             uri = require(request, 'uri', r'ipps?://[^\s]+')
             from urllib.parse import urlsplit
