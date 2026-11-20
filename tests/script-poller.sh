@@ -11,7 +11,7 @@ cp "$repository/tests/fixtures/script-poller.sh" "$test_root/fake.sh"
 chmod +x "$test_root/fake.sh"
 printf 'echo LOGIN_PROFILE_NOISE\n' > "$test_root/home/.bash_profile"
 # Also guards against a future change to invoke a login shell before the fixture.
-if rg -n '"-lc"|"--login"' "$repository/defaults/quickshell/Services/ScriptPoller.qml"; then
+if grep -nE '"-lc"|"--login"' "$repository/defaults/quickshell/Services/ScriptPoller.qml"; then
     printf 'ScriptPoller must not invoke a login shell\n' >&2
     exit 1
 fi

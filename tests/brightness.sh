@@ -46,5 +46,5 @@ bash "$helper" up 100 eDP-1
 bash "$helper" down 100 DP-3
 [[ $(cat "$test_root/external") == 5 ]]
 [[ ! -e $test_root/notifications ]]
-if rg -q 'notify-send' "$helper"; then exit 1; fi
+if grep -q 'notify-send' "$helper"; then exit 1; fi
 printf 'Brightness silent connector fixtures passed.\n'

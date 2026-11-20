@@ -190,7 +190,7 @@ grep -Fq 'python3 "$DOTS_DIR/shell/default-apps.py" seed' "$repository/install.s
 
 # Required cache retention must not depend on an optional profile.
 grep -Fxq pacman-contrib "$repository/packages/base.txt"
-if rg -q '^pacman-contrib$' "$repository/packages/profiles"; then exit 1; fi
+if grep -rqx 'pacman-contrib' "$repository/packages/profiles"; then exit 1; fi
 grep -Fq 'systemctl enable paccache.timer' "$repository/install.sh"
 
 # Choice initialization must precede package changes, and optional defaults
