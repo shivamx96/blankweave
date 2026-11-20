@@ -128,6 +128,9 @@ WidgetFrame {
     DisplayBrightness {
         id: ownDisplay
         screen: root.bar.screen
+        Component.onCompleted: root.bar.shell.brightness.registerDisplay(ownDisplay)
+        Component.onDestruction: root.bar.shell.brightness.unregisterDisplay(ownDisplay)
+        onStepRequested: value => root.bar.shell.osd.show("brightness", "Brightness · " + value + "%", "󰃟", value / 100)
     }
 
     Instantiator {
@@ -234,9 +237,9 @@ WidgetFrame {
 
     active: brightnessPanel.open
 
-    onScrolled: delta => {
+    onScrolled: steps => {
         if (display.available)
-            display.queuePercentage(display.percentage + (delta > 0 ? 2 : -2))
+            display.step(steps * 2)
     }
 
     ControlPopup {
@@ -247,6 +250,7 @@ WidgetFrame {
         anchorItem: root
 
         onOpenChanged: {
+            root.bar.shell.osd.panel(root, "brightness", open)
             if (open) {
                 placementPoller.refresh()
                 themePoller.refresh()

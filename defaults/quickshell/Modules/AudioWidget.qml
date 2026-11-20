@@ -3,12 +3,15 @@ import QtQuick
 import QtQuick.Layouts
 import "../Components"
 
+
 WidgetFrame {
     id: root
 
     readonly property var audio: bar.shell.audio
     readonly property bool muted: !audio.available || audio.muted
     readonly property int percentage: Math.round(audio.volume * 100)
+
+    Component.onDestruction: bar.shell.osd.panel(root, "volume", false)
 
     visible: audio.outputKey !== ""
     iconMark: muted ? "audio-muted" : "audio-" + (percentage < 35 ? 0 : percentage < 70 ? 1 : 2)
@@ -27,10 +30,12 @@ WidgetFrame {
             audioPanel.open = !audioPanel.open
         }
         else if (button === Qt.RightButton)
-            audio.setOutputMuted(!audio.muted)
+            bar.shell.osd.volume("mute")
     }
 
-    onScrolled: delta => audio.setVolume(audio.volume + (delta > 0 ? 0.02 : -0.02))
+    onScrolled: steps => {
+        bar.shell.osd.volume(steps > 0 ? "up" : "down", Math.abs(steps))
+    }
 
     ControlPopup {
         panelId: "audio"
@@ -39,6 +44,7 @@ WidgetFrame {
         theme: root.theme
         anchorItem: root
         panelWidth: 350
+        onOpenChanged: root.bar.shell.osd.panel(root, "volume", open)
 
         ControlPanelHeader {
             theme: root.theme
@@ -68,6 +74,7 @@ WidgetFrame {
         AudioVolumeControl {
             theme: root.theme
             backend: root.audio
+            maximumVolume: 1
         }
 
         ControlDivider { theme: root.theme }

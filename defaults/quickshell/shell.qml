@@ -21,6 +21,20 @@ ShellRoot {
     property Voxtype voxtype: Voxtype { }
     property PowerService power: PowerService { }
     property AudioService audio: AudioService { }
+    property OsdService osd: OsdService {
+        audio: root.audio
+        focusedScreenName: Hyprland.focusedMonitor ? Hyprland.focusedMonitor.name : (Quickshell.screens[0]?.name || "")
+        blocked: root.power.lowBattery.warningLevel > 0 || root.osd.panels.some(p => p.kind === "dictation")
+    }
+    property BrightnessRouter brightness: BrightnessRouter {
+        osd: root.osd
+        screens: Quickshell.screens
+        focusedScreenName: root.osd.focusedScreenName
+    }
+    Variants {
+        model: Quickshell.screens
+        delegate: OsdToast { modelData: modelData; theme: root.theme; feedback: root.osd }
+    }
     property ActiveWindow activeWindow: ActiveWindow { }
     property WirelessControls wireless: WirelessControls { wifi: root.wifi; bluetooth: root.bluetooth; connections: root.connections }
     property NetworkConnections connections: NetworkConnections { }
@@ -95,6 +109,8 @@ ShellRoot {
             modelData: modelData
             theme: root.theme
             voice: root.voxtype
+            osd: root.osd
+            suppressed: root.power.lowBattery.warningLevel > 0
         }
     }
 
@@ -117,6 +133,10 @@ ShellRoot {
 
     IpcHandler {
         target: "blankweave"
+
+        function volume(action: string): void { root.osd.volume(action) }
+        function micMute(): void { root.osd.micMute() }
+        function brightness(action: string): void { root.brightness.adjust(action) }
 
         function reload() {
             Quickshell.reload(true)

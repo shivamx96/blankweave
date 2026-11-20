@@ -9,6 +9,7 @@ RowLayout {
     property string sliderName: "soundOutputVolume"
     property string volumeLabel: "Output volume"
     property int dragGeneration: -1
+    property real maximumVolume: 1.5
     spacing: root.theme.spacing("lg")
     Layout.fillWidth: true
 
@@ -18,13 +19,14 @@ RowLayout {
         Layout.fillWidth: true
         theme: root.theme
         from: 0
-        to: 150
+        to: root.maximumVolume * 100
         stepSize: 1
         value: root.available ? root.backend.volume * 100 : 0
         enabled: root.available
         opacity: enabled ? 1 : 0.45
         Accessible.name: root.volumeLabel
-        Accessible.description: "Volume in percent; above 100 percent amplifies audio."
+        Accessible.description: root.maximumVolume > 1
+            ? "Volume in percent; above 100 percent amplifies audio." : "Volume in percent."
         onPressedChanged: root.dragGeneration = pressed && root.available ? root.backend.generation : -1
         onMoved: {
             if (root.available) root.backend.setVolume(value / 100,

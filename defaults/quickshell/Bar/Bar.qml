@@ -4,6 +4,7 @@ import Quickshell
 import Quickshell.Hyprland
 import Quickshell.Wayland
 import "../Components"
+import "../Components/BarHitGeometry.js" as HitGeometry
 import "../Modules"
 import "../Services/BarWidgets.js" as Widgets
 
@@ -89,6 +90,10 @@ PanelWindow {
     }
 
     onConcealableChanged: scheduleConceal()
+
+    function hitBounds(target) {
+        return HitGeometry.bounds(barContent, target, root.atBottom)
+    }
 
     function run(command) {
         Quickshell.execDetached([Quickshell.env("HOME") + "/.local/share/blankweave/shell/open-default.sh", "command"].concat(command))

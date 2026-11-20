@@ -517,7 +517,45 @@ if ! grep -q LOW_BATTERY_PASSED "$test_root/low-battery.log" \
     exit 1
 fi
 
+# Bar input and colours: injected audio, battery and Bluetooth only.
+mkdir -p "$test_root/bar-widgets"
+cp -R "$repository/defaults/quickshell/"{Components,Assets,Modules,Services,Settings,Launcher} "$test_root/bar-widgets/"
+cp "$repository/defaults/quickshell/Theme.qml" "$test_root/bar-widgets/"
+cp "$repository/tests/quickshell/bar-widgets.qml" "$test_root/bar-widgets/shell.qml"
+if ! HOME="$test_root/home" XDG_CONFIG_HOME="$test_root/home/.config" \
+    XDG_RUNTIME_DIR="$test_root/runtime" QT_QPA_PLATFORM=offscreen \
+    QT_QUICK_BACKEND=software timeout 15 qs -p "$test_root/bar-widgets" > "$test_root/bar-widgets.log" 2>&1; then
+    cat "$test_root/bar-widgets.log"
+    exit 1
+fi
+if ! grep -q BAR_WIDGETS_PASSED "$test_root/bar-widgets.log" \
+    || grep -Eq '(TypeError|ReferenceError|Binding loop|Unable to assign|Failed to load|Error:)' "$test_root/bar-widgets.log"; then
+    cat "$test_root/bar-widgets.log"
+    exit 1
+fi
+
 printf 'Settings command and interface tests passed.\n'
+
+# OSD brightness intent uses an isolated helper and never discovers host displays.
+mkdir -p "$test_root/osd-brightness"
+cp -R "$repository/defaults/quickshell/"{Services,Components,Modules,Launcher} "$test_root/osd-brightness/"
+cp "$repository/tests/quickshell/osd-brightness.qml" "$test_root/osd-brightness/shell.qml"
+cp "$repository/tests/fixtures/settings-brightness.sh" "$test_root/osd-brightness/brightness.sh"
+if ! HOME="$test_root/home" XDG_CONFIG_HOME="$test_root/home/.config" \
+    XDG_RUNTIME_DIR="$test_root/runtime" QT_QPA_PLATFORM=offscreen \
+    SETTINGS_BRIGHTNESS_DIR="$test_root/osd-brightness-state" \
+    QT_QUICK_BACKEND=software timeout 10 qs -p "$test_root/osd-brightness" > "$test_root/osd-brightness.log" 2>&1; then
+    cat "$test_root/osd-brightness.log"
+    exit 1
+fi
+if ! grep -q OSD_BRIGHTNESS_PASSED "$test_root/osd-brightness.log" \
+    || grep -Eq '(TypeError|ReferenceError|Binding loop|Unable to assign|Failed to load|Error:)' "$test_root/osd-brightness.log"; then
+    cat "$test_root/osd-brightness.log"
+    exit 1
+fi
+
+bash "$repository/tests/brightness.sh" </dev/null
+
 # Header action metadata is checked without instantiating host services.
 python3 "$repository/tests/header_actions_test.py" </dev/null
 

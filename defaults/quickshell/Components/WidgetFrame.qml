@@ -45,7 +45,26 @@ Item {
     readonly property color markAccent: dataStale || active || attention ? foreground : theme.accentBright
 
     signal pressed(int button)
-    signal scrolled(real delta)
+    signal scrolled(int steps)
+
+    readonly property bool barHitFrame: true
+    readonly property var hitBounds: typeof bar.hitBounds === "function"
+        ? bar.hitBounds(root) : Qt.rect(0, 0, width, height)
+    property real wheelRemainder: 0
+
+    function resetScroll() {
+        wheelRemainder = 0
+        scrollPause.stop()
+    }
+    function accumulateWheel(vertical, inverted) {
+        if (!vertical) return
+        wheelRemainder += inverted ? -vertical : vertical
+        const steps = Math.trunc(wheelRemainder / 120)
+        wheelRemainder -= steps * 120
+        scrollPause.restart()
+        if (steps) scrolled(steps)
+    }
+    Timer { id: scrollPause; interval: 250; onTriggered: root.resetScroll() }
 
     implicitWidth: content.implicitWidth + horizontalPadding * 2
     implicitHeight: theme.widgetHeight
@@ -110,7 +129,11 @@ Item {
 
     MouseArea {
         id: mouse
-        anchors.fill: parent
+        objectName: "barWidgetHitArea"
+        x: root.hitBounds.x
+        y: root.hitBounds.y
+        width: root.hitBounds.width
+        height: root.hitBounds.height
         acceptedButtons: Qt.AllButtons
         hoverEnabled: true
         cursorShape: Qt.PointingHandCursor
@@ -120,10 +143,14 @@ Item {
                 root.bar.showTooltip(root, root.tooltipText)
         }
         onExited: {
+            root.resetScroll()
             root.bar.hideTooltip(root)
         }
         onClicked: mouse => root.pressed(mouse.button)
-        onWheel: wheel => root.scrolled(wheel.angleDelta.y)
+        onWheel: wheel => {
+            wheel.accepted = wheel.angleDelta.y !== 0
+            root.accumulateWheel(wheel.angleDelta.y, wheel.inverted)
+        }
     }
 
     Component.onDestruction: root.bar.hideTooltip(root)

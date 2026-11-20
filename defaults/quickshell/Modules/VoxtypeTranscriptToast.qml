@@ -11,6 +11,10 @@ PanelWindow {
     required property var theme
     required property var voice
     property bool open: false
+    property bool suppressed: false
+    property var osd: null
+    onOpenChanged: if (osd) osd.panel(root, "dictation", open)
+    Component.onDestruction: if (osd) osd.panel(root, "dictation", false)
     property string transcript: ""
     property bool deliveryCopied: false
     property bool copyConfirmed: false
@@ -27,7 +31,7 @@ PanelWindow {
     }
 
     screen: modelData
-    visible: open && focusedScreen
+    visible: open && focusedScreen && !suppressed
     color: "transparent"
     implicitWidth: root.deliveryCopied ? 420 : 220
     implicitHeight: root.deliveryCopied ? 54 : 30

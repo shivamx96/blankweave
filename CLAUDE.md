@@ -540,6 +540,39 @@ disconnected, Do Not Disturb — is carried by its glyph or mark and never by
 pull-request reviews are the count beside the Git mark. The one deliberate
 exception is dictation: a live microphone stays red while recording.
 
+Widget input areas are larger than what is painted: each reaches the screen
+edge the bar sits on and splits the gap with its neighbours without overlap,
+and the first and last entries own the corners, so a throw to the edge always
+lands on a widget (`Components/BarHitGeometry.js`). Painted geometry and
+popup and tooltip anchors are unchanged, and the areas travel with a
+concealed bar so the two-pixel reveal strip keeps working. `WidgetFrame`
+turns wheel input into signed steps: it accumulates vertical `angleDelta`
+to 120 units, carries the remainder, honours `inverted`, ignores
+horizontal-only events, and resets on pointer exit or after 250 ms, so a
+touchpad and a wheel move a value at the same rate and a sideways swipe does
+nothing. Bar volume moves in 5% steps to a 100% maximum, slider included,
+matching the media keys; a level another tool set above 100% is shown
+truthfully, cannot be raised from the bar, and lowers normally.
+
+Volume, mute, microphone mute, and brightness have one implementation: the
+keys call the `blankweave` IPC methods `volume(action)`, `micMute()`, and
+`brightness(action)`, which go through `AudioService` and the focused
+monitor's `DisplayBrightness` with the same step and cap as the bar. Each
+binding keeps a silent shell fallback (`... || wpctl ...`, `... ||
+brightness.sh ...`) so a key still works when the shell is down.
+`Services/OsdService.qml` owns the feedback for those intents and is driven
+by intent only: a key or a bar scroll shows it, a change made by another
+application does not, and an open bar panel of the same kind suppresses it
+because the slider is the feedback. Raising the volume unmutes.
+`BrightnessRouter` reuses the focused screen's registered
+`DisplayBrightness` instance and otherwise caches one without steady
+polling; the requested level shows immediately while the coalesced write and
+readback complete. `OsdToast` is a pointer-transparent, unfocused overlay at
+bottom centre whose 1.5-second lifetime restarts on each step. Only one
+transient toast shows at a time, in the order battery warning, dictation,
+OSD; a suppressed OSD intent is dropped, never replayed. Volume and
+brightness feedback never goes through Dunst.
+
 Every bar panel opens and works from the keyboard. Widgets declare a stable
 `ControlPopup.panelId` and register with one `Launcher/PanelSession.qml` on
 `ShellRoot` (focused-output selection and hotplug fallback as for the
