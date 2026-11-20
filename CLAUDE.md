@@ -103,6 +103,14 @@ do not. `--report` may include versions and session types, but must not expose
 usernames, home paths, hostnames, network addresses, disk identifiers, UUIDs,
 or hardware serial numbers.
 
+Doctor checks the system against the saved sign-in policy rather than
+assuming automatic sign-in: automatic expects the tty1 autologin drop-in and
+the passwordless default keyring, password sign-in expects no drop-in and no
+passwordless keyring, and a missing policy keeps the automatic expectations.
+Every warning and failure ends with a short `remedy:`. A validator's own
+message is shown, bounded and indented, in normal output and omitted from
+`--report`, because it cannot be made reliably private.
+
 `blankweave rollback` is deliberately a Blankweave configuration rollback. It
 resets only the already-validated, clean managed checkout to the recorded
 previous commit and runs that revision's installer to converge managed files.

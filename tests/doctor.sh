@@ -150,6 +150,14 @@ exec "$@"
 EOF
 chmod +x "$fake_bin/sudo"
 
+cat > "$fake_bin/systemd-analyze" <<'EOF'
+#!/usr/bin/env bash
+[[ "$1" == "--root=$BLANKWEAVE_SYSTEM_ROOT" && "$2" == cat-config && "$3" == systemd/logind.conf ]] || exit 1
+[[ ${BLANKWEAVE_TEST_LOGIND:-ignore} != unreadable ]] || exit 1
+printf '[Login]\nHandlePowerKey=poweroff\n[Other]\nHandlePowerKey=ignore\n[Login]\nHandlePowerKey=%s\n' "${BLANKWEAVE_TEST_LOGIND:-ignore}"
+EOF
+chmod +x "$fake_bin/systemd-analyze"
+
 run_doctor() {
     PATH="$fake_bin:/usr/bin" \
         HOME="$home" \
@@ -173,7 +181,66 @@ run_doctor() {
         "$repository/scripts/doctor.sh" "$repository" "$@"
 }
 
+# Both saved policies must agree with getty and keyring state.
+mkdir -p "$system_root/etc/blankweave"
+autologin=$system_root/etc/systemd/system/getty@tty1.service.d/autologin.conf
+cp "$autologin" "$test_root/autologin.good"
+printf 'no\n' > "$system_root/etc/blankweave/signin.conf"
+if run_doctor --normal > "$test_root/password-mismatch"; then exit 1; fi
+grep -Eq '^FAIL +tty1 sign-in.*remedy:' "$test_root/password-mismatch"
+rm "$autologin"
+mv "$home/.local/share/keyrings" "$test_root/keyrings.good"
+password_output=$(run_doctor --normal)
+grep -Eq '^PASS +tty1 sign-in' <<< "$password_output"
+grep -Eq '^PASS +default keyring.*not required' <<< "$password_output"
+printf 'yes\n' > "$system_root/etc/blankweave/signin.conf"
+if run_doctor --normal > "$test_root/automatic-mismatch"; then exit 1; fi
+grep -Eq '^FAIL +tty1 automatic login.*remedy:' "$test_root/automatic-mismatch"
+grep -Eq '^FAIL +default keyring.*remedy:' "$test_root/automatic-mismatch"
+cp "$test_root/autologin.good" "$autologin"
+mv "$test_root/keyrings.good" "$home/.local/share/keyrings"
+automatic_output=$(run_doctor --normal)
+grep -Eq '^PASS +tty1 automatic login' <<< "$automatic_output"
+grep -Eq '^PASS +default keyring' <<< "$automatic_output"
+# Validator details remain local; identifiers cannot enter a report.
+cp "$fake_bin/hyprland" "$test_root/hyprland.good"
+cat > "$fake_bin/hyprland" <<'EOF_VALIDATOR'
+#!/bin/sh
+printf 'fixture validator error /home/privateuser/config host.private 192.0.2.1 UUID=private-id\n' >&2
+exit 1
+EOF_VALIDATOR
+if run_doctor --normal > "$test_root/validator-normal"; then exit 1; fi
+grep -Fq '      fixture validator error /home/privateuser/config' "$test_root/validator-normal"
+if run_doctor --normal --report > "$test_root/validator-report"; then exit 1; fi
+grep -Fq 'validator details omitted for privacy' "$test_root/validator-report"
+if grep -Eq 'privateuser|host.private|192.0.2.1|private-id' "$test_root/validator-report"; then exit 1; fi
+cp "$test_root/hyprland.good" "$fake_bin/hyprland"
+# Protected validator details survive the helper boundary in local output and
+# remain omitted when the parent requests a shareable report.
+cp "$fake_bin/efibootmgr" "$test_root/efibootmgr.good"
+cat > "$fake_bin/efibootmgr" <<'EOF_VALIDATOR'
+#!/bin/sh
+printf 'firmware validator error UUID=private-firmware-id\n' >&2
+exit 1
+EOF_VALIDATOR
+if BLANKWEAVE_TEST_BOOT_ACCESSIBLE=false run_doctor --full > "$test_root/boot-validator-normal"; then exit 1; fi
+grep -Fq '      firmware validator error UUID=private-firmware-id' "$test_root/boot-validator-normal"
+if BLANKWEAVE_TEST_BOOT_ACCESSIBLE=false run_doctor --full --report > "$test_root/boot-validator-report"; then exit 1; fi
+grep -Fq 'validator details omitted for privacy' "$test_root/boot-validator-report"
+if grep -Fq 'private-firmware-id' "$test_root/boot-validator-report"; then exit 1; fi
+cp "$test_root/efibootmgr.good" "$fake_bin/efibootmgr"
+for result in "$test_root/password-mismatch" "$test_root/automatic-mismatch" "$test_root/validator-normal"; do
+    if grep -E '^(WARN|FAIL) ' "$result" | grep -v 'remedy:'; then exit 1; fi
+done
+
+rm -f "$test_root/sudo.log"
+power_warning=$(BLANKWEAVE_TEST_LOGIND=poweroff run_doctor --normal --report)
+grep -Eq '^WARN +power key policy' <<< "$power_warning"
+power_unknown=$(BLANKWEAVE_TEST_LOGIND=unreadable run_doctor --normal)
+grep -Eq '^WARN +power key policy' <<< "$power_unknown"
+
 output=$(run_doctor)
+grep -Eq "^PASS +power key policy" <<< "$output"
 grep -Eq '^PASS  +repository ' <<< "$output"
 grep -Fq 'PASS  runtime commands' <<< "$output"
 grep -Fq 'PASS  tty1 automatic login' <<< "$output"
