@@ -15,6 +15,11 @@ ColumnLayout {
     readonly property var modifierChoices: ["", "SUPER", "CTRL", "ALT", "SHIFT", "SUPER + SHIFT", "SUPER + CTRL", "SUPER + ALT", "CTRL + ALT", "CTRL + SHIFT", "ALT + SHIFT", "SUPER + CTRL + SHIFT", "SUPER + ALT + SHIFT", "SUPER + CTRL + ALT", "CTRL + ALT + SHIFT", "SUPER + CTRL + ALT + SHIFT"]
     property string modifiers: ""
     property string key: ""
+    Keys.priority: Keys.AfterItem
+    Keys.onEscapePressed: event => {
+        if (draft !== null) { draft = null; event.accepted = true }
+        else event.accepted = false
+    }
     function begin() {
         if (!selected || !selected.available || !backend.writable) return
         draft = {id: selected.id, label: selected.label, revision: backend.revision, session: backend.session, fingerprint: backend.fingerprint}

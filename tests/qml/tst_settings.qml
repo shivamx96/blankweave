@@ -1,6 +1,9 @@
 import QtQuick
 import QtTest
+import QtQuick.Controls.Basic
+import "../../defaults/quickshell/Components"
 import "../../defaults/quickshell/Settings"
+import "../../defaults/quickshell/Services"
 import "../../defaults/quickshell/Settings/Catalog.js" as Catalog
 
 TestCase {
@@ -18,9 +21,9 @@ TestCase {
         canvas: "#0b111c", panelSurface: "#111a2a", surface: "#162033",
         surfaceRaised: "#1c2940", surfaceHover: "#263955", surfacePressed: "#304563",
         text: "#e7edf7", textMuted: "#a1aec4", accentBright: "#67a6ff",
-        accentSurface: "#1e3556", outline: "#33476a", divider: "#23314a",
+        accentSurface: "#1e3556", outline: "#33476a", outlineStrong: "#4f75ad", divider: "#23314a",
         warning: "#eab875", critical: "#ff7777", accent: "#67a6ff", fontFamily: "sans-serif", iconFontFamily: "sans-serif",
-        textSize: 13, smallTextSize: 12, microTextSize: 11, widgetRadius: 4, panelRadius: 14
+        textSize: 13, smallTextSize: 12, microTextSize: 11, iconSize: 16, widgetRadius: 4, panelRadius: 14
     })
     QtObject {
         id: fakeBackend
@@ -152,6 +155,130 @@ TestCase {
         fakeDisplays.presets = []
         fakeDisplays.lastPreset = ""
         wait(0)
+    }
+
+    Component {
+        id: escapeFieldFactory
+        ControlTextField {
+            theme: test.palette
+            property int cancellations: 0
+            Keys.onEscapePressed: event => { cancellations++; clear(); event.accepted = true }
+        }
+    }
+    Component {
+        id: plainFieldFactory
+        SettingsTextField { theme: test.palette }
+    }
+    Component {
+        id: numberFactory
+        SettingsNumberField { theme: test.palette; value: "42"; label: "Test"; minimum: 1; maximum: 100 }
+    }
+    Component { id: areaFactory; SettingsTextArea { theme: test.palette } }
+    function test_escape_reaches_inner_password_handler() {
+        const field = createTemporaryObject(escapeFieldFactory, content)
+        field.text = "half typed password"
+        field.forceActiveFocus()
+        keyClick(Qt.Key_Escape)
+        compare(field.cancellations, 1)
+        compare(field.text, "")
+        compare(closeSpy.count, 0)
+    }
+    function test_escape_plain_and_numeric_fields() {
+        for (const factory of [plainFieldFactory, numberFactory, areaFactory]) {
+            const editor = createTemporaryObject(factory, content)
+            const field = factory === numberFactory ? findChild(editor, "numberText") : editor
+            field.text = "42"
+            field.forceActiveFocus()
+            keyClick(Qt.Key_Escape)
+            compare(field.text, "")
+            compare(closeSpy.count, 0)
+            keyClick(Qt.Key_Escape)
+            verify(!field.activeFocus)
+            compare(closeSpy.count, 0)
+            keyClick(Qt.Key_Escape)
+            compare(closeSpy.count, 1)
+            closeSpy.clear()
+            editor.destroy()
+        }
+    }
+    function test_escape_popup_first() {
+        const choice = findChild(content, "settingsChoice_theme")
+        choice.forceActiveFocus()
+        choice.popup.open()
+        tryCompare(choice.popup, "visible", true)
+        keyClick(Qt.Key_Escape)
+        tryCompare(choice.popup, "visible", false)
+        compare(closeSpy.count, 0)
+    }
+
+    QtObject {
+        id: wifiBackend
+        signal credentialsRequired(string key)
+        property bool profilesActive: true
+        property bool available: true
+        property bool busy: false
+        property bool enabled: true
+        property bool hardwareEnabled: true
+        property bool managed: true
+        property bool hosting: false
+        property bool profilesBusy: false
+        property bool profilesReady: true
+        property bool usable: true
+        property var wifiDevice: ({})
+        property var connectedWifiNetwork: null
+        property var wifiRows: [{key:"test", ssid:"Test", known:false, security:"wpa2", connected:false, stateChanging:false, strength:80}]
+        property var profiles: []
+        property string profilesError: ""
+        property string failureReason: ""
+        property string actionKey: ""
+        function requiresCredentials(security) { return true }
+        function supportsPassword(security) { return true }
+    }
+    Component { id: wifiFactory; SettingsWifi { theme: test.palette; backend: wifiBackend; width: 600 } }
+    function test_escape_real_wifi_password_form() {
+        const form = createTemporaryObject(wifiFactory, content)
+        form.requestConnect(wifiBackend.wifiRows[0])
+        const password = findChild(form, "wifiPassword")
+        password.text = "half typed password"
+        verify(password.activeFocus)
+        keyClick(Qt.Key_Escape)
+        compare(form.passwordKey, "")
+        compare(password.text, "")
+        compare(closeSpy.count, 0)
+    }
+    QtObject {
+        id: operationBackend
+        signal applyFinished(bool success, var result)
+        property bool ready: true
+        property bool writable: true
+        property bool busy: false
+        property bool writing: false
+        property bool active: true
+        property string error: ""
+        property var data: ({revision:"test", actions:[], details:[], message:"", job:null})
+        property SettingsOperationDraft draft: SettingsOperationDraft { backend: operationBackend }
+    }
+    Component { id: operationFactory; SettingsOperations { theme: test.palette; settingId: "accounts"; backend: operationBackend; width: 600 } }
+    function test_escape_real_account_form() {
+        const form = createTemporaryObject(operationFactory, content)
+        form.begin({key:"account", label:"Account", confirm:"", fields:[{key:"password", label:"Password", value:"", options:[], secret:true}]})
+        wait(0)
+        const field = findChild(form, "operationField_password")
+        verify(field !== null)
+        field.forceActiveFocus()
+        keyClick(Qt.Key_P)
+        keyClick(Qt.Key_A)
+        keyClick(Qt.Key_S)
+        verify(operationBackend.draft.values.password.length > 0)
+        keyClick(Qt.Key_Escape)
+        compare(field.text, "")
+        compare(operationBackend.draft.values.password, "")
+        compare(closeSpy.count, 0)
+        keyClick(Qt.Key_Escape)
+        verify(!field.activeFocus)
+        keyClick(Qt.Key_Escape)
+        compare(form.editing, null)
+        compare(closeSpy.count, 0)
     }
 
     function test_search_and_empty_state() {
@@ -333,6 +460,8 @@ TestCase {
         keyClick(Qt.Key_Escape)
         compare(search.text, "")
         compare(closeSpy.count, 0)
+        // The search field is the window's resting focus: once it is empty,
+        // the next Escape closes the window rather than only blurring it.
         keyClick(Qt.Key_Escape)
         compare(closeSpy.count, 1)
     }

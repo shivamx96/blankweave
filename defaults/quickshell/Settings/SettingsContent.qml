@@ -117,12 +117,19 @@ Rectangle {
 
     Shortcut { sequence: "Ctrl+F"; onActivated: root.focusSearch() }
     Shortcut { sequence: "Ctrl+W"; onActivated: root.closeRequested() }
-    Shortcut {
-        sequence: "Escape"
-        onActivated: {
-            if (search.text) search.clear()
-            else root.closeRequested()
-        }
+    // Bubble from the focused control after its own handlers and popup handling.
+    // A window Shortcut would intercept Escape before those handlers can run.
+    Keys.priority: Keys.AfterItem
+    function disarmConfirmation(item) {
+        if (item.armed === true && typeof item.disarm === "function") { item.disarm(); return true }
+        for (const child of item.children || []) if (disarmConfirmation(child)) return true
+        return false
+    }
+    Keys.onEscapePressed: event => {
+        if (root.disarmConfirmation(root)) { event.accepted = true; return }
+        if (search.text) search.clear()
+        else root.closeRequested()
+        event.accepted = true
     }
 
     ColumnLayout {
@@ -167,6 +174,12 @@ Rectangle {
                     onTextChanged: { root.followSearchTarget = false; jumpTimer.stop(); highlightTimer.stop(); root.highlightedSetting = ""; root.searchIndex = 0; pageScroll.contentItem.contentY = 0 }
                     onAccepted: root.showResult(root.searchResults[root.searchIndex])
                     Keys.onDownPressed: root.searching ? root.focusResult(0) : categories.forceActiveFocus()
+                    // Search holds focus when the window opens, so an empty
+                    // search must close on the first Escape, not just blur.
+                    escapeHandler: () => {
+                        if (search.text.length) search.clear()
+                        else root.closeRequested()
+                    }
                 }
                 SettingsButton {
                     theme: root.theme

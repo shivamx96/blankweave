@@ -18,6 +18,13 @@ ColumnLayout {
     readonly property var secondaryActions: operations.filter(action => !primaryAction || action.key !== primaryAction.key)
     readonly property bool canOperate: backend && backend.writable && draft && !draft.pending
     readonly property bool operationBusy: Boolean((backend && (backend.writing || backend.data.writable === false)) || (draft && draft.pending))
+    Keys.priority: Keys.AfterItem
+    Keys.onEscapePressed: event => {
+        if (editing !== null && draft) {
+            if (!draft.pending) draft.discard()
+            event.accepted = true
+        } else event.accepted = false
+    }
     onOperationBusyChanged: if (operationBusy) actionMenu.close()
     readonly property var job: backend && backend.ready ? backend.data.job || null : null
     spacing: root.theme.spacing("lg")

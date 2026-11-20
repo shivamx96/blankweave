@@ -275,6 +275,7 @@ WidgetFrame {
 
     ControlPopup {
         panelId: "network"
+        escapeHandler: () => { if (!root.passwordSsid) return false; root.cancelPasswordPrompt(); return true }
         id: networkPanel
         bar: root.bar
         theme: root.theme
@@ -667,6 +668,7 @@ WidgetFrame {
                         Layout.fillWidth: true
                         theme: root.theme
                         placeholderText: "Identity (user@domain)"
+                        escapeHandler: () => root.cancelPasswordPrompt()
                         text: root.identityText
                         onTextChanged: if (networkDelegate.passwordOpen) root.identityText = text
                         onAccepted: passwordField.forceActiveFocus()
@@ -689,7 +691,7 @@ WidgetFrame {
                                 root.passwordText,
                                 root.identityText
                             )
-                            Keys.onEscapePressed: root.cancelPasswordPrompt()
+                            escapeHandler: () => root.cancelPasswordPrompt()
                             onVisibleChanged: {
                                 if (visible && !networkDelegate.enterprise)
                                     Qt.callLater(() => passwordField.forceActiveFocus())

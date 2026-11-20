@@ -279,6 +279,7 @@ WidgetFrame {
 
     ControlPopup {
         panelId: "weather"
+        escapeHandler: () => { if (!root.editingLocation) return false; root.editingLocation = false; return true }
         id: weatherPanel
         bar: root.bar
         theme: root.theme
