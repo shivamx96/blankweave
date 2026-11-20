@@ -256,6 +256,7 @@ Item {
     Component {
         id: choiceControl
         SettingsComboBox {
+            optionEnabled: function(index) { return root.setting.id !== "theme" || !root.backend || !root.backend.themes || !root.backend.themes[index] || !root.backend.themes[index].invalid }
             id: choice
             theme: root.theme
             objectName: "settingsChoice_" + root.setting.id

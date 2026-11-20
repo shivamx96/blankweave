@@ -9,6 +9,8 @@ import shutil
 import subprocess
 import tempfile
 import unittest
+import sys
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "defaults/shell"))
 
 REPO = Path(__file__).resolve().parents[1]
 spec = importlib.util.spec_from_file_location("theme_design", REPO / "defaults/shell/theme-design.py")
@@ -41,7 +43,11 @@ class DesignTests(unittest.TestCase):
         invalid = [None, [], {"unknown": {}}, {"spacing": None},
                    {"spacing": {"panel": True}}, {"spacing": {"panel": -1}},
                    {"spacing": {"panel": 65}}, {"spacing": {"panel": float("nan")}},
-                   {"shape": {"panelRadius": "8"}}, {"shape": {"borderWidth": 4}},
+                   {"shape": {"panelRadius": "8"}},
+                   {"shape": {"windowBorderWidth": 4}},
+                   {"shape": {"windowRadius": True}},
+                   {"shape": {"notificationRadius": -1}},
+                   {"shape": {"lockFieldRadius": "10"}}, {"shape": {"borderWidth": 4}},
                    {"typography": {"fontFamily": "bad\nfont"}},
                    {"typography": {"fontFamily": "Font #comment"}},
                    {"typography": {"monoFontFamily": "$injected"}},
@@ -66,6 +72,23 @@ class DesignTests(unittest.TestCase):
         self.assertEqual(value["shape"]["panelRadius"], 0)
         self.assertFalse(value["materials"]["gradientEnabled"])
 
+    def test_theme_values_and_warnings(self):
+        spec = importlib.util.spec_from_file_location("theme_validation", REPO / "defaults/shell/theme-validation.py")
+        validation = importlib.util.module_from_spec(spec); spec.loader.exec_module(validation)
+        with tempfile.TemporaryDirectory() as temp:
+            target = Path(temp) / "personal"
+            shutil.copytree(REPO / "defaults/themes/obsidian", target)
+            path = target / "theme.json"
+            for block, key, value in [("colors", "text", "red"), ("lock", "contrast", -1),
+                                       ("lock", "brightness", True), ("lock", "vibrancy", 2)]:
+                data = copy.deepcopy(THEME); data["modes"]["light"][block][key] = value
+                path.write_text(json.dumps(data))
+                with self.assertRaisesRegex(ValueError, "personal light " + block + "." + key):
+                    validation.validate(path, DEFAULTS)
+            data = copy.deepcopy(THEME); data["modes"]["dark"]["colors"]["text"] = "#ABCDEF"
+            path.write_text(json.dumps(data))
+            self.assertEqual(validation.validate(path, DEFAULTS)["modes"]["dark"]["colors"]["text"], "#abcdef")
+
     def test_script_resolves_and_rejects_before_outputs_change(self):
         with tempfile.TemporaryDirectory() as temp:
             home = Path(temp)
@@ -83,7 +106,7 @@ class DesignTests(unittest.TestCase):
             result = subprocess.run(["bash", script, "status"], env=env, capture_output=True, text=True, check=True)
             self.assertEqual(json.loads(result.stdout)["design"], DEFAULTS)
             custom = config / "themes/custom"
-            custom.mkdir(parents=True)
+            shutil.copytree(data / "themes/obsidian", custom)
             theme = copy.deepcopy(THEME)
             theme["design"] = {"spacing": {"panel": 22}}
             (custom / "theme.json").write_text(json.dumps(theme))

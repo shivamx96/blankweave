@@ -188,9 +188,9 @@ WidgetFrame {
                 const listing = JSON.parse(payload)
                 const entries = Array.isArray(listing) ? listing : []
                 for (let index = 0; index < entries.length; index++) {
-                    if (entries[index].invalid)
-                        continue
                     rows.push({
+                        "invalid": Boolean(entries[index].invalid),
+                        "reason": String(entries[index].reason || ""),
                         "id": String(entries[index].id || ""),
                         "name": String(entries[index].name || entries[index].id || ""),
                         "modes": Array.isArray(entries[index].modes) ? entries[index].modes : []
@@ -449,11 +449,11 @@ WidgetFrame {
                     required property var modelData
 
                     theme: root.theme
-                    text: String(modelData.name)
+                    text: String(modelData.name) + (modelData.invalid ? " — " + modelData.reason : "")
                     swatch: root.themeSwatch(modelData)
                     selected: root.theme.themeId === String(modelData.id)
                     busy: root.pendingThemeId === String(modelData.id)
-                    enabled: !themeProcess.running
+                    enabled: !themeProcess.running && !modelData.invalid
                     onPressed: root.setTheme(String(modelData.id))
                 }
             }

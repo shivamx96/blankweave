@@ -2,7 +2,7 @@
 set -euo pipefail
 case ${1:-} in
     list)
-        printf '[{"id":"obsidian","name":"Obsidian"},{"id":"moss","name":"Moss"},{"id":"invalid","invalid":true}]\n'
+        printf '[{"id":"obsidian","name":"Obsidian"},{"id":"moss","name":"Moss"},{"id":"invalid","name":"Invalid","invalid":true,"reason":"invalid dark colors.text: must be #rrggbb or #rrggbbaa"}]\n'
         ;;
     status)
         if [[ -f ${SETTINGS_SYNC_STATE:-/nonexistent} ]]; then

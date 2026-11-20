@@ -8,6 +8,7 @@ Controls.ComboBox {
     id: root
     required property var theme
 
+    property var optionEnabled: function(index) { return true }
     implicitHeight: Math.max(36, implicitContentHeight + topPadding + bottomPadding)
     implicitWidth: 190
     leftPadding: root.theme.spacing("xl")
@@ -47,6 +48,7 @@ Controls.ComboBox {
         id: option
         required property int index
         required property var modelData
+        enabled: root.optionEnabled(index)
         width: menu.width
         implicitHeight: Math.max(38, implicitContentHeight + topPadding + bottomPadding)
         leftPadding: root.theme.spacing("xl")

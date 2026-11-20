@@ -25,7 +25,7 @@ def bounds(group, key):
     if group == "spacing":
         return 0, 64
     if group == "shape":
-        return (0, 3) if key == "borderWidth" else (0, 32)
+        return (0, 3) if key in ("borderWidth", "windowBorderWidth") else (0, 32)
     if group == "typography":
         return (14, 40) if key == "headingSize" else (9, 24)
     if group == "sizes":

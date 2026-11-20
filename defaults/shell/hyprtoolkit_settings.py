@@ -130,6 +130,9 @@ if __name__ == '__main__':
     try:
         if sys.argv[1:] == ['--check-theme']:
             prepare(theme=json.load(sys.stdin))
+        elif sys.argv[1:] == ['--stage-theme']:
+            for path, text in prepare(theme=json.load(sys.stdin)):
+                print(json.dumps([str(path), text]))
         elif not sys.argv[1:]:
             sync()
         else:

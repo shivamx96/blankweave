@@ -76,6 +76,7 @@ QtObject {
     }
 
     function apply(id, index) {
+        if (id === "theme" && themes[index] && themes[index].invalid) return
         if (!ready || busy || index < 0 || index >= choices(id).length) return
         operationError = ""
         syncState = "idle"
@@ -98,8 +99,8 @@ QtObject {
                 try {
                     const entries = JSON.parse(text)
                     if (!Array.isArray(entries)) throw new Error("Invalid theme list")
-                    root.themes = entries.filter(row => !row.invalid && row.id)
-                        .map(row => ({ id: String(row.id), name: String(row.name || row.id) }))
+                    root.themes = entries.filter(row => row.id)
+                        .map(row => ({ id: String(row.id), name: String(row.name || row.id), invalid: Boolean(row.invalid), reason: String(row.reason || "") }))
                 } catch (error) {
                     root.themes = []
                     root.operationError = "Could not read available themes. Check your installation and retry."

@@ -1,8 +1,10 @@
 import QtQuick
 import Quickshell
+import "Components"
 
 ShellRoot {
     Theme { id: theme }
+    ControlSlider { id: slider; theme: theme }
     function check(ok, message) { if (!ok) throw new Error(message) }
     Timer {
         interval: 100
@@ -31,6 +33,15 @@ ShellRoot {
                 theme.highContrast = true
                 check(theme.motionDuration === 0, "Reduced motion must override theme")
                 check(!theme.gradientEnabled && theme.borderWidth >= 1, "Contrast must override decoration")
+                check(String(slider.trackColor) === "#767676", "High contrast slider track must differ from text")
+                check(String(slider.fillColor) === "#8ac7ff", "Dark contrast fill must retain accent")
+                theme.resolved = ({mode: "light", design: {}})
+                check(String(slider.trackColor) === "#767676", "Light high contrast slider track must differ from text")
+                check(String(slider.fillColor) === "#003a80", "Light contrast fill must retain accent")
+                theme.highContrast = false
+                theme.resolved = ({colors: {outlineStrong: "#69517f", accent: "#ac88d4"}, design: {}})
+                check(String(slider.trackColor) === "#69517f", "Normal slider must use theme track")
+                check(String(slider.fillColor) === "#ac88d4", "Normal fill must retain accent")
                 theme.resolved = ({design: {}})
                 check(theme.panelRadius === 14 && theme.spacing("panel") === 18, "Theme switch retained previous overrides")
                 console.log("THEME_RUNTIME_PASSED")

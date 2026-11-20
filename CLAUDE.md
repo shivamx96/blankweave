@@ -1100,6 +1100,21 @@ after Ghostty's own file-watch reload, so the script activates Ghostty's
 activatable and a bare call would launch a terminal. GTK3 apps (Thunar) still
 only pick a change up on restart.
 
+A theme is validated by value before anything is written
+(`shell/theme-validation.py`): colours must be six- or eight-digit hex, lock
+numbers finite and in range, and wallpaper and artwork paths relative and
+inside the theme directory. `folderColor` and `plymouth` are optional: a
+personal theme without them leaves the folder colour and the installed
+splash alone. A wallpaper file that does not exist, an unknown key, and an
+icon or cursor theme that is not installed are warnings, not failures. The apply is two-phase: every template,
+artwork copy, and toolkit output is rendered into staging, the rename loop
+is the commit point, `theme.json` is written in place last, and only then do
+the desktop side effects run, so a bad theme leaves the previous one fully
+in effect. `blankweave theme lint [id]` runs the same validation plus the
+shared `theme_contrast.py` assertions over bundled and personal themes,
+read-only. `list` marks an invalid theme with its reason, and both theme
+menus show it disabled.
+
 `blankweave theme list|status|set <id>|mode dark|light|toggle|sync` is the
 public entry point and delegates to the deployed script, adding the sudo
 step after `set`. The display panel hosts the same choice: its theme row is
