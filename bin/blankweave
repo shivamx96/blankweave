@@ -18,6 +18,7 @@ INSTALLED_VERSION_STATE=$BLANKWEAVE_STATE_DIR/installed-version
 INSTALLED_RELEASE_TAG_STATE=$BLANKWEAVE_STATE_DIR/installed-release-tag
 RECOVERY_DIR=$BLANKWEAVE_STATE_DIR/recovery
 RECOVERY_STATE=$RECOVERY_DIR/latest
+KERNEL_MODULES_DIR=/usr/lib/modules
 
 die() {
     printf '%s: %s\n' "$PROGRAM_NAME" "$*" >&2
@@ -115,7 +116,7 @@ apply_repository() {
 }
 
 record_restart_required() {
-    if [[ ! -d /usr/lib/modules/$(uname -r) ]]; then
+    if [[ ! -d $KERNEL_MODULES_DIR/$(uname -r) ]]; then
         printf 'Restart required: the running kernel modules are no longer installed.\n'
         if [[ -n ${XDG_RUNTIME_DIR:-} && -d $XDG_RUNTIME_DIR ]]; then
             mkdir -p "$XDG_RUNTIME_DIR/blankweave"

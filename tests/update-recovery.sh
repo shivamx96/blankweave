@@ -268,14 +268,17 @@ script -qec 'bash -c "confirm_update true"' /dev/null > "$test_root/yes"
 if grep -q 'Apply this update?' "$test_root/yes"; then exit 1; fi
 confirm_update false </dev/null
 
-# uname is the only host-dependent seam for the restart marker.
+# The modules directory and uname are the host-dependent seams for the restart
+# marker; a container may have no /usr/lib/modules at all.
+KERNEL_MODULES_DIR=$test_root/modules
+mkdir -p "$KERNEL_MODULES_DIR/blankweave-fixture-kernel"
 uname() { printf 'blankweave-fixture-missing-kernel\n'; }
 export XDG_RUNTIME_DIR=$test_root/runtime
 mkdir -p "$XDG_RUNTIME_DIR"
 record_restart_required > "$test_root/restart"
 grep -q 'Restart required' "$test_root/restart"
 [[ -s $XDG_RUNTIME_DIR/blankweave/restart-required ]]
-uname() { printf '.\n'; }
+uname() { printf 'blankweave-fixture-kernel\n'; }
 rm "$XDG_RUNTIME_DIR/blankweave/restart-required"
 record_restart_required
 [[ ! -e $XDG_RUNTIME_DIR/blankweave/restart-required ]]
