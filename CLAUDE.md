@@ -969,7 +969,8 @@ history, read from `cliphist list` once per open. `Ctrl+Tab` cycles the views
 from the keyboard, so the tab strip is never the only way to reach one; plain
 `Tab` still steps the selection. The bar has no launcher
 button — `Super+Space` and `Super+Shift+V` are the entry points, and both go
-through the `blankweave` IPC handler (`launcher`, `clipboard`) rather than
+through the `blankweave` IPC handler (`launcher`, `clipboard`; `power` and
+`settings` live beside them) rather than
 spawning anything.
 
 A desktop entry marked `runInTerminal` is launched detached in Ghostty with
@@ -977,6 +978,16 @@ A desktop entry marked `runInTerminal` is launched detached in Ghostty with
 argument vector, and the entry's working directory; `execute()` runs such an
 entry with no terminal attached, so it would do nothing visible. Never
 rebuild a shell string from `execString`. Other entries keep `execute()`.
+
+With a query, the applications view also lists matching Settings rows after
+the applications, then matching system actions: Lock, Suspend, Restart, Shut
+down, the session exit with the power panel's truthful label, Toggle dark
+mode, and Toggle Do Not Disturb. An empty query shows applications only.
+Restart, Shut down, and session exit need a second Enter on an armed row,
+which disarms when the selection, query, view, or open state changes. The
+commands come from `Services/PowerActions.js` and the existing theme and
+notification paths, never a second implementation. That is the whole of the
+launcher's scope beyond applications and clipboard.
 
 Rows select on pointer movement, never on hover alone: a list that scrolls,
 re-ranks, or opens under a resting pointer must not change what Enter
@@ -1239,6 +1250,19 @@ the user must act on sits as helper text beside its control. Add later page back
 row control types when their functionality becomes available. Settings tests
 run through `tests/settings.sh`, using offscreen Qt tests and isolated Quickshell
 processes so validation cannot modify the developer's desktop.
+
+Settings is addressable. `openSettings(target)` takes a page id, an
+unambiguous row id, or a qualified `page/row`; a page id wins a collision
+(`input` is the page, `sound/input` the microphone row), an unknown target
+opens the default page, and a row link reuses search-result scrolling and
+highlighting. Quickshell IPC needs exact argument counts, so `settings()`
+stays for existing callers beside `settingsTarget(target)`, and
+`blankweave settings [<id>|--list]` dispatches between them; `--list`
+parses the deployed `Catalog.js` read-only. Every bar panel with a Settings
+counterpart ends in one footer action from `Components/PanelSettings.js`
+(the single panel → Catalog table, checked against the Catalog by a test);
+a gear always means Settings and the audio mixer keeps a mixer glyph.
+`Super+/` opens the Keyboard shortcuts row.
 
 Settings has one control per job. A binary setting is a `SettingsSwitchRow`:
 activating it shows the requested position as pending, refuses a second

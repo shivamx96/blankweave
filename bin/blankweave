@@ -712,7 +712,7 @@ Usage: blankweave <command>
 Commands:
   version   Show the CLI version and installed/repository revisions
   setup     Guide first-install choices; use --non-interactive with saved configs
-  settings  Open the desktop settings application
+  settings [<id>|--list]  Open Settings at a page/row, or list valid ids
   update    Check, preview, or safely apply a fast-forward update
   rollback  Restore the previous Blankweave revision and managed configuration
   doctor    Run read-only health checks; add --report for shareable diagnostics
@@ -738,9 +738,40 @@ main() {
             command_setup "$@"
             ;;
         settings)
-            [[ $# -eq 0 ]] || die "settings does not accept arguments"
+            [[ $# -le 1 ]] || die "usage: blankweave settings [<id>|--list]"
+            if [[ ${1:-} == --help || ${1:-} == -h ]]; then
+                printf 'Usage: blankweave settings [<id>|--list]\n'
+                return
+            fi
+            if [[ ${1:-} == --list ]]; then
+                # Catalog is a data literal. Parse only id/title records; never evaluate JS/QML.
+                python3 - "$BLANKWEAVE_DATA_DIR/quickshell/Settings/Catalog.js" <<'PYLIST'
+import pathlib, re, sys
+source = pathlib.Path(sys.argv[1]).read_text().split('\n];', 1)[0]
+records = []
+page = ''
+for line in source.splitlines():
+    # A record opens with its id; any other keys may sit before the title.
+    match = re.search(r'\{ id: "([^"\n]+)",[^\n]*?\btitle: "([^"\n]+)"', line)
+    if not match:
+        continue
+    ident, title = match.groups()
+    if 'groups: [' in line:
+        page = ident
+        records.append((ident, title, ''))
+    elif 'kind:' in line:
+        records.append((ident, title, page))
+pages = {ident for ident, _, page in records if not page}
+for ident, title, page in records:
+    target = page + '/' + ident if page and ident in pages else ident
+    print(target + '\t' + title)
+PYLIST
+                return
+            fi
+            local settings_method=settings
+            [[ $# -eq 0 ]] || settings_method=settingsTarget
             command -v qs >/dev/null 2>&1 || die "Quickshell is not installed"
-            qs ipc -n -p "$BLANKWEAVE_DATA_DIR/quickshell" call blankweave settings \
+            qs ipc -n -p "$BLANKWEAVE_DATA_DIR/quickshell" call blankweave "$settings_method" "$@" \
                 || die "could not open settings; make sure the Blankweave desktop is running and up to date"
             ;;
         rollback)

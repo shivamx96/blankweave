@@ -216,5 +216,12 @@ WidgetFrame {
             font.pixelSize: root.theme.microTextSize
             renderType: Text.NativeRendering
         }
+        PanelSettingsAction {
+            id: settingsAction
+            theme: root.theme
+            panelKey: "PowerWidget"
+            bar: root.bar
+            panel: powerPanel
+        }
     }
 }

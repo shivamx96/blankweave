@@ -311,5 +311,11 @@ WidgetFrame {
             title: systemPoller.running ? "Reading system information…" : "System overview unavailable"
             message: systemPoller.running ? "" : String(root.systemInfo.error || "Try refreshing the panel.")
         }
+        PanelSettingsAction {
+            theme: root.theme
+            panelKey: "SystemOverviewWidget"
+            bar: root.bar
+            panel: systemPanel
+        }
     }
 }

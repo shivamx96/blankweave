@@ -174,6 +174,35 @@ state_dir=$test_root/state/blankweave
 [[ ! -e "$test_root/cache/hyprarch/git-login" ]]
 
 printf 'CLI and migration smoke tests passed.\n'
+
+# Settings CLI is exercised only with a stub IPC binary and a deployed temp Catalog.
+mkdir -p "$test_root/settings-bin" "$test_root/settings-data/quickshell/Settings"
+cp "$repository/defaults/quickshell/Settings/Catalog.js" "$test_root/settings-data/quickshell/Settings/"
+cat > "$test_root/settings-bin/qs" <<'EOF'
+#!/usr/bin/env bash
+printf '%s\n' "$@" > "$SETTINGS_CLI_LOG"
+EOF
+chmod +x "$test_root/settings-bin/qs"
+export SETTINGS_CLI_LOG="$test_root/settings-cli.log"
+for id in '' shortcuts unknown-id; do
+    args=()
+    [[ -z $id ]] || args+=("$id")
+    HOME="$test_root/home" BLANKWEAVE_DATA_DIR="$test_root/settings-data" PATH="$test_root/settings-bin:$PATH" \
+        "$repository/bin/blankweave" settings "${args[@]}"
+    if [[ -z $id ]]; then
+        [[ $(tail -n 1 "$SETTINGS_CLI_LOG") == settings ]]
+    else
+        [[ $(tail -n 2 "$SETTINGS_CLI_LOG") == "$(printf 'settingsTarget\n%s' "$id")" ]]
+    fi
+done
+BLANKWEAVE_DATA_DIR="$test_root/settings-data" "$repository/bin/blankweave" settings --list > "$test_root/settings-ids"
+grep -Fxq $'shortcuts\tKeyboard shortcuts' "$test_root/settings-ids"
+grep -Fxq $'sound/input\tMicrophone & input level' "$test_root/settings-ids"
+grep -Fxq $'appearance\tAppearance' "$test_root/settings-ids"
+grep -Fq 'settings [<id>|--list]' <<< "$("$repository/bin/blankweave" help)"
+grep -Fq 'Usage: blankweave settings [<id>|--list]' <<< "$("$repository/bin/blankweave" settings --help)"
+printf 'Settings CLI deep-link smoke tests passed.\n'
+
 # The shared login hook is installed alongside console autologin.
 # shellcheck disable=SC2016
 grep -Fq '"$REPO_DIR/scripts/configure-session-profile.sh"' "$repository/install.sh"

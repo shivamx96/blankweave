@@ -1,5 +1,12 @@
 [
   {
+    "id": "settings-shortcuts",
+    "label": "Keyboard shortcuts",
+    "group": "Applications",
+    "default": "SUPER + slash",
+    "repeat": false
+  },
+  {
     "id": "settings",
     "label": "Open Settings",
     "group": "Applications",

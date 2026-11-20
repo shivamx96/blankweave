@@ -29,12 +29,13 @@ FloatingWindow {
     minimumSize: Qt.size(640, 480)
     color: theme.canvas
 
-    function openSettings() {
+    function openSettings(target) {
         // Remapping an existing window also brings it back from another workspace.
         visible = false
         visible = true
         minimized = false
         appearanceBackend.refresh()
+        if (target) content.openSetting(target)
         content.focusSearch()
     }
 

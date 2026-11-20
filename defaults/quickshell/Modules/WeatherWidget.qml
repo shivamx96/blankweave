@@ -585,5 +585,11 @@ WidgetFrame {
             font.letterSpacing: 0.4
             renderType: Text.NativeRendering
         }
+        PanelSettingsAction {
+            theme: root.theme
+            panelKey: "WeatherWidget"
+            bar: root.bar
+            panel: weatherPanel
+        }
     }
 }

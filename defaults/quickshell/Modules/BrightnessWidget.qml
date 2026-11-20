@@ -1,4 +1,5 @@
 import QtQuick
+import "../Services/PowerActions.js" as PowerActions
 import QtQuick.Layouts
 import Quickshell
 import Quickshell.Io
@@ -273,7 +274,7 @@ WidgetFrame {
                 if (actionId === "theme") {
                     brightnessPanel.preserveNextClose = true
                     themeCloseGuard.restart()
-                    root.bar.run([root.shellDir + "/theme-apply.sh", "toggle"])
+                    root.bar.run(PowerActions.themeCommand(root.shellDir))
                 }
             }
         }
@@ -468,6 +469,12 @@ WidgetFrame {
             font.family: root.theme.fontFamily
             font.pixelSize: root.theme.microTextSize
             renderType: Text.NativeRendering
+        }
+        PanelSettingsAction {
+            theme: root.theme
+            panelKey: "BrightnessWidget"
+            bar: root.bar
+            panel: brightnessPanel
         }
     }
 

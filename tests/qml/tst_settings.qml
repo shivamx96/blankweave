@@ -5,6 +5,7 @@ import "../../defaults/quickshell/Components"
 import "../../defaults/quickshell/Settings"
 import "../../defaults/quickshell/Services"
 import "../../defaults/quickshell/Settings/Catalog.js" as Catalog
+import "../../defaults/quickshell/Components/PanelSettings.js" as PanelSettings
 
 TestCase {
     id: test
@@ -174,6 +175,64 @@ TestCase {
         SettingsNumberField { theme: test.palette; value: "42"; label: "Test"; minimum: 1; maximum: 100 }
     }
     Component { id: areaFactory; SettingsTextArea { theme: test.palette } }
+    function test_deep_link_navigation() {
+        content.openSetting("displays")
+        compare(content.selectedPage, "displays")
+        compare(content.highlightedSetting, "")
+        content.openSetting("shortcuts")
+        compare(content.selectedPage, "input")
+        compare(content.highlightedSetting, "shortcuts")
+        tryVerify(() => content.rowForSetting("shortcuts") !== null)
+        tryVerify(() => content.rowForSetting("shortcuts").activeFocus)
+        content.openSetting("sound/input")
+        compare(content.selectedPage, "sound")
+        compare(content.highlightedSetting, "input")
+        content.openSetting("input")
+        compare(content.selectedPage, "input")
+        content.openSetting("unknown-target")
+        compare(content.selectedPage, "appearance")
+        compare(content.highlightedSetting, "")
+        verify(!content.searching)
+        content.openSetting("")
+        compare(content.selectedPage, "appearance")
+    }
+
+    QtObject {
+        id: linkShell
+        property string target: ""
+        function openSettings(id) { target = id }
+    }
+    QtObject { id: linkBar; property var shell: linkShell }
+    QtObject { id: linkPanel; property bool open: false }
+    PanelSettingsAction {
+        id: panelLink
+        visible: false
+        theme: test.palette
+        panelKey: "AudioWidget"
+        bar: linkBar
+        panel: linkPanel
+    }
+    function test_panel_link_closes_and_navigates() {
+        linkPanel.open = true
+        linkShell.target = ""
+        panelLink.pressed()
+        verify(!linkPanel.open)
+        compare(linkShell.target, "sound")
+        compare(panelLink.label, "Sound settings")
+    }
+
+    function test_panel_destinations_exist() {
+        const ids = []
+        Catalog.pages.forEach(page => {
+            ids.push(page.id)
+            page.groups.forEach(group => group.rows.forEach(row => ids.push(row.id)))
+        })
+        for (const key of Object.keys(PanelSettings.destinations)) {
+            verify(ids.includes(PanelSettings.destinations[key].id), key)
+            verify(PanelSettings.destinations[key].label.length > 0, key)
+        }
+    }
+
     function test_cache_search_aliases() {
         for (const alias of ["cache", "disk space", "clean up", "paccache"])
             verify(Catalog.searchSettings(alias).some(row => row.id === "disk-usage"))
@@ -286,6 +345,24 @@ TestCase {
         compare(closeSpy.count, 0)
     }
 
+    function test_hardware_deep_links_and_text_link() {
+        content.capabilities = []
+        content.openSetting("wifi")
+        compare(content.selectedPage, "network")
+        compare(content.highlightedSetting, "")
+        content.capabilities = null
+        content.openSetting("wifi")
+        compare(content.highlightedSetting, "wifi")
+        content.openSetting("notifications")
+        compare(content.selectedPage, "alerts")
+        compare(content.highlightedSetting, "notifications")
+        content.openSetting("large-text")
+        compare(content.selectedPage, "input")
+        content.openSetting("fonts")
+        compare(content.selectedPage, "appearance")
+        compare(content.highlightedSetting, "fonts")
+    }
+
     function test_search_and_empty_state() {
         var search = findChild(content, "settingsSearch")
         search.text = "microphone"
@@ -388,7 +465,7 @@ TestCase {
         compare(content.highlightedSetting, "backup")
         compare(fakeBackend.writes, 0)
         content.openSetting("missing-setting")
-        compare(content.page.id, "storage")
+        compare(content.page.id, "appearance")
     }
     function test_search_mouse_selection_at_minimum_window_size() {
         const oldWidth = test.width

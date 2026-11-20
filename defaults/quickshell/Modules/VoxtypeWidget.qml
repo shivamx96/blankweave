@@ -144,5 +144,11 @@ WidgetFrame {
             font.pixelSize: root.theme.microTextSize
             renderType: Text.NativeRendering
         }
+        PanelSettingsAction {
+            theme: root.theme
+            panelKey: "VoxtypeWidget"
+            bar: root.bar
+            panel: dictationPanel
+        }
     }
 }

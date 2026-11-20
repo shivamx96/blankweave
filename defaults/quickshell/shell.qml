@@ -67,8 +67,9 @@ ShellRoot {
         root.togglePanel("power")
     }
 
-    function openSettings() {
-        settingsWindow.openSettings()
+    function openSettings(target) {
+        root.closeLauncher()
+        settingsWindow.openSettings(target || "")
     }
 
     SettingsWindow {
@@ -127,6 +128,7 @@ ShellRoot {
         theme: root.theme
         usage: root.launcherUsage
         session: launcherSession
+        onSettingRequested: target => root.openSettings(target)
         onDismissed: root.closeLauncher()
         onModeRequested: next => launcherSession.mode = next
     }
@@ -155,6 +157,9 @@ ShellRoot {
         function power() {
             root.togglePower()
         }
+
+        // IpcHandler requires exact arity; preserve the legacy zero-argument method.
+        function settingsTarget(target: string): void { root.openSettings(target) }
 
         function settings() {
             root.openSettings()

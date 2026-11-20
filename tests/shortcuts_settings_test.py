@@ -49,6 +49,27 @@ class ShortcutTests(unittest.TestCase):
     def request(self, action='terminal',value='SUPER + CTRL + F8'):
         return dict(revision=m.revision(self.helper.settings()),session='session',fingerprint=m.revision([self.rows,self.options]),id=action,value=value)
 
+    def test_panel_bindings_are_unique_and_unlocked(self):
+        rows = m.catalog()
+        expected = {"audio": "A", "network": "N", "bluetooth": "B", "notifications": "I", "display": "D"}
+        for panel, key in expected.items():
+            row = next(r for r in rows if r['id'] == 'panel-' + panel)
+            self.assertEqual(row['default'], 'SUPER + CTRL + ' + key)
+            self.assertFalse(row.get('locked', False))
+            chord = m.chord(row['default'])
+            self.assertEqual(sum(m.chord(other['default']) == chord for other in rows), 1)
+        voice = (REPO / 'defaults/hypr/voxtype.lua').read_text()
+        for panel, key in expected.items():
+            self.assertNotIn('"SUPER + CTRL + ' + key + '"', voice)
+
+    def test_settings_shortcuts_binding(self):
+        self.assertIn('slash', m.KEYS)
+        rows = [r for r in m.catalog() if r['default'] == 'SUPER + slash']
+        self.assertEqual([r['id'] for r in rows], ['settings-shortcuts'])
+        self.assertNotIn('locked', rows[0])
+        lua = (REPO / 'defaults/hypr/keybindings.lua').read_text()
+        self.assertIn('bind("settings-shortcuts", main_mod .. " + slash", hl.dsp.exec_cmd("~/.local/bin/blankweave settings shortcuts"))', lua)
+
     def test_apply_reset(self):
         self.helper.apply(self.request())
         self.assertEqual(self.helper.settings()['bindings']['terminal'],'SUPER + CTRL + F8')

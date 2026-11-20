@@ -513,6 +513,12 @@ WidgetFrame {
             renderType: Text.NativeRendering
         }
 
+        PanelSettingsAction {
+            theme: root.theme
+            panelKey: "TailscaleWidget"
+            bar: root.bar
+            panel: tailscalePanel
+        }
     }
 
     Component.onCompleted: root.syncPeerModel()

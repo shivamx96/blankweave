@@ -305,5 +305,11 @@ WidgetFrame {
                 renderType: Text.NativeRendering
             }
         }
+        PanelSettingsAction {
+            theme: root.theme
+            panelKey: "ClockWidget"
+            bar: root.bar
+            panel: calendarPanel
+        }
     }
 }

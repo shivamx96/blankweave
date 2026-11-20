@@ -309,5 +309,11 @@ WidgetFrame {
                     ? "Client details require Intel engine telemetry access."
                     : "GPU workloads will appear here when active.")
         }
+        PanelSettingsAction {
+            theme: root.theme
+            panelKey: "GpuWidget"
+            bar: root.bar
+            panel: gpuPanel
+        }
     }
 }

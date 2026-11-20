@@ -51,12 +51,23 @@ Rectangle {
 
     function focusSearch() { search.forceActiveFocus(); search.selectAll() }
     function openSetting(id) {
+        search.clear()
+        followSearchTarget = false
+        jumpTimer.stop()
+        highlightTimer.stop()
+        highlightedSetting = ""
+        pageScroll.contentItem.contentY = 0
+        const targetPage = Catalog.pages.find(page => page.id === id)
+        if (targetPage) { selectedPage = targetPage.id; return }
         for (const page of Catalog.pages) {
-            if (page.groups.some(group => group.rows.some(row => row.id === id))) {
-                showResult({id: id, pageId: page.id})
+            if (page.groups.some(group => group.rows.some(row => row.id === id || page.id + "/" + row.id === id))) {
+                const row = page.groups.reduce((rows, group) => rows.concat(group.rows), []).find(row => row.id === String(id).split("/").pop())
+                if (Catalog.available(row, capabilities)) showResult({id: row.id, pageId: page.id})
+                else selectedPage = page.id
                 return
             }
         }
+        selectedPage = Catalog.pages[0].id
     }
 
     function showResult(result) {

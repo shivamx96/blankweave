@@ -1,4 +1,5 @@
 import QtQuick
+import "../Services/PowerActions.js" as PowerActions
 import QtQuick.Controls.Basic
 import QtQuick.Layouts
 import Quickshell
@@ -40,7 +41,7 @@ WidgetFrame {
 
     function runControl(arguments) {
         if (arguments[0] === "set-paused")
-            root.bar.run(["python3", root.shellDir + "/notification-settings.py", "toggle"])
+            root.bar.run(PowerActions.dndCommand(root.shellDir))
         else root.bar.run(["dunstctl"].concat(arguments))
         refreshTimer.restart()
     }
@@ -198,6 +199,12 @@ WidgetFrame {
                     ? "Notifications wait until do not disturb is disabled. Critical alerts still appear; muted apps stay muted."
                     : "Notifications will appear here after they leave the screen.")
                 : String(root.status.error || "Dunst is not responding.")
+        }
+        PanelSettingsAction {
+            theme: root.theme
+            panelKey: "NotificationWidget"
+            bar: root.bar
+            panel: notificationPanel
         }
     }
 }

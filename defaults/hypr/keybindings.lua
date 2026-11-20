@@ -20,10 +20,11 @@ end
 local main_mod = "SUPER"
 
 -- Applications
+bind("settings-shortcuts", main_mod .. " + slash", hl.dsp.exec_cmd("~/.local/bin/blankweave settings shortcuts"))
 bind("settings", main_mod .. " + comma", hl.dsp.exec_cmd("~/.local/bin/blankweave settings"))
 bind("terminal", main_mod .. " + Return", hl.dsp.exec_cmd("~/.local/share/blankweave/shell/open-default.sh terminal"))
 bind("browser", main_mod .. " + B", hl.dsp.exec_cmd("~/.local/share/blankweave/shell/open-default.sh browser"))
-bind("bluetooth", main_mod .. " + SHIFT + B", hl.dsp.exec_cmd("blueman-manager"))
+bind("bluetooth", main_mod .. " + SHIFT + B", hl.dsp.exec_cmd("~/.local/bin/blankweave settings bluetooth"))
 bind("files", main_mod .. " + E", hl.dsp.exec_cmd("~/.local/share/blankweave/shell/open-default.sh files"))
 bind("launcher", main_mod .. " + space", hl.dsp.exec_cmd([[qs ipc -n -p "$HOME/.local/share/blankweave/quickshell" call blankweave launcher]]))
 bind("lock", main_mod .. " + L", hl.dsp.exec_cmd("~/.local/share/blankweave/shell/lock.sh"), { locked = true })

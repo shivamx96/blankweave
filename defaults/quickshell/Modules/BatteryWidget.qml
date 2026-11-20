@@ -249,5 +249,11 @@ WidgetFrame {
             font.pixelSize: root.theme.microTextSize
             renderType: Text.NativeRendering
         }
+        PanelSettingsAction {
+            theme: root.theme
+            panelKey: "BatteryWidget"
+            bar: root.bar
+            panel: batteryPanel
+        }
     }
 }

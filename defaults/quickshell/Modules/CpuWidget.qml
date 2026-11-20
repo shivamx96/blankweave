@@ -236,5 +236,11 @@ WidgetFrame {
                 }
             }
         }
+        PanelSettingsAction {
+            theme: root.theme
+            panelKey: "CpuWidget"
+            bar: root.bar
+            panel: cpuPanel
+        }
     }
 }

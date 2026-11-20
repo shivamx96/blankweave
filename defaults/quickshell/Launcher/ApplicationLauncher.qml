@@ -8,6 +8,8 @@ import Quickshell.Widgets
 import "../Services/LauncherUsage.js" as Usage
 import "../Components"
 import "Launch.js" as Launch
+import "../Settings/Catalog.js" as Catalog
+import "../Services/PowerActions.js" as PowerActions
 
 PanelWindow {
     id: root
@@ -36,6 +38,33 @@ PanelWindow {
 
     // Injectable executor keeps isolated tests from running desktop actions.
     property var executeCommand: command => Quickshell.execDetached(command)
+    property string armedAction: ""
+    property bool automaticSignIn: true
+    readonly property string shellDir: Quickshell.env("HOME") + "/.local/share/blankweave/shell"
+    readonly property var systemActions: [
+        {id: "lock", name: "Lock", icon: "󰌾", command: PowerActions.lockCommand()},
+        {id: "suspend", name: "Suspend", icon: "󰒲", command: PowerActions.suspendCommand()},
+        {id: "restart", name: "Restart", icon: "󰜉", guarded: true, command: PowerActions.restartCommand()},
+        {id: "shutdown", name: "Shut down", icon: "󰐥", guarded: true, command: PowerActions.shutdownCommand()},
+        {id: "logout", name: PowerActions.exitLabel(automaticSignIn), icon: "󰍃", guarded: true, command: PowerActions.exitCommand()},
+        {id: "theme-toggle", name: "Toggle dark mode", icon: "󰖔", command: PowerActions.themeCommand(shellDir)},
+        {id: "dnd-toggle", name: "Toggle Do Not Disturb", icon: "󰂛", command: PowerActions.dndCommand(shellDir)}
+    ]
+    FileView {
+        path: "/etc/blankweave/signin.conf"
+        watchChanges: true
+        printErrors: false
+        onLoaded: root.automaticSignIn = text().trim() !== "no"
+        onLoadFailed: root.automaticSignIn = true
+        onFileChanged: reload()
+    }
+    onOpenChanged: { armedAction = ""; lastPointer = Qt.point(-1, -1) }
+    onArmedActionChanged: {
+        if (armedAction === "clipboard-clear") clearTimeout.restart()
+        else clearTimeout.stop()
+    }
+    Timer { id: clearTimeout; interval: 5000; onTriggered: root.armedAction = "" }
+    signal settingRequested(string target)
     signal dismissed
     signal modeRequested(string mode)
 
@@ -115,8 +144,21 @@ PanelWindow {
             if (!entry || entry.noDisplay || !String(entry.name || ""))
                 continue
             const score = root.applicationScore(entry, query)
-            if (score >= 0)
+            if (!query || score >= 0)
                 ranked.push({ "entry": entry, "score": score })
+        }
+        if (query) {
+            // Preserve Catalog's own relevance ordering within Settings results.
+            Catalog.searchSettings(query).forEach(result => {
+                const page = Catalog.pages.find(page => page.id === result.pageId)
+                const entry = {id: result.id, target: result.pageId + "/" + result.id, name: result.title, kind: "setting",
+                    icon: "󰒓", genericName: page.title}
+                ranked.push({entry: entry, score: 100 + result.score})
+            })
+            root.systemActions.forEach(action => {
+                const score = root.applicationScore(action, query)
+                if (!query || score >= 0) ranked.push({entry: Object.assign({kind: "system"}, action), score: 200 + score})
+            })
         }
         ranked.sort((left, right) => {
             if (left.score !== right.score)
@@ -174,6 +216,9 @@ PanelWindow {
             return ""
         if (root.clipboardMode)
             return item.binary ? "Binary clipboard entry" : ""
+        if (item.kind === "system" && root.armedAction === item.id)
+            return "Press Enter again to " + item.name.toLowerCase()
+        if (item.id === "dnd-toggle") return "Critical alerts still appear"
         return String(item.genericName || item.comment || "")
     }
 
@@ -194,6 +239,21 @@ PanelWindow {
     function activate(item) {
         if (!item)
             return
+        if (item.kind === "system") {
+            if (item.guarded && root.armedAction !== item.id) {
+                root.armedAction = item.id
+                return
+            }
+            const command = item.command
+            root.armedAction = ""
+            root.dismissed()
+            root.executeCommand(command)
+            return
+        }
+        if (item.kind === "setting") {
+            root.settingRequested(item.target)
+            return
+        }
         root.dismissed()
         if (root.clipboardMode) {
             // The id is passed as an argument rather than spliced into the
@@ -212,6 +272,7 @@ PanelWindow {
     }
 
     function closeLauncher() {
+        root.armedAction = ""
         root.dismissed()
     }
 
@@ -240,6 +301,9 @@ PanelWindow {
     Connections {
         target: root.session
         function onRefreshRequested() { root.refresh() }
+        function onSearchTextChanged() { root.armedAction = "" }
+        function onSelectedIndexChanged() { root.armedAction = "" }
+        function onModeChanged() { root.armedAction = "" }
     }
     // Changing a PanelWindow's screen can recreate its native surface. Keep
     // the QML search state and restore focus without starting a new query.
@@ -342,7 +406,7 @@ PanelWindow {
                             if (root.session.searchText.trim() !== "")
                                 return root.results.length + (root.clipboardMode
                                     ? " matching entries"
-                                    : " matching applications")
+                                    : " matching results")
                             if (root.clipboardMode)
                                 return "Recent first · " + root.clipboardEntries.length + " entries"
                             return "Quick launch · " + root.applicationEntries.length + " installed"
@@ -384,7 +448,7 @@ PanelWindow {
                 rightPadding: 14
                 placeholderText: root.clipboardMode
                     ? "Search clipboard history"
-                    : "Search applications"
+                    : "Search applications, settings, and actions"
                 text: root.session.searchText
                 color: root.theme.text
                 placeholderTextColor: root.theme.textMuted
@@ -540,7 +604,7 @@ PanelWindow {
                             spacing: 11
 
                             IconImage {
-                                visible: !root.clipboardMode
+                                visible: !root.clipboardMode && !resultCard.modelData.kind
                                 Layout.preferredWidth: 30
                                 Layout.preferredHeight: 30
                                 source: root.clipboardMode
@@ -553,10 +617,10 @@ PanelWindow {
                             }
 
                             Text {
-                                visible: root.clipboardMode
+                                visible: root.clipboardMode || Boolean(resultCard.modelData.kind)
                                 Layout.preferredWidth: 30
                                 horizontalAlignment: Text.AlignHCenter
-                                text: resultCard.modelData.binary ? "󰋩" : "󰅌"
+                                text: resultCard.modelData.icon || (resultCard.modelData.binary ? "󰋩" : "󰅌")
                                 color: resultCard.selected
                                     ? root.theme.accentBright
                                     : root.theme.textMuted

@@ -203,5 +203,11 @@ WidgetFrame {
                 }
             }
         }
+        PanelSettingsAction {
+            theme: root.theme
+            panelKey: "MemoryWidget"
+            bar: root.bar
+            panel: memoryPanel
+        }
     }
 }

@@ -167,6 +167,12 @@ WidgetFrame {
             }
         }
 
+        PanelSettingsAction {
+            theme: root.theme
+            panelKey: "AudioWidget"
+            bar: root.bar
+            panel: audioPanel
+        }
     }
 
 }

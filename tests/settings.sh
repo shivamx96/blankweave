@@ -42,7 +42,7 @@ if HOME="$test_root/home" PATH="$test_root/bin:$PATH" SETTINGS_TEST_EXIT=1 \
     exit 1
 fi
 grep -q 'could not open settings' "$test_root/output"
-if "$repository/bin/blankweave" settings unexpected > "$test_root/output" 2>&1; then
+if "$repository/bin/blankweave" settings unexpected extra > "$test_root/output" 2>&1; then
     printf 'Settings should reject unexpected arguments\n' >&2
     exit 1
 fi

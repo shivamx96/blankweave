@@ -436,6 +436,12 @@ WidgetFrame {
             font.pixelSize: root.theme.smallTextSize
             renderType: Text.NativeRendering
         }
+        PanelSettingsAction {
+            theme: root.theme
+            panelKey: "BluetoothWidget"
+            bar: root.bar
+            panel: bluetoothPanel
+        }
     }
 
     Component.onCompleted: root.syncDeviceModel()

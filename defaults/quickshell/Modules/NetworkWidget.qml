@@ -747,6 +747,12 @@ WidgetFrame {
             font.pixelSize: root.theme.smallTextSize
             renderType: Text.NativeRendering
         }
+        PanelSettingsAction {
+            theme: root.theme
+            panelKey: "NetworkWidget"
+            bar: root.bar
+            panel: networkPanel
+        }
     }
 
     component StatLabel: Text {
