@@ -136,4 +136,16 @@ dofile(arg[0]); assert(type(workspace_action)=="function"); workspace_action(); 
         result=subprocess.run(['lua','-e',script,str(REPO/'defaults/hypr/keybindings.lua')],check=True,text=True,capture_output=True)
         self.assertIn('blankweave:terminal\tSUPER + CTRL + F8\tfalse',result.stdout)
 
+class DefaultRoleBindingsTest(unittest.TestCase):
+    def test_role_commands_and_stable_ids(self):
+        root = Path(__file__).resolve().parents[1]
+        lua = (root / 'defaults/hypr/keybindings.lua').read_text()
+        for role in ('browser', 'files', 'terminal'):
+            self.assertIn('bind("' + role + '"', lua)
+            self.assertIn('open-default.sh ' + role, lua)
+        self.assertNotIn('zen-browser', lua)
+        self.assertNotIn('blueman-manager', lua)
+        self.assertIn('blankweave settings bluetooth', lua)
+
+
 if __name__=='__main__':unittest.main()

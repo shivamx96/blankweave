@@ -117,5 +117,10 @@ def shortcut(tool):
 
 if __name__ == '__main__':
     import sys
+    if sys.argv[1] in TOOLS and not installed(TOOLS[sys.argv[1]][0]):
+        import subprocess
+        subprocess.run([str(Path(__file__).with_name('open-default.sh')), 'missing',
+                        TOOLS[sys.argv[1]][0], 'assistive'], check=False)
+        sys.exit(1)
     try: shortcut(sys.argv[1])
     except (ValueError, OSError) as error: print(str(error), file=sys.stderr); sys.exit(1)

@@ -15,7 +15,7 @@
   },
   {
     "id": "browser",
-    "label": "Open browser",
+    "label": "Open web browser",
     "group": "Applications",
     "default": "SUPER + B",
     "repeat": false

@@ -116,14 +116,14 @@ WidgetFrame {
         if (!path)
             return
         gitPanel.open = false
-        root.bar.run(root.ideAvailable ? ["idea", path] : ["xdg-open", path])
+        root.bar.run(root.ideAvailable ? ["idea", path] : [root.shellDir + "/open-default.sh", "files", path])
     }
 
     function openInBrowser(url) {
         if (!url)
             return
         gitPanel.open = false
-        root.bar.run(["xdg-open", url])
+        root.bar.run([root.shellDir + "/open-default.sh", "browser", url])
     }
 
     visible: available

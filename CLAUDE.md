@@ -303,6 +303,20 @@ for profiles that already opened it. Trash, removable drives, and thumbnails
 come from `gvfs`, `udisks2`, and `tumbler` in the required manifest; without
 `gvfs`, Thunar's Delete is permanent.
 
+Core keys never name an optional application. `shell/open-default.sh
+<role>` delegates to `default-apps.py`, which shares the Settings resolver:
+`Super+B` opens the effective handler for `https`, `Super+E` the handler
+for folders, and the terminal stays Ghostty. The bar's URL and folder
+actions go through the same helper, and every direct bar or key command
+checks that its tool exists; a missing one produces a single transient
+notification naming it, whose default action opens the relevant Settings
+row. A base install with no browser is supported. `tests/action-manifests.sh`
+audits every command a default binding or bar action runs against the
+required manifests or that degradation path. `default-apps.py seed` also
+gives web links and folders a default where the user has none: Zen, then
+Firefox, then Helium, then any other registered browser, and Thunar for
+folders.
+
 Seed `~/.config/blankweave/overrides/` from `defaults/overrides/` only for missing
 files. Its Lua settings load after all compositor defaults, including voice
 bindings. Missing Lua overrides are optional, but syntax/runtime/read errors in

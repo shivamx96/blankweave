@@ -6,6 +6,7 @@ export MOZ_ENABLE_WAYLAND=1
 export QT_QPA_PLATFORM=wayland
 export SDL_VIDEODRIVER=wayland
 export EDITOR=nano
+export BROWSER="${BROWSER-\"${XDG_DATA_HOME:-$HOME/.local/share}/blankweave/shell/open-default.sh\" browser}"
 export TERMINAL=ghostty
 
 # This file is sourced by profile.d and legacy .zprofile; keep the session wrapper POSIX-compatible.

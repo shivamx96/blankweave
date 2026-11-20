@@ -21,10 +21,10 @@ local main_mod = "SUPER"
 
 -- Applications
 bind("settings", main_mod .. " + comma", hl.dsp.exec_cmd("~/.local/bin/blankweave settings"))
-bind("terminal", main_mod .. " + Return", hl.dsp.exec_cmd("ghostty"))
-bind("browser", main_mod .. " + B", hl.dsp.exec_cmd("zen-browser"))
+bind("terminal", main_mod .. " + Return", hl.dsp.exec_cmd("~/.local/share/blankweave/shell/open-default.sh terminal"))
+bind("browser", main_mod .. " + B", hl.dsp.exec_cmd("~/.local/share/blankweave/shell/open-default.sh browser"))
 bind("bluetooth", main_mod .. " + SHIFT + B", hl.dsp.exec_cmd("blueman-manager"))
-bind("files", main_mod .. " + F", hl.dsp.exec_cmd("thunar"))
+bind("files", main_mod .. " + F", hl.dsp.exec_cmd("~/.local/share/blankweave/shell/open-default.sh files"))
 bind("launcher", main_mod .. " + space", hl.dsp.exec_cmd([[qs ipc -n -p "$HOME/.local/share/blankweave/quickshell" call blankweave launcher]]))
 bind("lock", main_mod .. " + L", hl.dsp.exec_cmd("hyprlock"))
 bind("theme", main_mod .. " + T", hl.dsp.exec_cmd("~/.local/share/blankweave/shell/theme-apply.sh toggle"))

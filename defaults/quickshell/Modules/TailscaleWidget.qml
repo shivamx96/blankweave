@@ -139,7 +139,7 @@ WidgetFrame {
         if (event === "auth-url" && value.startsWith("https://") && !root.loginUrlOpened) {
             root.loginUrlOpened = true
             root.actionOutput = "Complete sign-in in your browser"
-            root.bar.run(["xdg-open", value])
+            root.bar.run([root.shellDir + "/open-default.sh", "browser", value])
         } else if (event === "error") {
             root.actionError = value || "Tailscale authentication failed"
         } else if (event === "state") {
@@ -305,7 +305,7 @@ WidgetFrame {
             onActionPressed: actionId => {
                 if (actionId === "admin") {
                     tailscalePanel.open = false
-                    root.bar.run(["xdg-open", "https://login.tailscale.com/admin/machines"])
+                    root.bar.run([root.shellDir + "/open-default.sh", "browser", "https://login.tailscale.com/admin/machines"])
                 } else if (actionId === "power") {
                     root.beginConnectionAction(!root.connected)
                 } else if (actionId === "login") {

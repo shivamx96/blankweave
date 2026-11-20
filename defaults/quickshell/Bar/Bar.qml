@@ -91,7 +91,7 @@ PanelWindow {
     onConcealableChanged: scheduleConceal()
 
     function run(command) {
-        Quickshell.execDetached(command)
+        Quickshell.execDetached([Quickshell.env("HOME") + "/.local/share/blankweave/shell/open-default.sh", "command"].concat(command))
     }
 
     function showTooltip(target, text) {
