@@ -1,10 +1,23 @@
 import QtQuick
 import QtQuick.Layouts
+import Quickshell
+import Quickshell.Io
 import "../Components"
 import "../Services"
 
 WidgetFrame {
     id: root
+
+    property bool restartRequired: false
+    FileView {
+        id: restartMarker
+        path: Quickshell.env("XDG_RUNTIME_DIR") + "/blankweave/restart-required"
+        watchChanges: true
+        printErrors: false
+        onLoaded: root.restartRequired = true
+        onLoadFailed: root.restartRequired = false
+        onFileChanged: reload()
+    }
 
     property string pendingAction: ""
     SettingsTask {
@@ -62,6 +75,7 @@ WidgetFrame {
         panelWidth: 340
 
         onOpenChanged: {
+            if (open) restartMarker.reload()
             if (!open) {
                 confirmTimer.stop()
                 root.pendingAction = ""
@@ -75,6 +89,14 @@ WidgetFrame {
             subtitle: root.pendingAction
                 ? "Select again to confirm"
                 : "Lock, suspend, or end this session"
+        }
+
+        Text {
+            visible: root.restartRequired
+            text: "Restart to finish updating"
+            color: root.theme.warning
+            font.pixelSize: root.theme.smallTextSize
+            font.family: root.theme.fontFamily
         }
 
         ControlDivider { theme: root.theme }

@@ -99,7 +99,62 @@ apply_repository() {
 
     require_normal_user
     validate_repository "$repository"
-    "$repository/install.sh"
+    local policy=${2:-upgrade}
+    local -a apply_command=(env BLANKWEAVE_PACKAGE_POLICY="$policy" "$repository/install.sh")
+    if command -v systemd-inhibit >/dev/null 2>&1; then
+        apply_command=(systemd-inhibit --what=shutdown:sleep:idle --who=Blankweave
+            --why="Applying Blankweave configuration and packages" --mode=block "${apply_command[@]}")
+    else
+        printf 'Warning: systemd-inhibit unavailable; keep the machine awake during apply.\n' >&2
+    fi
+    local status=0 was_installed=false
+    [[ ! -s $INSTALLED_REVISION_STATE ]] || was_installed=true
+    "${apply_command[@]}" || status=$?
+    if [[ $was_installed == true ]]; then record_restart_required; fi
+    return "$status"
+}
+
+record_restart_required() {
+    if [[ ! -d /usr/lib/modules/$(uname -r) ]]; then
+        printf 'Restart required: the running kernel modules are no longer installed.\n'
+        if [[ -n ${XDG_RUNTIME_DIR:-} && -d $XDG_RUNTIME_DIR ]]; then
+            mkdir -p "$XDG_RUNTIME_DIR/blankweave"
+            printf 'Restart to finish updating\n' > "$XDG_RUNTIME_DIR/blankweave/restart-required"
+        fi
+    fi
+}
+
+print_update_summary() {
+    printf 'Apply Blankweave %s -> %s (full Arch system upgrade).\n' "$1" "$2"
+    printf 'Pending upgrades from local pacman databases (may change after refresh):\n'
+    local upgrades package rest label
+    if command -v pacman >/dev/null 2>&1 && upgrades=$(pacman -Qu 2>/dev/null); then
+        if [[ -z $upgrades ]]; then
+            printf '  None known locally; databases may be stale.\n'
+        else
+            while read -r package rest; do
+                label=
+                case "$package" in
+                    linux|linux-lts|linux-zen|linux-hardened|linux-rt*) label=' [KERNEL]' ;;
+                    mesa*|lib32-mesa*|nvidia*|lib32-nvidia*|vulkan-*|xf86-video-*) label=' [GPU/mesa]' ;;
+                    hyprland*) label=' [HYPRLAND]' ;;
+                    quickshell*) label=' [QUICKSHELL]' ;;
+                esac
+                printf '  %s %s%s\n' "$package" "$rest" "$label"
+            done <<< "$upgrades"
+        fi
+    else
+        printf '  Unavailable; pacman will resolve upgrades during apply.\n'
+    fi
+}
+
+confirm_update() {
+    local answer
+    if [[ $1 != true && -t 0 ]]; then
+        printf 'Apply this update? [y/N]: '
+        IFS= read -r answer || return 1
+        [[ ${answer,,} == y || ${answer,,} == yes ]] || return 1
+    fi
 }
 
 validate_revision() {
@@ -374,7 +429,7 @@ command_setup() {
 command_update() {
     local repository branch mode=apply current target current_version target_version
     local current_tag target_tag rollback_floor commit_count update_log doctor_script apply_status
-    local SNAPSHOT_NUMBER='' reapply=false option requested_release='' newest_tag
+    local SNAPSHOT_NUMBER='' reapply=false yes=false option requested_release='' newest_tag
     local RECOVERY_DIR=$RECOVERY_DIR RECOVERY_STATE=$RECOVERY_STATE
 
     while (( $# > 0 )); do
@@ -389,14 +444,16 @@ command_update() {
                 [[ $mode == apply ]] || die "choose only one preview mode"
                 mode=${option#--} ;;
             --reapply) reapply=true ;;
+            --yes) yes=true ;;
             --help|-h)
                 cat <<'EOF'
-Usage: blankweave update [--check|--dry-run] [--reapply | --to vX.Y.Z]
+Usage: blankweave update [--check|--dry-run] [--reapply | --to vX.Y.Z] [--yes]
 
   --to       Select a specific newer annotated release reachable from main.
   --check    Fetch and report tagged releases; no system changes.
   --dry-run  Validate and print the install plan without applying.
   --reapply  Apply the current revision again, including a full system upgrade.
+  --yes      Skip the terminal confirmation (scripts without a TTY already do).
 EOF
                 return 0 ;;
             *) die "unknown update option: $option" ;;
@@ -475,6 +532,12 @@ EOF
         return 0
     fi
 
+    print_update_summary "$current_tag" "$target_tag"
+    if ! confirm_update "$yes"; then
+        printf 'Update cancelled; no changes applied.\n'
+        return 0
+    fi
+
     printf 'Validating sudo before changing the checkout...\n'
     sudo -v
     # Same-revision repair must never replace a previous-release rollback point.
@@ -525,24 +588,32 @@ EOF
 
 command_rollback() {
     local repository branch previous previous_version target target_version status current
-    local rollback_floor rollback_log rollback_status snapshot=
+    local rollback_floor rollback_log rollback_status snapshot='' allow_upgrade=false
+    local package_policy=missing-only answer
 
     case "${1:-}" in
         '') ;;
+        --allow-upgrade) allow_upgrade=true ;;
         --help|-h)
             cat <<'EOF'
-Usage: blankweave rollback
+Usage: blankweave rollback [--allow-upgrade]
 
 Restore the previous Blankweave revision and reconverge managed configuration.
+No system upgrade or database refresh is performed. Only missing manifest
+packages are installed from the local cache; unavailable packages stop rollback.
 Packages and completed one-time migrations are not reversed. If a Snapper
 pre-update snapshot was recorded, its number is shown for manual system recovery.
 Rollback never crosses the release floor recorded by the applied update.
+
+A release from before this policy cannot skip the upgrade: its installer always
+runs a full system upgrade and needs the network. Rollback to such a release
+asks first on a terminal, or needs --allow-upgrade when there is none.
 EOF
             return 0
             ;;
-        *) die "rollback does not accept arguments" ;;
+        *) die "rollback accepts only --allow-upgrade" ;;
     esac
-    (( $# <= 1 )) || die "rollback does not accept arguments"
+    (( $# <= 1 )) || die "rollback accepts only --allow-upgrade"
 
     require_normal_user
     repository=$(configured_repository)
@@ -590,6 +661,25 @@ EOF
         return 0
     fi
 
+    # A release from before the package policy ignores it and upgrades the
+    # system. Rollback is the recovery path, so it stays available, but never
+    # silently: say what will happen and require an explicit yes.
+    if ! git -C "$repository" show "$previous:install.sh" | grep 'BLANKWEAVE_PACKAGE_POLICY' >/dev/null; then
+        package_policy=upgrade
+        printf 'Blankweave %s predates upgrade-free rollback: its installer also runs a full\n' "$previous_version"
+        printf 'Arch system upgrade and needs the network.\n'
+        if [[ $allow_upgrade != true ]]; then
+            [[ -t 0 ]] || die "rerun with --allow-upgrade to accept the system upgrade"
+            printf 'Roll back and upgrade the system? [y/N]: '
+            IFS= read -r answer || answer=
+            if [[ ${answer,,} != y && ${answer,,} != yes ]]; then
+                printf 'Rollback cancelled; no changes applied.\n'
+                return 0
+            fi
+        fi
+    fi
+    validate_target_plan "$repository" "$previous"
+
     printf 'Rolling Blankweave back to %s (%s)...\n' \
         "$previous_version" "${previous:0:12}"
     sudo -v
@@ -598,7 +688,7 @@ EOF
     fi
     recovery_update_status rolling-back
     rollback_log=$RECOVERY_DIR/rollback.log
-    if apply_repository "$repository" 2>&1 | tee "$rollback_log"; then
+    if apply_repository "$repository" "$package_policy" 2>&1 | tee "$rollback_log"; then
         chmod 600 "$rollback_log"
         recovery_update_status rolled-back
         printf 'Managed configuration is restored to %s (%s).\n' \

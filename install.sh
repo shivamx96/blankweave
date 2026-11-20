@@ -1,6 +1,12 @@
 #!/usr/bin/env bash
 set -e
 
+# Explicit package policy, including across sudo. Reject unknown values early.
+case "${BLANKWEAVE_PACKAGE_POLICY:-upgrade}" in
+    upgrade|missing-only) ;;
+    *) echo "Invalid BLANKWEAVE_PACKAGE_POLICY (use upgrade or missing-only)" >&2; exit 1 ;;
+esac
+
 # If not root: show banner and elevate. Block running with sudo directly.
 if [ "$EUID" -ne 0 ]; then
     echo ""
@@ -20,6 +26,7 @@ if [ "$EUID" -ne 0 ]; then
     echo "#############################################################################"
     echo ""
     exec sudo env \
+        BLANKWEAVE_PACKAGE_POLICY="${BLANKWEAVE_PACKAGE_POLICY:-upgrade}" \
         BLANKWEAVE_USER_STATE_HOME="${XDG_STATE_HOME:-$HOME/.local/state}" \
         BLANKWEAVE_SETUP_THEME="${BLANKWEAVE_SETUP_THEME:-}" \
         BLANKWEAVE_SETUP_MODE="${BLANKWEAVE_SETUP_MODE:-}" \
@@ -148,9 +155,14 @@ else
     echo "Optional profiles: none"
 fi
 
+# Rollback resolves all missing targets before any package/configuration apply.
+if [[ ${BLANKWEAVE_PACKAGE_POLICY:-upgrade} == missing-only ]]; then
+    install_rollback_packages "$REPO_DIR" "$CAPABILITIES"
+fi
+
 section "INSTALLING AUR HELPER"
 
-if ! command -v paru &> /dev/null; then
+if [[ ${BLANKWEAVE_PACKAGE_POLICY:-upgrade} == upgrade ]] && ! command -v paru &> /dev/null; then
     echo "Installing paru (AUR helper)..."
     pacman -S --noconfirm --needed base-devel
     PARU_BUILD_DIR=$(mktemp -d /tmp/blankweave-paru.XXXXXX)
@@ -163,6 +175,7 @@ fi
 
 section "INSTALLING PACKAGES"
 
+if [[ ${BLANKWEAVE_PACKAGE_POLICY:-upgrade} == upgrade ]]; then
 echo "Enabling multilib repository..."
 if ! grep -q "^\[multilib\]" /etc/pacman.conf; then
     echo -e "\n[multilib]\nInclude = /etc/pacman.d/mirrorlist" >> /etc/pacman.conf
@@ -181,6 +194,7 @@ fi
 install_manifest_packages "$REPO_DIR" "$CAPABILITIES" providers
 install_manifest_packages "$REPO_DIR" "$CAPABILITIES" repository
 install_manifest_packages "$REPO_DIR" "$CAPABILITIES" aur
+fi
 
 printf 'Package phase finished: %s optional package(s) need attention.\n' "${#OPTIONAL_PACKAGE_FAILURES[@]}"
 
@@ -465,7 +479,9 @@ fi
 
 section "CONFIGURING VOICE DICTATION"
 
-if installer_profile_enabled voice-dictation && ! command -v voxtype >/dev/null 2>&1; then
+if [[ ${BLANKWEAVE_PACKAGE_POLICY:-upgrade} == missing-only ]]; then
+    echo "Rollback keeps existing voice models and service state; no model downloads."
+elif installer_profile_enabled voice-dictation && ! command -v voxtype >/dev/null 2>&1; then
     warn "Voice dictation is unavailable because VoxType is missing. Retry its package and rerun setup to configure it."
 elif installer_profile_enabled voice-dictation; then
     # VoxType chooses Vulkan/CUDA/MIGraphX for the detected machine and leaves
@@ -509,7 +525,7 @@ install -D -m 0644 -o "$SUDO_USER" -g "$SUDO_USER" \
 # Helium ships with the optional desktop profile, so the script skips itself
 # when the browser is absent; a failed icon download is not worth aborting an
 # apply over.
-if ! sudo -H -u "$SUDO_USER" env \
+if [[ ${BLANKWEAVE_PACKAGE_POLICY:-upgrade} == upgrade ]] && ! sudo -H -u "$SUDO_USER" env \
     HOME="$USER_HOME" \
     XDG_CONFIG_HOME="$CONFIG_DIR" \
     "$DOTS_DIR/shell/webapp.sh" sync; then
@@ -523,11 +539,14 @@ if hardware_capability_has gpu-nvidia; then
     mkdir -p /etc/modprobe.d
     echo "options nvidia_drm modeset=1" > /etc/modprobe.d/nvidia.conf
 
+    if [[ ${BLANKWEAVE_PACKAGE_POLICY:-upgrade} == upgrade ]]; then
     for kern in $(pacman -Qqe | grep "^linux" | grep -v headers); do
         if pacman -Si "${kern}-headers" &> /dev/null; then
             pacman -S --noconfirm --needed "${kern}-headers"
         fi
     done
+
+    fi
 
     RUNNING_KERNEL=$(uname -r)
     if command -v dkms &> /dev/null; then

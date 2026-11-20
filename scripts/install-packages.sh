@@ -63,3 +63,44 @@ print_optional_package_retries() {
     done
     printf 'For a checksum mismatch, do not skip verification. A clean download may fix a corrupt cache; otherwise the upstream package needs correction.\n'
 }
+
+# Resolve every selected missing target as one transaction before managed files
+# are deployed. Disable downloads: rollback uses only the existing sync DB/cache.
+install_rollback_packages() (
+    local repository=$1 capabilities=$2 kind package config transaction
+    local -a selected=() missing=()
+    for kind in providers repository aur; do
+        resolve_package_manifests "$repository" "$capabilities" "$kind" selected || return
+        for package in "${selected[@]}"; do
+            if ! pacman -Q -- "$package" >/dev/null 2>&1; then
+                missing+=("$package")
+            fi
+        done
+    done
+    (( ${#missing[@]} )) || return 0
+    printf 'Rollback: installing only missing manifest packages from local cache: %s\n' "${missing[*]}"
+    config=$(mktemp /tmp/blankweave-rollback-pacman.XXXXXX) || return
+    trap 'rm -f -- "$config"' EXIT
+    # Preserve repository configuration, replacing any configured downloader.
+    awk '
+        /^[[:space:]]*XferCommand[[:space:]]*=/ { next }
+        { print }
+        /^\[options\]/ { print "XferCommand = /usr/bin/false" }
+    ' /etc/pacman.conf > "$config"
+    if ! transaction=$(pacman --config "$config" -Sp --needed --print-format '%n' -- "${missing[@]}"); then
+        printf 'Rollback stopped: missing packages cannot be resolved from local databases/cache. No managed configuration was applied.\n' >&2
+        return 1
+    fi
+    while IFS= read -r package; do
+        [[ -n $package ]] || continue
+        if pacman -Q -- "$package" >/dev/null 2>&1; then
+            printf 'Rollback stopped: installing missing packages would change installed package %s. Run a normal full update instead.\n' "$package" >&2
+            return 1
+        fi
+    done <<< "$transaction"
+    if ! pacman --config "$config" -S --needed --noconfirm -- "${missing[@]}"; then
+        printf 'Rollback stopped: missing packages (or dependencies) could not be installed from local databases/cache. No managed configuration was applied. Restore the package cache or complete a normal full update before retrying.\n' >&2
+        return 1
+    fi
+    verify_packages_installed rollback "${missing[@]}"
+)

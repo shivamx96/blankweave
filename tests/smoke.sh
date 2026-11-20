@@ -33,7 +33,7 @@ grep -Fq 'Usage: blankweave doctor [--full|--normal] [--report]' <<< "$(
         "$repository/bin/blankweave" doctor --help
 )"
 
-grep -Fq 'Usage: blankweave update [--check|--dry-run]' <<< "$(
+grep -Fq 'Usage: blankweave update [--check|--dry-run] [--reapply | --to vX.Y.Z] [--yes]' <<< "$(
     HOME="$test_root/home" \
         XDG_STATE_HOME="$test_root/state" \
         "$repository/bin/blankweave" update --help

@@ -132,6 +132,32 @@ It does not downgrade packages, delete user data, or automatically restore a
 Snapper snapshot. Applied migrations remain forward-only and are not removed
 from their ledger. Keep this boundary explicit in help and failure messages.
 
+Rollback performs no system upgrade and no database refresh: `bin/blankweave`
+passes `BLANKWEAVE_PACKAGE_POLICY=missing-only` to the installer, which then
+installs only manifest packages that are absent, from the local databases and
+cache, and stops before deploying anything if that would change an installed
+package or cannot be resolved offline. An update keeps the full `-Syu`
+(partial upgrades are unsupported on Arch). A recovery release whose installer
+predates the policy cannot honour it, so rollback to one says that it will
+also upgrade the system and proceeds only after a yes on a terminal or with
+`--allow-upgrade`; never make that path refuse outright, because rollback is
+the recovery tool.
+
+A real update prints the release transition and the upgrades already known
+to the local pacman databases, with kernel, GPU driver, Hyprland, and
+Quickshell called out, then asks for confirmation when stdin is a terminal;
+`--yes` skips the question and a script without a terminal applies as before.
+`blankweave update --reapply` converges the current release again without
+advancing it, with the same summary, confirmation, and system upgrade; it is
+the repair command that doctor remedies and the "already up to date" message
+name. Its recovery records live under `recovery/reapply/` so a repair never
+replaces the previous-release rollback point. Every apply runs under
+`systemd-inhibit --what=shutdown:sleep:idle` when available. When the running
+kernel's module directory is gone afterwards, the CLI says a restart is
+required and writes `$XDG_RUNTIME_DIR/blankweave/restart-required`; the power
+panel shows "Restart to finish updating" while that marker exists, and
+Settings › Updates offers a confirmed Restart; no bar indicator does.
+
 `VERSION` is a stable `MAJOR.MINOR.PATCH` declaration, not a config schema. A
 commit becomes a release only when the matching annotated
 `vMAJOR.MINOR.PATCH` tag points to that exact commit; lightweight tags and
