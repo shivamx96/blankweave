@@ -719,6 +719,7 @@ Commands:
   doctor    Run read-only health checks; add --report for shareable diagnostics
   theme     Manage the desktop theme: list, status, set <id>, mode <dark|light>, toggle, sync
   webapp    Manage Helium web apps: list, install <name> <url> <icon>, remove <name>, sync
+  uninstall Preview the footprint; --apply removes proven owned files
   help      Show this help
 EOF
 }
@@ -728,6 +729,11 @@ main() {
     shift || true
 
     case "$command" in
+        uninstall)
+            local repository
+            repository=$(configured_repository)
+            exec "$repository/scripts/uninstall.sh" "$@"
+            ;;
         version|--version|-V)
             [[ $# -eq 0 ]] || die "version does not accept arguments"
             command_version

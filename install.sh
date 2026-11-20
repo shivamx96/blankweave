@@ -43,6 +43,9 @@ trap 'install_progress_exit "$?"' EXIT
 
 section "CHECKING PREREQUISITES"
 "$REPO_DIR/scripts/installer-preflight.sh"
+# Record only the explicitly scoped footprint, before any managed file writes.
+UNINSTALL_HOME="$(getent passwd "$SUDO_USER" | cut -d: -f6)"
+python3 "$REPO_DIR/scripts/uninstall-footprint.py" before '' "$UNINSTALL_HOME"
 "$REPO_DIR/scripts/configure-signin-policy.sh" "$SUDO_USER"
 
 WARNINGS=()
@@ -126,6 +129,7 @@ cleanup_install() {
     if [[ -n "$PARU_BUILD_DIR" && "$PARU_BUILD_DIR" == /tmp/blankweave-paru.* ]]; then
         rm -rf -- "$PARU_BUILD_DIR"
     fi
+    python3 "$REPO_DIR/scripts/uninstall-footprint.py" after '' "$USER_HOME" || true
     install_progress_exit "$install_status"
 }
 trap cleanup_install EXIT

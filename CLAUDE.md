@@ -135,6 +135,17 @@ Every warning and failure ends with a short `remedy:`. A validator's own
 message is shown, bounded and indented, in normal output and omitted from
 `--report`, because it cannot be made reliably private.
 
+`blankweave uninstall` previews the footprint and changes nothing;
+`--apply` needs a terminal confirmation or `--yes`. The installer records
+before-and-after ownership of what it writes under
+`/var/lib/blankweave/uninstall/` (`scripts/uninstall-footprint.py`, shared
+with the uninstaller so the two cannot drift). Removal needs proof of
+ownership, meaning matching deployed content or an exact symlink target;
+recorded originals are restored, and modified or unproven files stay and
+are reported. Packages are never removed, personal configuration needs
+`--purge-config`, and boot cleanup removes only tokens the installer added.
+Test it only against sandbox roots.
+
 `blankweave rollback` is deliberately a Blankweave configuration rollback. It
 resets only the already-validated, clean managed checkout to the recorded
 previous commit and runs that revision's installer to converge managed files.
