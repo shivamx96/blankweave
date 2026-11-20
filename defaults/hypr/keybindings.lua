@@ -56,6 +56,7 @@ bind("float-window", main_mod .. " + V", hl.dsp.window.float({ action = "toggle"
 bind("pseudo-window", main_mod .. " + P", hl.dsp.window.pseudo({ action = "toggle" }))
 bind("split", main_mod .. " + J", hl.dsp.layout("togglesplit"))
 bind("logout", main_mod .. " + Escape", hl.dsp.exec_cmd('qs ipc -n -p "$HOME/.local/share/blankweave/quickshell" call blankweave power'))
+bind("power-menu", "XF86PowerOff", hl.dsp.exec_cmd('qs ipc -n -p "$HOME/.local/share/blankweave/quickshell" call blankweave power'))
 
 -- Focus with arrow keys
 bind("focus-left", main_mod .. " + left", hl.dsp.focus({ direction = "l" }))

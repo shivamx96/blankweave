@@ -601,7 +601,8 @@ steady state, so it changes a widget's form, never its `active` accent.
 
 The rightmost power control is a native panel. Lock and suspend are immediate;
 logout, reboot, and shutdown require a second confirmation click and must clear
-their armed state whenever the panel closes. `Super+Escape` toggles it through the `power` IPC method; nothing binds a key
+their armed state whenever the panel closes. `Super+Escape` and the power key
+(`XF86PowerOff`) toggle it through the `power` IPC method; nothing binds a key
 straight to `uwsm stop`, because under tty1 automatic sign-in that restarts
 the session empty and discards unsaved work. The invocation state is a second
 `LauncherSession` on `ShellRoot` (`powerMenu`), so the panel opens on the
@@ -610,6 +611,12 @@ through that state too. Arrows and Tab move between actions, Enter activates,
 Escape closes. The session-exit action reads `/etc/blankweave/signin.conf` and
 is labelled "Restart session" unless the saved policy is password sign-in.
 
+`scripts/configure-logind-power-key.sh` owns only
+`/etc/systemd/logind.conf.d/50-blankweave.conf` (`HandlePowerKey=ignore`,
+`HandlePowerKeyLongPress=poweroff`) so a brushed power key reaches the
+compositor instead of shutting down. It signals logind with SIGHUP when the
+file changes and never restarts it, which could end the graphical session.
+Doctor warns, without elevation, when the merged policy is not `ignore`.
 
 Brightness is also runtime-selected: internal eDP/LVDS/DSI panels use
 `brightnessctl`, while external displays use DDC/CI VCP `0x10`. Pass the

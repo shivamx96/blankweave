@@ -259,6 +259,32 @@ check_hyprland_runtime() {
     fi
 }
 
+check_logind_power_key() {
+    local config value
+    local -a args=()
+    [[ -z "$SYSTEM_ROOT" ]] || args+=("--root=$SYSTEM_ROOT")
+    if ! config=$(systemd-analyze "${args[@]}" cat-config systemd/logind.conf 2>/dev/null); then
+        warn 'power key policy' 'could not read logind configuration'
+        return
+    fi
+    # cat-config applies drop-in precedence; the last assignment in [Login]
+    # wins. Do not print arbitrary config values in privacy-safe reports.
+    value=$(awk '
+        BEGIN { section=""; value="poweroff" }
+        /^[[:space:]]*[#;]/ { next }
+        /^[[:space:]]*\[/ { section=$0; gsub(/[[:space:]]/, "", section); next }
+        section == "[Login]" && /^[[:space:]]*HandlePowerKey[[:space:]]*=/ {
+            sub(/^[^=]*=[[:space:]]*/, ""); sub(/[[:space:]]*$/, ""); value=$0
+        }
+        END { print value }
+    ' <<< "$config")
+    if [[ "$value" == ignore ]]; then
+        pass 'power key policy' 'short press is handled by the power menu'
+    else
+        warn 'power key policy' 'logind short press is not configured to ignore; it may bypass confirmation'
+    fi
+}
+
 signin_policy() {
     local policy_file
     policy_file=$(root_path /etc/blankweave/signin.conf)
@@ -828,6 +854,7 @@ main() {
     check_user_configuration
     check_hyprland_runtime
     check_console_session
+    check_logind_power_key
     check_keyring
     check_plymouth
     run_boot_checks

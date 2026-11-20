@@ -204,6 +204,13 @@
     "repeat": false
   },
   {
+    "id": "power-menu",
+    "label": "Open power menu (power key)",
+    "group": "Windows",
+    "default": "XF86PowerOff",
+    "repeat": false
+  },
+  {
     "id": "focus-left",
     "label": "Focus left",
     "group": "Windows",

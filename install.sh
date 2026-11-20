@@ -262,6 +262,7 @@ fi
 section "CONFIGURING CONSOLE AUTO-LOGIN"
 
 "$REPO_DIR/scripts/configure-console-autologin.sh" "$SUDO_USER"
+"$REPO_DIR/scripts/configure-logind-power-key.sh"
 "$REPO_DIR/scripts/configure-session-profile.sh"
 rm -f /etc/pam.d/blankweave-lock
 

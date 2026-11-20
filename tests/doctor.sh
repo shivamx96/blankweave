@@ -252,6 +252,7 @@ grep -Fq 'PASS  UEFI boot order' <<< "$output"
 grep -Fq 'PASS  bootloader recovery' <<< "$output"
 grep -Fq 'PASS  CPU microcode package' <<< "$output"
 grep -Fq '0 failures' <<< "$output"
+grep -Fq '      disabled' <<< "$output"
 grep -Fq 'running and installed 0.57.1' <<< "$output"
 grep -Eq '^PASS +Hyprland deprecations +none reported' <<< "$output"
 
