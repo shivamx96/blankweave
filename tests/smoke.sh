@@ -119,6 +119,11 @@ state_dir=$test_root/state/blankweave
 [[ ! -e "$test_root/cache/hyprarch/git-login" ]]
 
 printf 'CLI and migration smoke tests passed.\n'
+# The shared login hook is installed alongside console autologin.
+# shellcheck disable=SC2016
+grep -Fq '"$REPO_DIR/scripts/configure-session-profile.sh"' "$repository/install.sh"
+"$repository/tests/configure-session-profile.sh" < /dev/null
+
 # Exercise only bootstrap's existing-checkout handoff in a disposable checkout;
 # the real bootstrap (and its host prerequisites) is never run.
 bootstrap_home=$test_root/bootstrap-home

@@ -58,7 +58,7 @@ copy_file_atomically() {
     local staged_file
 
     staged_file=$(mktemp "$(dirname "$target_file")/.blankweave.XXXXXX")
-    install -m 0644 "$source_file" "$staged_file"
+    install -o "$SUDO_USER" -g "$SUDO_USER" -m 0644 "$source_file" "$staged_file"
     mv -f "$staged_file" "$target_file"
 }
 
@@ -101,6 +101,9 @@ rm -f /etc/pam.d/hyprarch-lock
 USER_RUNTIME_DIR="/run/user/$USER_UID"
 USER_STATE_HOME="${BLANKWEAVE_USER_STATE_HOME:-$USER_HOME/.local/state}"
 PARU_BUILD_DIR=""
+# shellcheck source=scripts/installer-choices.sh
+source "$REPO_DIR/scripts/installer-choices.sh"
+installer_choices_init
 
 # Grant temporary NOPASSWD to avoid repeated password prompts during install
 SUDOERS_TMP="/etc/sudoers.d/blankweave-install"
@@ -219,15 +222,13 @@ systemctl enable NetworkManager.service
 systemctl start NetworkManager.service || warn "Could not start NetworkManager."
 
 echo "Setting up Tailscale..."
-systemctl enable tailscaled.service
-systemctl start tailscaled.service || warn "Could not start Tailscale."
+installer_seed tailscaled installer_seed_service tailscaled.service
 # Log in separately (interactive/browser auth):  tailscale up
 
 if installer_profile_enabled development && pacman -Q docker >/dev/null 2>&1; then
     echo "Setting up Docker..."
-    systemctl enable docker.service
-    systemctl start docker.service || warn "Could not start Docker."
-    usermod -aG docker "$SUDO_USER"
+    installer_seed docker installer_seed_service docker.service
+    installer_seed docker-group usermod -aG docker "$SUDO_USER"
 fi
 usermod -aG render,video "$SUDO_USER"
 
@@ -261,17 +262,18 @@ fi
 section "CONFIGURING CONSOLE AUTO-LOGIN"
 
 "$REPO_DIR/scripts/configure-console-autologin.sh" "$SUDO_USER"
+"$REPO_DIR/scripts/configure-session-profile.sh"
 rm -f /etc/pam.d/blankweave-lock
 
 section "COPYING DEFAULTS"
 
-mkdir -p "$DOTS_DIR"
-mkdir -p "$CONFIG_DIR"
+sudo -H -u "$SUDO_USER" mkdir -p "$DOTS_DIR"
+sudo -H -u "$SUDO_USER" mkdir -p "$CONFIG_DIR"
 
 echo "Copying defaults to $DOTS_DIR..."
 
-mkdir -p "$USER_HOME/.local/bin"
-install -m 0755 "$REPO_DIR/bin/blankweave" "$USER_HOME/.local/bin/blankweave"
+sudo -H -u "$SUDO_USER" mkdir -p "$USER_HOME/.local/bin"
+install -o "$SUDO_USER" -g "$SUDO_USER" -m 0755 "$REPO_DIR/bin/blankweave" "$USER_HOME/.local/bin/blankweave"
 install -D -m 0755 "$REPO_DIR/scripts/doctor.sh" /usr/lib/blankweave/doctor-boot
 install -D -o root -g root -m 0755 "$REPO_DIR/scripts/theme-system.sh" /usr/lib/blankweave/theme-system
 install -D -o root -g root -m 0644 "$REPO_DIR/defaults/polkit/org.blankweave.theme-sync.policy" \
@@ -332,10 +334,31 @@ if ! "$DOTS_DIR/shell/hardware-inventory.sh" "$SUDO_USER"; then
     warn "Could not capture hardware inventory; the system overview will use generic fallbacks."
 fi
 
+# Entry points and their parent directories are created in the user's context.
+user_config_as_user() {
+    sudo -H -u "$SUDO_USER" env HOME="$USER_HOME" bash -c \
+        'source "$1/scripts/user-config.sh"; shift; "$@"' bash "$REPO_DIR" "$@"
+}
+user_config_link() { user_config_as_user user_config_link "$@"; }
+user_config_seed() { user_config_as_user user_config_seed "$@"; }
+user_config_install_hyprland_entry() { user_config_as_user user_config_install_hyprland_entry "$@"; }
+user_config_install_zsh() { user_config_as_user user_config_install_zsh "$@"; }
+
+section "FIXING OWNERSHIP"
+# Only deployed trees, never the checkout or unrelated user data. -P and -h
+# keep symlinks from leading ownership changes outside these trees.
+for managed_tree in hypr quickshell voxtype dunst thunar ghostty xdg-desktop-portal fontconfig spotify-launcher mangohud shell webapps plymouth themes; do
+    if [[ -d $DOTS_DIR/$managed_tree && ! -L $DOTS_DIR/$managed_tree ]]; then
+        find -P "$DOTS_DIR/$managed_tree" -exec chown -h "$SUDO_USER:$SUDO_USER" {} +
+    fi
+done
+chown -h "$SUDO_USER:$SUDO_USER" "$DOTS_DIR/VERSION" "$DOTS_DIR/MIN_ROLLBACK_VERSION" \
+    "$DOTS_DIR/hardware-overrides.json" "$DOTS_DIR/hardware-capabilities.json"
+
 section "GENERATING USER CONFIGS"
-mkdir -p "$CONFIG_DIR/hypr"
-mkdir -p "$CONFIG_DIR/dunst"
-mkdir -p "$CONFIG_DIR/ghostty"
+sudo -H -u "$SUDO_USER" mkdir -p "$CONFIG_DIR/hypr"
+sudo -H -u "$SUDO_USER" mkdir -p "$CONFIG_DIR/dunst"
+sudo -H -u "$SUDO_USER" mkdir -p "$CONFIG_DIR/ghostty"
 
 # Seed only missing override files. A user's file or symlink always wins.
 for override in "$REPO_DIR/defaults/overrides/"*; do
@@ -403,11 +426,11 @@ user_config_link "$CONFIG_DIR/blankweave/overrides/dunst.conf" \
     "$CONFIG_DIR/dunst/dunstrc.d/99-blankweave-user.conf"
 
 # XDG Desktop Portal
-mkdir -p "$CONFIG_DIR/xdg-desktop-portal"
+sudo -H -u "$SUDO_USER" mkdir -p "$CONFIG_DIR/xdg-desktop-portal"
 user_config_link "$DOTS_DIR/xdg-desktop-portal/hyprland-portals.conf" "$CONFIG_DIR/xdg-desktop-portal/hyprland-portals.conf"
 
 # Ghostty
-mkdir -p "$CONFIG_DIR/ghostty"
+sudo -H -u "$SUDO_USER" mkdir -p "$CONFIG_DIR/ghostty"
 user_config_link "$DOTS_DIR/ghostty/config" "$CONFIG_DIR/ghostty/config"
 
 # Fontconfig
@@ -418,7 +441,7 @@ user_config_link "$DOTS_DIR/fontconfig/local.conf" "$CONFIG_DIR/fontconfig/conf.
 # only create or replace Blankweave's own symlink.
 VOXTYPE_CONFIG="$CONFIG_DIR/voxtype/config.toml"
 if installer_profile_enabled voice-dictation; then
-    mkdir -p "$CONFIG_DIR/voxtype"
+    sudo -H -u "$SUDO_USER" mkdir -p "$CONFIG_DIR/voxtype"
     user_config_link "$DOTS_DIR/voxtype/config.toml" "$VOXTYPE_CONFIG"
 elif [[ -L $VOXTYPE_CONFIG && $(readlink "$VOXTYPE_CONFIG") == "$DOTS_DIR/voxtype/config.toml" ]]; then
     rm -f "$VOXTYPE_CONFIG"
@@ -442,25 +465,18 @@ elif [[ -L $MANGOHUD_CONFIG && $(readlink "$MANGOHUD_CONFIG") == "$DOTS_DIR/mang
 fi
 
 section "SETTING UP ZSH"
-chsh -s /usr/bin/zsh "$SUDO_USER"
+installer_seed login-shell chsh -s /usr/bin/zsh "$SUDO_USER"
 
 ZSHRC="$USER_HOME/.zshrc"
 user_config_install_zsh "$DOTS_DIR/shell/.zshrc" "$ZSHRC"
-chown -h "$SUDO_USER:$SUDO_USER" "$ZSHRC"
+# profile.d handles sh/bash/zsh login shells. Keep existing .zprofile lines;
+# the managed profile guard makes that legacy second source harmless.
 
-PROFILE_SOURCE="source $DOTS_DIR/shell/profile"
-SHELL_RC="$USER_HOME/.zprofile"
-touch "$SHELL_RC"
-if ! grep -qF "$PROFILE_SOURCE" "$SHELL_RC"; then
-    echo "$PROFILE_SOURCE" >> "$SHELL_RC"
+# Seed missing media associations in the same user context as Settings.
+if ! sudo -H -u "$SUDO_USER" env HOME="$USER_HOME" XDG_CONFIG_HOME="$CONFIG_DIR" \
+    python3 "$DOTS_DIR/shell/default-apps.py" seed; then
+    echo "Warning: Could not seed media defaults; existing preferences were preserved."
 fi
-
-section "FIXING OWNERSHIP"
-chown -R "$SUDO_USER:$SUDO_USER" "$DOTS_DIR"
-chown -R "$SUDO_USER:$SUDO_USER" "$CONFIG_DIR"
-chown "$SUDO_USER:$SUDO_USER" "$SHELL_RC"
-[ -d "$USER_HOME/.cache" ] && chown -R "$SUDO_USER:$SUDO_USER" "$USER_HOME/.cache"
-[ -d "$USER_HOME/.local" ] && chown -R "$SUDO_USER:$SUDO_USER" "$USER_HOME/.local"
 
 section "APPLYING THEME"
 
@@ -509,10 +525,9 @@ fi
 section "SYNCING WEB APPS"
 
 # A normal desktop entry makes settings discoverable in application launchers.
-mkdir -p "$USER_HOME/.local/share/applications"
+sudo -H -u "$SUDO_USER" mkdir -p "$USER_HOME/.local/share/applications" \
+    "$USER_HOME/.local/share/icons/hicolor/scalable/apps"
 copy_file_atomically "$REPO_DIR/defaults/applications/blankweave-settings.desktop" \
-    "$USER_HOME/.local/share/applications/blankweave-settings.desktop"
-chown "$SUDO_USER:$SUDO_USER" "$USER_HOME/.local/share/applications" \
     "$USER_HOME/.local/share/applications/blankweave-settings.desktop"
 
 # Ship the Settings icon in the standard fallback theme so launchers do not

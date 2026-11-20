@@ -169,6 +169,17 @@ bootstrap plus `blankweave setup`; subsequent convergence is `blankweave
 update`. `setup --non-interactive` requires both saved configs and is the
 repeatable-provisioning path.
 
+`install.sh` distinguishes requirements from first-run defaults.
+NetworkManager, Bluetooth when detected, the package-cache timer, and the GPU
+access groups are asserted on every apply. Tailscale, Docker, docker group
+membership, and the zsh login shell are seeded once, each recorded as a
+marker under `~/.local/state/blankweave/defaults-seeded/`; an installation
+that predates the markers is treated as already seeded, so an update never
+re-enables something the user turned off, while a profile selected later
+still seeds its service once. Ownership repair covers only the trees and
+files the installer deployed, without following symlinks; never recursively
+`chown` `~/.config`, `~/.cache`, `~/.local`, or the managed checkout.
+
 ### Login and graphical session
 
 Blankweave assumes its root filesystem is LUKS-encrypted. It configures
@@ -207,6 +218,16 @@ looping back into the failure; they print a one-line reminder instead, and
 nothing, because any character on tty1 would flash during the Plymouth
 handoff. `tests/session-profile.sh` drives all of this with a stubbed UWSM
 under sh, bash, and zsh; never exercise the developer's live login path.
+
+The session start does not depend on the login shell.
+`scripts/configure-session-profile.sh` installs the root-owned
+`/etc/profile.d/blankweave-session.sh`, which sources the current account's
+managed profile when it exists, so sh, bash, and zsh logins all reach it and
+other accounts see nothing; fish does not read `profile.d`. Because
+`/etc/profile` runs before the user's own startup files, the hook steps
+aside for a zsh login whose `.zprofile` still sources the managed profile:
+that session keeps starting from `.zprofile`, after the user's exports. A
+shell-local guard makes a second source of the profile a no-op.
 
 Do not restore a graphical-startup Hyprlock. The LUKS prompt is the boot-time
 authentication boundary. Hyprlock remains in manual keybindings and in
