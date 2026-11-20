@@ -8,7 +8,7 @@ Item {
     id: root
 
     property string mark: ""
-    property color markColor: "#ffffff"
+    required property color markColor
     property color accentColor: root.markColor
     property int visualSize: 16
 

@@ -123,7 +123,7 @@ Item {
                     height: 2
 
                     Behavior on width {
-                        NumberAnimation { duration: root.theme.reducedMotion ? 0 : 150; easing.type: Easing.OutCubic }
+                        NumberAnimation { duration: Math.round(root.theme.motionDuration * 150 / 150); easing.type: Easing.OutCubic }
                     }
 
                     Rectangle {

@@ -166,7 +166,7 @@ WidgetFrame {
                         id: coreLabel
                         anchors.left: parent.left
                         anchors.verticalCenter: parent.verticalCenter
-                        width: 24
+                        width: Math.round(24 * (root.theme.textScale || 1))
                         text: String(coreCell.index + 1).padStart(2, "0")
                         color: root.theme.textMuted
                         font.family: root.theme.monoFontFamily
@@ -192,7 +192,7 @@ WidgetFrame {
                                 : root.theme.accentBright
 
                             Behavior on width {
-                                NumberAnimation { duration: root.theme.reducedMotion ? 0 : 180; easing.type: Easing.OutCubic }
+                                NumberAnimation { duration: Math.round(root.theme.motionDuration * 180 / 150); easing.type: Easing.OutCubic }
                             }
                         }
                     }

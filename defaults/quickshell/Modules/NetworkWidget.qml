@@ -494,7 +494,7 @@ WidgetFrame {
                         height: networkDelegate.connected ? 22 : (networkActionMouse.containsMouse ? 14 : 0)
                         color: root.theme.accentBright
 
-                        Behavior on height { NumberAnimation { duration: root.theme.reducedMotion ? 0 : 140 } }
+                        Behavior on height { NumberAnimation { duration: Math.round(root.theme.motionDuration * 140 / 150) } }
                     }
 
                     RowLayout {
@@ -603,7 +603,7 @@ WidgetFrame {
                         }
 
                         Item {
-                            Layout.preferredWidth: 68
+                            Layout.preferredWidth: Math.round(68 * (root.theme.textScale || 1))
                             Layout.preferredHeight: 28
                             opacity: root.busy && !networkDelegate.rowBusy ? 0.45 : 1
 
@@ -625,7 +625,7 @@ WidgetFrame {
                                 height: 1
                                 color: root.theme.accentBright
 
-                                Behavior on width { NumberAnimation { duration: root.theme.reducedMotion ? 0 : 140 } }
+                                Behavior on width { NumberAnimation { duration: Math.round(root.theme.motionDuration * 140 / 150) } }
                             }
 
                             ControlMouseArea {

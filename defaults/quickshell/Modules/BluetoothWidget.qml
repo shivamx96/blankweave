@@ -277,7 +277,7 @@ WidgetFrame {
                         color: root.theme.accentBright
 
                         Behavior on height {
-                            NumberAnimation { duration: root.theme.reducedMotion ? 0 : 140; easing.type: Easing.OutCubic }
+                            NumberAnimation { duration: Math.round(root.theme.motionDuration * 140 / 150); easing.type: Easing.OutCubic }
                         }
                     }
 
@@ -343,7 +343,7 @@ WidgetFrame {
                                 height: 1
                                 color: deviceDelegate.confirmForget ? root.theme.critical : root.theme.accentBright
 
-                                Behavior on width { NumberAnimation { duration: root.theme.reducedMotion ? 0 : 140 } }
+                                Behavior on width { NumberAnimation { duration: Math.round(root.theme.motionDuration * 140 / 150) } }
                             }
 
                             ControlMouseArea {
@@ -369,7 +369,7 @@ WidgetFrame {
                         }
 
                         Item {
-                            Layout.preferredWidth: 72
+                            Layout.preferredWidth: Math.round(72 * (root.theme.textScale || 1))
                             Layout.preferredHeight: 28
                             opacity: deviceDelegate.busy && deviceDelegate.pending !== "pairing" ? 0.58 : 1
 
@@ -389,7 +389,7 @@ WidgetFrame {
                                 height: 1
                                 color: root.theme.accentBright
 
-                                Behavior on width { NumberAnimation { duration: root.theme.reducedMotion ? 0 : 140 } }
+                                Behavior on width { NumberAnimation { duration: Math.round(root.theme.motionDuration * 140 / 150) } }
                             }
 
                             ControlMouseArea {

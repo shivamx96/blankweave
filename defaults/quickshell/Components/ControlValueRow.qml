@@ -52,7 +52,7 @@ RowLayout {
     }
 
     Text {
-        Layout.preferredWidth: 42
+        Layout.preferredWidth: Math.round(42 * (root.theme.textScale || 1))
         horizontalAlignment: Text.AlignRight
         text: root.valueText
         color: root.theme.text

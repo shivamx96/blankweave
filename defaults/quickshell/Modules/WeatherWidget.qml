@@ -340,7 +340,7 @@ WidgetFrame {
 
                 ControlAction {
                     Layout.fillWidth: false
-                    Layout.preferredWidth: 82
+                    Layout.preferredWidth: Math.round(82 * (root.theme.textScale || 1))
                     theme: root.theme
                     icon: "󰍉"
                     label: actionProcess.running && root.actionKind === "search" ? "Searching" : "Search"
@@ -525,7 +525,7 @@ WidgetFrame {
                     spacing: 10
 
                     Text {
-                        Layout.preferredWidth: 48
+                        Layout.preferredWidth: Math.round(48 * (root.theme.textScale || 1))
                         text: parent.parent.index === 0 ? "TODAY" : root.formatDay(parent.parent.modelData.date)
                         color: parent.parent.index === 0 ? root.theme.accentBright : root.theme.text
                         font.family: root.theme.fontFamily
@@ -552,7 +552,7 @@ WidgetFrame {
                     }
 
                     Text {
-                        Layout.preferredWidth: 42
+                        Layout.preferredWidth: Math.round(42 * (root.theme.textScale || 1))
                         horizontalAlignment: Text.AlignRight
                         text: parent.parent.modelData.rain + "%"
                         color: root.theme.textMuted
@@ -562,7 +562,7 @@ WidgetFrame {
                     }
 
                     Text {
-                        Layout.preferredWidth: 62
+                        Layout.preferredWidth: Math.round(62 * (root.theme.textScale || 1))
                         horizontalAlignment: Text.AlignRight
                         text: parent.parent.modelData.high + "° / " + parent.parent.modelData.low + "°"
                         color: root.theme.text

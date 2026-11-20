@@ -103,7 +103,7 @@ WidgetFrame {
                     color: root.theme.accentBright
 
                     Behavior on height {
-                        NumberAnimation { duration: root.theme.reducedMotion ? 0 : 140; easing.type: Easing.OutCubic }
+                        NumberAnimation { duration: Math.round(root.theme.motionDuration * 140 / 150); easing.type: Easing.OutCubic }
                     }
                 }
 

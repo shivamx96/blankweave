@@ -16,7 +16,7 @@ RowLayout {
     spacing: root.theme.spacing("md")
 
     Text {
-        Layout.preferredWidth: 82
+        Layout.preferredWidth: Math.round(82 * (root.theme.textScale || 1))
         text: root.label
         color: root.theme.textMuted
         font.family: root.theme.fontFamily

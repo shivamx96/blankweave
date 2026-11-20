@@ -69,7 +69,7 @@ PanelWindow {
         border.color: root.theme.outlineStrong
 
         Behavior on color {
-            ColorAnimation { duration: root.theme.reducedMotion ? 0 : 120 }
+            ColorAnimation { duration: Math.round(root.theme.motionDuration * 120 / 150) }
         }
 
         RowLayout {

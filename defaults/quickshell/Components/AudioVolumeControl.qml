@@ -34,7 +34,7 @@ RowLayout {
         }
     }
     Text {
-        Layout.preferredWidth: 46
+        Layout.preferredWidth: Math.round(46 * (root.theme.textScale || 1))
         text: root.available ? Math.round(root.backend.volume * 100) + "%" : "—"
         color: root.available ? root.theme.text : root.theme.textMuted
         font.family: root.theme.fontFamily

@@ -573,6 +573,21 @@ glyph only ever closes something. Bar widgets declare their gestures through
 generated line (`Right-click: mute · Scroll: adjust volume`) that is omitted
 when neither applies, so a tooltip never misstates what a gesture does.
 
+A panel never outgrows the screen: `ControlPopup` caps its height at the
+screen height minus the bar and a margin and scrolls its content in
+`PanelViewport` with a visible scrollbar, and keyboard focus scrolls into
+view; a panel that fits is unchanged. The display panel stays available
+when brightness cannot be read, because it also owns the theme toggle and
+the layout controls: that screen's row says so in place of its slider, the
+bar shows a level-free mark, and scrolling does nothing. Display names come
+from the EDID; never special-case a model. The six system controls in the
+right section (display, audio, Bluetooth, network, notifications, battery)
+are vector marks with one per state; keep the body of a mark the same size
+across its states so the icon does not jump when the level changes.
+Explicit animations take their duration from `theme.motionDuration`, label
+widths follow the text scale, and palette literals live only in
+`Theme.qml`; `tests/quickshell-style.sh` scans for all three.
+
 `Components/ControlPopup.qml` provides the anchored, keyboard-dismissible panel
 surface used by interactive status widgets. `ControlSlider.qml` provides the
 shared angular slider treatment. Interactive panels compose
