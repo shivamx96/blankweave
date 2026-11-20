@@ -81,11 +81,12 @@ ColumnLayout {
             enabled: root.ready && root.backend.writable && root.selected !== null && root.selected.available
             onClicked: root.begin()
         }
-        SettingsButton {
+        SettingsConfirmButton {
+                targetIdentity: root.selectedId
             objectName: "shortcutReset"
-            theme: root.theme; text: "Reset"
+            theme: root.theme; actionText: "Reset"
             enabled: root.ready && root.backend.writable && root.selected !== null && root.selected.available && root.selected.overridden
-            onClicked: root.backend.apply(root.selected.id, null, root.backend.revision, root.backend.session, root.backend.fingerprint)
+            onConfirmed: root.backend.apply(root.selected.id, null, root.backend.revision, root.backend.session, root.backend.fingerprint)
         }
     }
     ColumnLayout {

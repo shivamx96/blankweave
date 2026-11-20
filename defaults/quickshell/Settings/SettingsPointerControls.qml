@@ -94,6 +94,17 @@ ColumnLayout {
                     currentIndex = Qt.binding(() => optionRow.selected)
                 }
             }
+            SettingsSwitchRow {
+                Layout.fillWidth: true
+                theme: root.theme
+                visible: root.target.scope !== "device" && !["sensitivity", "accel_profile", "clickfinger_behavior"].includes(optionRow.modelData)
+                text: root.label(optionRow.modelData)
+                checked: root.backend.value(root.target, optionRow.modelData) === true
+                busy: Boolean(root.backend && root.backend.busy)
+                identity: JSON.stringify(root.target)
+                enabled: root.writable
+                onClicked: root.backend.apply(Object.assign({}, root.target), optionRow.modelData, !checked)
+            }
             Connections {
                 target: optionChoice.popup
                 function onAboutToShow() {
@@ -103,13 +114,14 @@ ColumnLayout {
                 }
                 function onClosed() { Qt.callLater(() => { if (!optionChoice.popup.visible) optionRow.choosing = false }) }
             }
-            SettingsButton {
+            SettingsConfirmButton {
+                targetIdentity: JSON.stringify(root.target) + optionRow.modelData
                 objectName: "pointerReset_" + optionRow.modelData
                 theme: root.theme
-                text: "Reset"
+                actionText: "Reset"
                 enabled: root.writable && root.backend.overridden(root.target, optionRow.modelData)
                 Accessible.name: "Reset " + root.label(optionRow.modelData)
-                onClicked: root.backend.apply(root.target, optionRow.modelData, null)
+                onConfirmed: root.backend.apply(root.target, optionRow.modelData, null)
             }
         }
     }

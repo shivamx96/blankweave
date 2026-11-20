@@ -11,6 +11,9 @@ from unittest.mock import patch
 from gi.repository import GLib
 from network_connections_test import FakeNetwork, PATH, UUID
 
+import sys
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'defaults/shell'))
+
 SPEC = importlib.util.spec_from_file_location('wireless', Path(__file__).resolve().parents[1] / 'defaults/shell/wireless-controls.py')
 w = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(w)

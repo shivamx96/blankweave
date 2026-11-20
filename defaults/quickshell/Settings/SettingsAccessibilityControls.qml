@@ -11,24 +11,16 @@ ColumnLayout {
     readonly property bool ready: backend !== null && backend.ready
     property var snapshot: null
     spacing: root.theme.spacing("lg")
-    SettingsComboBox {
-        id: choice
+    SettingsSwitchRow {
         objectName: "accessibility_" + root.key
         Layout.fillWidth: true
         theme: root.theme
-        model: ["Off", "On"]
-        currentIndex: root.ready ? (root.backend.saved[root.key] ? 1 : 0) : -1
+        text: root.settingId === "motion" ? "Reduce motion" : "High contrast"
+        checked: root.ready && root.backend.saved[root.key]
+        busy: Boolean(root.backend && root.backend.busy)
+        error: root.backend ? Errors.message(root.backend.error) : ""
         enabled: root.ready && root.backend.writable
-        Accessible.name: root.settingId === "motion" ? "Reduce motion" : "High contrast"
-        onActivated: index => {
-            if (index === 0 || index === 1) root.backend.apply(root.key, index === 1, root.snapshot)
-            currentIndex = Qt.binding(() => root.ready ? (root.backend.saved[root.key] ? 1 : 0) : -1)
-        }
-    }
-    Connections {
-        target: choice.popup
-        function onAboutToShow() { root.snapshot = root.backend.snapshot() }
-        function onClosed() { Qt.callLater(() => { if (!choice.popup.visible) root.snapshot = null }) }
+        onClicked: root.backend.apply(root.key, !root.backend.saved[root.key], root.backend.snapshot())
     }
     Text {
         Layout.fillWidth: true

@@ -26,6 +26,7 @@ Switch {
     }
     FocusRing { theme: root.theme }
     required property var theme
+    property bool pending: false
     implicitHeight: Math.max(36, implicitContentHeight + topPadding + bottomPadding)
     implicitWidth: 52 + label.implicitWidth
     spacing: root.theme.spacing("lg")
@@ -41,7 +42,7 @@ Switch {
         color: root.controlDown ? root.theme.surfacePressed : root.checked ? root.theme.accentSurface : root.theme.surfaceRaised
         border.width: root.activeFocus ? Math.max(1, root.theme.borderWidth) : root.theme.borderWidth
         border.color: root.activeFocus ? root.theme.accentBright : root.theme.outline
-        opacity: root.enabled ? 1 : 0.55
+        opacity: root.pending ? 0.65 : root.enabled ? 1 : 0.55
         Rectangle {
             x: root.checked ? 18 : 4
             y: 4

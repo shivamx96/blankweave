@@ -19,31 +19,39 @@ ColumnLayout {
     GridLayout {
         columns: root.width < 440 ? 1 : 2
         Layout.fillWidth: true
-        SettingsButton {
+        SettingsSwitchRow {
             objectName: "eventSoundsToggle"
             theme: root.theme
-            text: !root.ready ? "Event sounds: —" : root.backend.preferences["event-sounds"] ? "Event sounds: On" : "Event sounds: Off"
+            checked: root.ready && root.backend.preferences["event-sounds"] === true
+            busy: Boolean(root.backend && root.backend.busy)
+            error: root.backend ? Errors.message(root.backend.error) : ""
+            detail: root.backend ? Errors.detail(root.backend.error) : ""
+            text: "Event sounds"
             enabled: root.writable && root.backend.writable["event-sounds"] === true
-            selected: root.ready && root.backend.preferences["event-sounds"] === true
             onClicked: root.backend.apply("event-sounds", !root.backend.preferences["event-sounds"])
         }
-        SettingsButton {
+        SettingsSwitchRow {
             objectName: "inputSoundsToggle"
             theme: root.theme
-            text: !root.ready ? "Input feedback: —" : root.backend.preferences["input-feedback-sounds"] ? "Input feedback: On" : "Input feedback: Off"
+            checked: root.ready && root.backend.preferences["input-feedback-sounds"] === true
+            busy: Boolean(root.backend && root.backend.busy)
+            error: root.backend ? Errors.message(root.backend.error) : ""
+            detail: root.backend ? Errors.detail(root.backend.error) : ""
+            text: "Input feedback"
             enabled: root.writable && root.backend.preferences["event-sounds"] === true
                 && root.backend.writable["input-feedback-sounds"] === true
-            selected: root.ready && root.backend.preferences["input-feedback-sounds"] === true
             onClicked: root.backend.apply("input-feedback-sounds", !root.backend.preferences["input-feedback-sounds"])
         }
     }
-    SettingsButton {
+    SettingsSwitchRow {
         objectName: "systemBellToggle"
         theme: root.theme
-        text: !root.ready || !root.bell.available ? "System bell: unavailable"
-            : root.bell.enabled ? "System bell: On" : "System bell: Off"
+            checked: root.ready && root.bell.enabled
+            busy: Boolean(root.backend && root.backend.busy)
+            error: root.backend ? Errors.message(root.backend.error) : ""
+            detail: root.backend ? Errors.detail(root.backend.error) : ""
+            text: "System bell"
         enabled: root.writable && root.bell.writable
-        selected: root.ready && root.bell.enabled
         onClicked: root.backend.applyBell(!root.bell.enabled)
     }
     Text {

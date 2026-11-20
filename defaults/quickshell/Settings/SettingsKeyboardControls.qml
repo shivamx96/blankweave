@@ -175,12 +175,12 @@ ColumnLayout {
     }
     Text {
         Layout.fillWidth: true
-        text: root.backend === null ? "Keyboard settings unavailable." : root.backend.error
+        text: root.backend === null ? "Keyboard settings unavailable." : Errors.message(root.backend.error)
             || (!root.ready ? "Loading keyboard settings…" : root.backend.message
                 || (root.backend.values.kb_file || !["", "evdev", "base"].includes(root.backend.values.kb_rules)
-                    ? "A custom keymap or rules file is active. Edit it in your personal configuration."
+                    ? "Read-only custom keymap/rules: " + (root.backend.values.kb_file || root.backend.values.kb_rules)
                     : "Save applies the layout list immediately. Shortcuts may conflict with personal bindings."))
-        color: root.backend && root.backend.error ? root.theme.warning : root.theme.textMuted
+        color: root.backend && Errors.message(root.backend.error) ? root.theme.critical : root.theme.textMuted
         font.family: root.theme.fontFamily; font.pixelSize: root.theme.smallTextSize; wrapMode: Text.WordWrap
     }
     RowLayout {
@@ -188,7 +188,8 @@ ColumnLayout {
             theme: root.theme; text: "Refresh"; enabled: root.backend !== null && !root.backend.busy
             onClicked: { root.editing = false; root.backend.refresh(true) }
         }
-        SettingsButton {
+        SettingsConfirmButton {
+                targetIdentity: JSON.stringify(root.draft)
             objectName: "keyboardReset"
             theme: root.theme; text: "Reset defaults"
             enabled: root.ready && root.backend.writable && Object.keys(root.backend.saved.values).length > 0

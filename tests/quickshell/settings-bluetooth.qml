@@ -132,7 +132,7 @@ ShellRoot {
                     device.paired = true
                     const button = findChild(controls, "bluetoothForget:" + test.deviceKey)
                     button.clicked()
-                    test.check(!bluetooth.busy && controls.confirmKey === test.deviceKey, "Forget skipped confirmation")
+                    test.check(!bluetooth.busy && button.armed, "Forget skipped confirmation")
                     button.clicked()
                     break
                 case 8:

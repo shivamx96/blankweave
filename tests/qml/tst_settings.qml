@@ -583,7 +583,7 @@ TestCase {
         verify(!restore.enabled && remove.enabled)
         remove.clicked()
         compare(fakeDisplays.lastPreset, "save:Desk")
-        compare(remove.text, "Confirm delete")
+        compare(remove.text, "Delete “Desk”")
         remove.clicked()
         compare(fakeDisplays.lastPreset, "delete:desk")
         fakeDisplays.presets = [{id:"desk",name:"Desk",available:true,reason:"",summary:"2 displays"}]

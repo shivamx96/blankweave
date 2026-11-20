@@ -1129,6 +1129,23 @@ row control types when their functionality becomes available. Settings tests
 run through `tests/settings.sh`, using offscreen Qt tests and isolated Quickshell
 processes so validation cannot modify the developer's desktop.
 
+Settings has one control per job. A binary setting is a `SettingsSwitchRow`:
+activating it shows the requested position as pending, refuses a second
+activation, and settles only on the backend's readback, returning to the
+actual state with an error underneath when the write fails. Anything with
+more than two states stays a menu. A destructive or disruptive action is a
+`SettingsConfirmButton` on the power panel's model: the first activation
+arms it in place with a label that says exactly what will happen, the second
+performs it, and it disarms on timeout, focus loss, Escape, a changed
+target, or the page or window closing. Actions that need typed input keep
+their inline form, whose labelled submit is the confirmation, and the
+display mode preview keeps its 20-second keep-or-revert watchdog. Helper
+failures are structured (`message`, `detail`, optional `field`): the main
+line is a plain sentence in `critical`, the raw text sits behind "Show
+details" with home paths and secrets redacted, validation names the field's
+label rather than its key, a cancelled authorization is a quiet
+"Cancelled", advisories stay `warning`, and progress text is muted.
+
 `~/.config/blankweave` holds configuration only. Locks and transient
 scratch go through `shell/runtime_paths.py` (`runtime-paths.sh` for bash):
 `$XDG_RUNTIME_DIR/blankweave/`, mode 0700. A caller that lost the variable

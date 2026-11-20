@@ -15,8 +15,8 @@ TestCase {
         spacing: function(name) { return ({xxs:2,xs:4,sm:6,md:8,lg:10,xl:12,section:14,panel:18,content:32,labelGap:5,descriptionGap:9,group:16,page:20,controlInset:24,rowInset:28})[name] },
         designValue: function(group, name, fallback) { return fallback },
         surfaceRaised:"#1c2940", surfaceHover:"#263955", surfacePressed:"#304563", panelSurface:"#111a2a",
-        text:"#e7edf7", textMuted:"#a1aec4", accentBright:"#67a6ff", accentSurface:"#1e3556",
-        outline:"#33476a", divider:"#23314a", accent:"#67a6ff", warning:"#ffaa33", fontFamily:"sans-serif",
+        text:"#e7edf7", critical:"#ff7777",textMuted:"#a1aec4", accentBright:"#67a6ff", accentSurface:"#1e3556",
+        outline:"#33476a", outlineStrong: "#4f75ad", divider:"#23314a", accent:"#67a6ff", warning:"#ffaa33", fontFamily:"sans-serif",
         smallTextSize:12, textSize:13, widgetRadius:4
     })
     QtObject { id: internalAudio; property real volume: .8; property bool muted: false; property var volumes: [.8,.8] }
@@ -78,7 +78,7 @@ TestCase {
         internalAudio.volume = .63
         compare(volume.value, 63)
         internalAudio.muted = true
-        compare(findChild(controls, "soundInputMute").text, "Unmute")
+        compare(findChild(controls, "soundInputMute").checked, true)
         backend.setVolume(4)
         compare(internalAudio.volume, 1.5)
         backend.setVolume(-1)
@@ -162,7 +162,7 @@ TestCase {
         const mute = findChild(controls, "soundInputMute")
         mute.clicked()
         verify(usbAudio.muted)
-        compare(mute.text, "Unmute")
+        compare(mute.checked, true)
         mute.clicked()
         verify(!usbAudio.muted)
         const volume = findChild(controls, "soundInputVolume")

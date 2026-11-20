@@ -7,7 +7,6 @@ ColumnLayout {
     required property var theme
     required property var backend
     readonly property bool writable: backend && backend.ready && !backend.busy && typeof backend.canApply === "function" && backend.canApply("display-presets")
-    property string deletingId: ""
     spacing: root.theme.spacing("xl")
 
     RowLayout {
@@ -75,24 +74,16 @@ ColumnLayout {
                     enabled: root.writable && preset.modelData.available
                     onClicked: root.backend.restorePreset(preset.modelData.id)
                 }
-                SettingsButton {
+                SettingsConfirmButton {
                     objectName: "deleteDisplaySetup_" + preset.modelData.id
                     theme: root.theme
-                    text: root.deletingId === preset.modelData.id ? "Confirm delete" : "Delete"
+                    actionText: "Delete"
+                    confirmText: "Delete “" + preset.modelData.name + "”"
+                    targetIdentity: preset.modelData.id
                     enabled: root.writable
-                    onClicked: {
-                        if (root.deletingId === preset.modelData.id) {
-                            root.backend.deletePreset(preset.modelData.id)
-                            root.deletingId = ""
-                        } else root.deletingId = preset.modelData.id
-                    }
+                    onConfirmed: root.backend.deletePreset(preset.modelData.id)
                 }
-                SettingsButton {
-                    theme: root.theme
-                    text: "Cancel"
-                    visible: root.deletingId === preset.modelData.id
-                    onClicked: root.deletingId = ""
-                }
+
             }
         }
     }

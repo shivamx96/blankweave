@@ -96,6 +96,7 @@ Item {
                 : root.setting.kind === "system-sounds" ? systemSoundsControl
                 : root.setting.kind === "wifi" ? wifiControl
                 : root.setting.kind === "bluetooth" ? bluetoothControl
+                : root.setting.kind === "switch" ? switchControl
                 : root.setting.kind === "choice" ? choiceControl
                 : root.setting.kind === "slider" ? sliderControl
                 : null
@@ -237,6 +238,19 @@ Item {
         SettingsDisplayPresets {
             theme: root.theme
             backend: root.backend
+        }
+    }
+    Component {
+        id: switchControl
+        SettingsSwitchRow {
+            theme: root.theme
+            text: root.setting.title
+            checked: root.live && root.selection === 0
+            enabled: root.writable
+            busy: Boolean(root.backend && root.backend.busy)
+            error: root.backend ? Errors.message(root.backend.error) : ""
+            detail: root.backend ? Errors.detail(root.backend.error) : ""
+            onClicked: root.backend.apply(root.setting.id, checked ? 1 : 0)
         }
     }
     Component {

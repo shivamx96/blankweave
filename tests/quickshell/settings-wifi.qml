@@ -7,6 +7,7 @@ import "Modules"
 
 ShellRoot {
     id: test
+    property PollerService pollers: PollerService { }
     property var palette: ({
         borderWidth: 1, headingSize: 22, textWeight: 400, headingWeight: 600, motionDuration: 0, motionEasing: Easing.OutCubic,
         spacing: function(name) { return ({xxs:2,xs:4,sm:6,md:8,lg:10,xl:12,section:14,panel:18,content:32,labelGap:5,descriptionGap:9,group:16,page:20,controlInset:24,rowInset:28})[name] },
@@ -55,6 +56,7 @@ ShellRoot {
     Theme { id: barTheme }
     FloatingWindow {
         id: barStub
+        property var shell: test
         property bool atBottom: false
         function setVisibilityHold(owner, held) {}
         function hideTooltip(owner) {}
@@ -220,7 +222,7 @@ ShellRoot {
     function test_saved_forget_confirmation_and_active_guard() {
         const button = findChild(controls, "wifiForget:saved-test")
         button.clicked()
-        compare(controls.confirmUuid, "saved-test")
+        verify(button.armed)
         wifi.profiles = [{uuid:"saved-test",name:"Not nearby",ssid:"Not nearby",active:true}]
         verify(!findChild(controls, "wifiForget:saved-test").enabled)
         wifi.forgetProfile("saved-test")

@@ -24,6 +24,21 @@ QtObject {
     // the file is still loading cannot overwrite what is on disk with defaults.
     property bool ready: false
     property string writeError: ""
+    property string confirmedHiddenWidgets: ""
+    property bool widgetsPending: false
+    function setWidgetVisibility(id, visible) {
+        if (!ready || widgetsPending || ["overview", "power"].includes(id)) return
+        const hidden = preferences.bar.hiddenWidgets.split(",").filter(Boolean)
+        widgetsPending = true
+        writeError = ""
+        preferences.bar.hiddenWidgets = (visible ? hidden.filter(item => item !== id) : Array.from(new Set(hidden.concat([id])))).join(",")
+    }
+
+
+    function savePreferences() {
+        if (root.ready) file.writeAdapter()
+    }
+
 
     property FileView file: FileView {
         id: file
@@ -33,14 +48,14 @@ QtObject {
         atomicWrites: true
         printErrors: false
 
-        onLoaded: root.ready = true
-        onLoadFailed: root.ready = true
-        onSaved: root.writeError = ""
-        onSaveFailed: root.writeError = "Bar preferences changed for this session but could not be saved. Check access to ~/.config/blankweave/shell.json."
+        onLoaded: { root.ready = true; root.confirmedHiddenWidgets = preferences.bar.hiddenWidgets; root.widgetsPending = false }
+        onLoadFailed: { root.ready = true }
+        onSaved: { root.writeError = ""; if (root.widgetsPending) reload() }
+        onSaveFailed: { root.widgetsPending = false; root.writeError = "Could not save bar preferences. Check access to the settings file." }
         onFileChanged: reload()
         onAdapterUpdated: {
             if (root.ready)
-                file.writeAdapter()
+                Qt.callLater(root.savePreferences)
         }
 
         JsonAdapter {

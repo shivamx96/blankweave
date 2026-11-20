@@ -50,7 +50,7 @@ ShellRoot {
                     break
                 case 1:
                     test.check(backend.writable, "Controls unavailable")
-                    test.find(contrast, "accessibility_high_contrast").activated(1)
+                    test.find(contrast, "accessibility_high_contrast").activate()
                     test.check(backend.busy && !backend.saved.high_contrast, "Optimistic value")
                     backend.active = false
                     break
@@ -58,7 +58,7 @@ ShellRoot {
                     test.check(theme.highContrast && String(theme.text) === "#ffffff" && theme.themeId === "custom", "Contrast did not preserve theme")
                     theme.resolved = Object.assign({}, theme.resolved, {mode: "light"})
                     test.check(String(theme.text) === "#000000", "Light contrast palette missing")
-                    test.find(motion, "accessibility_reduced_motion").activated(1)
+                    test.find(motion, "accessibility_reduced_motion").activate()
                     break
                 case 3:
                     test.check(theme.reducedMotion && backend.saved.reduced_motion, "Motion preference not loaded")
@@ -67,11 +67,11 @@ ShellRoot {
                         const line = action.children.find(c => c.height === 1)
                         test.check(line && line.width === Math.min(action.width - 12, 140), "Control transition did not finish immediately")
                     })
-                    test.find(motion, "accessibility_reduced_motion").activated(0)
+                    test.find(motion, "accessibility_reduced_motion").activate()
                     break
                 case 4:
                     test.check(backend.error.includes("overrides") && theme.reducedMotion, "Rejected write accepted")
-                    test.find(contrast, "accessibility_high_contrast").activated(0)
+                    test.find(contrast, "accessibility_high_contrast").activate()
                     break
                 case 5:
                     test.check(!theme.highContrast && String(theme.text) === "#dddddd" && theme.themeId === "custom", "Original palette not restored")

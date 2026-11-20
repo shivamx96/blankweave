@@ -58,12 +58,14 @@ ColumnLayout {
                 font.pixelSize: root.theme.smallTextSize
                 wrapMode: Text.WordWrap
             }
-            SettingsButton {
+            SettingsSwitchRow {
                 objectName: "batteryLimit_" + battery.index
                 theme: root.theme
-                text: !battery.modelData.supported ? "Charge limit unavailable"
-                    : battery.modelData.enabled ? "Charge limit: On" : "Charge limit: Off"
-                selected: battery.modelData.enabled === true
+            checked: battery.modelData.enabled === true
+            busy: Boolean(root.backend && root.backend.busy)
+            error: root.backend ? Errors.message(root.backend.error) : ""
+            detail: root.backend ? Errors.detail(root.backend.error) : ""
+            text: "Charge limit"
                 enabled: battery.modelData.supported && !root.backend.busy
                 onClicked: root.backend.setLimit(battery.modelData, !battery.modelData.enabled)
             }

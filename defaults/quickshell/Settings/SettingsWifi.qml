@@ -10,7 +10,6 @@ ColumnLayout {
     readonly property bool active: backend !== null && backend.profilesActive
     readonly property bool ready: backend !== null && backend.available
     property string passwordKey: ""
-    property string confirmUuid: ""
     readonly property var passwordRow: backend ? backend.wifiRows.find(row => row.key === passwordKey) || null : null
     spacing: root.theme.spacing("xl")
 
@@ -27,7 +26,7 @@ ColumnLayout {
         backend.connectNetwork(passwordKey, password.text)
         clearPassword()
     }
-    onActiveChanged: if (!active) { clearPassword(); confirmUuid = "" }
+    onActiveChanged: if (!active) { clearPassword() }
     onPasswordRowChanged: if (!passwordRow) clearPassword()
     Connections {
         target: root.backend
@@ -45,11 +44,12 @@ ColumnLayout {
     Flow {
         Layout.fillWidth: true
         spacing: root.theme.spacing("md")
-        SettingsButton {
+        SettingsSwitchRow {
             objectName: "wifiPower"
             theme: root.theme
-            text: root.ready ? root.backend.enabled ? "Wi-Fi: On" : "Wi-Fi: Off" : "Wi-Fi unavailable"
-            selected: root.ready && root.backend.enabled
+            checked: root.ready && root.backend.enabled
+            busy: Boolean(root.backend && root.backend.busy)
+            text: "Wi-Fi"
             enabled: root.ready && root.backend.wifiDevice !== null && root.backend.hardwareEnabled && !root.backend.busy
             onClicked: root.backend.setEnabled(!root.backend.enabled)
         }
@@ -201,19 +201,15 @@ ColumnLayout {
                 font.pixelSize: root.theme.textSize
                 wrapMode: Text.WordWrap
             }
-            SettingsButton {
+            SettingsConfirmButton {
                 objectName: "wifiForget:" + savedRow.modelData.uuid
                 theme: root.theme
-                text: root.confirmUuid === savedRow.modelData.uuid ? "Confirm forget" : "Forget"
+                actionText: "Forget"
+                    confirmText: "Forget “" + savedRow.modelData.name + "”"
+                    targetIdentity: savedRow.modelData.uuid
                 enabled: !root.backend.busy && !root.backend.profilesBusy && !savedRow.modelData.active
-                onClicked: {
-                    if (root.confirmUuid === savedRow.modelData.uuid) {
-                        root.backend.forgetProfile(savedRow.modelData.uuid)
-                        root.confirmUuid = ""
-                    } else { root.confirmUuid = savedRow.modelData.uuid; confirmTimer.restart() }
+                onConfirmed: root.backend.forgetProfile(savedRow.modelData.uuid)
                 }
-            }
         }
     }
-    Timer { id: confirmTimer; interval: 5000; onTriggered: root.confirmUuid = "" }
 }

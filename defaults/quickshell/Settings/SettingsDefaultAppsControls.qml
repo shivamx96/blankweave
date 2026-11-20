@@ -85,11 +85,12 @@ ColumnLayout {
         text: "Only installed apps registered for every listed type are offered. Changes affect compatible open-link and open-file actions. Application launch shortcuts keep their configured actions."
         color: root.theme.textMuted; font.family: root.theme.fontFamily; font.pixelSize: root.theme.smallTextSize; wrapMode: Text.WordWrap
     }
-    SettingsButton {
+    SettingsConfirmButton {
+                targetIdentity: root.selectedId
         objectName: "defaultAppInherited"
-        theme: root.theme; text: "Use inherited defaults"
+        theme: root.theme; actionText: "Use inherited defaults"
         enabled: root.ready && root.backend.writable && root.selected !== null && root.selected.local
-        onClicked: root.backend.apply(root.selectedId, null, root.backend.snapshot())
+        onConfirmed: root.backend.apply(root.selectedId, null, root.backend.snapshot())
     }
     Text {
         Layout.fillWidth: true

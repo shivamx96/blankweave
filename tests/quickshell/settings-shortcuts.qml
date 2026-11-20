@@ -46,7 +46,7 @@ ShellRoot {
                 case 3:
                     test.check(backend.error.includes("conflicts") && controls.selected.value === "SUPER + F8" && controls.draft !== null, "Rejected save accepted or draft lost")
                     controls.draft = null
-                    test.find(controls, "shortcutReset").clicked()
+                    test.find(controls, "shortcutReset").clicked(); test.find(controls, "shortcutReset").clicked()
                     break
                 case 4:
                     test.check(controls.selected.value === "SUPER + comma" && !controls.selected.overridden, "Reset failed")

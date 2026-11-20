@@ -20,11 +20,13 @@ ColumnLayout {
     spacing: root.theme.spacing("xl")
     Binding { target: root.backend; property: "automaticMenuOpen"; value: root.openMenus.length > 0; when: root.backend !== null }
 
-    SettingsButton {
+    SettingsSwitchRow {
         objectName: "automaticPowerToggle"
         theme: root.theme
-        text: root.enabledPolicy ? "Automatic switching: On" : "Automatic switching: Off"
-        selected: root.enabledPolicy
+            checked: root.enabledPolicy
+            busy: Boolean(root.backend && root.backend.busy)
+            error: root.backend && Errors.message(root.backend.automaticError) ? Errors.message(root.backend.automaticError) : ""
+            text: "Automatic switching"
         enabled: root.writable && (root.enabledPolicy || (root.backend.available && root.policy.source.available))
         onClicked: root.backend.configureAutomatic({enabled: !root.enabledPolicy})
     }

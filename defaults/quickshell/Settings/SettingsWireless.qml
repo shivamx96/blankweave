@@ -22,24 +22,24 @@ ColumnLayout {
     }
     property string selectedPath: ""
     readonly property var selected: devices.find(row => row.path === selectedPath) || null
-    property var confirmation: null
+    property var formTarget: null
     readonly property bool canStart: selected !== null && selected.managed && selected.apCapable && !selected.hotspot
         && [30, 100, 120].includes(selected.state) && backend.network && backend.network.wifiEnabled
         && backend.network.hardwareEnabled && backend.network.sharingAvailable && !backend.airplaneRequested
     spacing: root.theme.spacing("xl")
 
-    function clearSecret() { password.text = ""; confirmation = null }
+    function clearSecret() { password.text = ""; formTarget = null }
     function start() {
         if (!canStart || busy || !ssid.text.trim() || password.text.length < 8) return
-        if (selected.activePath !== "/" && !confirmation) { confirmation = selected; return }
-        if (confirmation && !backend.matches(confirmation, selected)) { confirmation = null; return }
-        backend.start(confirmation || selected, ssid.text, password.text, confirmation !== null)
+        const captured = formTarget || selected
+        if (!backend.matches(captured, selected)) { clearSecret(); return }
+        backend.start(captured, ssid.text, password.text, captured.activePath !== "/")
         clearSecret()
     }
     onSelectedPathChanged: clearSecret()
     onDevicesChanged: {
         if (!devices.some(row => row.path === selectedPath)) selectedPath = devices.length ? devices[0].path : ""
-        if (confirmation && !backend.matches(confirmation, devices.find(row => row.path === selectedPath))) clearSecret()
+        if (formTarget && !backend.matches(formTarget, devices.find(row => row.path === selectedPath))) clearSecret()
     }
     Connections {
         target: root.backend
@@ -51,11 +51,14 @@ ColumnLayout {
         visible: !root.hotspot
         Layout.fillWidth: true
         spacing: root.theme.spacing("md")
-        SettingsButton {
+        SettingsSwitchRow {
             objectName: "airplaneToggle"
             theme: root.theme
-            text: root.backend && (root.backend.airplaneRequested || root.backend.radiosBlocked) ? "Turn off airplane mode" : "Turn on airplane mode"
-            selected: root.backend !== null && root.backend.radiosBlocked
+            checked: root.backend !== null && root.backend.radiosBlocked
+            busy: Boolean(root.backend && root.backend.busy)
+            error: root.backend ? Errors.message(root.backend.error) : ""
+            detail: root.backend ? Errors.detail(root.backend.error) : ""
+            text: "Airplane mode"
             enabled: !root.busy && root.backend.airplane !== null && root.backend.airplane.radios.length > 0
             onClicked: root.backend.setAirplane(!(root.backend.airplaneRequested || root.backend.radiosBlocked))
         }
@@ -137,7 +140,7 @@ ColumnLayout {
             Accessible.name: "Hotspot name"
             visible: !root.selected || !root.selected.hotspot
             enabled: root.canStart && !root.busy
-            onTextChanged: root.confirmation = null
+            onTextChanged: if (text && !root.formTarget && root.selected) root.formTarget = Object.assign({}, root.selected)
         }
         ControlTextField {
             id: password
@@ -149,14 +152,7 @@ ColumnLayout {
             Accessible.name: "Hotspot password"
             visible: !root.selected || !root.selected.hotspot
             enabled: root.canStart && !root.busy
-            onTextChanged: root.confirmation = null
-        }
-        Text {
-            Layout.fillWidth: true
-            visible: root.confirmation !== null
-            text: "Disconnect “" + (root.confirmation ? root.confirmation.name : "") + "” on " + (root.confirmation ? root.confirmation.interface : "") + " and start the hotspot?"
-            textFormat: Text.PlainText; wrapMode: Text.WordWrap
-            color: root.theme.warning; font.family: root.theme.fontFamily; font.pixelSize: root.theme.smallTextSize
+            onTextChanged: if (text && !root.formTarget && root.selected) root.formTarget = Object.assign({}, root.selected)
         }
         Flow {
             Layout.fillWidth: true
@@ -165,17 +161,17 @@ ColumnLayout {
                 objectName: "hotspotStart"
                 theme: root.theme
                 visible: !root.selected || !root.selected.hotspot
-                text: root.confirmation ? "Disconnect & start hotspot" : "Start hotspot"
+                text: root.selected && root.selected.activePath !== "/" ? "Disconnect “" + root.selected.name + "” & start hotspot" : "Start hotspot"
                 enabled: !root.busy && root.canStart && ssid.text.trim().length > 0 && password.text.length >= 8 && password.text.length <= 63
                 onClicked: root.start()
             }
-            SettingsButton { theme: root.theme; text: "Cancel"; visible: root.confirmation !== null; onClicked: root.clearSecret() }
-            SettingsButton {
+            SettingsConfirmButton {
+                targetIdentity: JSON.stringify(root.selected)
                 objectName: "hotspotStop"
-                theme: root.theme; text: "Stop hotspot"
+                theme: root.theme; actionText: "Stop hotspot"
                 visible: root.selected !== null && root.selected.hotspot && root.selected.owned
                 enabled: !root.busy
-                onClicked: root.backend.stop(root.selected)
+                onConfirmed: root.backend.stop(root.selected)
             }
         }
         Text {

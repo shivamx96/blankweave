@@ -60,10 +60,9 @@ ShellRoot {
                     find(hotspot, "hotspotName").text = "Test sharing"
                     find(hotspot, "hotspotPassword").text = "test-secret"
                     hotspot.start()
-                    test.verify(hotspot.confirmation !== null && !wireless.applying)
-                    hotspot.start()
+                    test.verify(wireless.applying)
                     test.verify(find(hotspot, "hotspotPassword").text === "")
-                    test.verify(hotspot.confirmation === null)
+                    test.verify(hotspot.formTarget === null)
                     break
                 case 4:
                     test.verify(wireless.devices[0].hotspot && wireless.devices[0].owned)
@@ -84,10 +83,9 @@ ShellRoot {
                     wireless.network = Object.assign({}, test.saved, {devices: [Object.assign({}, test.saved.devices[0], {uuid:"old", activePath:"/old", name:"Old Wi-Fi", connected:true, state:100})]})
                     find(hotspot, "hotspotName").text = "Test sharing"
                     find(hotspot, "hotspotPassword").text = "test-secret"
-                    hotspot.start()
-                    test.verify(hotspot.confirmation !== null)
+                    test.verify(hotspot.formTarget !== null)
                     wireless.network = test.saved
-                    test.verify(hotspot.confirmation === null)
+                    test.verify(hotspot.formTarget === null)
                     test.verify(find(hotspot, "hotspotPassword").text === "")
                     find(hotspot, "hotspotPassword").text = "test-secret"
                     wireless.active = false

@@ -50,12 +50,13 @@ ColumnLayout {
             sliderName: "soundInputVolume"
             volumeLabel: "Microphone gain"
         }
-        SettingsButton {
+        SettingsSwitchRow {
             objectName: "soundInputMute"
             theme: root.theme
-            text: root.available && root.backend.muted ? "Unmute" : "Mute"
+            checked: root.available && root.backend.muted
+            busy: Boolean(root.backend && root.backend.busy)
+            text: "Mute microphone"
             enabled: root.available
-            Accessible.name: root.available && root.backend.muted ? "Unmute microphone" : "Mute microphone"
             onClicked: root.backend.setInputMuted(!root.backend.muted)
         }
     }
