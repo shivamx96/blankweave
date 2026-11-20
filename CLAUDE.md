@@ -317,6 +317,11 @@ gives web links and folders a default where the user has none: Zen, then
 Firefox, then Helium, then any other registered browser, and Thunar for
 folders.
 
+`default-apps.py seed` runs as the user on every apply and gives video and
+audio to mpv, images to Loupe, and PDF to Papers only where the user has no
+explicit default; it uses the Settings helper's lock and atomic writer and
+skips symlinked or malformed preference files.
+
 Seed `~/.config/blankweave/overrides/` from `defaults/overrides/` only for missing
 files. Its Lua settings load after all compositor defaults, including voice
 bindings. Missing Lua overrides are optional, but syntax/runtime/read errors in

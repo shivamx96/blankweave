@@ -75,3 +75,8 @@ alsa-plugins
 plymouth
 limine
 efibootmgr
+
+# Media and document handlers
+mpv
+loupe
+papers
