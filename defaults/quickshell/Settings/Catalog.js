@@ -1,7 +1,7 @@
 .pragma library
 
 // Stable IDs are the contract between a page and its backend. A missing backend
-// leaves a control in preview; catalog entries never execute commands or write.
+// leaves a control disabled; catalog entries never execute commands or write.
 var pages = [
     { id: "appearance", title: "Appearance", icon: "󰏘", description: "Make this desktop yours.", groups: [
         { title: "Theme & color", rows: [

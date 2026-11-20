@@ -1118,8 +1118,8 @@ unavailable; it must never derive utilization from the requested clock ratio.
 The native Settings window lives in `defaults/quickshell/Settings/` and is
 instantiated once in `shell.qml`. Open it through `blankweave settings`, the
 `settings` shell IPC method, or the system overview action. `Catalog.js` owns
-category and setting IDs, descriptions, and preview controls; it must never
-execute commands or write configuration. `SettingsContent.qml` is the view,
+category and setting IDs, descriptions, search aliases, and control kinds; it
+must never execute commands or write configuration. `SettingsContent.qml` is the view,
 and `Services/SettingsAppearance.qml` adapts the existing theme helper and the
 single shared `ShellPreferences` instance. Do not introduce another writer for
 `shell.json` or theme selection. Only controls backed by implemented services

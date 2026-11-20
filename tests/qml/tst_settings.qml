@@ -475,9 +475,9 @@ TestCase {
         }
     }
 
-    function test_preview_never_writes() {
+    function test_missing_service_never_writes() {
         var row = createTemporaryObject(rowFactory, test, {
-            setting: { id: "profile", title: "Power profile", description: "Preview", kind: "choice", options: ["Balanced", "Saver"] }
+            setting: { id: "profile", title: "Power profile", description: "Unavailable", kind: "choice" }
         })
         verify(row !== null)
         compare(row.live, false)

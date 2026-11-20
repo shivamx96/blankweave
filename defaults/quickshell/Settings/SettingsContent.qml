@@ -395,41 +395,6 @@ Rectangle {
                             wrapMode: Text.WordWrap
                         }
 
-                        Rectangle {
-                            Layout.fillWidth: true
-                            Layout.topMargin: root.theme.spacing("xl")
-                            implicitHeight: notice.implicitHeight + 2 * root.theme.spacing("section")
-                            visible: root.page !== null
-                            color: root.theme.accentSurface
-                            radius: root.theme.widgetRadius
-                            Text {
-                                id: notice
-                                anchors { fill: parent; margins: root.theme.spacing("section") }
-                                text: root.page && root.page.id === "appearance"
-                                    ? "Theme, color mode, bar widgets, wallpaper, text, and pointer sizes are available."
-                                    : root.page && root.page.id === "displays" && root.displays
-                                    ? "Mode, mirror, and setup changes have a 20-second preview. Other display changes apply immediately; night light applies to all displays."
-                                    : root.page && root.page.id === "sound" && root.sound
-                                    ? "Sound controls are available. Changes apply to the selected device or supported apps."
-                                    : root.page && root.page.id === "power" && root.power
-                                    ? "Power profiles, battery controls, idle timeouts, and hibernation readiness are available."
-                                    : root.page && root.page.id === "input" && root.pointer
-                                    ? "Input and accessibility controls apply to this session and supported assistive applications."
-                                    : root.page && root.page.id === "apps" && root.defaultApps
-                                    ? "Manage installed software, supported application permissions, defaults, startup apps, and notifications."
-                                    : root.page && root.page.id === "system" && root.system
-                                    ? "System changes may require administrator authorization. Device support is detected before offering operations."
-                                    : root.page && root.page.id === "network" && root.wifi
-                                    ? "Manage connections, private networks, and supported sharing services."
-                                    : root.page && root.page.id === "storage" ? "Inspect storage, manage removable drives, and configure supported backup providers."
-                                    : "Controls report unavailable services and hardware before changes can be made."
-                                color: root.theme.text
-                                font.family: root.theme.fontFamily
-                                font.pixelSize: root.theme.smallTextSize
-                                wrapMode: Text.WordWrap
-                            }
-                        }
-
                         ColumnLayout {
                             visible: root.page !== null && root.page.id === "appearance"
                             Layout.fillWidth: true

@@ -18,7 +18,7 @@ Item {
     readonly property real sliderValue: live && backend && typeof backend.value === "function" ? backend.value(setting.id) : -1
     readonly property string description: live && backend && typeof backend.description === "function"
         ? backend.description(setting.id) || setting.description : setting.description
-    readonly property var choices: live && backend && typeof backend.choices === "function" ? backend.choices(setting.id) : (setting.options || [])
+    readonly property var choices: live && backend && typeof backend.choices === "function" ? backend.choices(setting.id) : []
     readonly property int selection: live && backend && typeof backend.selection === "function" ? backend.selection(setting.id) : 0
     readonly property bool expandedControl: ["operations", "system-info", "webapps", "widgets", "wallpaper", "startup", "notifications", "default-apps", "accessibility", "interface-size", "shortcuts", "keyboard", "pointer", "idle", "battery-health", "automatic-power", "power-profile", "presets", "night-light", "color-profile", "sound-output", "sound-input", "dictation", "system-sounds", "wifi", "bluetooth", "network", "airplane", "hotspot"].includes(setting.kind)
     readonly property bool compact: width < 510
@@ -46,7 +46,17 @@ Item {
             Text {
                 Layout.fillWidth: true
                 objectName: "settingsDescription_" + root.setting.id
-                text: root.description + (root.live ? "" : "  ·  Preview")
+                text: root.description
+                color: root.theme.textMuted
+                font.family: root.theme.fontFamily
+                font.pixelSize: root.theme.smallTextSize
+                wrapMode: Text.WordWrap
+            }
+            Text {
+                objectName: "settingsHelper_" + root.setting.id
+                Layout.fillWidth: true
+                visible: ["resolution", "mirroring", "display-presets"].includes(root.setting.id)
+                text: "Confirm display changes within 20 seconds to keep them; otherwise the previous setup is restored."
                 color: root.theme.textMuted
                 font.family: root.theme.fontFamily
                 font.pixelSize: root.theme.smallTextSize
@@ -88,7 +98,7 @@ Item {
                 : root.setting.kind === "bluetooth" ? bluetoothControl
                 : root.setting.kind === "choice" ? choiceControl
                 : root.setting.kind === "slider" ? sliderControl
-                : root.setting.kind === "toggle" ? toggleControl : actionControl
+                : null
         }
     }
 
@@ -290,26 +300,6 @@ Item {
                 font.pixelSize: root.theme.smallTextSize
                 horizontalAlignment: Text.AlignRight
             }
-        }
-    }
-    Component {
-        id: toggleControl
-        SettingsSwitch {
-            theme: root.theme
-            enabled: false
-            checked: false
-            text: "Preview"
-            Accessible.name: root.setting.title + " (preview)"
-            font.family: root.theme.fontFamily
-        }
-    }
-    Component {
-        id: actionControl
-        SettingsButton {
-            theme: root.theme
-            text: root.setting.action || "Configure"
-            enabled: false
-            Accessible.name: root.setting.title + " (preview)"
         }
     }
 }
