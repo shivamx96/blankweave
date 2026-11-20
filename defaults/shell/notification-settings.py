@@ -1,16 +1,17 @@
 #!/usr/bin/env python3
 """Persistent notification policy shared by Settings and the desktop bar."""
+from runtime_paths import runtime_path
 import datetime
 import json
 import os
 from pathlib import Path
 import re
 import sys
-from settings_support import atomic, check_revision, cli, config_home, digest, locked, read, restore, run
+from settings_support import file_refusal, atomic, check_revision, cli, config_home, digest, locked, read, restore, run
 
 PATH = config_home() / 'blankweave/notifications.json'
 RULES = config_home() / 'dunst/dunstrc.d/90-blankweave-notifications.conf'
-STATE = Path(os.environ.get('XDG_RUNTIME_DIR', str(config_home() / 'blankweave/runtime'))) / 'blankweave/notifications-state.json'
+STATE = runtime_path('notifications-state.json')
 DEFAULT = dict(manual=False, schedule=False, start='22:00', end='08:00', blocked=[])
 
 
@@ -134,7 +135,7 @@ def apply(request):
     with locked('notifications'):
         current = status()
         check_revision(request, current)
-        if not current['writable']: raise ValueError('Notification preferences are symlinked; edit their source.')
+        if not current['writable']: raise file_refusal('Notification preferences are symlinked; edit their source.', PATH, RULES)
         value = dict(current['policy'])
         old_state = read(STATE)
         state = observation(current['paused'], current['quiet'])

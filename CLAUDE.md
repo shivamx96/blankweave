@@ -1413,6 +1413,19 @@ restore managed files/pause state after failures. `SettingsTask` is the common
 JSON helper adapter for subsequent Settings pages, with no optimistic updates.
 The temporary Keep awake preview was removed; idle timeouts remain authoritative.
 
+The themed `dunstrc` owns click and placement behaviour. Left and middle
+click run the notification's default or sole action and then close it; right
+click dismisses without acting; no binding may depend on the `context` menu,
+which needs a dmenu the rice does not install. `follow = keyboard` overrides
+`monitor`, and on native Wayland the compositor picks the output.
+`idle_threshold = 120s` keeps a non-transient notification on screen until
+the user returns. Manual Do Not Disturb and quiet hours pause Dunst at level
+100, and critical urgency carries `override_pause_level = 100` so a failed
+backup still appears; app muting uses `skip_display` and still hides critical
+popups from a muted app. Keep that override in the template so the later
+user snippet can change it, and say "critical alerts still appear" wherever
+the interface describes Do Not Disturb.
+
 `startup-settings.py` manages existing XDG autostart desktop entries for the next
 sign-in, never launches/stops processes, and leaves core Hyprland services alone.
 System entries are disabled through user copies with Hidden=true; only copies

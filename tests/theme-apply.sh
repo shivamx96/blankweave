@@ -105,6 +105,24 @@ assert_rendered
 [[ -f $(jq -r '.wallpaper' "$state") ]]
 grep -Fxq 'background = "#0b111c"' "$dunstrc"
 grep -Fxq 'frame_color = "#4f75ad"' "$dunstrc"
+
+# Notification interaction, placement, idle retention and critical DND bypass.
+for line in 'monitor = 0' 'follow = keyboard' 'idle_threshold = 120s' \
+    'mouse_left_click = do_action, close_current' \
+    'mouse_middle_click = do_action, close_current' \
+    'mouse_right_click = close_current'; do
+    grep -Fxq "$line" "$dunstrc"
+done
+expect_failure grep -Eq '^mouse_.*=.*context' "$dunstrc"
+awk '
+    /^\[/ { critical = ($0 == "[urgency_critical]") }
+    /^override_pause_level =/ {
+        if (!critical || $0 != "override_pause_level = 100") exit 1
+        found++
+    }
+    END { if (found != 1) exit 1 }
+' "$dunstrc"
+
 grep -Fq "foreground='#8798ae'" "$dunstrc"
 grep -Fxq 'theme = light:Catppuccin Latte,dark:Catppuccin Mocha' "$ghostty"
 grep -Fxq 'config-file = ?~/.config/blankweave/overrides/ghostty.conf' "$ghostty"

@@ -192,7 +192,7 @@ WidgetFrame {
                 : "Notification history unavailable"
             message: Boolean(root.status.available)
                 ? (Boolean(root.status.paused)
-                    ? "New notifications will wait quietly until do not disturb is disabled."
+                    ? "Notifications wait until do not disturb is disabled. Critical alerts still appear; muted apps stay muted."
                     : "Notifications will appear here after they leave the screen.")
                 : String(root.status.error || "Dunst is not responding.")
         }
