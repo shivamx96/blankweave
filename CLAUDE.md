@@ -1257,6 +1257,18 @@ details" with home paths and secrets redacted, validation names the field's
 label rather than its key, a cancelled authorization is a quiet
 "Cancelled", advisories stay `warning`, and progress text is muted.
 
+Settings says where each setting lives. A Catalog row (or its page) carries
+`file`, the path of the file that stores it, or `store` for a system store
+such as NetworkManager profiles or the desktop settings database, with
+`relatedFiles` for generated companions; take the value from the code that
+writes it, and `tests/settings_files_test.py` checks every path against the
+writers and against the README's Files list. The row shows "Stored in …"
+with Copy path and Open folder, names a personal override that takes
+precedence when one exists, and is findable by file name. A refusal names
+the file it is about through `file_refusal` in on-screen messages only;
+durable job records use `error_result(..., shareable=True)` and doctor
+reports keep their redaction.
+
 `~/.config/blankweave` holds configuration only. Locks and transient
 scratch go through `shell/runtime_paths.py` (`runtime-paths.sh` for bash):
 `$XDG_RUNTIME_DIR/blankweave/`, mode 0700. A caller that lost the variable

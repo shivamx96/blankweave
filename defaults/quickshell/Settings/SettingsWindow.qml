@@ -90,6 +90,8 @@ FloatingWindow {
         active: root.visible && !root.minimized && content.page !== null && content.page.id === "input"
     }
 
+    SettingsFiles { id: storageFiles; active: root.visible && !root.minimized }
+
     SettingsNightLight { id: nightLightBackend }
     SettingsSystemSounds {
         id: systemSoundsBackend
@@ -119,6 +121,7 @@ FloatingWindow {
     SettingsCapabilities { id: hardware }
     SettingsContent {
         capabilities: hardware.capabilities
+        fileAccess: storageFiles
         onCopyRequested: text => Quickshell.clipboardText = text
         id: content
         anchors.fill: parent

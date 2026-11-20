@@ -10,6 +10,7 @@ Rectangle {
     id: root
     required property var theme
     required property var appearance
+    property var fileAccess: null
     property var displays: null
     property var power: null
     property var battery: null
@@ -541,12 +542,13 @@ Rectangle {
                                                     color: root.theme.divider
                                                 }
                                                 SettingsRow {
+                                                    fileAccess: root.fileAccess
                                                     onSettingRequested: id => root.openSetting(id)
                                                     onCopyRequested: text => root.copyRequested(text)
                                                     Layout.fillWidth: true
                                                     theme: root.theme
                                                     timeFormat: root.appearance && root.appearance.preferences ? root.appearance.preferences.resolvedTimeFormat : "24h"
-                                                    setting: settingGroup.modelData
+                                                    setting: Object.assign({}, settingGroup.modelData, {file: settingGroup.modelData.file || root.page.file, store: settingGroup.modelData.store || root.page.store})
                                                     backend: settingGroup.modelData.kind === "operations" ? (root.operations ? root.operations.provider(settingGroup.modelData.id) : null)
                                                         : settingGroup.modelData.kind === "system-info" ? root.system
                                                         : settingGroup.modelData.kind === "webapps" ? root.webapps

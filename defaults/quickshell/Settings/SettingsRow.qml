@@ -13,6 +13,7 @@ Item {
     required property var setting
     property string timeFormat: "24h"
     property var backend: null
+    property var fileAccess: null
     readonly property bool live: Boolean(setting.live && backend)
     readonly property bool writable: live && backend && Boolean(backend.ready) && !backend.busy
         && (typeof backend.canApply !== "function" || backend.canApply(setting.id))
@@ -53,6 +54,13 @@ Item {
                 font.family: root.theme.fontFamily
                 font.pixelSize: root.theme.smallTextSize
                 wrapMode: Text.WordWrap
+            }
+            SettingsStorageLine {
+                Layout.fillWidth: true
+                theme: root.theme
+                setting: root.setting
+                access: root.fileAccess
+                onCopyRequested: text => root.copyRequested(text)
             }
             Text {
                 objectName: "settingsHelper_" + root.setting.id
