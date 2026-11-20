@@ -49,6 +49,15 @@ grep -Fq 'Usage: blankweave setup [--non-interactive]' <<< "$(
         "$repository/bin/blankweave" setup --help
 )"
 
+# Read-only theme lint is dispatched through the deployed helper.
+mkdir -p "$test_root/home/.local/share/blankweave/shell"
+cat > "$test_root/home/.local/share/blankweave/shell/theme-apply.sh" <<'EOF'
+#!/usr/bin/env bash
+[[ $* == "lint custom" ]]
+EOF
+chmod +x "$test_root/home/.local/share/blankweave/shell/theme-apply.sh"
+HOME="$test_root/home" "$repository/bin/blankweave" theme lint custom
+
 # The old command name hands over to the new one so an installed
 # `hyprarch update` can exec the fetched revision.
 grep -Fxq "blankweave $repository_version ($repository_release)" \
@@ -309,3 +318,22 @@ subprocess.run([str(root / 'migrations/20261112-zsh-banner-duplicates.sh')], env
 PYTEST
 printf 'Zsh banner migration tests passed.\n'
 
+for command in welcome version setup settings update rollback doctor theme webapp uninstall help; do
+    for flag in --help -h; do
+        "$repository/bin/blankweave" "$command" "$flag" > "$test_root/help-a"
+        "$repository/bin/blankweave" help "$command" > "$test_root/help-b"
+        cmp "$test_root/help-a" "$test_root/help-b"
+        grep -Fq "Usage: blankweave $command" "$test_root/help-a"
+        if grep -Eq 'theme-apply.sh|webapp.sh|scripts/' "$test_root/help-a"; then exit 1; fi
+    done
+done
+for sub in list status set mode toggle sync lint; do
+    "$repository/bin/blankweave" help theme "$sub" >/dev/null
+    "$repository/bin/blankweave" theme "$sub" --help >/dev/null
+done
+HOME="$test_root/theme-home" XDG_CONFIG_HOME="$test_root/config" "$repository/bin/blankweave" theme > "$test_root/theme-status"
+grep -Fq 'Theme:' "$test_root/theme-status"
+"$repository/bin/blankweave" --version > /dev/null
+if "$repository/bin/blankweave" udpate > "$test_root/typo" 2>&1; then exit 1; fi
+grep -Fq 'did you mean update' "$test_root/typo"
+printf 'Uniform CLI help and read-only theme tests passed.\n'

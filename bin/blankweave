@@ -376,14 +376,37 @@ command_theme_sync() {
     sudo "$repository/scripts/theme-system.sh" "$HOME" "${XDG_CONFIG_HOME:-$HOME/.config}"
 }
 
+theme_helper() {
+    "$BLANKWEAVE_DATA_DIR/shell/theme-apply.sh" "$@" 2> >(sed 's/^theme-apply:/blankweave theme:/' >&2)
+}
+
 command_theme() {
     local script=$BLANKWEAVE_DATA_DIR/shell/theme-apply.sh
 
+    if [[ $# -eq 0 ]]; then
+        if [[ -r ${XDG_CONFIG_HOME:-$HOME/.config}/blankweave/theme.json ]]; then
+            jq -r '"Theme: \(.theme)\nMode: \(.mode)"' "${XDG_CONFIG_HOME:-$HOME/.config}/blankweave/theme.json"
+        else
+            printf 'Theme: not configured\n'
+        fi
+        if [[ -x $script ]]; then
+            theme_helper status | jq -r '"System sync pending: \(.system.pending // false)"'
+        fi
+        command_help theme
+        return
+    fi
+    case "$1" in
+        list|status|set|mode|toggle|sync|lint) ;;
+        *) unknown_command "$1" 'list status set mode toggle sync lint'; return 2 ;;
+    esac
     require_normal_user
     [[ -x "$script" ]] || die "theme support is not deployed yet; run: blankweave update --reapply"
     case "${1:-}" in
+        lint)
+            theme_helper "$@"
+            ;;
         set)
-            "$script" "$@"
+            theme_helper "$@"
             command_theme_sync
             ;;
         sync)
@@ -391,7 +414,7 @@ command_theme() {
             command_theme_sync
             ;;
         *)
-            exec "$script" "$@"
+            theme_helper "$@"
             ;;
     esac
 }
@@ -399,6 +422,13 @@ command_theme() {
 command_webapp() {
     local script=$BLANKWEAVE_DATA_DIR/shell/webapp.sh
 
+    if [[ $# -eq 0 ]]; then command_help webapp; return; fi
+    case "$1" in
+        list|sync) [[ $# -eq 1 ]] || die "usage: blankweave webapp $1" ;;
+        install) [[ $# -eq 4 ]] || die 'usage: blankweave webapp install <name> <url> <icon>' ;;
+        remove) [[ $# -eq 2 ]] || die 'usage: blankweave webapp remove <name>' ;;
+        *) unknown_command "$1" 'list install remove sync'; return 2 ;;
+    esac
     require_normal_user
     [[ -x "$script" ]] || die "web app support is not deployed yet; run: blankweave update --reapply"
     exec "$script" "$@"
@@ -717,17 +747,77 @@ Commands:
   update    Check, preview, or safely apply a fast-forward update
   rollback  Restore the previous Blankweave revision and managed configuration
   doctor    Run read-only health checks; add --report for shareable diagnostics
-  theme     Manage the desktop theme: list, status, set <id>, mode <dark|light>, toggle, sync
+  theme     Manage the desktop theme: list, status, set <id>, mode <dark|light>, toggle, sync, lint
   webapp    Manage Helium web apps: list, install <name> <url> <icon>, remove <name>, sync
   uninstall Preview the footprint; --apply removes proven owned files
   help      Show this help
 EOF
 }
 
+command_help() {
+    local command=${1:-} sub=${2:-}
+    case "$command" in
+        '') print_help; return ;;
+        update) command_update --help ;;
+        rollback) command_rollback --help ;;
+        setup) printf 'Usage: blankweave setup [--non-interactive]\nGuide installation; --non-interactive applies saved choices.\n' ;;
+        doctor) printf 'Usage: blankweave doctor [--full|--normal] [--report]\nRun read-only diagnostics; --normal never elevates; --report omits identifiers.\n' ;;
+        theme)
+            case "$sub" in
+                ''|list|status|set|mode|toggle|sync|lint) ;;
+                *) unknown_command "$sub" 'list status set mode toggle sync lint'; return 2 ;;
+            esac
+            printf 'Usage: blankweave theme [list|status|set <id>|mode <dark|light>|toggle|sync|lint [<id>]]\nShow theme status, choose appearance, validate themes, or sync system styling.\n' ;;
+        webapp)
+            case "$sub" in
+                ''|list|install|remove|sync) ;;
+                *) unknown_command "$sub" 'list install remove sync'; return 2 ;;
+            esac
+            printf 'Usage: blankweave webapp [list|install <name> <url> <icon>|remove <name>|sync]\nManage Helium web application entries.\n' ;;
+        settings) printf 'Usage: blankweave settings [<id>|--list]\nOpen a Settings row or list valid identifiers.\n' ;;
+        uninstall) printf 'Usage: blankweave uninstall [--apply] [--purge-config] [--yes]\nPreview removal; --apply removes proven owned files; packages stay installed.\n' ;;
+        version) printf 'Usage: blankweave version\nShow release and installed revisions.\n' ;;
+        welcome) printf 'Usage: blankweave welcome\nShow the first-login welcome card.\n' ;;
+        help) printf 'Usage: blankweave help [<command> [<subcommand>]]\nShow command help.\n' ;;
+        *) unknown_command "$command"; return 2 ;;
+    esac
+    printf '\nExample: blankweave %s' "$command"
+    case "$command" in
+        theme) printf ' status' ;;
+        webapp) printf ' list' ;;
+        uninstall) printf ' --apply --yes' ;;
+        settings) printf ' --list' ;;
+        help) printf ' update' ;;
+        doctor) printf ' --normal' ;;
+        update) printf ' --check' ;;
+    esac
+    printf '\n'
+}
+
+unknown_command() {
+    local closest
+    closest=$(python3 - "$1" "${2:-welcome version setup settings update rollback doctor theme webapp uninstall help}" <<'PYNEAR'
+import difflib, sys
+print(next(iter(difflib.get_close_matches(sys.argv[1], sys.argv[2].split(), n=1, cutoff=0.4)), 'help'))
+PYNEAR
+    )
+    printf 'blankweave: unknown command: %s; did you mean %s?\n' "$1" "$closest" >&2
+}
+
 main() {
     local command=${1:-help}
     shift || true
 
+    if [[ $command == help && ${1:-} != --help && ${1:-} != -h ]]; then
+        (( $# <= 2 )) || die 'help accepts a command and optional subcommand'
+        command_help "$@"; return
+    fi
+    if [[ ${1:-} == --help || ${1:-} == -h ]]; then
+        command_help "$command"; return
+    fi
+    if [[ ${2:-} == --help || ${2:-} == -h ]]; then
+        command_help "$command" "$1"; return
+    fi
     case "$command" in
         uninstall)
             local repository
@@ -807,7 +897,7 @@ PYLIST
             apply_repository "$1"
             ;;
         *)
-            printf '%s: unknown command: %s\n\n' "$PROGRAM_NAME" "$command" >&2
+            unknown_command "$command"
             print_help >&2
             exit 2
             ;;

@@ -144,7 +144,14 @@ ownership, meaning matching deployed content or an exact symlink target;
 recorded originals are restored, and modified or unproven files stay and
 are reported. Packages are never removed, personal configuration needs
 `--purge-config`, and boot cleanup removes only tokens the installer added.
-Test it only against sandbox roots.
+Test it only against sandbox roots. Every command answers `help <command>`,
+`--help`, and `-h` without naming internal scripts, an unknown command
+suggests the closest one, and bare `blankweave theme` prints status rather
+than applying. Zsh and bash completions install under
+`~/.local/share/zsh/site-functions` and
+`~/.local/share/bash-completion/completions`; `tests/readme.sh` fails when
+the README or the completion disagrees with the commands, flags, keys, or
+paths that exist.
 
 `blankweave rollback` is deliberately a Blankweave configuration rollback. It
 resets only the already-validated, clean managed checkout to the recorded

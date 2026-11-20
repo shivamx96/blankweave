@@ -296,6 +296,10 @@ echo "Copying defaults to $DOTS_DIR..."
 
 sudo -H -u "$SUDO_USER" mkdir -p "$USER_HOME/.local/bin"
 install -o "$SUDO_USER" -g "$SUDO_USER" -m 0755 "$REPO_DIR/bin/blankweave" "$USER_HOME/.local/bin/blankweave"
+sudo -H -u "$SUDO_USER" mkdir -p "$USER_HOME/.local/share/zsh/site-functions"
+install -o "$SUDO_USER" -g "$SUDO_USER" -m 0644 "$REPO_DIR/completions/_blankweave" "$USER_HOME/.local/share/zsh/site-functions/_blankweave"
+sudo -H -u "$SUDO_USER" mkdir -p "$USER_HOME/.local/share/bash-completion/completions"
+install -o "$SUDO_USER" -g "$SUDO_USER" -m 0644 "$REPO_DIR/completions/blankweave.bash" "$USER_HOME/.local/share/bash-completion/completions/blankweave"
 install -D -m 0755 "$REPO_DIR/scripts/doctor.sh" /usr/lib/blankweave/doctor-boot
 install -D -o root -g root -m 0755 "$REPO_DIR/scripts/theme-system.sh" /usr/lib/blankweave/theme-system
 install -D -o root -g root -m 0644 "$REPO_DIR/defaults/polkit/org.blankweave.theme-sync.policy" \
