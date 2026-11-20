@@ -302,8 +302,11 @@ The other non-secret guided choices live in
 Keep this separate from `install.conf` because setup selections such as the
 initial theme are not ongoing package convergence policy. Setup seeds the chosen
 theme once; ordinary updates must not force it back after the user switches
-themes. Git keys are generated locally only when explicitly selected and are
-never uploaded.
+themes. Setup itself follows the same rule: it passes a theme and mode to the
+apply only when `theme.json` is absent or the choice was changed in that
+interactive run, so `setup --non-interactive` preserves the current selection.
+Git keys are generated locally only when explicitly selected and are never
+uploaded.
 
 ### Shell scripts
 

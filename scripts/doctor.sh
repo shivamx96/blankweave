@@ -107,7 +107,7 @@ check_repository() {
     fi
 
     if [[ ! -r "$installed_file" ]]; then
-        warn 'installed revision' 'not recorded; run blankweave update'
+        warn 'installed revision' 'not recorded; run blankweave update --reapply'
         return
     fi
 
@@ -615,7 +615,7 @@ check_intel_gpu_monitoring() {
     if [[ $capabilities =~ cap_perfmon[=+][a-z]*e[a-z]* ]]; then
         pass 'Intel GPU telemetry' 'CAP_PERFMON is configured'
     else
-        warn 'Intel GPU telemetry' 'CAP_PERFMON is missing; run blankweave update'
+        warn 'Intel GPU telemetry' 'CAP_PERFMON is missing; run blankweave update --reapply'
     fi
 }
 

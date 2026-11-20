@@ -11,6 +11,7 @@ SETUP_CONFIG=$BLANKWEAVE_CONFIG_DIR/setup.conf
 THEME_STATE=$BLANKWEAVE_CONFIG_DIR/theme.json
 CAPABILITIES=
 NON_INTERACTIVE=false
+THEME_CHANGED=false
 TTY_FD=
 
 die() {
@@ -128,13 +129,13 @@ load_initial_choices() {
     installer_config_load "$INSTALL_CONFIG" "$CAPABILITIES"
     setup_config_load "$SETUP_CONFIG"
 
+    if command -v jq >/dev/null 2>&1 && [[ -r $THEME_STATE ]]; then
+        existing_theme=$(jq -r '.theme // empty' "$THEME_STATE" 2>/dev/null || true)
+        existing_mode=$(jq -r '.mode // empty' "$THEME_STATE" 2>/dev/null || true)
+        [[ -z $existing_theme ]] || SETUP_THEME=$existing_theme
+        [[ -z $existing_mode ]] || SETUP_MODE=$existing_mode
+    fi
     if [[ ! -e $SETUP_CONFIG ]]; then
-        if command -v jq >/dev/null 2>&1 && [[ -r $THEME_STATE ]]; then
-            existing_theme=$(jq -r '.theme // empty' "$THEME_STATE" 2>/dev/null || true)
-            existing_mode=$(jq -r '.mode // empty' "$THEME_STATE" 2>/dev/null || true)
-            [[ -z $existing_theme ]] || SETUP_THEME=$existing_theme
-            [[ -z $existing_mode ]] || SETUP_MODE=$existing_mode
-        fi
         existing_name=$(git config --global --get user.name 2>/dev/null || true)
         existing_email=$(git config --global --get user.email 2>/dev/null || true)
         if [[ -n $existing_name && -n $existing_email ]]; then
@@ -168,7 +169,7 @@ choose_profiles() {
 }
 
 choose_theme() {
-    local theme
+    local theme previous_theme=$SETUP_THEME previous_mode=$SETUP_MODE
 
     printf '\n[2/4] Appearance\nAvailable themes:\n' >&$TTY_FD
     while IFS= read -r theme; do
@@ -189,6 +190,9 @@ choose_theme() {
             *) printf 'Mode must be dark or light.\n' >&$TTY_FD ;;
         esac
     done
+    if [[ $SETUP_THEME != "$previous_theme" || $SETUP_MODE != "$previous_mode" ]]; then
+        THEME_CHANGED=true
+    fi
 }
 
 choose_git() {
@@ -342,13 +346,16 @@ save_choices() {
 }
 
 apply_setup() {
+    local theme='' mode=''
+    if [[ ! -e $THEME_STATE || $THEME_CHANGED == true ]]; then
+        theme=$SETUP_THEME
+        mode=$SETUP_MODE
+    fi
     if [[ -n ${BLANKWEAVE_SETUP_APPLY_COMMAND:-} ]]; then
-        BLANKWEAVE_SETUP_THEME=$SETUP_THEME \
-        BLANKWEAVE_SETUP_MODE=$SETUP_MODE \
+        BLANKWEAVE_SETUP_THEME=$theme BLANKWEAVE_SETUP_MODE=$mode \
             "$BLANKWEAVE_SETUP_APPLY_COMMAND" "$REPOSITORY"
     else
-        BLANKWEAVE_SETUP_THEME=$SETUP_THEME \
-        BLANKWEAVE_SETUP_MODE=$SETUP_MODE \
+        BLANKWEAVE_SETUP_THEME=$theme BLANKWEAVE_SETUP_MODE=$mode \
             "$REPOSITORY/bin/blankweave" _apply "$REPOSITORY"
     fi
 }

@@ -325,7 +325,7 @@ command_theme() {
     local script=$BLANKWEAVE_DATA_DIR/shell/theme-apply.sh
 
     require_normal_user
-    [[ -x "$script" ]] || die "theme support is not deployed yet; run: blankweave update"
+    [[ -x "$script" ]] || die "theme support is not deployed yet; run: blankweave update --reapply"
     case "${1:-}" in
         set)
             "$script" "$@"
@@ -345,7 +345,7 @@ command_webapp() {
     local script=$BLANKWEAVE_DATA_DIR/shell/webapp.sh
 
     require_normal_user
-    [[ -x "$script" ]] || die "web app support is not deployed yet; run: blankweave update"
+    [[ -x "$script" ]] || die "web app support is not deployed yet; run: blankweave update --reapply"
     exec "$script" "$@"
 }
 
@@ -374,7 +374,8 @@ command_setup() {
 command_update() {
     local repository branch mode=apply current target current_version target_version
     local current_tag target_tag rollback_floor commit_count update_log doctor_script apply_status
-    local SNAPSHOT_NUMBER='' option requested_release='' newest_tag
+    local SNAPSHOT_NUMBER='' reapply=false option requested_release='' newest_tag
+    local RECOVERY_DIR=$RECOVERY_DIR RECOVERY_STATE=$RECOVERY_STATE
 
     while (( $# > 0 )); do
         option=$1
@@ -387,19 +388,22 @@ command_update() {
             --check|--dry-run)
                 [[ $mode == apply ]] || die "choose only one preview mode"
                 mode=${option#--} ;;
+            --reapply) reapply=true ;;
             --help|-h)
                 cat <<'EOF'
-Usage: blankweave update [--check|--dry-run] [--to vX.Y.Z]
+Usage: blankweave update [--check|--dry-run] [--reapply | --to vX.Y.Z]
 
   --to       Select a specific newer annotated release reachable from main.
   --check    Fetch and report tagged releases; no system changes.
   --dry-run  Validate and print the install plan without applying.
+  --reapply  Apply the current revision again, including a full system upgrade.
 EOF
                 return 0 ;;
             *) die "unknown update option: $option" ;;
         esac
     done
 
+    [[ -z $requested_release || $reapply != true ]] || die "--to and --reapply cannot be combined"
     require_normal_user
     repository=$(configured_repository)
     validate_repository "$repository"
@@ -425,17 +429,19 @@ EOF
     if [[ $mode == check && $(git -C "$repository" rev-parse origin/main) != "$(git -C "$repository" rev-parse "refs/tags/$newest_tag^{commit}")" ]]; then
         printf 'main has unreleased commits; the newest release is %s\n' "$newest_tag"
     fi
+    [[ $reapply != true ]] || target=$current
     current_version=$(blankweave_release_version_at "$repository" "$current") \
         || die "current checkout has an invalid VERSION"
     current_tag=$(blankweave_release_tag_at "$repository" "$current") \
         || die "current checkout is not an annotated release matching VERSION"
 
-    git -C "$repository" merge-base --is-ancestor "$current" "$target" \
+    [[ $reapply == true ]] || git -C "$repository" merge-base --is-ancestor "$current" "$target" \
         || die "selected release is not a fast-forward; use blankweave rollback for a downgrade"
 
-    if [[ $current == "$target" && -z $requested_release ]]; then
+    if [[ $current == "$target" && $reapply != true && -z $requested_release ]]; then
         printf 'Blankweave %s (%s) is already up to date at %s.\n' \
             "$current_version" "$current_tag" "${current:0:12}"
+        printf 'Run blankweave update --reapply to repair configuration or apply saved package choices.\n'
         return 0
     fi
 
@@ -443,7 +449,7 @@ EOF
         || die "target revision has an invalid VERSION"
     target_tag=$(blankweave_release_tag_at "$repository" "$target") \
         || die "target revision is not an annotated release matching VERSION"
-    blankweave_release_version_greater "$target_version" "$current_version" \
+    [[ $reapply == true ]] || blankweave_release_version_greater "$target_version" "$current_version" \
         || die "target release must advance beyond $current_version (found $target_version); use blankweave rollback for a downgrade"
     rollback_floor=$(blankweave_release_floor_at "$repository" "$target") \
         || die "target revision has an invalid MIN_ROLLBACK_VERSION"
@@ -471,6 +477,11 @@ EOF
 
     printf 'Validating sudo before changing the checkout...\n'
     sudo -v
+    # Same-revision repair must never replace a previous-release rollback point.
+    if [[ $reapply == true ]]; then
+        RECOVERY_DIR=$RECOVERY_DIR/reapply
+        RECOVERY_STATE=$RECOVERY_DIR/latest
+    fi
     recovery_write "$current" "$current_version" "$target" "$target_version" prepared
     doctor_script=$repository/scripts/doctor.sh
     if ! "$doctor_script" "$repository" --normal --report > "$RECOVERY_DIR/preflight-report.txt"; then
@@ -480,7 +491,7 @@ EOF
 
     create_pre_snapshot "$current" "$target"
     recovery_write "$current" "$current_version" "$target" "$target_version" prepared "$SNAPSHOT_NUMBER"
-    git -C "$repository" merge --ff-only "$target"
+    [[ $reapply == true ]] || git -C "$repository" merge --ff-only "$target"
     recovery_update_status applying
 
     update_log=$RECOVERY_DIR/update.log

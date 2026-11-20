@@ -79,6 +79,15 @@ mapfile -t replay_apply < "$replay_home/apply-called"
 grep -q 'Profiles:     desktop development' "$test_root/replay.out"
 grep -q 'Git identity: Ada Lovelace <ada@example.com>' "$test_root/replay.out"
 
+# Existing theme/mode survive a replay even when setup.conf differs.
+printf '{"theme":"obsidian","mode":"dark"}\n' > "$replay_config/theme.json"
+HOME=$replay_home XDG_CONFIG_HOME=$replay_home/config \
+BLANKWEAVE_SETUP_APPLY_COMMAND=$fake_apply \
+    "$repository/scripts/setup.sh" --non-interactive > "$test_root/preserve.out"
+mapfile -t preserved_apply < "$replay_home/apply-called"
+[[ -z ${preserved_apply[1]} && -z ${preserved_apply[2]} ]]
+[[ $(cat "$replay_config/theme.json") == '{"theme":"obsidian","mode":"dark"}' ]]
+
 missing_home=$test_root/missing-home
 mkdir -p "$missing_home"
 if HOME=$missing_home XDG_CONFIG_HOME=$missing_home/config \
