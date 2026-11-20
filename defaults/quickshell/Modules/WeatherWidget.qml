@@ -29,8 +29,10 @@ WidgetFrame {
     readonly property var daily: status.daily || ({})
     readonly property int weatherCode: Number(current.weather_code ?? -1)
     readonly property bool isDay: Number(current.is_day ?? 1) === 1
-    readonly property int temperature: Math.round(Number(current.temperature_2m || 0))
-    readonly property int feelsLike: Math.round(Number(current.apparent_temperature || 0))
+    readonly property var preferences: root.bar.shell.preferences
+    readonly property string temperatureSuffix: preferences.temperatureSuffix
+    readonly property int temperature: preferences.temperature(current.temperature_2m || 0)
+    readonly property int feelsLike: preferences.temperature(current.apparent_temperature || 0)
     readonly property int rainChance: hourly.precipitation_probability
         && hourly.precipitation_probability.length > 0
         ? Math.round(Number(hourly.precipitation_probability[0] || 0))
@@ -92,14 +94,7 @@ WidgetFrame {
     }
 
     function formatHour(value) {
-        const parts = String(value || "").split("T")
-        if (parts.length < 2)
-            return "—"
-        const hour = Number(parts[1].slice(0, 2))
-        if (Number.isNaN(hour))
-            return "—"
-        const displayHour = hour % 12 === 0 ? 12 : hour % 12
-        return displayHour + (hour < 12 ? " AM" : " PM")
+        return preferences.formatTime(value)
     }
 
     function formatDay(value) {
@@ -110,8 +105,7 @@ WidgetFrame {
     }
 
     function timeOnly(value) {
-        const parts = String(value || "").split("T")
-        return parts.length > 1 ? parts[1].slice(0, 5) : "—"
+        return preferences.formatTime(value)
     }
 
     function windDirection(value) {
@@ -131,7 +125,7 @@ WidgetFrame {
         for (let index = 0; index < count; index++) {
             rows.push({
                 "time": String(times[index] || ""),
-                "temperature": Math.round(Number(temperatures[index] || 0)),
+                "temperature": preferences.temperature(temperatures[index] || 0),
                 "code": Number(codes[index] ?? -1),
                 "isDay": Number(dayStates[index] ?? 1) === 1,
                 "rain": Math.round(Number(rain[index] || 0))
@@ -152,8 +146,8 @@ WidgetFrame {
             rows.push({
                 "date": String(times[index] || ""),
                 "code": Number(codes[index] ?? -1),
-                "high": Math.round(Number(highs[index] || 0)),
-                "low": Math.round(Number(lows[index] || 0)),
+                "high": preferences.temperature(highs[index] || 0),
+                "low": preferences.temperature(lows[index] || 0),
                 "rain": Math.round(Number(rain[index] || 0))
             })
         }
@@ -205,12 +199,13 @@ WidgetFrame {
     }
 
     iconMark: root.weatherMark
-    label: root.available ? root.temperature + "°" : ""
+    label: root.available ? root.temperature + root.temperatureSuffix : ""
+    rightClickHint: "refresh weather"
     tooltip: !root.configured
         ? "Weather location not set\nClick to configure"
         : (root.available
             ? String(root.status.location || "Weather") + " · " + root.conditionLabel(root.weatherCode)
-                + " · " + root.temperature + "°C"
+                + " · " + root.temperature + root.temperatureSuffix
                 + (root.stale ? "\nShowing cached forecast" : "")
             : String(root.status.error || "Weather unavailable"))
     active: weatherPanel.open
@@ -293,7 +288,7 @@ WidgetFrame {
             iconMark: root.weatherMark
             title: root.configured ? String(root.status.location || "WEATHER").toUpperCase() : "WEATHER"
             subtitle: root.available
-                ? root.conditionLabel(root.weatherCode) + " · Feels like " + root.feelsLike + "°C"
+                ? root.conditionLabel(root.weatherCode) + " · Feels like " + root.feelsLike + root.temperatureSuffix
                     + (root.stale ? " · Cached" : "")
                 : (root.configured ? String(root.status.error || "Loading forecast…") : "Choose a forecast location")
             actions: [
@@ -402,8 +397,8 @@ WidgetFrame {
             visible: !root.editingLocation && root.available
             theme: root.theme
             metrics: [
-                { "label": "NOW", "value": root.temperature + "°C", "active": true },
-                { "label": "FEELS", "value": root.feelsLike + "°C" },
+                { "label": "NOW", "value": root.temperature + root.temperatureSuffix, "active": true },
+                { "label": "FEELS", "value": root.feelsLike + root.temperatureSuffix },
                 { "label": "RAIN", "value": root.rainChance + "%" }
             ]
         }

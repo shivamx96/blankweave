@@ -1,6 +1,7 @@
 import QtQuick
 import Quickshell
 import Quickshell.Io
+import "../Components/LocaleFormats.js" as Formats
 
 QtObject {
     id: root
@@ -22,6 +23,21 @@ QtObject {
 
     // Writes wait for the first read to finish, so a preference changed while
     // the file is still loading cannot overwrite what is on disk with defaults.
+    // Qt uses the session locale (including LC_TIME); cache it for this session.
+    readonly property var sessionLocale: Qt.locale()
+    readonly property string resolvedTimeFormat: Formats.timeMode(preferences.timeFormat, sessionLocale)
+    readonly property string resolvedTemperatureUnit: Formats.temperatureUnit(preferences.temperatureUnit, sessionLocale)
+    property alias timeFormat: preferences.timeFormat
+    property alias temperatureUnit: preferences.temperatureUnit
+
+    function formatTime(value, seconds) {
+        return Formats.time(value, resolvedTimeFormat, sessionLocale, Boolean(seconds))
+    }
+    function temperature(value) {
+        return Formats.temperature(value, resolvedTemperatureUnit, sessionLocale)
+    }
+    readonly property string temperatureSuffix: Formats.suffix(resolvedTemperatureUnit, sessionLocale)
+
     property bool ready: false
     property string writeError: ""
     property string confirmedHiddenWidgets: ""
@@ -60,6 +76,17 @@ QtObject {
 
         JsonAdapter {
             id: preferences
+
+            property string timeFormat: "auto"
+            property string temperatureUnit: "auto"
+            onTimeFormatChanged: {
+                const normalized = Formats.normalizeTime(timeFormat)
+                if (timeFormat !== normalized) timeFormat = normalized
+            }
+            onTemperatureUnitChanged: {
+                const normalized = Formats.normalizeTemperature(temperatureUnit)
+                if (temperatureUnit !== normalized) temperatureUnit = normalized
+            }
 
             property JsonObject clock: JsonObject {
                 // 0 time, 1 date, 2 date and time.

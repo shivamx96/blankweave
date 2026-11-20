@@ -668,6 +668,14 @@ file and its own script instead, the way the weather location lives in
 every file has exactly one writer. A persisted preference is still a
 steady state, so it changes a widget's form, never its `active` accent.
 
+`ShellPreferences` also declares `timeFormat` (`auto`, `12h`, `24h`) and
+`temperatureUnit` (`auto`, `celsius`, `fahrenheit`). `auto` resolves once
+from the session locale. Every time of day and temperature the shell shows
+goes through its `formatTime` and `temperature` methods
+(`Components/LocaleFormats.js`), so the bar clock, its tooltip and panel, and
+the weather views cannot disagree; weather data stays Celsius and ISO and is
+converted only for display.
+
 The rightmost power control is a native panel. Lock and suspend are immediate;
 logout, reboot, and shutdown require a second confirmation click and must clear
 their armed state whenever the panel closes. `Super+Escape` and the power key

@@ -94,14 +94,25 @@ WidgetFrame {
         if (displayMode === 1)
             return Qt.formatDateTime(clock.date, "ddd, dd MMM")
         if (displayMode === 2)
-            return Qt.formatDateTime(clock.date, "ddd, dd MMM · hh:mm AP")
-        return Qt.formatDateTime(clock.date, "hh:mm AP")
+            return Qt.formatDateTime(clock.date, "ddd, dd MMM") + " · " + preferences.formatTime(clock.date)
+        return preferences.formatTime(clock.date)
     }
-    tooltip: Qt.formatDateTime(clock.date, "dddd, d MMMM yyyy\nHH:mm:ss")
-        + "\nRight-click: change display"
+    rightClickHint: "change display"
+    tooltip: Qt.formatDateTime(clock.date, "dddd, d MMMM yyyy") + "\n" + preferences.formatTime(clock.date, true)
+        + ""
     active: calendarPanel.open
     labelWeight: Font.DemiBold
     horizontalPadding: 13
+    labelWidth: Math.ceil(clockLabelMetrics.width)
+    TextMetrics {
+        id: clockLabelMetrics
+        font.family: root.theme.fontFamily
+        font.pixelSize: root.theme.textSize
+        font.weight: root.labelWeight
+        text: (root.displayMode === 1 ? root.label : root.displayMode === 2
+            ? Qt.formatDateTime(clock.date, "ddd, dd MMM") + " · " : "")
+            + (root.displayMode === 1 ? "" : root.preferences.resolvedTimeFormat === "12h" ? "00:00 PM" : "00:00")
+    }
 
     SystemClock {
         id: clock
@@ -131,7 +142,7 @@ WidgetFrame {
             atBottom: root.bar.atBottom
             icon: "󰃭"
             title: "TIME & DATE"
-            subtitle: Qt.formatDateTime(clock.date, "dddd, d MMMM yyyy · HH:mm:ss t")
+            subtitle: Qt.formatDateTime(clock.date, "dddd, d MMMM yyyy") + " · " + preferences.formatTime(clock.date, true) + " " + Qt.formatDateTime(clock.date, "t")
             actions: [
                 { "id": "previous", "label": "Previous month", "icon": "󰁍" },
                 { "id": "today", "label": "Go to today", "icon": "󰃭", "active": root.todayKey === root.selectedKey },
@@ -154,7 +165,7 @@ WidgetFrame {
             metrics: [
                 {
                     "label": "LOCAL TIME",
-                    "value": Qt.formatDateTime(clock.date, "hh:mm AP"),
+                    "value": preferences.formatTime(clock.date),
                     "active": true
                 },
                 {
