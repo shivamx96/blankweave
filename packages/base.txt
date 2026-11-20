@@ -86,3 +86,7 @@ efibootmgr
 mpv
 loupe
 papers
+satty
+libnotify
+coreutils
+bash

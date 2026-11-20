@@ -98,6 +98,13 @@
     "repeat": false
   },
   {
+    "id": "screenshot-window",
+    "label": "Capture focused window",
+    "group": "Screenshots",
+    "default": "SUPER + ALT + S",
+    "repeat": false
+  },
+  {
     "id": "volume-up",
     "label": "Raise volume",
     "group": "Media & brightness",

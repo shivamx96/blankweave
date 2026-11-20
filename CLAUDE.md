@@ -726,6 +726,16 @@ without initial focus. The Lua option table is not validated, so a parser
 pass does not prove behaviour: when the live compositor may not be touched,
 record each new binding and rule as a manual check instead.
 
+`shell/screenshot.sh screen|region|window` owns captures. It writes the PNG
+under the Pictures directory's `Screenshots` folder first and only then
+copies it as `image/png`, so a cancelled selection or failed capture leaves
+both the folder and the clipboard untouched; never pipe `grim` into
+`wl-copy`. `screen` takes the focused output only, and `region` seeds
+`slurp` with the visible windows so one gesture drags a region or clicks a
+window. Its notification is transient, carries the image, opens the file as
+the default action, offers Annotate (`satty`), and waits for an action for a
+bounded time. `tests/screenshot.sh` stubs every capture tool.
+
 Monitor arrangement and scaling are display-panel choices, persisted by
 `defaults/shell/monitor-layout.sh`, the sole writer of
 `~/.config/blankweave/monitors.json` (source of truth) and of the

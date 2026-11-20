@@ -33,9 +33,11 @@ bind("clipboard", main_mod .. " + SHIFT + V", hl.dsp.exec_cmd([[qs ipc -n -p "$H
 bind("reload-shell", main_mod .. " + Y", hl.dsp.exec_cmd([[qs ipc -n -p "$HOME/.local/share/blankweave/quickshell" call blankweave reload]]))
 
 -- Screenshots
-bind("screenshot-print", "Print", hl.dsp.exec_cmd("grim - | wl-copy"))
-bind("screenshot", main_mod .. " + S", hl.dsp.exec_cmd("grim - | wl-copy"))
-bind("screenshot-region", main_mod .. " + SHIFT + S", hl.dsp.exec_cmd([[grim -g "$(slurp)" - | wl-copy]]))
+bind("screenshot-print", "Print", hl.dsp.exec_cmd("~/.local/share/blankweave/shell/screenshot.sh screen"))
+bind("screenshot", main_mod .. " + S", hl.dsp.exec_cmd("~/.local/share/blankweave/shell/screenshot.sh screen"))
+bind("screenshot-region", main_mod .. " + SHIFT + S", hl.dsp.exec_cmd("~/.local/share/blankweave/shell/screenshot.sh region"))
+
+bind("screenshot-window", main_mod .. " + ALT + S", hl.dsp.exec_cmd("~/.local/share/blankweave/shell/screenshot.sh window"))
 
 -- Multimedia keys (repeating = repeat on hold)
 bind("volume-up", "XF86AudioRaiseVolume", hl.dsp.exec_cmd("wpctl set-volume -l 1.0 @DEFAULT_AUDIO_SINK@ 5%+ && ~/.local/share/blankweave/shell/volume-popup.sh"), { repeating = true })
