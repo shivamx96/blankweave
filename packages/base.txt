@@ -11,6 +11,12 @@ quickshell
 dunst
 ghostty
 thunar
+gvfs
+gvfs-mtp
+udisks2
+tumbler
+ffmpegthumbnailer
+webp-pixbuf-loader
 btop
 fastfetch
 pipewire

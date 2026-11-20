@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<actions>
+  <action>
+    <icon>utilities-terminal</icon>
+    <patterns>*</patterns>
+    <range/>
+    <name>Open Terminal Here</name>
+    <command>ghostty --working-directory=%f</command>
+    <description>Open Ghostty in this directory</description>
+    <startup-notify/>
+    <directories/>
+  </action>
+</actions>

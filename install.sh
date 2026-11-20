@@ -299,6 +299,7 @@ if installer_profile_enabled voice-dictation; then
     cp -rv "$REPO_DIR/defaults/voxtype" "$DOTS_DIR/" || { echo "Failed to copy VoxType config"; exit 1; }
 fi
 cp -rv "$REPO_DIR/defaults/dunst" "$DOTS_DIR/" || { echo "Failed to copy dunst"; exit 1; }
+cp -rv "$REPO_DIR/defaults/thunar" "$DOTS_DIR/" || { echo "Failed to copy thunar"; exit 1; }
 cp -rv "$REPO_DIR/defaults/ghostty" "$DOTS_DIR/" || { echo "Failed to copy ghostty"; exit 1; }
 cp -rv "$REPO_DIR/defaults/xdg-desktop-portal" "$DOTS_DIR/" || { echo "Failed to copy xdg-desktop-portal"; exit 1; }
 cp -rv "$REPO_DIR/defaults/fontconfig" "$DOTS_DIR/" || { echo "Failed to copy fontconfig"; exit 1; }
@@ -417,6 +418,10 @@ if ! sudo -u "$SUDO_USER" env \
 fi
 
 section "SYMLINKING CONFIGS"
+
+# Thunar rewrites custom actions in its editor: seed a copy, never a symlink.
+user_config_seed "$DOTS_DIR/thunar/uca.xml" "$CONFIG_DIR/Thunar/uca.xml" \
+    /etc/xdg/Thunar/uca.xml
 
 # Dunst
 user_config_link "$DOTS_DIR/dunst/dunstrc" "$CONFIG_DIR/dunst/dunstrc"

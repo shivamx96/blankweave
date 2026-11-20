@@ -95,6 +95,7 @@ printf '[Desktop Entry]\nName=Steam\nExec=/usr/bin/steam -custom %%U\n' \
 # XDG_DATA_HOME is passed explicitly: a developer's session may export it, and
 # the migrations must act on the sandbox, never on the real home.
 HOME="$test_root/home" \
+    XDG_CONFIG_HOME="$test_root/home/.config" \
     XDG_CACHE_HOME="$test_root/cache" \
     XDG_DATA_HOME="$test_root/home/.local/share" \
     XDG_STATE_HOME="$test_root/state" \
@@ -108,6 +109,29 @@ printf '[Desktop Entry]\nName=Steam\nExec=/usr/bin/steam -mine %%U\n' > "$applic
 HOME="$test_root/home" XDG_DATA_HOME="$test_root/home/.local/share" \
     "$repository/migrations/20261011-drop-steam-shadow-entry.sh"
 grep -Fxq 'Exec=/usr/bin/steam -mine %U' "$applications_dir/steam.desktop"
+
+# The Thunar migration repoints only the stock, exo-backed terminal action.
+thunar_dir=$test_root/home/.config/Thunar
+empty_path=$test_root/empty-path
+mkdir -p "$thunar_dir" "$empty_path"
+printf '<actions>\n<action>\n\t<unique-id>1-1</unique-id>\n\t<command>exo-open --working-directory %%f --launch TerminalEmulator</command>\n</action>\n</actions>\n' \
+    > "$thunar_dir/uca.xml"
+chmod 600 "$thunar_dir/uca.xml"
+for _ in 1 2; do
+    HOME="$test_root/home" XDG_CONFIG_HOME="$test_root/home/.config" PATH="$empty_path:/usr/bin:/bin" \
+        "$repository/migrations/20261112-thunar-terminal-action.sh"
+done
+if command -v exo-open >/dev/null 2>&1; then
+    grep -Fq 'exo-open --working-directory %f' "$thunar_dir/uca.xml"
+else
+    grep -Fq '<command>ghostty --working-directory=%f</command>' "$thunar_dir/uca.xml"
+    grep -Fq '<unique-id>1-1</unique-id>' "$thunar_dir/uca.xml"
+    [[ $(stat -c %a "$thunar_dir/uca.xml") == 600 ]]
+fi
+printf '<actions><action><command>kitty -d %%f</command></action></actions>\n' > "$thunar_dir/uca.xml"
+HOME="$test_root/home" XDG_CONFIG_HOME="$test_root/home/.config" \
+    "$repository/migrations/20261112-thunar-terminal-action.sh"
+grep -Fq '<command>kitty -d %f</command>' "$thunar_dir/uca.xml"
 
 state_dir=$test_root/state/blankweave
 [[ $(< "$state_dir/repository") == "$migration_repository" ]]

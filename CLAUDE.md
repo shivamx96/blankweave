@@ -293,6 +293,16 @@ may be adopted. Unknown regular files, directories, and foreign symlinks
 capability-selected configs now live under the managed `hypr/` directory;
 the matching paths under `~/.config/hypr/` link to them on fresh installs.
 
+A config the application rewrites itself is seeded as a regular copy with
+`user_config_seed`, never linked: Thunar's custom actions
+(`~/.config/Thunar/uca.xml`, so "Open Terminal Here" runs Ghostty) are copied
+only when missing or byte-identical to the packaged default passed as a
+comparison file. Thunar stamps its own copy on first run, so the
+`thunar-terminal-action` migration repoints only the exact stock exo command
+for profiles that already opened it. Trash, removable drives, and thumbnails
+come from `gvfs`, `udisks2`, and `tumbler` in the required manifest; without
+`gvfs`, Thunar's Delete is permanent.
+
 Seed `~/.config/blankweave/overrides/` from `defaults/overrides/` only for missing
 files. Its Lua settings load after all compositor defaults, including voice
 bindings. Missing Lua overrides are optional, but syntax/runtime/read errors in
