@@ -97,7 +97,10 @@ PARU_BUILD_DIR=""
 
 # Grant temporary NOPASSWD to avoid repeated password prompts during install
 SUDOERS_TMP="/etc/sudoers.d/blankweave-install"
-echo "$SUDO_USER ALL=(ALL) NOPASSWD: ALL" > "$SUDOERS_TMP"
+rm -f -- "$SUDOERS_TMP"
+# Only Paru's package transactions need elevation from the invoking user.
+# All other privileged installer work already runs in this root process.
+printf '%s ALL=(root) NOPASSWD: /usr/bin/pacman\n' "$SUDO_USER" > "$SUDOERS_TMP"
 chmod 440 "$SUDOERS_TMP"
 
 cleanup_install() {

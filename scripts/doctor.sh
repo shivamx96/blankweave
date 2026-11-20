@@ -423,7 +423,8 @@ run_privileged_boot_checks() {
     local -a sudo_args=() boot_args=(--boot-only)
 
     if [[ ! -x $BOOT_HELPER ]]; then
-        fail 'privileged boot scan' 'helper is not installed; run blankweave update'
+        fail 'privileged boot scan' 'helper is not installed; run blankweave update --reapply'
+        check_install_sudoers
         check_kernel_command_line
         check_bootloader
         return
@@ -483,6 +484,7 @@ choose_scan_mode() {
 
 run_boot_checks() {
     if boot_files_inspectable || [[ $SCAN_MODE == normal ]]; then
+        check_install_sudoers
         check_kernel_command_line
         check_bootloader
     else
@@ -756,6 +758,14 @@ print_report() {
     printf '  privacy: usernames, hostnames, network addresses, disk identifiers, and serial numbers omitted\n'
 }
 
+check_install_sudoers() {
+    if [[ -e $(root_path /etc/sudoers.d/blankweave-install) || -L $(root_path /etc/sudoers.d/blankweave-install) ]]; then
+        fail 'temporary installer sudo rule' 'remove with: sudo rm -f /etc/sudoers.d/blankweave-install'
+    else
+        pass 'temporary installer sudo rule' 'absent'
+    fi
+}
+
 main() {
     local repository
 
@@ -767,6 +777,7 @@ main() {
             printf '%s doctor: privileged boot helper must run as root\n' "$PROGRAM_NAME" >&2
             return 2
         fi
+        check_install_sudoers
         check_kernel_command_line
         check_bootloader
         (( FAILED == 0 ))

@@ -338,6 +338,23 @@ grep -Fq 'FAIL  Limine Linux entries' "$test_root/missing-boot.log"
 grep -Fq 'FAIL  Limine BLS handoff' "$test_root/missing-boot.log"
 mv "$system_root/boot.available" "$system_root/boot"
 
+mkdir -p "$system_root/etc/sudoers.d"
+printf 'fixture ALL=(root) NOPASSWD: /usr/bin/pacman\n' > "$system_root/etc/sudoers.d/blankweave-install"
+if run_doctor --report > "$test_root/stale-rule.log"; then exit 1; fi
+grep -Fq 'sudo rm -f /etc/sudoers.d/blankweave-install' "$test_root/stale-rule.log"
+[[ -e $system_root/etc/sudoers.d/blankweave-install ]]
+if PATH="$fake_bin:/usr/bin" BLANKWEAVE_SYSTEM_ROOT="$system_root" BLANKWEAVE_TEST_ALLOW_BOOT_HELPER=true \
+    "$repository/scripts/doctor.sh" --boot-only > "$test_root/stale-helper.log"; then exit 1; fi
+grep -Fq 'temporary installer sudo rule' "$test_root/stale-helper.log"
+rm "$system_root/etc/sudoers.d/blankweave-install"
+# Force an unknown root source without exposing a disk identifier in reports.
+cat > "$fake_bin/findmnt" <<'EOF_FIXTURE'
+#!/bin/sh
+printf 'overlay\n'
+EOF_FIXTURE
+chmod +x "$fake_bin/findmnt"
+encryption_report=$(run_doctor --report)
+grep -Fq 'automatic sign-in is active but root encryption could not be confirmed' <<< "$encryption_report"
 report=$(run_doctor --report)
 grep -Fq 'Sanitized report' <<< "$report"
 grep -Fq 'hyprlock: 1.0-1' <<< "$report"

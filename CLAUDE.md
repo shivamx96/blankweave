@@ -91,6 +91,20 @@ finds nothing at them.
    configuration receives paired pre/post snapshots. The postflight doctor
    must pass before the recovery state is marked complete.
 
+First installation is defensive. `bootstrap.sh` hands an existing checkout
+with no recorded installed revision to `setup` rather than `update`, and a
+cancelled setup prints the command that resumes it. Preflight runs before
+any system change: it removes a stale temporary sudoers file, checks root
+block-device ancestry for encryption, and calls the read-only `--check`
+modes of the boot configuration helpers so an unsupported boot layout stops
+there. On an unencrypted or unrecognised root, setup defaults to
+password-required sign-in and skips the passwordless keyring unless the user
+explicitly chooses automatic sign-in; the review always states that the disk
+passphrase is the login. An existing installation keeps its sign-in policy.
+The temporary installer sudo rule is limited to `/usr/bin/pacman`. Doctor
+warns when automatic sign-in is active without confirmed root encryption
+and fails on a leftover installer sudo rule, without naming devices.
+
 `blankweave doctor` delegates to `scripts/doctor.sh` and is strictly read-only:
 checks may report warnings or failures but must not repair files, restart
 services, or contact the network. Interactive use offers a full scan by default

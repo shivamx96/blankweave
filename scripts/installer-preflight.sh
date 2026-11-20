@@ -14,6 +14,14 @@ installer_check_boot_layout() {
 
 installer_preflight() {
     local root=${1:-} tool variable value failed=false
+    # This rule belongs only to an active apply; never retain it after a crash.
+    if [[ -e $root/etc/sudoers.d/blankweave-install || -L $root/etc/sudoers.d/blankweave-install ]]; then
+        if (( EUID == 0 )); then
+            rm -f -- "$root/etc/sudoers.d/blankweave-install"
+        else
+            sudo rm -f -- "$root/etc/sudoers.d/blankweave-install" || return 1
+        fi
+    fi
     printf '\nChecking installation prerequisites...\n'
     if [[ ! -r $root/etc/arch-release ]]; then
         printf '  FAIL: Blankweave requires an installed Arch Linux system.\n' >&2
