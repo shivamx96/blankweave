@@ -38,11 +38,15 @@ profile_enabled() {
     return 1
 }
 
+resume_setup() {
+    printf "Resume setup with:\n  %q setup\n" "$REPOSITORY/bin/blankweave" >&2
+}
+
 prompt_line() {
     local prompt=$1 default=${2:-}
 
     printf '%s' "$prompt" >&$TTY_FD
-    IFS= read -r REPLY <&$TTY_FD || die 'input ended before setup was complete'
+    IFS= read -r REPLY <&$TTY_FD || { resume_setup; die 'input ended before setup was complete'; }
     [[ -n $REPLY ]] || REPLY=$default
 }
 
@@ -385,6 +389,7 @@ main() {
         if [[ -f $INSTALL_CONFIG || -f $SETUP_CONFIG ]]; then
             printf 'Existing choices have been loaded as defaults.\n' >&$TTY_FD
         fi
+        trap 'resume_setup; exit 130' INT HUP TERM
         choose_profiles
         choose_theme
         choose_git
@@ -394,6 +399,7 @@ main() {
     setup_config_validate
     if [[ $NON_INTERACTIVE == false ]]; then
         if ! review_choices; then
+            resume_setup
             printf 'Setup cancelled; no choices or system configuration were changed.\n'
             return 0
         fi

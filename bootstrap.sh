@@ -54,6 +54,9 @@ if [ -e "$repository" ]; then
         "$repository_ssh_url"|"$repository_ssh_url_no_suffix") ;;
         *) die "existing repository has an unexpected origin: $origin" ;;
     esac
+    if [ ! -s "${XDG_STATE_HOME:-$HOME/.local/state}/blankweave/installed-revision" ]; then
+        exec "$repository/bin/blankweave" setup </dev/tty
+    fi
     exec "$repository/bin/blankweave" update </dev/tty
 fi
 

@@ -96,7 +96,8 @@ printf '\n\n\n\n\n\n\nn\nn\nn\n' | \
     HOME=$cancel_home \
     XDG_CONFIG_HOME=$cancel_home/config \
     BLANKWEAVE_SETUP_APPLY_COMMAND=$fake_apply \
-    script -qec "'$repository/scripts/setup.sh'" /dev/null > /dev/null
+    script -qec "'$repository/scripts/setup.sh'" /dev/null > "$test_root/cancel.out"
+grep -Fq "$repository/bin/blankweave setup" "$test_root/cancel.out"
 [[ ! -e $cancel_home/config/blankweave/install.conf ]]
 [[ ! -e $cancel_home/config/blankweave/setup.conf ]]
 [[ ! -e $cancel_home/config/blankweave/theme.json ]]

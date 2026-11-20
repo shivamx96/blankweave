@@ -119,3 +119,65 @@ state_dir=$test_root/state/blankweave
 [[ ! -e "$test_root/cache/hyprarch/git-login" ]]
 
 printf 'CLI and migration smoke tests passed.\n'
+# Exercise only bootstrap's existing-checkout handoff in a disposable checkout;
+# the real bootstrap (and its host prerequisites) is never run.
+bootstrap_home=$test_root/bootstrap-home
+bootstrap_repository=$bootstrap_home/.local/share/blankweave/repository
+mkdir -p "$bootstrap_repository/.git" "$bootstrap_repository/bin" "$test_root/bootstrap-bin"
+cat > "$bootstrap_repository/bin/blankweave" <<'EOF_FIXTURE'
+#!/bin/sh
+printf '%s\n' "$1" > "$BOOTSTRAP_CALL"
+EOF_FIXTURE
+cat > "$test_root/bootstrap-bin/git" <<'EOF_FIXTURE'
+#!/bin/sh
+printf 'https://github.com/shivamx96/blankweave.git\n'
+EOF_FIXTURE
+chmod +x "$bootstrap_repository/bin/blankweave" "$test_root/bootstrap-bin/git"
+# Keep the production branch intact, replacing only terminal input with null.
+awk '/^if \[ -e "\$repository" \]; then$/ {copy=1} copy {print} copy && /^fi$/ {exit}' \
+    "$repository/bootstrap.sh" | sed 's@</dev/tty@</dev/null@g' > "$test_root/handoff.sh"
+for expected in setup update; do
+    HOME="$bootstrap_home" XDG_STATE_HOME="$test_root/bootstrap-state" \
+        BOOTSTRAP_CALL="$test_root/bootstrap-call" PATH="$test_root/bootstrap-bin:$PATH" \
+        sh -c '
+            repository=$HOME/.local/share/blankweave/repository
+            repository_url=https://github.com/shivamx96/blankweave.git
+            repository_url_no_suffix=https://github.com/shivamx96/blankweave
+            repository_ssh_url=git@github.com:shivamx96/blankweave.git
+            repository_ssh_url_no_suffix=git@github.com:shivamx96/blankweave
+            die() { exit 1; }
+            . "$1"
+        ' sh "$test_root/handoff.sh"
+    [[ $(cat "$test_root/bootstrap-call") == "$expected" ]]
+    mkdir -p "$test_root/bootstrap-state/blankweave"
+    printf 'recorded-revision\n' > "$test_root/bootstrap-state/blankweave/installed-revision"
+done
+
+release_fixture=$test_root/bootstrap-release
+git init --quiet --initial-branch=main "$release_fixture"
+git -C "$release_fixture" config user.name Fixture
+git -C "$release_fixture" config user.email fixture@example.invalid
+mkdir -p "$release_fixture/scripts"
+cp "$repository/scripts/verify-release.sh" "$repository/scripts/release-version.sh" "$release_fixture/scripts/"
+printf '0.9.0\n' > "$release_fixture/VERSION"
+git -C "$release_fixture" add .
+git -C "$release_fixture" commit --quiet -m release
+git -C "$release_fixture" tag -a v0.9.0 -m release
+printf '0.10.0\n' > "$release_fixture/VERSION"
+git -C "$release_fixture" commit --quiet -am release
+git -C "$release_fixture" tag -a v0.10.0 -m release
+release_revision=$(git -C "$release_fixture" rev-parse HEAD)
+printf 'unreleased\n' > "$release_fixture/work"
+git -C "$release_fixture" add .
+git -C "$release_fixture" commit --quiet -m development
+git -C "$release_fixture" update-ref refs/remotes/origin/main HEAD
+awk '/^release_tag=/ {copy=1} copy && /^mv / {exit} copy {print}' \
+    "$repository/bootstrap.sh" > "$test_root/select-release.sh"
+sh -c 'temporary_repository=$1; die() { exit 1; }; . "$2"' sh \
+    "$release_fixture" "$test_root/select-release.sh"
+[[ $(git -C "$release_fixture" rev-parse HEAD) == "$release_revision" ]]
+[[ $(git -C "$release_fixture" branch --show-current) == main ]]
+git -C "$release_fixture" tag -d v0.9.0 v0.10.0 >/dev/null
+if "$repository/scripts/verify-release.sh" "$release_fixture" --newest > "$test_root/no-release" 2>&1; then exit 1; fi
+grep -Fq 'No valid annotated Blankweave release' "$test_root/no-release"
+
