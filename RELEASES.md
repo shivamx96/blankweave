@@ -170,6 +170,30 @@ Blankweave release versions.
 - Validate generated configurations with the real Hyprland parser in CI.
   The minimum supported configuration rollback release remains `0.1.0`.
 
+## 0.13.0
+
+- Install and update the newest valid tagged release even when main has newer
+  unreleased commits. Preserve the selected theme when reapplying configuration.
+- Resume cancelled setup, validate boot layouts before changes, account for
+  disk encryption when choosing sign-in, and improve update/rollback safeguards.
+- Add first-login guidance, startup recovery prompts, an uninstall footprint
+  preview, command help, and Bash/Zsh completions.
+- Add fullscreen, window movement and resizing shortcuts, improve lid handling
+  and lock-screen recovery, and save screenshots before copying them.
+- Make bar panels keyboard navigable, unify volume and brightness feedback,
+  show low-battery warnings over fullscreen, and bound background polling.
+- Rank recently used applications, launch terminal applications in Ghostty,
+  exclude clipboard entries marked secret, and support clipboard-history deletion.
+- Improve Settings search, direct navigation, confirmations and action feedback;
+  show preference-file locations and expand keyboard, touchpad, date, drives,
+  updates, package-cache cleanup, and printer controls.
+- Improve theme contrast, accessibility sizing, locale-aware clocks and weather,
+  and validate complete theme renders before replacing generated files.
+- Fix default application handlers, Thunar integration, managed font defaults,
+  and terminal startup and editing keys. Expand regression coverage and document
+  hardware and fresh-install checks in `docs/ux-audit.md`.
+  The minimum supported configuration rollback release remains `0.1.0`.
+
 Install and update select the highest stable SemVer annotated `vX.Y.Z` tag
 reachable from `origin/main` whose commit's `VERSION` matches. Unreleased main
 commits, lightweight tags, mismatched tags, and off-main tags are ignored.
